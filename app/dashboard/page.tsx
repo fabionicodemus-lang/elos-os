@@ -114,6 +114,15 @@ export default async function DashboardPage({
   const permissionKeys = new Set(
     ((permissionResult.data ?? []) as { permission_key: string }[]).map((item) => item.permission_key),
   );
+
+  const privilegedRole = activeRole?.key === "owner" || activeRole?.key === "admin";
+  if (privilegedRole) {
+    permissionKeys.add("suppliers.view");
+    permissionKeys.add("suppliers.manage");
+    permissionKeys.add("clients.view");
+    permissionKeys.add("clients.manage");
+  }
+
   const availableRegistries = registryCatalog.filter((registry) => permissionKeys.has(registry.key));
 
   return (
