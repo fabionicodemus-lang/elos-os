@@ -35,17 +35,48 @@ function relatedOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
 }
 
-const moduleCatalog = [
-  { key: "execution.view", label: "Execução", description: "Cronograma, diário de obras e rotinas de campo." },
-  { key: "quality.view", label: "Qualidade", description: "Vistorias, critérios e não conformidades." },
-  { key: "financial.view", label: "Financeiro", description: "Contas, fluxo financeiro e compromissos." },
-  { key: "commercial.view", label: "Comercial", description: "Clientes, unidades, vendas e contratos." },
-  { key: "documents.view", label: "Documentos", description: "Arquivos, projetos e registros da obra." },
+const registryCatalog = [
+  {
+    key: "suppliers.view",
+    label: "Fornecedores",
+    description: "Base central compartilhada por Execução, Suprimentos e Financeiro.",
+    href: "/cadastros/fornecedores",
+  },
+  {
+    key: "clients.view",
+    label: "Clientes",
+    description: "Clientes e investidores vinculados a propostas, vendas e contratos.",
+    href: "/cadastros/clientes",
+  },
 ];
 
-const registryCatalog = [
-  { key: "suppliers.view", label: "Fornecedores", description: "Base central compartilhada por Execução, Suprimentos e Financeiro.", href: "/cadastros/fornecedores" },
-  { key: "clients.view", label: "Clientes", description: "Clientes e investidores vinculados a propostas, vendas e contratos.", href: "/cadastros/clientes" },
+const moduleCatalog = [
+  {
+    key: "execution.view",
+    label: "Execução",
+    description: "Cronograma, diário de obras e rotinas de campo.",
+  },
+  {
+    key: "quality.view",
+    label: "Qualidade",
+    description: "Vistorias, critérios e não conformidades.",
+  },
+  {
+    key: "payables.view",
+    label: "Financeiro",
+    description: "Contas a pagar, pagamentos e compromissos da obra.",
+    href: "/financeiro/contas-a-pagar",
+  },
+  {
+    key: "commercial.view",
+    label: "Comercial",
+    description: "Clientes, unidades, vendas e contratos.",
+  },
+  {
+    key: "documents.view",
+    label: "Documentos",
+    description: "Arquivos, projetos e registros da obra.",
+  },
 ];
 
 export default async function DashboardPage({
@@ -73,8 +104,7 @@ export default async function DashboardPage({
 
   const schemaMissing = Boolean(
     membershipResult.error &&
-      (membershipResult.error.code === "42P01" ||
-        membershipResult.error.message.includes("company_memberships")),
+      (membershipResult.error.code === "42P01" || membershipResult.error.message.includes("company_memberships")),
   );
 
   const memberships = (membershipResult.data ?? []) as unknown as Membership[];
@@ -111,19 +141,25 @@ export default async function DashboardPage({
         .eq("role_id", activeRole.id)
         .eq("allowed", true)
     : { data: [], error: null };
+
   const permissionKeys = new Set(
     ((permissionResult.data ?? []) as { permission_key: string }[]).map((item) => item.permission_key),
   );
 
   const privilegedRole = activeRole?.key === "owner" || activeRole?.key === "admin";
   if (privilegedRole) {
-    permissionKeys.add("suppliers.view");
-    permissionKeys.add("suppliers.manage");
-    permissionKeys.add("clients.view");
-    permissionKeys.add("clients.manage");
+    [
+      "suppliers.view",
+      "suppliers.manage",
+      "clients.view",
+      "clients.manage",
+      "payables.view",
+      "payables.manage",
+    ].forEach((permission) => permissionKeys.add(permission));
   }
 
   const availableRegistries = registryCatalog.filter((registry) => permissionKeys.has(registry.key));
+  const availableModules = moduleCatalog.filter((module) => permissionKeys.has(module.key));
 
   return (
     <main className="protected-page">
@@ -138,18 +174,25 @@ export default async function DashboardPage({
 
         <nav className="sidebar-nav" aria-label="Navegação principal">
           <Link className="active" href="/dashboard">Início</Link>
+
           {availableRegistries.length ? (
             <>
               <span className="sidebar-section">Cadastros</span>
-              {availableRegistries.map((registry) => <Link href={registry.href} key={registry.key}>{registry.label}</Link>)}
+              {availableRegistries.map((registry) => (
+                <Link href={registry.href} key={registry.key}>{registry.label}</Link>
+              ))}
             </>
           ) : null}
+
           {activeCompany ? <span className="sidebar-section">Módulos</span> : null}
-          {moduleCatalog
-            .filter((module) => permissionKeys.has(module.key))
-            .map((module) => (
+          {availableModules.map((module) =>
+            module.href ? (
+              <Link href={module.href} key={module.key}>{module.label}</Link>
+            ) : (
               <span className="disabled-link" key={module.key}>{module.label}</span>
-            ))}
+            ),
+          )}
+
           {permissionKeys.has("admin.users.view") ? (
             <>
               <span className="sidebar-section">Administração</span>
@@ -184,9 +227,7 @@ export default async function DashboardPage({
           <section className="setup-panel">
             <span>Banco de dados pendente</span>
             <h2>Instale a estrutura multiempresa no Supabase</h2>
-            <p>
-              O login já está funcionando, mas as tabelas de empresas, obras, papéis e permissões ainda precisam ser criadas.
-            </p>
+            <p>O login funciona, mas as tabelas de empresas, obras, papéis e permissões ainda precisam ser criadas.</p>
             <ol>
               <li>Abra o projeto no Supabase e entre em <strong>SQL Editor</strong>.</li>
               <li>Abra no GitHub o arquivo <code>supabase/migrations/20260722_0001_multitenancy.sql</code>.</li>
@@ -198,9 +239,7 @@ export default async function DashboardPage({
             <div className="welcome-card onboarding-copy">
               <span>Primeiro ambiente</span>
               <h2>Vamos cadastrar a Bossa e a primeira obra</h2>
-              <p>
-                Esta empresa será isolada das futuras construtoras clientes. Você será cadastrado como proprietário e poderá definir os acessos dos demais usuários.
-              </p>
+              <p>Esta empresa será isolada das futuras construtoras clientes. Você será cadastrado como proprietário.</p>
               <div className="foundation-grid compact-grid">
                 <article><span>01</span><h3>Empresa isolada</h3><p>Dados separados por construtora.</p></article>
                 <article><span>02</span><h3>Papéis</h3><p>Diretoria, engenharia, financeiro, comercial e obra.</p></article>
@@ -209,10 +248,7 @@ export default async function DashboardPage({
             </div>
 
             <form className="workspace-form" action={bootstrapWorkspace}>
-              <div>
-                <span className="form-kicker">Cadastro inicial</span>
-                <h2>Empresa e obra</h2>
-              </div>
+              <div><span className="form-kicker">Cadastro inicial</span><h2>Empresa e obra</h2></div>
               <label>Nome da empresa<input name="company_name" defaultValue="Bossa Empreendimentos" required /></label>
               <label>Identificador<input name="company_slug" defaultValue="bossa" /></label>
               <label>Primeira obra<input name="project_name" defaultValue="Flow Aptos" /></label>
@@ -226,9 +262,7 @@ export default async function DashboardPage({
               <div>
                 <span>Ambiente ativo</span>
                 <h2>{activeProject?.name ?? "Visão geral da empresa"}</h2>
-                <p>
-                  Você está acessando como <strong>{activeRole?.name}</strong>. Os módulos abaixo respeitam as permissões desse papel.
-                </p>
+                <p>Você está acessando como <strong>{activeRole?.name}</strong>. Os módulos respeitam as permissões desse papel.</p>
               </div>
               <div className="workspace-summary">
                 <div><span>Empresa</span><strong>{activeCompany?.name}</strong></div>
@@ -257,23 +291,22 @@ export default async function DashboardPage({
             ) : null}
 
             <section className="module-grid">
-              {moduleCatalog
-                .filter((module) => permissionKeys.has(module.key))
-                .map((module) => (
-                  <article key={module.key}>
-                    <span>Disponível</span>
-                    <h3>{module.label}</h3>
-                    <p>{module.description}</p>
+              {availableModules.map((module) => (
+                <article key={module.key}>
+                  <span>{module.href ? "Disponível" : "Em preparação"}</span>
+                  <h3>{module.label}</h3>
+                  <p>{module.description}</p>
+                  {module.href ? (
+                    <Link className="module-link" href={module.href}>Abrir módulo</Link>
+                  ) : (
                     <button disabled>Em construção</button>
-                  </article>
-                ))}
+                  )}
+                </article>
+              ))}
             </section>
 
             <section className="environment-panel">
-              <div>
-                <span>Trocar ambiente</span>
-                <h2>Empresas e obras disponíveis</h2>
-              </div>
+              <div><span>Trocar ambiente</span><h2>Empresas e obras disponíveis</h2></div>
               <div className="company-list">
                 {memberships.map((membership) => {
                   const company = relatedOne(membership.companies);
