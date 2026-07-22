@@ -11,7 +11,15 @@ Aplicação web multiempresa para gestão de construtoras e incorporadoras.
 
 ## Passo atual
 
-Fundação da aplicação: autenticação por e-mail e senha, confirmação de cadastro, sessão por cookies, logout e página protegida.
+Fundação da aplicação com:
+
+- autenticação por e-mail e senha;
+- confirmação de cadastro e sessão por cookies;
+- empresas com dados isolados;
+- obras vinculadas à empresa;
+- perfis, papéis e permissões;
+- seleção do ambiente ativo;
+- tela inicial de usuários e acessos.
 
 ## Configuração local
 
@@ -48,9 +56,19 @@ Em **Authentication → URL Configuration**:
 
 - Site URL local: `http://localhost:3000`
 - Redirect URL local: `http://localhost:3000/auth/confirm`
-- Adicione também as URLs da Vercel, de teste e de produção quando estiverem disponíveis.
+- Adicione também as URLs da Vercel, de teste e de produção.
 
 Mantenha a confirmação de e-mail habilitada durante os testes do cadastro.
+
+### Instalar o banco multiempresa
+
+1. Abra **SQL Editor** no Supabase.
+2. Abra o arquivo `supabase/migrations/20260722_0001_multitenancy.sql` deste repositório.
+3. Copie todo o conteúdo para o editor.
+4. Execute o script uma única vez.
+5. Volte ao dashboard do Elos OS e cadastre a primeira empresa e obra.
+
+A migration cria tabelas, índices, funções seguras e políticas de Row Level Security para empresas, obras, perfis, papéis e permissões.
 
 ## Configuração na Vercel
 
@@ -60,6 +78,13 @@ Adicione estas variáveis no projeto:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 A chave `SUPABASE_SERVICE_ROLE_KEY` não é usada neste passo e nunca deve ser exposta ao navegador.
+
+## Fluxo de usuários
+
+1. Cada pessoa cria e confirma a própria conta no Elos OS.
+2. Um proprietário ou administrador abre **Usuários e acessos**.
+3. Informa o e-mail já cadastrado e escolhe o papel.
+4. O usuário passa a enxergar somente a empresa, as obras e os módulos permitidos.
 
 ## Segurança
 
