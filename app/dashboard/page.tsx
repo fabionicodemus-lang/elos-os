@@ -43,6 +43,11 @@ const moduleCatalog = [
   { key: "documents.view", label: "Documentos", description: "Arquivos, projetos e registros da obra." },
 ];
 
+const registryCatalog = [
+  { key: "suppliers.view", label: "Fornecedores", description: "Base central compartilhada por Execução, Suprimentos e Financeiro.", href: "/cadastros/fornecedores" },
+  { key: "clients.view", label: "Clientes", description: "Clientes e investidores vinculados a propostas, vendas e contratos.", href: "/cadastros/clientes" },
+];
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -109,6 +114,7 @@ export default async function DashboardPage({
   const permissionKeys = new Set(
     ((permissionResult.data ?? []) as { permission_key: string }[]).map((item) => item.permission_key),
   );
+  const availableRegistries = registryCatalog.filter((registry) => permissionKeys.has(registry.key));
 
   return (
     <main className="protected-page">
@@ -123,6 +129,12 @@ export default async function DashboardPage({
 
         <nav className="sidebar-nav" aria-label="Navegação principal">
           <Link className="active" href="/dashboard">Início</Link>
+          {availableRegistries.length ? (
+            <>
+              <span className="sidebar-section">Cadastros</span>
+              {availableRegistries.map((registry) => <Link href={registry.href} key={registry.key}>{registry.label}</Link>)}
+            </>
+          ) : null}
           {activeCompany ? <span className="sidebar-section">Módulos</span> : null}
           {moduleCatalog
             .filter((module) => permissionKeys.has(module.key))
@@ -215,6 +227,25 @@ export default async function DashboardPage({
                 <div><span>Papel</span><strong>{activeRole?.name}</strong></div>
               </div>
             </section>
+
+            {availableRegistries.length ? (
+              <section className="registry-dashboard-section">
+                <div className="section-heading">
+                  <div><span>Cadastros integrados</span><h2>Bases centrais da empresa</h2></div>
+                  <p>Fornecedores e clientes são cadastrados antes dos lançamentos financeiros e comerciais.</p>
+                </div>
+                <div className="module-grid registry-module-grid">
+                  {availableRegistries.map((registry) => (
+                    <article key={registry.key}>
+                      <span>Disponível</span>
+                      <h3>{registry.label}</h3>
+                      <p>{registry.description}</p>
+                      <Link className="module-link" href={registry.href}>Abrir cadastro</Link>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <section className="module-grid">
               {moduleCatalog
