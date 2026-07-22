@@ -20,17 +20,31 @@ export async function requireCompanyPermission(permission: string) {
     redirect("/dashboard?error=Selecione%20uma%20empresa.");
   }
 
-  const [{ data: company }, { data: allowed }] = await Promise.all([
+  const [{ data: company }, { data: membership }] = await Promise.all([
     supabase.from("companies").select("id, name, slug").eq("id", companyId).maybeSingle(),
-    supabase.rpc("has_company_permission", {
-      target_company_id: companyId,
-      target_permission: permission,
-    }),
+    supabase
+      .from("company_memberships")
+      .select("id, roles(key)")
+      .eq("company_id", companyId)
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle(),
   ]);
 
-  if (!company || allowed !== true) {
+  const roleRelation = membership?.roles as { key?: string } | { key?: string }[] | null | undefined;
+  const roleKey = Array.isArray(roleRelation) ? roleRelation[0]?.key : roleRelation?.key;
+  const privileged = roleKey === "owner" || roleKey === "admin";
+
+  const { data: allowed } = privileged
+    ? { data: true }
+    : await supabase.rpc("has_company_permission", {
+        target_company_id: companyId,
+        target_permission: permission,
+      });
+
+  if (!company || !membership || allowed !== true) {
     redirect("/dashboard?error=Você%20não%20possui%20acesso%20a%20esta%20área.");
   }
 
-  return { supabase, company, companyId, projectId, userId, email };
+  return { supabase, company, companyId, projectId, userId, email, roleKey };
 }
