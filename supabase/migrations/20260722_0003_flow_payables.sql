@@ -83,5 +83,43 @@ for update using (
   public.has_company_permission(company_id, 'payables.manage')
 );
 
+create or replace function public.payables_summary(
+  p_company_id uuid,
+  p_project_id uuid default null
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  result jsonb;
+begin
+  if not (
+    public.has_company_permission(p_company_id, 'payables.view')
+    or public.has_company_permission(p_company_id, 'payables.manage')
+  ) then
+    raise exception 'Você não possui acesso às contas a pagar desta empresa.';
+  end if;
+
+  select jsonb_build_object(
+    'total_count', count(*),
+    'open_count', count(*) filter (where status = 'open'),
+    'paid_count', count(*) filter (where status = 'paid'),
+    'cancelled_count', count(*) filter (where status = 'cancelled'),
+    'total_amount', coalesce(sum(amount) filter (where status <> 'cancelled'), 0),
+    'open_amount', coalesce(sum(amount) filter (where status = 'open'), 0),
+    'paid_amount', coalesce(sum(coalesce(paid_amount, amount)) filter (where status = 'paid'), 0)
+  ) into result
+  from public.payables
+  where company_id = p_company_id
+    and (p_project_id is null or project_id = p_project_id);
+
+  return result;
+end;
+$$;
+
 -- Contas financeiras não possuem exclusão física pela aplicação.
 grant select, insert, update on public.payables to authenticated;
+grant execute on function public.payables_summary(uuid, uuid) to authenticated;
