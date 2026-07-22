@@ -9,37 +9,74 @@ function loginUrl(message: string, type: "error" | "success" = "error") {
   return `/login?${params.toString()}`;
 }
 
-async function getRequestOrigin() {
-  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+function cleanUrlCandidate(value: string | null | undefined) {
+  const cleaned = value?.trim();
 
-  if (configuredSiteUrl) {
-    return configuredSiteUrl.replace(/\/$/, "");
+  if (!cleaned) {
+    return undefined;
   }
 
+  const hasWrappingQuotes =
+    (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+    (cleaned.startsWith("'") && cleaned.endsWith("'"));
+
+  return hasWrappingQuotes ? cleaned.slice(1, -1).trim() : cleaned;
+}
+
+async function getEmailRedirectTo() {
   const requestHeaders = await headers();
-  const origin = requestHeaders.get("origin");
-
-  if (origin) {
-    return origin.replace(/\/$/, "");
-  }
-
   const host =
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
   const protocol =
     requestHeaders.get("x-forwarded-proto") ??
     (host?.startsWith("localhost") ? "http" : "https");
 
-  if (host) {
-    return `${protocol}://${host}`;
+  const candidates = [
+    cleanUrlCandidate(process.env.NEXT_PUBLIC_SITE_URL),
+    cleanUrlCandidate(requestHeaders.get("origin")),
+    host ? `${protocol}://${host}` : undefined,
+    process.env.VERCEL_URL
+      ? `https://${cleanUrlCandidate(process.env.VERCEL_URL)}`
+      : undefined,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+
+    try {
+      const siteUrl = new URL(candidate);
+
+      if (!["https:", "http:"].includes(siteUrl.protocol)) {
+        continue;
+      }
+
+      return new URL("/auth/confirm", siteUrl.origin).toString();
+    } catch {
+      // Tenta o próximo endereço disponível.
+    }
   }
 
-  const vercelUrl = process.env.VERCEL_URL?.trim();
+  return undefined;
+}
 
-  if (vercelUrl) {
-    return `https://${vercelUrl}`;
+function friendlySignupError(message: string) {
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("invalid path specified")) {
+    return "Não foi possível concluir o cadastro por causa da configuração do endereço. Atualize a página e tente novamente.";
   }
 
-  throw new Error("Não foi possível determinar o endereço do Elos OS.");
+  if (normalized.includes("already registered")) {
+    return "Este e-mail já possui cadastro. Use o botão Entrar.";
+  }
+
+  if (normalized.includes("password")) {
+    return "A senha não atende aos requisitos de segurança do Supabase.";
+  }
+
+  return "Não foi possível criar o acesso. Verifique os dados e tente novamente.";
 }
 
 export async function login(formData: FormData) {
@@ -68,20 +105,28 @@ export async function signup(formData: FormData) {
     redirect(loginUrl("Use um e-mail válido e uma senha com pelo menos 8 caracteres."));
   }
 
-  const origin = await getRequestOrigin();
-  const emailRedirectTo = new URL("/auth/confirm", origin).toString();
+  const emailRedirectTo = await getEmailRedirectTo();
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      emailRedirectTo,
-    },
+    ...(emailRedirectTo
+      ? {
+          options: {
+            emailRedirectTo,
+          },
+        }
+      : {}),
   });
 
   if (error) {
-    redirect(loginUrl(error.message));
+    redirect(loginUrl(friendlySignupError(error.message)));
   }
 
-  redirect(loginUrl("Cadastro criado. Verifique seu e-mail para confirmar o acesso.", "success"));
+  redirect(
+    loginUrl(
+      "Cadastro criado. Verifique seu e-mail para confirmar o acesso.",
+      "success",
+    ),
+  );
 }
