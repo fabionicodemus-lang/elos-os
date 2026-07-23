@@ -1,0 +1,1418 @@
+/* Elos OS — padrão visual oficial baseado no protótipo V0.25.3 */
+:root {
+  --brand: #008780;
+  --brand-strong: #00615c;
+  --brand-soft: #e2f1ef;
+  --background: #eef1f0;
+  --foreground: #16211f;
+  --muted: #5f7d79;
+  --line: #e5eae8;
+  --card: #ffffff;
+  --sidebar: #0f1c1b;
+  --sidebar-muted: #93a6a3;
+  --danger: #b8453f;
+  --success: #217a50;
+  --warning: #946414;
+  --shadow: 0 4px 20px rgba(15, 28, 27, 0.06);
+  --elos-sidebar-width: 272px;
+}
+
+body {
+  font-family: var(--font-ibm-plex), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+h1,
+h2,
+h3,
+.elos-logo-text strong,
+.finance-summary-grid strong,
+.access-summary strong,
+.kpi .value {
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.elos-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.elos-app-shell {
+  display: grid;
+  grid-template-columns: var(--elos-sidebar-width) minmax(0, 1fr);
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.elos-sidebar {
+  position: relative;
+  z-index: 40;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 10px 16px;
+  background: var(--sidebar);
+  color: #b6c6c3;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.elos-sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.elos-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+}
+
+.elos-sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.elos-logo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 8px 18px;
+}
+
+.elos-logo-mark {
+  width: 39px;
+  height: 39px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #008780, #053c39);
+  box-shadow: 0 9px 22px rgba(0, 135, 128, 0.24);
+}
+
+.elos-logo-mark svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.elos-logo-text strong,
+.elos-logo-text span {
+  display: block;
+}
+
+.elos-logo-text strong {
+  color: #fff;
+  font-size: 17px;
+}
+
+.elos-logo-text span {
+  margin-top: 2px;
+  color: #5f7d79;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.elos-module-menu,
+.elos-module-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.elos-module-menu {
+  gap: 3px;
+}
+
+.elos-main-item {
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 12px;
+  color: #b6c6c3;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 680;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.elos-main-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.elos-main-item.active {
+  color: #fff;
+  background: var(--brand);
+  font-weight: 800;
+}
+
+.elos-icon {
+  width: 19px;
+  flex: 0 0 19px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.module-chevron {
+  margin-left: auto;
+  color: #5f7d79;
+  font-size: 18px;
+  transition: transform 0.18s ease;
+}
+
+.elos-module-group.open > .elos-main-item .module-chevron {
+  color: #7fc9c3;
+  transform: rotate(90deg);
+}
+
+.elos-subnav {
+  display: none;
+  margin: 3px 0 7px 31px;
+  padding: 3px 0 3px 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.elos-module-group.open > .elos-subnav {
+  display: grid;
+  gap: 2px;
+}
+
+.elos-subnav a,
+.elos-subnav-disabled {
+  min-height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 7px 9px;
+  color: #93a6a3;
+  font-size: 11px;
+  font-weight: 680;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.elos-subnav a:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.elos-subnav a.active {
+  color: #7fd8d1;
+  background: rgba(0, 135, 128, 0.22);
+  font-weight: 830;
+}
+
+.elos-subnav-disabled {
+  color: #4d6360;
+  cursor: not-allowed;
+}
+
+.elos-subtitle {
+  padding: 9px 9px 4px;
+  color: #5f7d79;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.elos-sidebar-foot {
+  margin: 18px 10px 0;
+  padding: 14px 2px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  color: #7d908c;
+  line-height: 1.55;
+}
+
+.elos-sidebar-foot strong,
+.elos-sidebar-foot span,
+.elos-sidebar-foot small {
+  display: block;
+}
+
+.elos-sidebar-foot strong {
+  color: #b6c6c3;
+  font-size: 11px;
+}
+
+.elos-sidebar-foot span,
+.elos-sidebar-foot small {
+  font-size: 9px;
+}
+
+.elos-main {
+  min-width: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--background);
+  -webkit-overflow-scrolling: touch;
+}
+
+.elos-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: 72px;
+  border-bottom: 1px solid #e2e8e8;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 0 28px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+}
+
+.elos-org {
+  min-width: 210px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.elos-org-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--brand);
+  background: var(--brand-soft);
+  font-size: 17px;
+}
+
+.elos-org-text strong,
+.elos-org-text span,
+.elos-user-text strong,
+.elos-user-text span {
+  display: block;
+}
+
+.elos-org-text strong {
+  max-width: 190px;
+  overflow: hidden;
+  color: #263435;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elos-org-text span,
+.elos-user-text span {
+  margin-top: 2px;
+  color: #9aa4a6;
+  font-size: 9px;
+}
+
+.elos-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #8b989a;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.elos-breadcrumb b {
+  color: var(--brand);
+  font-weight: 820;
+}
+
+.elos-project-switcher {
+  position: relative;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.elos-project-switcher label {
+  color: #9aa5a7;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.elos-project-switcher select {
+  min-width: 260px;
+  height: 40px;
+  border: 1px solid #e0e6e6 !important;
+  border-radius: 12px !important;
+  padding: 0 36px 0 12px;
+  color: #334143;
+  background: #f7f9f9;
+  box-shadow: none !important;
+}
+
+.elos-search-button,
+.elos-logout-button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #647174;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.elos-search-button:hover,
+.elos-logout-button:hover {
+  background: #f4f7f6;
+}
+
+.elos-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-left: 6px;
+}
+
+.elos-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  background: #153e3c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.elos-user-text strong {
+  color: #263435;
+  font-size: 12px;
+}
+
+.elos-module-content {
+  width: 100%;
+  padding: 28px 32px 60px;
+}
+
+.elos-page-top {
+  margin-bottom: 22px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.elos-eyebrow {
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: 0.02em;
+}
+
+.elos-page-top h1 {
+  margin: 5px 0 0;
+  color: #172021;
+  font-size: 30px;
+  letter-spacing: -0.04em;
+}
+
+.elos-page-top p {
+  margin: 8px 0 0;
+  color: #788587;
+  font-size: 13px;
+}
+
+.elos-module-version {
+  margin-left: 8px;
+  border: 1px solid #d8e7e5;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  color: #54716e;
+  background: #f3f9f8;
+  font-family: var(--font-ibm-plex), sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+.elos-page-actions,
+.registry-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.elos-button,
+.back-link,
+.module-link,
+.registry-pagination a,
+.table-action,
+.role-form button,
+.registry-filter button,
+.finance-filter button,
+.auth-primary {
+  min-height: 40px;
+  border: 1px solid #dce3e3;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 13px;
+  color: #334143;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 760;
+  text-decoration: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.elos-button:hover,
+.back-link:hover,
+.module-link:hover,
+.registry-pagination a:hover,
+.table-action:hover,
+.role-form button:hover {
+  color: var(--brand);
+  border-color: #b9d4d1;
+  background: #f7f9f9;
+}
+
+.elos-button.primary,
+.registry-filter button,
+.finance-filter button,
+.auth-primary {
+  color: #fff;
+  border-color: var(--brand);
+  background: var(--brand);
+  box-shadow: 0 8px 20px rgba(0, 135, 128, 0.15);
+}
+
+.elos-button.primary:hover,
+.registry-filter button:hover,
+.finance-filter button:hover,
+.auth-primary:hover {
+  color: #fff;
+  background: var(--brand-strong);
+}
+
+.dashboard-welcome {
+  margin-bottom: 16px;
+  border-radius: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 25px 27px;
+  color: #fff;
+  background: linear-gradient(135deg, #0a3a37, #008780);
+}
+
+.dashboard-welcome > div > span {
+  color: #9fe0da;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+}
+
+.dashboard-welcome h2 {
+  margin: 6px 0;
+  font-size: 24px;
+}
+
+.dashboard-welcome p {
+  margin: 0;
+  color: #dcf3f1;
+  font-size: 12px;
+}
+
+.module-launch-grid,
+.module-grid,
+.registry-module-grid,
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.module-launch-grid {
+  margin-bottom: 16px;
+}
+
+.module-launch-grid article,
+.module-grid article,
+.role-grid article {
+  min-height: 145px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.module-launch-grid article:hover,
+.module-grid article:hover {
+  border-color: #b9d4d1;
+  box-shadow: 0 8px 22px rgba(0, 135, 128, 0.07);
+}
+
+.module-launch-grid article > span,
+.module-grid article > span,
+.role-grid article > span {
+  color: var(--brand);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.module-launch-grid h3,
+.module-grid h3,
+.role-grid h3 {
+  margin: 13px 0 5px;
+  color: #1d3735;
+  font-size: 15px;
+}
+
+.module-launch-grid p,
+.module-grid p,
+.role-grid p {
+  flex: 1;
+  margin: 0 0 14px;
+  color: #8a9698;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.workspace-hero,
+.environment-panel,
+.setup-panel,
+.add-member-panel,
+.members-panel,
+.roles-panel,
+.registry-toolbar,
+.registry-table-panel,
+.registry-dashboard-section {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.workspace-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  background: linear-gradient(135deg, #f6fbfa, #fff);
+}
+
+.workspace-hero > div > span,
+.section-heading > div > span,
+.setup-panel > span,
+.add-member-panel > div > span {
+  color: var(--brand);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.workspace-hero h2,
+.section-heading h2,
+.setup-panel h2,
+.add-member-panel h2 {
+  margin: 5px 0;
+  color: #1c2d2c;
+}
+
+.workspace-hero p,
+.section-heading p,
+.setup-panel p,
+.add-member-panel p {
+  color: #7d898b;
+  line-height: 1.55;
+}
+
+.workspace-summary {
+  min-width: 340px;
+  border: 1px solid #d7e7e5;
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  background: #fff;
+}
+
+.workspace-summary div {
+  padding: 14px;
+  border-right: 1px solid #e1eceb;
+}
+
+.workspace-summary div:last-child {
+  border-right: 0;
+}
+
+.workspace-summary span,
+.workspace-summary strong {
+  display: block;
+}
+
+.workspace-summary span {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.workspace-summary strong {
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.access-summary,
+.finance-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.access-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.access-summary article,
+.finance-summary-grid article {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 19px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.access-summary span,
+.finance-summary-grid span,
+.access-summary strong,
+.finance-summary-grid strong,
+.finance-summary-grid small {
+  display: block;
+}
+
+.access-summary span,
+.finance-summary-grid span {
+  color: #718083;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.access-summary strong,
+.finance-summary-grid strong {
+  margin-top: 7px;
+  color: #172021;
+  font-size: 25px;
+}
+
+.finance-summary-grid small {
+  margin-top: 4px;
+  color: #9aa5a7;
+  font-size: 11px;
+}
+
+.registry-filter,
+.finance-filter {
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) 180px auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.finance-filter {
+  grid-template-columns: minmax(260px, 1fr) 160px minmax(240px, 1fr) 145px 145px auto auto;
+}
+
+.registry-filter input,
+.registry-filter select,
+.finance-filter input,
+.finance-filter select,
+.registry-create input,
+.registry-create select,
+.registry-create textarea,
+.add-member-panel input,
+.add-member-panel select,
+.role-form select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #dce3e3 !important;
+  border-radius: 11px !important;
+  padding: 0 11px;
+  color: var(--foreground);
+  background: #fff;
+  outline: none;
+}
+
+.registry-create textarea {
+  min-height: 82px;
+  padding-top: 10px;
+}
+
+.registry-filter input:focus,
+.registry-filter select:focus,
+.finance-filter input:focus,
+.finance-filter select:focus,
+.registry-create input:focus,
+.registry-create select:focus,
+.registry-create textarea:focus,
+.add-member-panel input:focus,
+.add-member-panel select:focus,
+.role-form select:focus {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(0, 135, 128, 0.12) !important;
+}
+
+.registry-filter a,
+.finance-filter a {
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.registry-create {
+  margin-top: 14px;
+  border: 1px solid #d9e4e3;
+  border-radius: 14px;
+  background: #f8fbfa;
+}
+
+.registry-create summary {
+  padding: 14px 16px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  list-style: none;
+}
+
+.registry-create summary::-webkit-details-marker {
+  display: none;
+}
+
+.registry-create[open] summary {
+  border-bottom: 1px solid #dfe8e7;
+}
+
+.registry-create form {
+  padding: 18px;
+}
+
+.registry-form-grid {
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.registry-form-grid label,
+.add-member-panel label,
+.payable-actions label {
+  display: grid;
+  gap: 5px;
+  color: #526163;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.registry-wide {
+  grid-column: 1 / -1;
+}
+
+.section-heading {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.section-heading p {
+  max-width: 520px;
+  margin: 0;
+  font-size: 11px;
+}
+
+.registry-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+}
+
+.registry-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.registry-table th,
+.registry-table td {
+  padding: 11px 10px;
+  border-bottom: 1px solid #edf1f1;
+  text-align: left;
+  vertical-align: middle;
+  font-size: 12px;
+}
+
+.registry-table th {
+  color: #58706d;
+  background: #f7f9f9;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.registry-table tbody tr:hover {
+  background: #fbfcfc;
+}
+
+.registry-table td > strong,
+.registry-table td > span,
+.registry-table td > small {
+  display: block;
+}
+
+.registry-table td > strong {
+  color: #203431;
+  font-size: 12px;
+}
+
+.registry-table td > small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.status-badge {
+  width: fit-content;
+  border-radius: 999px;
+  display: inline-flex !important;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 9px !important;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.status-badge.active,
+.status-badge.paid {
+  color: var(--success);
+  background: #e7f3ec;
+}
+
+.status-badge.inactive,
+.status-badge.open {
+  color: var(--warning);
+  background: #fff3d7;
+}
+
+.status-badge.cancelled {
+  color: var(--danger);
+  background: #f7e5e3;
+}
+
+.registry-pagination {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.registry-pagination > div {
+  display: flex;
+  gap: 8px;
+}
+
+.payable-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.payable-actions details {
+  position: relative;
+}
+
+.payable-actions summary {
+  min-height: 34px;
+  border: 1px solid #d5dfde;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 11px;
+  color: var(--brand);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+
+.payable-actions details form {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: 40px;
+  width: 250px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 9px;
+  padding: 13px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(15, 28, 27, 0.16);
+}
+
+.add-member-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(520px, 1fr);
+  align-items: end;
+  gap: 28px;
+}
+
+.add-member-panel form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.member-table {
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow: hidden;
+}
+
+.member-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(260px, 1.3fr) 100px minmax(240px, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.member-row:last-child {
+  border-bottom: 0;
+}
+
+.member-head {
+  color: #58706d;
+  background: #f7f9f9;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.member-row strong,
+.member-row span {
+  display: block;
+}
+
+.member-row > div > span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.role-form {
+  display: flex;
+  gap: 8px;
+}
+
+.company-list {
+  display: grid;
+  gap: 12px;
+}
+
+.company-list > article {
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 16px;
+}
+
+.company-list > article.selected {
+  border-color: #9cc9c5;
+  background: #f6fbfa;
+}
+
+.company-card-header,
+.project-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.project-buttons {
+  margin-top: 12px;
+  justify-content: flex-start;
+}
+
+.project-buttons button {
+  min-height: 36px;
+  border: 1px solid #d6e0df;
+  border-radius: 9px;
+  padding: 0 11px;
+  color: #405052;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.project-buttons button.active,
+.project-buttons button:hover {
+  color: var(--brand);
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.auth-message.workspace-message {
+  margin: 0 0 16px;
+}
+
+.elos-mobile-menu-button,
+.elos-mobile-close,
+.elos-sidebar-backdrop {
+  display: none;
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #cdd6d3;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b7c2be;
+}
+
+@media (max-width: 1200px) {
+  .elos-breadcrumb,
+  .elos-user-text {
+    display: none;
+  }
+
+  .elos-project-switcher label {
+    display: none;
+  }
+
+  .elos-project-switcher select {
+    min-width: 210px;
+  }
+
+  .elos-module-content {
+    padding: 26px 22px 50px;
+  }
+
+  .finance-filter {
+    grid-template-columns: minmax(240px, 1fr) 150px minmax(210px, 1fr) 135px 135px auto;
+  }
+
+  .finance-filter a {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .elos-app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .elos-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: min(320px, calc(100vw - 44px));
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+    box-shadow: 20px 0 60px rgba(5, 24, 22, 0.32);
+  }
+
+  .elos-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .elos-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    border: 0;
+    display: block;
+    background: rgba(5, 24, 22, 0.55);
+  }
+
+  .elos-mobile-close {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    color: #b6c6c3;
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  .elos-mobile-menu-button {
+    position: fixed;
+    z-index: 34;
+    left: 13px;
+    top: 16px;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 11px;
+    display: grid;
+    place-content: center;
+    gap: 4px;
+    background: var(--sidebar);
+    box-shadow: 0 6px 18px rgba(15, 28, 27, 0.18);
+  }
+
+  .elos-mobile-menu-button span {
+    width: 17px;
+    height: 2px;
+    border-radius: 2px;
+    background: #fff;
+  }
+
+  .elos-main {
+    height: 100vh;
+  }
+
+  .elos-header {
+    padding: 0 14px 0 64px;
+  }
+
+  .elos-org {
+    min-width: auto;
+  }
+
+  .elos-org-text {
+    display: none;
+  }
+
+  .elos-project-switcher {
+    flex: 1;
+  }
+
+  .elos-project-switcher select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .elos-search-button,
+  .elos-user,
+  .elos-logout-button {
+    display: none;
+  }
+
+  .elos-module-content {
+    padding: 22px 15px 45px;
+  }
+
+  .elos-page-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .elos-page-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .workspace-hero,
+  .dashboard-welcome,
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workspace-summary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .module-launch-grid,
+  .module-grid,
+  .registry-module-grid,
+  .role-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .finance-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .registry-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .registry-filter,
+  .finance-filter {
+    grid-template-columns: 1fr 180px auto;
+  }
+
+  .registry-filter a,
+  .finance-filter a {
+    grid-column: 1 / -1;
+  }
+
+  .add-member-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .add-member-panel form {
+    grid-template-columns: 1fr 180px auto;
+  }
+
+  .member-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .member-head {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .elos-header {
+    height: 64px;
+  }
+
+  .elos-page-top h1 {
+    font-size: 25px;
+  }
+
+  .elos-module-version {
+    margin: 8px 0 0;
+    width: fit-content;
+    display: flex;
+  }
+
+  .module-launch-grid,
+  .module-grid,
+  .registry-module-grid,
+  .role-grid,
+  .access-summary,
+  .finance-summary-grid,
+  .registry-form-grid,
+  .registry-filter,
+  .finance-filter,
+  .add-member-panel form,
+  .workspace-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .registry-wide {
+    grid-column: auto;
+  }
+
+  .elos-page-actions > *,
+  .registry-header-actions > *,
+  .elos-page-actions .elos-button {
+    flex: 1 1 auto;
+  }
+
+  .registry-toolbar,
+  .registry-table-panel,
+  .registry-dashboard-section,
+  .environment-panel,
+  .workspace-hero,
+  .add-member-panel,
+  .members-panel,
+  .roles-panel {
+    padding: 15px;
+  }
+
+  .registry-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .member-row {
+    grid-template-columns: 1fr;
+  }
+
+  .role-form {
+    flex-direction: column;
+  }
+}
+
+@media print {
+  .elos-sidebar,
+  .elos-header,
+  .elos-page-actions,
+  .elos-mobile-menu-button {
+    display: none !important;
+  }
+
+  .elos-app-shell,
+  .elos-main {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .elos-module-content {
+    padding: 0 !important;
+  }
+}
