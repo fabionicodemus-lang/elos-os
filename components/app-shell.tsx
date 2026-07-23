@@ -116,6 +116,8 @@ export async function AppShell({
       "clients.manage",
       "payables.view",
       "payables.manage",
+      "sales.view",
+      "sales.manage",
       "execution.view",
       "quality.view",
       "commercial.view",
@@ -225,7 +227,7 @@ export async function AppShell({
         { label: "Clientes", href: can("clients.view") ? "/cadastros/clientes" : undefined, active: activeItem === "commercial-clients", disabled: !can("clients.view") },
         { label: "Propostas", disabled: true },
         { label: "Corretores", disabled: true },
-        { label: "Vendas", disabled: true },
+        { label: "Vendas", href: can("sales.view") ? "/comercial/vendas" : undefined, active: activeItem === "sales", disabled: !can("sales.view") },
       ],
     },
     {
