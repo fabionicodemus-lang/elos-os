@@ -1,0 +1,2 @@
+-- Placeholder migration marker for Koper receivables audit.
+-- The actual data correction is executed by the customer-specific SQL file generated from the Koper reports.
