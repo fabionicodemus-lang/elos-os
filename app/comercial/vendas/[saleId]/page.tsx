@@ -47,10 +47,14 @@ type Sale = {
   broker_name: string | null;
   status: "active" | "cancelled";
   payment_plan_available: boolean;
+  correction_start_month: number;
   notes: string | null;
   clients: Client | Client[] | null;
   units: Unit | Unit[] | null;
-  projects: { id: string; name: string; code: string | null } | { id: string; name: string; code: string | null }[] | null;
+  projects:
+    | { id: string; name: string; code: string | null }
+    | { id: string; name: string; code: string | null }[]
+    | null;
 };
 
 type Receivable = {
@@ -61,8 +65,14 @@ type Receivable = {
   sequence_total: number;
   due_date: string;
   amount: number;
+  adjusted_amount: number;
+  correction_amount: number;
   adjustment_index: string | null;
   correction_base_month: string | null;
+  correction_base_value: number | null;
+  correction_reference_month: string | null;
+  correction_reference_value: number | null;
+  correction_locked: boolean;
   interest_rate_monthly: number | null;
   status: "open" | "paid" | "cancelled";
   paid_at: string | null;
@@ -71,15 +81,15 @@ type Receivable = {
 };
 
 type Summary = {
-  contracted_amount: number;
+  base_amount: number;
+  updated_amount: number;
+  correction_amount: number;
   total_count: number;
   open_count: number;
   paid_count: number;
   overdue_count: number;
-  planned_amount: number;
   open_amount: number;
   paid_amount: number;
-  unplanned_amount: number;
 };
 
 const categoryLabels: Record<string, string> = {
@@ -96,7 +106,15 @@ function relatedOne<T>(value: T | T[] | null): T | null {
 }
 
 function money(value: number | null | undefined) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value ?? 0));
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(value ?? 0));
+}
+
+function decimal(value: number | null | undefined, maximumFractionDigits = 4) {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits }).format(Number(value));
 }
 
 function inputMoney(value: number | null | undefined) {
@@ -129,7 +147,9 @@ export default async function SaleDetailPage({
 
   const saleResult = await supabase
     .from("sales")
-    .select("id, project_id, client_id, unit_id, number, source_code, contract_number, sale_date, total_amount, commission_pct, commission_amount, broker_name, status, payment_plan_available, notes, clients(id, name, tax_id), units(id, code, floor, type, status), projects(id, name, code)")
+    .select(
+      "id, project_id, client_id, unit_id, number, source_code, contract_number, sale_date, total_amount, commission_pct, commission_amount, broker_name, status, payment_plan_available, correction_start_month, notes, clients(id, name, tax_id), units(id, code, floor, type, status), projects(id, name, code)",
+    )
     .eq("id", saleId)
     .eq("company_id", companyId)
     .maybeSingle();
@@ -161,7 +181,9 @@ export default async function SaleDetailPage({
       .order("code"),
     supabase
       .from("receivables")
-      .select("id, category, description, sequence_number, sequence_total, due_date, amount, adjustment_index, correction_base_month, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name")
+      .select(
+        "id, category, description, sequence_number, sequence_total, due_date, amount, adjusted_amount, correction_amount, adjustment_index, correction_base_month, correction_base_value, correction_reference_month, correction_reference_value, correction_locked, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name",
+      )
       .eq("company_id", companyId)
       .eq("sale_id", saleId)
       .order("due_date", { ascending: true })
@@ -194,16 +216,17 @@ export default async function SaleDetailPage({
   const units = (unitsResult.data ?? []) as Unit[];
   const receivables = (receivablesResult.data ?? []) as Receivable[];
   const correctionIndices = (correctionIndicesResult.data ?? []) as CorrectionIndex[];
+  const defaultCorrectionIndexId = correctionIndices.find((index) => index.code === "CUB-SC")?.id ?? "";
   const summary = (summaryResult.data ?? {
-    contracted_amount: sale.total_amount,
+    base_amount: 0,
+    updated_amount: 0,
+    correction_amount: 0,
     total_count: 0,
     open_count: 0,
     paid_count: 0,
     overdue_count: 0,
-    planned_amount: 0,
     open_amount: 0,
     paid_amount: 0,
-    unplanned_amount: sale.total_amount,
   }) as Summary;
   const privileged = roleKey === "owner" || roleKey === "admin";
   const canEditSale = salesManageResult.data === true || privileged;
@@ -237,20 +260,22 @@ export default async function SaleDetailPage({
         <div>
           <span>Unidade e cliente</span>
           <h2>{unit?.code || "Unidade"} · {client?.name || "Cliente"}</h2>
-          <p>Contrato {sale.contract_number || "sem numeração"} · venda em {dateBR(sale.sale_date)}</p>
+          <p>
+            Contrato {sale.contract_number || "sem numeração"} · venda em {dateBR(sale.sale_date)} · mês 0 da correção {monthBR(`${sale.sale_date.slice(0, 7)}-01`)}
+          </p>
         </div>
         <div className="sale-detail-values">
-          <div><span>Valor contratado</span><strong>{money(sale.total_amount)}</strong></div>
-          <div><span>Plano cadastrado</span><strong>{money(summary.planned_amount)}</strong></div>
-          <div><span>A detalhar</span><strong>{money(summary.unplanned_amount)}</strong></div>
+          <div><span>Valor contrato</span><strong>{money(summary.base_amount)}</strong></div>
+          <div><span>Valor atualizado</span><strong>{money(summary.updated_amount)}</strong></div>
+          <div><span>Correção acumulada</span><strong>{money(summary.correction_amount)}</strong></div>
         </div>
       </section>
 
       <section className="finance-summary-grid sale-finance-summary">
         <article><span>Parcelas</span><strong>{summary.total_count}</strong><small>{summary.open_count} em aberto</small></article>
-        <article><span>Em aberto</span><strong>{money(summary.open_amount)}</strong><small>{summary.overdue_count} vencida(s)</small></article>
+        <article><span>Em aberto</span><strong>{money(summary.open_amount)}</strong><small>valores atualizados pelo último CUB disponível · {summary.overdue_count} vencida(s)</small></article>
         <article><span>Recebido</span><strong>{money(summary.paid_amount)}</strong><small>{summary.paid_count} parcela(s)</small></article>
-        <article><span>Situação do plano</span><strong>{summary.unplanned_amount <= 0.01 ? "Completo" : "Incompleto"}</strong><small>{sale.payment_plan_available ? "plano iniciado" : "sem parcelas"}</small></article>
+        <article><span>Regra da correção</span><strong>Mês {sale.correction_start_month}</strong><small>mês da venda = 0 · parcelas futuras usam o CUB mais recente</small></article>
       </section>
 
       <section className="sale-detail-columns">
@@ -308,7 +333,7 @@ export default async function SaleDetailPage({
                 </label>
                 <label>Descrição<input name="description" placeholder="Ex.: Mensais até as chaves" /></label>
                 <label>Primeiro vencimento<input name="first_due_date" type="date" required /></label>
-                <label>Valor por parcela<input name="amount" inputMode="decimal" placeholder="0,00" required /></label>
+                <label>Valor base por parcela<input name="amount" inputMode="decimal" placeholder="0,00" required /></label>
                 <label>Quantidade<input name="quantity" type="number" min={1} max={240} defaultValue={1} required /></label>
                 <label>Periodicidade
                   <select name="frequency" defaultValue="monthly">
@@ -321,12 +346,13 @@ export default async function SaleDetailPage({
                   </select>
                 </label>
                 <label>Índice de correção
-                  <select name="correction_index_id" defaultValue="">
+                  <select name="correction_index_id" defaultValue={defaultCorrectionIndexId}>
                     <option value="">Sem correção</option>
                     {correctionIndices.map((index) => <option key={index.id} value={index.id}>{index.code} · {index.unit_label}</option>)}
                   </select>
                 </label>
-                <label>Mês-base da correção<input name="correction_base_month" type="month" defaultValue={sale.sale_date.slice(0, 7)} /></label>
+                <label>Mês 0 da correção<input value={sale.sale_date.slice(0, 7)} type="month" readOnly /></label>
+                <label>Início do reajuste<input value={`Mês ${sale.correction_start_month}`} readOnly /></label>
                 <label>Juros ao mês (%)<input name="interest_rate_monthly" inputMode="decimal" placeholder="0,00" /></label>
                 <label className="registry-wide">Observações<textarea name="notes" rows={3} /></label>
               </div>
@@ -339,27 +365,44 @@ export default async function SaleDetailPage({
       <section className="registry-table-panel sale-plan-table-panel">
         <div className="section-heading">
           <div><span>Plano do contrato</span><h2>Parcelas da venda</h2></div>
-          <p>{receivables.length} parcela(s) cadastrada(s) · diferença para o contrato: {money(summary.unplanned_amount)}</p>
+          <p>{receivables.length} parcela(s) cadastrada(s) · Valor contrato = soma dos valores base.</p>
         </div>
 
         <div className="registry-table-wrap">
           <table className="registry-table finance-table">
             <thead>
-              <tr><th>Tipo</th><th>Descrição</th><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Correção</th><th>Status</th><th>Ações</th></tr>
+              <tr>
+                <th>Tipo</th><th>Descrição</th><th>Parcela</th><th>Vencimento</th><th>Valor base</th><th>Valor</th><th>Correção</th><th>Status</th><th>Ações</th>
+              </tr>
             </thead>
             <tbody>
               {receivables.map((receivable) => {
                 const overdue = receivable.status === "open" && receivable.due_date < today;
+                const updatedValue = Number(receivable.adjusted_amount ?? receivable.amount);
+                const correctionDetails = [
+                  receivable.correction_base_month ? `base ${monthBR(receivable.correction_base_month)}` : "",
+                  receivable.correction_base_value ? `CUB ${decimal(receivable.correction_base_value, 6)}` : "",
+                  receivable.correction_reference_month ? `aplicado ${monthBR(receivable.correction_reference_month)}` : "",
+                  receivable.correction_reference_value ? `CUB ${decimal(receivable.correction_reference_value, 6)}` : "",
+                  receivable.correction_locked ? "valor histórico" : "automático",
+                ].filter(Boolean).join(" · ");
+
                 return (
                   <tr key={receivable.id}>
                     <td><span>{categoryLabels[receivable.category] || "Outra"}</span></td>
                     <td><strong>{receivable.description}</strong></td>
                     <td>{receivable.sequence_number}/{receivable.sequence_total}</td>
                     <td>{dateBR(receivable.due_date)}</td>
-                    <td><strong>{money(receivable.amount)}</strong>{receivable.status === "paid" ? <small>Recebido: {money(receivable.paid_amount)}</small> : null}</td>
+                    <td><strong>{money(receivable.amount)}</strong><small>lançamento original</small></td>
+                    <td>
+                      <strong>{money(updatedValue)}</strong>
+                      <small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small>
+                      {receivable.status === "paid" ? <small>Recebido: {money(receivable.paid_amount)}</small> : null}
+                    </td>
                     <td>
                       <span>{receivable.adjustment_index || "Sem correção"}</span>
-                      <small>{receivable.correction_base_month ? `Base ${monthBR(receivable.correction_base_month)}` : ""}{receivable.interest_rate_monthly ? ` · ${receivable.interest_rate_monthly}% a.m.` : ""}</small>
+                      <small>{correctionDetails}</small>
+                      {receivable.interest_rate_monthly ? <small>{receivable.interest_rate_monthly}% a.m.</small> : null}
                     </td>
                     <td><span className={`status-badge ${receivable.status}`}>{receivable.status === "paid" ? "Recebida" : receivable.status === "cancelled" ? "Cancelada" : overdue ? "Vencida" : "Em aberto"}</span></td>
                     <td>
@@ -372,7 +415,7 @@ export default async function SaleDetailPage({
                               <input type="hidden" name="sale_id" value={sale.id} />
                               <input type="hidden" name="return_path" value={returnPath} />
                               <label>Data recebida<input name="paid_at" type="date" defaultValue={today} required /></label>
-                              <label>Valor recebido<input name="paid_amount" inputMode="decimal" defaultValue={inputMoney(receivable.amount)} required /></label>
+                              <label>Valor recebido<input name="paid_amount" inputMode="decimal" defaultValue={inputMoney(updatedValue)} required /></label>
                               <label>Conta / banco<input name="paid_account_name" /></label>
                               <button type="submit">Registrar recebimento</button>
                             </form>
@@ -389,7 +432,7 @@ export default async function SaleDetailPage({
                   </tr>
                 );
               })}
-              {receivables.length === 0 ? <tr><td className="empty-table" colSpan={8}>Nenhuma parcela cadastrada. Use o formulário acima para montar o plano desta venda.</td></tr> : null}
+              {receivables.length === 0 ? <tr><td className="empty-table" colSpan={9}>Nenhuma parcela cadastrada. Use o formulário acima para montar o plano desta venda.</td></tr> : null}
             </tbody>
           </table>
         </div>
