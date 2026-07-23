@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppShell } from "@/components/app-shell";
 import { createSupplier, setSupplierStatus } from "@/app/cadastros/actions";
 import { requireCompanyPermission } from "@/lib/workspace";
 
@@ -25,7 +26,7 @@ export default async function SuppliersPage({
   searchParams: Promise<{ q?: string; status?: string; page?: string; error?: string; success?: string }>;
 }) {
   const params = await searchParams;
-  const { supabase, company, companyId } = await requireCompanyPermission("suppliers.view");
+  const { supabase, company, companyId, roleKey } = await requireCompanyPermission("suppliers.view");
   const queryText = (params.q ?? "").trim();
   const status = params.status === "inactive" ? "inactive" : params.status === "active" ? "active" : "";
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
@@ -45,7 +46,7 @@ export default async function SuppliersPage({
     listQuery = listQuery.or(`legal_name.ilike.%${safe}%,trade_name.ilike.%${safe}%,tax_id.ilike.%${safe}%`);
   }
 
-  const [{ data, count, error }, { count: activeCount }, { count: inactiveCount }, { data: canManage }] = await Promise.all([
+  const [{ data, count, error }, { count: activeCount }, { count: inactiveCount }, manageResult] = await Promise.all([
     listQuery,
     supabase.from("suppliers").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "active"),
     supabase.from("suppliers").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "inactive"),
@@ -55,21 +56,17 @@ export default async function SuppliersPage({
   const suppliers = (data ?? []) as Supplier[];
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
 
   return (
-    <main className="registry-page">
-      <header className="settings-header registry-header">
-        <div>
-          <span>Cadastros gerais</span>
-          <h1>Fornecedores</h1>
-          <p>{company.name} · base central compartilhada entre Execução, Suprimentos e Financeiro</p>
-        </div>
-        <div className="registry-header-actions">
-          <Link className="back-link" href="/cadastros/clientes">Clientes</Link>
-          <Link className="back-link" href="/dashboard">Voltar ao dashboard</Link>
-        </div>
-      </header>
-
+    <AppShell
+      activeGroup="system"
+      activeItem="suppliers"
+      eyebrow="Sistema · Cadastros gerais"
+      title="Fornecedores"
+      description={`${company.name} · base central compartilhada entre Execução, Suprimentos e Financeiro.`}
+      actions={<Link className="elos-button" href="/cadastros/clientes">Abrir clientes</Link>}
+    >
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {error ? <div className="auth-message error workspace-message">{error.message}</div> : null}
@@ -89,10 +86,10 @@ export default async function SuppliersPage({
             <option value="inactive">Inativos</option>
           </select>
           <button type="submit">Filtrar</button>
-          {(queryText || status) ? <Link href="/cadastros/fornecedores">Limpar</Link> : null}
+          {(queryText || status) ? <Link href="/cadastros/fornecedores">Limpar</Link> : <span />}
         </form>
 
-        {canManage === true ? (
+        {canManage ? (
           <details className="registry-create">
             <summary>+ Novo fornecedor</summary>
             <form action={createSupplier}>
@@ -119,7 +116,7 @@ export default async function SuppliersPage({
       <section className="registry-table-panel">
         <div className="section-heading">
           <div><span>Base central</span><h2>Fornecedores encontrados</h2></div>
-          <p>{total} registro(s) no filtro atual. Fornecedores não são excluídos; quando necessário, são inativados.</p>
+          <p>{total} registro(s) no filtro atual. Fornecedores são inativados, nunca excluídos.</p>
         </div>
         <div className="registry-table-wrap">
           <table className="registry-table">
@@ -134,7 +131,7 @@ export default async function SuppliersPage({
                   <td>{[supplier.city, supplier.state].filter(Boolean).join(" / ") || "—"}</td>
                   <td><span className={`status-badge ${supplier.status}`}>{supplier.status === "active" ? "Ativo" : "Inativo"}</span></td>
                   <td>
-                    {canManage === true ? (
+                    {canManage ? (
                       <form action={setSupplierStatus}>
                         <input type="hidden" name="supplier_id" value={supplier.id} />
                         <input type="hidden" name="status" value={supplier.status === "active" ? "inactive" : "active"} />
@@ -157,6 +154,6 @@ export default async function SuppliersPage({
           </div>
         </div>
       </section>
-    </main>
+    </AppShell>
   );
 }
