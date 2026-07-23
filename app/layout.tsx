@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import "./workspace.css";
 import "./registry.css";
 import "./finance.css";
+import "./elos-theme.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const ibmPlexSans = IBM_Plex_Sans({
+  variable: "--font-ibm-plex",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -26,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="pt-BR" className={`${ibmPlexSans.variable} ${spaceGrotesk.variable}`}>
       <body>{children}</body>
     </html>
   );
