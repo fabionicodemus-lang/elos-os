@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
 import { createClient } from "@/lib/supabase/server";
 import { addExistingMember, changeMemberRole } from "./actions";
 
@@ -37,6 +37,7 @@ export default async function AccessSettingsPage({
     redirect("/login");
   }
 
+  const userId = typeof authData.claims.sub === "string" ? authData.claims.sub : "";
   const cookieStore = await cookies();
   const companyId = cookieStore.get("elos_company_id")?.value;
 
@@ -44,15 +45,26 @@ export default async function AccessSettingsPage({
     redirect("/dashboard");
   }
 
-  const [{ data: company }, { data: permissionData }] = await Promise.all([
+  const [{ data: company }, { data: permissionData }, { data: currentMembership }] = await Promise.all([
     supabase.from("companies").select("id, name").eq("id", companyId).maybeSingle(),
     supabase.rpc("has_company_permission", {
       target_company_id: companyId,
       target_permission: "admin.users.view",
     }),
+    supabase
+      .from("company_memberships")
+      .select("role_id, roles(key)")
+      .eq("company_id", companyId)
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle(),
   ]);
 
-  if (!company || permissionData !== true) {
+  const roleRelation = currentMembership?.roles as { key?: string } | { key?: string }[] | null | undefined;
+  const currentRoleKey = Array.isArray(roleRelation) ? roleRelation[0]?.key : roleRelation?.key;
+  const privileged = currentRoleKey === "owner" || currentRoleKey === "admin";
+
+  if (!company || (permissionData !== true && !privileged)) {
     redirect("/dashboard");
   }
 
@@ -80,20 +92,17 @@ export default async function AccessSettingsPage({
     ? await supabase.from("profiles").select("id, email, full_name").in("id", userIds)
     : { data: [] };
   const profiles = (profileData ?? []) as Profile[];
-  const canManage = managePermission === true;
+  const canManage = managePermission === true || privileged;
   const assignableRoles = roles.filter((role) => role.key !== "owner");
 
   return (
-    <main className="settings-page">
-      <header className="settings-header">
-        <div>
-          <span>Administração</span>
-          <h1>Usuários e acessos</h1>
-          <p>{company.name}</p>
-        </div>
-        <Link className="back-link" href="/dashboard">Voltar ao dashboard</Link>
-      </header>
-
+    <AppShell
+      activeGroup="system"
+      activeItem="users"
+      eyebrow="Sistema · Administração"
+      title="Usuários e Acessos"
+      description={`${company.name} · papéis, permissões e pessoas autorizadas a acessar o ambiente.`}
+    >
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
 
@@ -173,6 +182,6 @@ export default async function AccessSettingsPage({
           ))}
         </div>
       </section>
-    </main>
+    </AppShell>
   );
 }
