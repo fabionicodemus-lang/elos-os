@@ -97,6 +97,7 @@ export async function AppShell({
       "receivables.manage",
       "indices.view",
       "indices.manage",
+      "cashflow.view",
       "execution.view",
       "quality.view",
       "commercial.view",
@@ -110,6 +111,7 @@ export async function AppShell({
   const financeReceivablesHref = can("receivables.view") ? "/financeiro/contas-a-receber" : undefined;
   const commercialReceivablesHref = can("receivables.view") ? "/comercial/planos-de-pagamento" : undefined;
   const indicesHref = can("indices.view") ? "/financeiro/indices-de-correcao" : undefined;
+  const cashflowHref = can("cashflow.view") ? "/financeiro/fluxo-de-caixa" : undefined;
 
   const groups: ShellNavigationGroup[] = [
     {
@@ -193,7 +195,7 @@ export async function AppShell({
         { label: "Contas a Pagar", href: can("payables.view") ? "/financeiro/contas-a-pagar" : undefined, active: activeItem === "payables", disabled: !can("payables.view") },
         { label: "Contas a Receber", href: financeReceivablesHref, active: activeItem === "receivables", disabled: !financeReceivablesHref },
         { label: "Índices de Correção", href: indicesHref, active: activeItem === "correction-indices", disabled: !indicesHref },
-        { label: "Fluxo de Caixa", disabled: true },
+        { label: "Fluxo de Caixa", href: cashflowHref, active: activeItem === "cashflow", disabled: !cashflowHref },
         { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "finance-suppliers", disabled: !can("suppliers.view") },
         { label: "Notas Manuais", disabled: true },
         { label: "Notas Eletrônicas · XML", disabled: true },
@@ -253,7 +255,7 @@ export async function AppShell({
           <div className="elos-page-top">
             <div>
               <div className="elos-eyebrow">{eyebrow}</div>
-              <h1>{title}<span className="elos-module-version">V0.25.3 · sistema integrado</span></h1>
+              <h1>{title}<span className="elos-module-version">V0.25.4 · sistema integrado</span></h1>
               {description ? <p>{description}</p> : null}
             </div>
             {actions ? <div className="elos-page-actions">{actions}</div> : null}
