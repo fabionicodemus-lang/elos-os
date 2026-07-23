@@ -4,6 +4,7 @@ import "./globals.css";
 import "./workspace.css";
 import "./registry.css";
 import "./finance.css";
+import "./receivables.css";
 import "./elos-theme.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
