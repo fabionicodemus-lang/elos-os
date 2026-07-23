@@ -95,6 +95,8 @@ export async function AppShell({
       "sales.manage",
       "receivables.view",
       "receivables.manage",
+      "indices.view",
+      "indices.manage",
       "execution.view",
       "quality.view",
       "commercial.view",
@@ -106,6 +108,7 @@ export async function AppShell({
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
   const activeProject = projects.find((project) => project.id === projectId) ?? null;
   const receivablesHref = can("receivables.view") ? "/comercial/planos-de-pagamento" : undefined;
+  const indicesHref = can("indices.view") ? "/financeiro/indices-de-correcao" : undefined;
 
   const groups: ShellNavigationGroup[] = [
     {
@@ -188,6 +191,7 @@ export async function AppShell({
       items: [
         { label: "Contas a Pagar", href: can("payables.view") ? "/financeiro/contas-a-pagar" : undefined, active: activeItem === "payables", disabled: !can("payables.view") },
         { label: "Contas a Receber", href: receivablesHref, active: activeItem === "receivables", disabled: !receivablesHref },
+        { label: "Índices de Correção", href: indicesHref, active: activeItem === "correction-indices", disabled: !indicesHref },
         { label: "Fluxo de Caixa", disabled: true },
         { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "finance-suppliers", disabled: !can("suppliers.view") },
         { label: "Notas Manuais", disabled: true },
