@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { DateRangeFilter } from "@/components/date-range-filter";
+import { resolveDateRange } from "@/lib/date-range";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { cancelReceivable, createReceivableSeries, markReceivablePaid } from "./actions";
 
@@ -102,6 +104,7 @@ export default async function PaymentPlansPage({
     status?: string;
     category?: string;
     sale?: string;
+    period?: string;
     from?: string;
     to?: string;
     page?: string;
@@ -115,8 +118,9 @@ export default async function PaymentPlansPage({
   const status = ["open", "paid", "cancelled"].includes(params.status ?? "") ? params.status! : "";
   const category = categoryLabels[params.category ?? ""] ? params.category! : "";
   const saleId = params.sale ?? "";
-  const dateFrom = params.from ?? "";
-  const dateTo = params.to ?? "";
+  const dateRange = resolveDateRange(params.period, params.from, params.to);
+  const dateFrom = dateRange.from;
+  const dateTo = dateRange.to;
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
   const fromRow = (page - 1) * PAGE_SIZE;
   const toRow = fromRow + PAGE_SIZE - 1;
@@ -200,6 +204,7 @@ export default async function PaymentPlansPage({
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const totalPages = Math.max(1, Math.ceil((listResult.count ?? 0) / PAGE_SIZE));
   const project = projectResult.data;
+  const paginationQuery = `q=${encodeURIComponent(queryText)}&status=${status}&category=${category}&sale=${saleId}&period=${dateRange.preset}&from=${dateFrom}&to=${dateTo}`;
 
   return (
     <AppShell
@@ -270,8 +275,7 @@ export default async function PaymentPlansPage({
                 <option value="">Todos os tipos</option>
                 {Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
-              <input name="from" type="date" defaultValue={dateFrom} />
-              <input name="to" type="date" defaultValue={dateTo} />
+              <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateFrom} defaultTo={dateTo} />
               <button type="submit">Filtrar</button>
               <Link href="/comercial/planos-de-pagamento">Limpar</Link>
             </form>
@@ -385,8 +389,8 @@ export default async function PaymentPlansPage({
             <div className="registry-pagination">
               <span>Página {page} de {totalPages}</span>
               <div>
-                {page > 1 ? <Link href={`?q=${encodeURIComponent(queryText)}&status=${status}&category=${category}&sale=${saleId}&from=${dateFrom}&to=${dateTo}&page=${page - 1}`}>Anterior</Link> : null}
-                {page < totalPages ? <Link href={`?q=${encodeURIComponent(queryText)}&status=${status}&category=${category}&sale=${saleId}&from=${dateFrom}&to=${dateTo}&page=${page + 1}`}>Próxima</Link> : null}
+                {page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
+                {page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
               </div>
             </div>
           </section>
