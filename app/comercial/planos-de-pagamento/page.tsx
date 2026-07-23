@@ -3,17 +3,8 @@ import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { cancelReceivable, createReceivableSeries, markReceivablePaid } from "./actions";
 
-type Client = {
-  id: string;
-  name: string;
-  tax_id: string | null;
-};
-
-type Unit = {
-  id: string;
-  code: string;
-};
-
+type Client = { id: string; name: string; tax_id: string | null };
+type Unit = { id: string; code: string };
 type CorrectionIndex = {
   id: string;
   code: string;
@@ -21,17 +12,15 @@ type CorrectionIndex = {
   value_type: "index_number" | "percentage";
   unit_label: string;
 };
-
 type SaleOption = {
   id: string;
   number: string;
-  sale_date?: string;
+  sale_date: string;
   total_amount: number;
   payment_plan_available: boolean;
   clients: Client | Client[] | null;
   units: Unit | Unit[] | null;
 };
-
 type Receivable = {
   id: string;
   sale_id: string;
@@ -41,8 +30,14 @@ type Receivable = {
   sequence_total: number;
   due_date: string;
   amount: number;
+  adjusted_amount: number;
+  correction_amount: number;
   adjustment_index: string | null;
   correction_base_month: string | null;
+  correction_base_value: number | null;
+  correction_reference_month: string | null;
+  correction_reference_value: number | null;
+  correction_locked: boolean;
   interest_rate_monthly: number | null;
   status: "open" | "paid" | "cancelled";
   paid_at: string | null;
@@ -52,22 +47,20 @@ type Receivable = {
   units: Unit | Unit[] | null;
   sales: { id: string; number: string; total_amount: number } | { id: string; number: string; total_amount: number }[] | null;
 };
-
 type Summary = {
-  contracted_amount: number;
+  base_amount: number;
+  updated_amount: number;
+  correction_amount: number;
   active_sales: number;
   total_count: number;
   open_count: number;
   paid_count: number;
   overdue_count: number;
-  planned_amount: number;
   open_amount: number;
   paid_amount: number;
-  unplanned_amount: number;
 };
 
 const PAGE_SIZE = 50;
-
 const categoryLabels: Record<string, string> = {
   entry: "Entrada",
   monthly: "Mensal",
@@ -80,21 +73,25 @@ const categoryLabels: Record<string, string> = {
 function relatedOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
 }
-
 function money(value: number | null | undefined) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value ?? 0));
 }
-
+function decimal(value: number | null | undefined, maximumFractionDigits = 4) {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits }).format(Number(value));
+}
 function dateBR(value: string | null) {
   if (!value) return "—";
   const [year, month, day] = value.split("-");
   return `${day}/${month}/${year}`;
 }
-
 function monthBR(value: string | null) {
   if (!value) return "";
   const [year, month] = value.split("-");
   return `${month}/${year}`;
+}
+function inputMoney(value: number | null | undefined) {
+  return Number(value ?? 0).toFixed(2).replace(".", ",");
 }
 
 export default async function PaymentPlansPage({
@@ -136,19 +133,17 @@ export default async function PaymentPlansPage({
     .eq("status", "active")
     .order("sale_date", { ascending: false })
     .limit(500);
-
   if (projectId) salesQuery = salesQuery.eq("project_id", projectId);
 
   let listQuery = supabase
     .from("receivables")
     .select(
-      "id, sale_id, category, description, sequence_number, sequence_total, due_date, amount, adjustment_index, correction_base_month, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name, clients(id, name, tax_id), units(id, code), sales(id, number, total_amount)",
+      "id, sale_id, category, description, sequence_number, sequence_total, due_date, amount, adjusted_amount, correction_amount, adjustment_index, correction_base_month, correction_base_value, correction_reference_month, correction_reference_value, correction_locked, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name, clients(id, name, tax_id), units(id, code), sales(id, number, total_amount)",
       { count: "exact" },
     )
     .eq("company_id", companyId)
     .order("due_date", { ascending: true })
     .range(fromRow, toRow);
-
   if (projectId) listQuery = listQuery.eq("project_id", projectId);
   if (saleId) listQuery = listQuery.eq("sale_id", saleId);
   if (status) listQuery = listQuery.eq("status", status);
@@ -185,22 +180,22 @@ export default async function PaymentPlansPage({
     listResult.error?.code === "42P01" ||
     listResult.error?.message.includes("receivables") ||
     summaryResult.error?.message.includes("receivables_summary");
-
   const sales = (salesResult.data ?? []) as unknown as SaleOption[];
   const receivables = (listResult.data ?? []) as unknown as Receivable[];
   const correctionIndices = (correctionIndicesResult.data ?? []) as CorrectionIndex[];
+  const defaultCorrectionIndexId = correctionIndices.find((index) => index.code === "CUB-SC")?.id ?? "";
   const selectedSale = sales.find((sale) => sale.id === saleId) ?? null;
   const summary = (summaryResult.data ?? {
-    contracted_amount: 0,
+    base_amount: 0,
+    updated_amount: 0,
+    correction_amount: 0,
     active_sales: 0,
     total_count: 0,
     open_count: 0,
     paid_count: 0,
     overdue_count: 0,
-    planned_amount: 0,
     open_amount: 0,
     paid_amount: 0,
-    unplanned_amount: 0,
   }) as Summary;
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const totalPages = Math.max(1, Math.ceil((listResult.count ?? 0) / PAGE_SIZE));
@@ -223,22 +218,20 @@ export default async function PaymentPlansPage({
     >
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
-      {correctionIndicesResult.error ? (
-        <div className="auth-message error workspace-message">Instale o cadastro de índices para usar CUB-SC, IPCA e INCC.</div>
-      ) : null}
+      {correctionIndicesResult.error ? <div className="auth-message error workspace-message">Instale o cadastro de índices para usar CUB-SC, IPCA e INCC.</div> : null}
 
       {schemaMissing ? (
         <section className="setup-panel">
           <span>Banco de dados pendente</span>
           <h2>Instale a estrutura de contas a receber</h2>
-          <p>Execute no SQL Editor do Supabase o arquivo <code>supabase/migrations/20260723_0005_receivables.sql</code>.</p>
+          <p>Execute as migrations do módulo financeiro no SQL Editor do Supabase.</p>
         </section>
       ) : (
         <>
           <section className="finance-summary-grid">
-            <article><span>Valor contratado</span><strong>{money(summary.contracted_amount)}</strong><small>{summary.active_sales} venda(s) ativa(s)</small></article>
-            <article><span>Plano cadastrado</span><strong>{money(summary.planned_amount)}</strong><small>{summary.total_count} parcela(s)</small></article>
-            <article><span>Em aberto</span><strong>{money(summary.open_amount)}</strong><small>{summary.open_count} parcela(s) · {summary.overdue_count} vencida(s)</small></article>
+            <article><span>Valor contrato</span><strong>{money(summary.base_amount)}</strong><small>soma dos valores base</small></article>
+            <article><span>Valor atualizado</span><strong>{money(summary.updated_amount)}</strong><small>{money(summary.correction_amount)} de correção acumulada</small></article>
+            <article><span>Em aberto</span><strong>{money(summary.open_amount)}</strong><small>{summary.open_count} parcela(s) atualizada(s) · {summary.overdue_count} vencida(s)</small></article>
             <article><span>Recebido</span><strong>{money(summary.paid_amount)}</strong><small>{summary.paid_count} parcela(s) baixada(s)</small></article>
           </section>
 
@@ -247,11 +240,11 @@ export default async function PaymentPlansPage({
               <div>
                 <span>Plano selecionado</span>
                 <h2>{relatedOne(selectedSale.units)?.code} · {relatedOne(selectedSale.clients)?.name}</h2>
-                <p>Venda {selectedSale.number} · contrato de {money(selectedSale.total_amount)}</p>
+                <p>Venda {selectedSale.number} · mês 0 em {monthBR(`${selectedSale.sale_date.slice(0, 7)}-01`)}</p>
               </div>
               <div className="receivable-sale-values">
-                <div><span>Planejado</span><strong>{money(summary.planned_amount)}</strong></div>
-                <div><span>A detalhar</span><strong>{money(summary.unplanned_amount)}</strong></div>
+                <div><span>Valor contrato</span><strong>{money(summary.base_amount)}</strong></div>
+                <div><span>Valor atualizado</span><strong>{money(summary.updated_amount)}</strong></div>
               </div>
             </section>
           ) : null}
@@ -305,25 +298,20 @@ export default async function PaymentPlansPage({
                     </label>
                     <label>Descrição<input name="description" placeholder="Ex.: Mensais até as chaves" /></label>
                     <label>Primeiro vencimento<input name="first_due_date" type="date" required /></label>
-                    <label>Valor de cada parcela<input name="amount" inputMode="decimal" placeholder="0,00" required /></label>
+                    <label>Valor base de cada parcela<input name="amount" inputMode="decimal" placeholder="0,00" required /></label>
                     <label>Quantidade<input name="quantity" type="number" min={1} max={240} defaultValue={1} required /></label>
                     <label>Periodicidade
                       <select name="frequency" defaultValue="monthly">
-                        <option value="once">Única</option>
-                        <option value="monthly">Mensal</option>
-                        <option value="bimonthly">Bimestral</option>
-                        <option value="quarterly">Trimestral</option>
-                        <option value="semiannual">Semestral</option>
-                        <option value="annual">Anual</option>
+                        <option value="once">Única</option><option value="monthly">Mensal</option><option value="bimonthly">Bimestral</option><option value="quarterly">Trimestral</option><option value="semiannual">Semestral</option><option value="annual">Anual</option>
                       </select>
                     </label>
                     <label>Índice de correção
-                      <select name="correction_index_id" defaultValue="">
+                      <select name="correction_index_id" defaultValue={defaultCorrectionIndexId}>
                         <option value="">Sem correção</option>
                         {correctionIndices.map((index) => <option key={index.id} value={index.id}>{index.code} · {index.unit_label}</option>)}
                       </select>
                     </label>
-                    <label>Mês-base da correção<input name="correction_base_month" type="month" defaultValue={selectedSale?.sale_date?.slice(0, 7) ?? today.slice(0, 7)} /></label>
+                    <label>Regra<input value="Mês da venda = 0; reajuste a partir do mês 4" readOnly /></label>
                     <label>Juros ao mês (%)<input name="interest_rate_monthly" inputMode="decimal" placeholder="0,00" /></label>
                     <label className="registry-wide">Observações<textarea name="notes" rows={3} /></label>
                   </div>
@@ -338,28 +326,33 @@ export default async function PaymentPlansPage({
               <div><span>Contas a receber</span><h2>Parcelas do plano</h2></div>
               <p>{listResult.count ?? 0} parcela(s) no filtro atual.</p>
             </div>
-
             <div className="registry-table-wrap">
               <table className="registry-table finance-table">
-                <thead><tr><th>Unidade / cliente</th><th>Tipo / parcela</th><th>Vencimento</th><th>Valor</th><th>Correção</th><th>Status</th><th>Recebimento</th><th>Ação</th></tr></thead>
+                <thead><tr><th>Unidade / cliente</th><th>Tipo / parcela</th><th>Vencimento</th><th>Valor base</th><th>Valor</th><th>Correção</th><th>Status</th><th>Recebimento</th><th>Ação</th></tr></thead>
                 <tbody>
                   {receivables.map((receivable) => {
                     const client = relatedOne(receivable.clients);
                     const unit = relatedOne(receivable.units);
                     const sale = relatedOne(receivable.sales);
                     const overdue = receivable.status === "open" && receivable.due_date < today;
+                    const updatedValue = Number(receivable.adjusted_amount ?? receivable.amount);
+                    const correctionDetails = [
+                      receivable.correction_base_month ? `base ${monthBR(receivable.correction_base_month)}` : "",
+                      receivable.correction_base_value ? `CUB ${decimal(receivable.correction_base_value, 6)}` : "",
+                      receivable.correction_reference_month ? `aplicado ${monthBR(receivable.correction_reference_month)}` : "",
+                      receivable.correction_reference_value ? `CUB ${decimal(receivable.correction_reference_value, 6)}` : "",
+                      receivable.correction_locked ? "histórico" : "automático",
+                    ].filter(Boolean).join(" · ");
                     return (
                       <tr key={receivable.id}>
                         <td><strong>{unit?.code || "—"}</strong><span>{client?.name || "Cliente"}</span><small>Venda {sale?.number}</small></td>
                         <td><strong>{categoryLabels[receivable.category] || receivable.category}</strong><span>{receivable.description}</span><small>{receivable.sequence_number} / {receivable.sequence_total}</small></td>
                         <td>{dateBR(receivable.due_date)}</td>
-                        <td><strong>{money(receivable.amount)}</strong></td>
-                        <td>
-                          <span>{receivable.adjustment_index || "Sem correção"}</span>
-                          <small>{receivable.correction_base_month ? `Base ${monthBR(receivable.correction_base_month)}` : ""}{receivable.interest_rate_monthly ? ` · ${receivable.interest_rate_monthly}% a.m.` : ""}</small>
-                        </td>
+                        <td><strong>{money(receivable.amount)}</strong><small>lançamento original</small></td>
+                        <td><strong>{money(updatedValue)}</strong><small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small></td>
+                        <td><span>{receivable.adjustment_index || "Sem correção"}</span><small>{correctionDetails}</small>{receivable.interest_rate_monthly ? <small>{receivable.interest_rate_monthly}% a.m.</small> : null}</td>
                         <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{overdue ? "Vencida" : receivable.status === "open" ? "Em aberto" : receivable.status === "paid" ? "Recebida" : "Cancelada"}</span></td>
-                        <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : "—"}</span><small>{receivable.paid_at ? `${money(receivable.paid_amount ?? receivable.amount)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
+                        <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : "—"}</span><small>{receivable.paid_at ? `${money(receivable.paid_amount ?? updatedValue)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
                         <td>
                           {canManage && receivable.status === "open" ? (
                             <div className="payable-actions">
@@ -369,7 +362,7 @@ export default async function PaymentPlansPage({
                                   <input type="hidden" name="receivable_id" value={receivable.id} />
                                   <input type="hidden" name="sale_id" value={receivable.sale_id} />
                                   <label>Data<input name="paid_at" type="date" defaultValue={today} required /></label>
-                                  <label>Valor<input name="paid_amount" defaultValue={receivable.amount.toFixed(2)} required /></label>
+                                  <label>Valor<input name="paid_amount" defaultValue={inputMoney(updatedValue)} required /></label>
                                   <label>Conta<input name="paid_account_name" /></label>
                                   <button type="submit">Confirmar</button>
                                 </form>
@@ -385,11 +378,10 @@ export default async function PaymentPlansPage({
                       </tr>
                     );
                   })}
-                  {receivables.length === 0 ? <tr><td className="empty-table" colSpan={8}>Nenhuma parcela cadastrada.</td></tr> : null}
+                  {receivables.length === 0 ? <tr><td className="empty-table" colSpan={9}>Nenhuma parcela cadastrada.</td></tr> : null}
                 </tbody>
               </table>
             </div>
-
             <div className="registry-pagination">
               <span>Página {page} de {totalPages}</span>
               <div>
