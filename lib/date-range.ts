@@ -21,6 +21,17 @@ function localIso(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function brazilCalendarDate(referenceDate: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(referenceDate);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return new Date(Number(values.year), Number(values.month) - 1, Number(values.day));
+}
+
 function startOfWeek(date: Date) {
   const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const day = result.getDay();
@@ -52,7 +63,7 @@ export function resolveDateRange(
   referenceDate = new Date(),
 ) {
   const preset = normalizeDateRangePreset(value, customFrom, customTo);
-  const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+  const today = brazilCalendarDate(referenceDate);
 
   if (preset === "all") return { preset, from: "", to: "" };
   if (preset === "custom") return { preset, from: cleanDate(customFrom), to: cleanDate(customTo) };
