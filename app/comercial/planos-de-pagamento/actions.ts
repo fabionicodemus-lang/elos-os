@@ -71,6 +71,8 @@ export async function createReceivableSeries(formData: FormData) {
   const amount = parseMoney(formData.get("amount"));
   const requestedQuantity = Number.parseInt(String(formData.get("quantity") ?? "1"), 10);
   const quantity = frequency === "once" ? 1 : requestedQuantity;
+  const correctionIndexId = String(formData.get("correction_index_id") ?? "").trim() || null;
+  const correctionBaseMonthInput = String(formData.get("correction_base_month") ?? "").trim();
 
   if (
     !saleId ||
@@ -84,6 +86,10 @@ export async function createReceivableSeries(formData: FormData) {
     quantity > 240
   ) {
     redirect(pageUrl("Informe venda, tipo, vencimento, quantidade e valor válidos.", "error", saleId, returnPath));
+  }
+
+  if (correctionIndexId && !/^\d{4}-\d{2}$/.test(correctionBaseMonthInput)) {
+    redirect(pageUrl("Informe o mês-base da correção monetária.", "error", saleId, returnPath));
   }
 
   const { supabase, companyId, projectId, userId } = await requireCompanyPermission("receivables.manage");
@@ -104,8 +110,38 @@ export async function createReceivableSeries(formData: FormData) {
     redirect(pageUrl("A venda selecionada não pertence ao ambiente ativo ou está cancelada.", "error", saleId, returnPath));
   }
 
+  let correctionIndex: { id: string; code: string } | null = null;
+  let correctionBaseMonth: string | null = null;
+  let correctionBaseValue: number | null = null;
+
+  if (correctionIndexId) {
+    const indexResult = await supabase
+      .from("correction_indices")
+      .select("id, code")
+      .eq("id", correctionIndexId)
+      .eq("company_id", companyId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (!indexResult.data) {
+      redirect(pageUrl("O índice de correção selecionado não está disponível.", "error", saleId, returnPath));
+    }
+
+    correctionIndex = indexResult.data;
+    correctionBaseMonth = `${correctionBaseMonthInput}-01`;
+
+    const baseValueResult = await supabase
+      .from("correction_index_values")
+      .select("value")
+      .eq("company_id", companyId)
+      .eq("correction_index_id", correctionIndexId)
+      .eq("reference_month", correctionBaseMonth)
+      .maybeSingle();
+
+    correctionBaseValue = baseValueResult.data ? Number(baseValueResult.data.value) : null;
+  }
+
   const description = optional(formData, "description") || categoryLabels[category];
-  const adjustmentIndex = optional(formData, "adjustment_index");
   const interestRate = parseMoney(formData.get("interest_rate_monthly"));
   const notes = optional(formData, "notes");
   const stepMonths = frequencyMonths[frequency];
@@ -123,7 +159,10 @@ export async function createReceivableSeries(formData: FormData) {
     sequence_total: quantity,
     due_date: addMonths(firstDueDate, stepMonths * index),
     amount,
-    adjustment_index: adjustmentIndex,
+    adjustment_index: correctionIndex?.code ?? null,
+    correction_index_id: correctionIndex?.id ?? null,
+    correction_base_month: correctionBaseMonth,
+    correction_base_value: correctionBaseValue,
     interest_rate_monthly: Number.isFinite(interestRate) && interestRate >= 0 ? interestRate : null,
     status: "open",
     notes,

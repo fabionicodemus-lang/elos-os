@@ -1,0 +1,113 @@
+.index-summary-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.index-summary-grid article {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: linear-gradient(145deg, #ffffff, #f4fbfa);
+  box-shadow: 0 10px 30px rgba(30, 51, 50, 0.05);
+}
+
+.index-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.index-card-heading span,
+.index-summary-grid p,
+.index-summary-grid small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.index-card-heading strong {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--brand);
+  background: var(--brand-soft);
+  font-size: 11px;
+}
+
+.index-summary-grid h2 {
+  margin: 18px 0 5px;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+}
+
+.index-summary-grid p,
+.index-summary-grid small {
+  margin: 0;
+  display: block;
+}
+
+.index-summary-grid small {
+  margin-top: 7px;
+}
+
+.index-toolbar {
+  align-items: flex-start;
+}
+
+.index-filter {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 130px auto auto;
+  gap: 9px;
+  align-items: center;
+}
+
+.index-filter select,
+.index-filter button {
+  min-height: 44px;
+  border: 1px solid #d7e0df;
+  border-radius: 11px;
+  padding: 0 11px;
+  color: var(--foreground);
+  background: white;
+  font: inherit;
+}
+
+.index-filter button {
+  padding: 0 18px;
+  border-color: var(--brand);
+  color: white;
+  background: var(--brand);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.index-filter a {
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.index-entry-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.index-table {
+  min-width: 980px;
+}
+
+@media (max-width: 960px) {
+  .index-summary-grid,
+  .index-entry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .index-summary-grid,
+  .index-entry-grid,
+  .index-filter {
+    grid-template-columns: 1fr;
+  }
+}
