@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { DateRangeFilter } from "@/components/date-range-filter";
+import { resolveDateRange } from "@/lib/date-range";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 type Client = { id: string; name: string; tax_id: string | null };
@@ -86,6 +88,7 @@ export default async function AccountsReceivablePage({
     status?: string;
     category?: string;
     sale?: string;
+    period?: string;
     from?: string;
     to?: string;
     page?: string;
@@ -97,8 +100,9 @@ export default async function AccountsReceivablePage({
   const status = ["open", "paid", "cancelled"].includes(params.status ?? "") ? params.status! : "";
   const category = categoryLabels[params.category ?? ""] ? params.category! : "";
   const saleId = params.sale ?? "";
-  const dateFrom = params.from ?? "";
-  const dateTo = params.to ?? "";
+  const dateRange = resolveDateRange(params.period, params.from, params.to);
+  const dateFrom = dateRange.from;
+  const dateTo = dateRange.to;
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
   const fromRow = (page - 1) * PAGE_SIZE;
   const toRow = fromRow + PAGE_SIZE - 1;
@@ -164,7 +168,7 @@ export default async function AccountsReceivablePage({
   }) as Summary;
   const totalPages = Math.max(1, Math.ceil((listResult.count ?? 0) / PAGE_SIZE));
   const project = projectResult.data;
-  const queryString = `q=${encodeURIComponent(queryText)}&status=${status}&category=${category}&sale=${saleId}&from=${dateFrom}&to=${dateTo}`;
+  const paginationQuery = `q=${encodeURIComponent(queryText)}&status=${status}&category=${category}&sale=${saleId}&period=${dateRange.preset}&from=${dateFrom}&to=${dateTo}`;
 
   return (
     <AppShell
@@ -209,8 +213,7 @@ export default async function AccountsReceivablePage({
             <option value="">Todos os tipos</option>
             {Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
-          <input name="from" type="date" defaultValue={dateFrom} />
-          <input name="to" type="date" defaultValue={dateTo} />
+          <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateFrom} defaultTo={dateTo} />
           <button type="submit">Filtrar</button>
           <Link href="/financeiro/contas-a-receber">Limpar</Link>
         </form>
@@ -261,8 +264,8 @@ export default async function AccountsReceivablePage({
         <div className="registry-pagination">
           <span>Página {page} de {totalPages}</span>
           <div>
-            {page > 1 ? <Link href={`?${queryString}&page=${page - 1}`}>Anterior</Link> : null}
-            {page < totalPages ? <Link href={`?${queryString}&page=${page + 1}`}>Próxima</Link> : null}
+            {page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
+            {page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
           </div>
         </div>
       </section>
