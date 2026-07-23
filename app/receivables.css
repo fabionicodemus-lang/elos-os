@@ -1,0 +1,136 @@
+.receivable-sale-card {
+  margin-top: 18px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 22px;
+  background: linear-gradient(135deg, #ffffff, #f1faf9);
+  box-shadow: 0 10px 30px rgba(30, 51, 50, 0.05);
+}
+
+.receivable-sale-card > div > span,
+.receivable-sale-values span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.receivable-sale-card h2 {
+  margin: 7px 0 4px;
+  font-size: 21px;
+  letter-spacing: -0.03em;
+}
+
+.receivable-sale-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.receivable-sale-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(145px, 1fr));
+  gap: 10px;
+}
+
+.receivable-sale-values div {
+  min-width: 150px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 135, 128, 0.16);
+  border-radius: 13px;
+  background: white;
+}
+
+.receivable-sale-values strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--brand);
+  font-size: 17px;
+}
+
+.receivable-filter {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(250px, 1.2fr) 140px 145px 135px 135px auto auto;
+  gap: 9px;
+  align-items: center;
+}
+
+.receivable-filter input,
+.receivable-filter select,
+.receivable-filter button {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #d7e0df;
+  border-radius: 11px;
+  padding: 0 11px;
+  color: var(--foreground);
+  background: white;
+  font: inherit;
+}
+
+.receivable-filter button {
+  width: auto;
+  padding: 0 18px;
+  border-color: var(--brand);
+  color: white;
+  background: var(--brand);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.receivable-filter a {
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.receivable-plan-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.status-badge.overdue {
+  color: #a33c3c;
+  background: #fff0f0;
+}
+
+@media (max-width: 1280px) {
+  .receivable-filter {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .receivable-plan-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .receivable-sale-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .receivable-sale-values {
+    width: 100%;
+  }
+
+  .receivable-filter,
+  .receivable-plan-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .receivable-filter,
+  .receivable-plan-grid,
+  .receivable-sale-values {
+    grid-template-columns: 1fr;
+  }
+
+  .receivable-sale-values div {
+    min-width: 0;
+  }
+}
