@@ -24,6 +24,14 @@ type Unit = {
   status: string;
 };
 
+type CorrectionIndex = {
+  id: string;
+  code: string;
+  name: string;
+  value_type: "index_number" | "percentage";
+  unit_label: string;
+};
+
 type Sale = {
   id: string;
   project_id: string;
@@ -54,6 +62,7 @@ type Receivable = {
   due_date: string;
   amount: number;
   adjustment_index: string | null;
+  correction_base_month: string | null;
   interest_rate_monthly: number | null;
   status: "open" | "paid" | "cancelled";
   paid_at: string | null;
@@ -100,6 +109,12 @@ function dateBR(value: string | null) {
   return `${day}/${month}/${year}`;
 }
 
+function monthBR(value: string | null) {
+  if (!value) return "";
+  const [year, month] = value.split("-");
+  return `${month}/${year}`;
+}
+
 export default async function SaleDetailPage({
   params,
   searchParams,
@@ -122,7 +137,15 @@ export default async function SaleDetailPage({
   if (!saleResult.data) notFound();
   const sale = saleResult.data as unknown as Sale;
 
-  const [clientsResult, unitsResult, receivablesResult, summaryResult, salesManageResult, receivablesManageResult] = await Promise.all([
+  const [
+    clientsResult,
+    unitsResult,
+    receivablesResult,
+    summaryResult,
+    salesManageResult,
+    receivablesManageResult,
+    correctionIndicesResult,
+  ] = await Promise.all([
     supabase
       .from("clients")
       .select("id, name, tax_id, status")
@@ -138,7 +161,7 @@ export default async function SaleDetailPage({
       .order("code"),
     supabase
       .from("receivables")
-      .select("id, category, description, sequence_number, sequence_total, due_date, amount, adjustment_index, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name")
+      .select("id, category, description, sequence_number, sequence_total, due_date, amount, adjustment_index, correction_base_month, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name")
       .eq("company_id", companyId)
       .eq("sale_id", saleId)
       .order("due_date", { ascending: true })
@@ -156,6 +179,12 @@ export default async function SaleDetailPage({
       target_company_id: companyId,
       target_permission: "receivables.manage",
     }),
+    supabase
+      .from("correction_indices")
+      .select("id, code, name, value_type, unit_label")
+      .eq("company_id", companyId)
+      .eq("status", "active")
+      .order("code"),
   ]);
 
   const client = relatedOne(sale.clients);
@@ -164,6 +193,7 @@ export default async function SaleDetailPage({
   const clients = (clientsResult.data ?? []) as Client[];
   const units = (unitsResult.data ?? []) as Unit[];
   const receivables = (receivablesResult.data ?? []) as Receivable[];
+  const correctionIndices = (correctionIndicesResult.data ?? []) as CorrectionIndex[];
   const summary = (summaryResult.data ?? {
     contracted_amount: sale.total_amount,
     total_count: 0,
@@ -191,11 +221,17 @@ export default async function SaleDetailPage({
         <>
           <Link className="elos-button" href="/comercial/vendas">Voltar às vendas</Link>
           <Link className="elos-button" href={`/comercial/planos-de-pagamento?sale=${sale.id}`}>Visão financeira</Link>
+          <Link className="elos-button" href="/financeiro/indices-de-correcao">Índices de correção</Link>
         </>
       }
     >
       {messages.error ? <div className="auth-message error workspace-message">{messages.error}</div> : null}
       {messages.success ? <div className="auth-message success workspace-message">{messages.success}</div> : null}
+      {correctionIndicesResult.error ? (
+        <div className="auth-message error workspace-message">
+          Instale o cadastro de índices para usar CUB-SC, IPCA e INCC no plano de pagamento.
+        </div>
+      ) : null}
 
       <section className="sale-detail-hero">
         <div>
@@ -284,7 +320,13 @@ export default async function SaleDetailPage({
                     <option value="annual">Anual</option>
                   </select>
                 </label>
-                <label>Índice de correção<input name="adjustment_index" placeholder="CUB, INCC, IPCA..." /></label>
+                <label>Índice de correção
+                  <select name="correction_index_id" defaultValue="">
+                    <option value="">Sem correção</option>
+                    {correctionIndices.map((index) => <option key={index.id} value={index.id}>{index.code} · {index.unit_label}</option>)}
+                  </select>
+                </label>
+                <label>Mês-base da correção<input name="correction_base_month" type="month" defaultValue={sale.sale_date.slice(0, 7)} /></label>
                 <label>Juros ao mês (%)<input name="interest_rate_monthly" inputMode="decimal" placeholder="0,00" /></label>
                 <label className="registry-wide">Observações<textarea name="notes" rows={3} /></label>
               </div>
@@ -315,7 +357,10 @@ export default async function SaleDetailPage({
                     <td>{receivable.sequence_number}/{receivable.sequence_total}</td>
                     <td>{dateBR(receivable.due_date)}</td>
                     <td><strong>{money(receivable.amount)}</strong>{receivable.status === "paid" ? <small>Recebido: {money(receivable.paid_amount)}</small> : null}</td>
-                    <td><span>{receivable.adjustment_index || "—"}</span><small>{receivable.interest_rate_monthly ? `${receivable.interest_rate_monthly}% a.m.` : ""}</small></td>
+                    <td>
+                      <span>{receivable.adjustment_index || "Sem correção"}</span>
+                      <small>{receivable.correction_base_month ? `Base ${monthBR(receivable.correction_base_month)}` : ""}{receivable.interest_rate_monthly ? ` · ${receivable.interest_rate_monthly}% a.m.` : ""}</small>
+                    </td>
                     <td><span className={`status-badge ${receivable.status}`}>{receivable.status === "paid" ? "Recebida" : receivable.status === "cancelled" ? "Cancelada" : overdue ? "Vencida" : "Em aberto"}</span></td>
                     <td>
                       {canManagePlan && receivable.status === "open" ? (
