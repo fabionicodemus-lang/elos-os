@@ -161,6 +161,17 @@ set updated_at = now()
 where status = 'open'
   and correction_locked = false;
 
+-- Nas parcelas históricas recebidas, registra como correção a diferença já
+-- efetivamente cobrada. O valor recebido e o Valor histórico não são alterados.
+update public.receivables
+set correction_amount = round(adjusted_amount - amount, 2),
+    updated_at = now()
+where source_system = 'koper_flow_receivables'
+  and status = 'paid'
+  and correction_locked = true
+  and abs(coalesce(adjusted_amount, amount) - amount) > 0.004
+  and abs(coalesce(correction_amount, 0)) <= 0.004;
+
 commit;
 
 -- Conferência específica: valores base iguais, na mesma venda e com o mesmo CUB
