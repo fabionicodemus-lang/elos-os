@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { DateRangeFilter } from "@/components/date-range-filter";
+import { dateRangePresetLabels, resolveDateRange } from "@/lib/date-range";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 type Supplier = {
@@ -162,6 +164,7 @@ export default async function CashFlowPage({
     grouping?: string;
     direction?: string;
     situation?: string;
+    period?: string;
     from?: string;
     to?: string;
     page?: string;
@@ -174,8 +177,9 @@ export default async function CashFlowPage({
   const grouping = (["month", "quarter", "year"].includes(params.grouping ?? "") ? params.grouping : "month") as "month" | "quarter" | "year";
   const direction = ["in", "out"].includes(params.direction ?? "") ? params.direction! : "";
   const situation = ["realized", "forecast"].includes(params.situation ?? "") ? params.situation! : "";
-  const dateFrom = cleanDate(params.from);
-  const dateTo = cleanDate(params.to);
+  const dateRange = resolveDateRange(params.period, params.from, params.to);
+  const dateFrom = dateRange.from;
+  const dateTo = dateRange.to;
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
   const projectQuery = projectId
@@ -255,8 +259,11 @@ export default async function CashFlowPage({
     };
   });
 
-  const entries = [...receivableEntries, ...payableEntries]
+  const allEntries = [...receivableEntries, ...payableEntries]
     .filter((entry) => Boolean(entry.effectiveDate))
+    .sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate) || a.direction.localeCompare(b.direction));
+
+  const entries = allEntries
     .filter((entry) => !direction || entry.direction === direction)
     .filter((entry) => !situation || entry.situation === situation)
     .filter((entry) => !dateFrom || entry.effectiveDate >= dateFrom)
@@ -267,8 +274,7 @@ export default async function CashFlowPage({
         .join(" ")
         .toLowerCase()
         .includes(queryText);
-    })
-    .sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate) || a.direction.localeCompare(b.direction));
+    });
 
   const received = entries.filter((entry) => entry.direction === "in" && entry.situation === "realized").reduce((sum, entry) => sum + entry.amount, 0);
   const toReceive = entries.filter((entry) => entry.direction === "in" && entry.situation === "forecast").reduce((sum, entry) => sum + entry.amount, 0);
@@ -318,13 +324,25 @@ export default async function CashFlowPage({
     grouping,
     direction,
     situation,
+    period: dateRange.preset,
     from: dateFrom,
     to: dateTo,
   };
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Todas as obras";
-  const periodDescription = entries.length
-    ? `${dateBR(entries[0]?.effectiveDate)} a ${dateBR(entries[entries.length - 1]?.effectiveDate)}`
-    : "sem lançamentos no filtro";
+  const availableFrom = allEntries[0]?.effectiveDate ?? "";
+  const availableTo = allEntries[allEntries.length - 1]?.effectiveDate ?? "";
+  const displayedFrom = dateRange.preset === "all" ? availableFrom : dateFrom;
+  const displayedTo = dateRange.preset === "all" ? availableTo : dateTo;
+  const periodDescription = displayedFrom || displayedTo
+    ? displayedFrom && displayedTo
+      ? `${dateBR(displayedFrom)} a ${dateBR(displayedTo)}`
+      : displayedFrom
+        ? `a partir de ${dateBR(displayedFrom)}`
+        : `até ${dateBR(displayedTo)}`
+    : "sem lançamentos";
+  const periodHeading = dateRange.preset === "all"
+    ? "Todo o período da obra"
+    : dateRangePresetLabels[dateRange.preset];
 
   return (
     <AppShell
@@ -371,8 +389,7 @@ export default async function CashFlowPage({
             <option value="realized">Somente realizado</option>
             <option value="forecast">Somente previsto</option>
           </select>
-          <input name="from" type="date" defaultValue={dateFrom} />
-          <input name="to" type="date" defaultValue={dateTo} />
+          <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateFrom} defaultTo={dateTo} />
           <button type="submit">Filtrar</button>
           <Link href="/financeiro/fluxo-de-caixa">Limpar</Link>
         </form>
@@ -380,7 +397,7 @@ export default async function CashFlowPage({
 
       <section className="cashflow-chart-panel">
         <div className="section-heading">
-          <div><span>Todo o período da obra</span><h2>Entradas, saídas e saldo acumulado</h2></div>
+          <div><span>{periodHeading}</span><h2>Entradas, saídas e saldo acumulado</h2></div>
           <p>{buckets.length} período(s) · {entries.length} lançamento(s)</p>
         </div>
 
