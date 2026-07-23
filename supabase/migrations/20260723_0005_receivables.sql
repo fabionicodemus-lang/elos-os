@@ -111,8 +111,18 @@ security definer
 set search_path = public
 as $$
 begin
-  perform public.refresh_sale_payment_plan_flag(coalesce(new.sale_id, old.sale_id));
-  return coalesce(new, old);
+  if tg_op = 'DELETE' then
+    perform public.refresh_sale_payment_plan_flag(old.sale_id);
+    return old;
+  end if;
+
+  perform public.refresh_sale_payment_plan_flag(new.sale_id);
+
+  if tg_op = 'UPDATE' and old.sale_id is distinct from new.sale_id then
+    perform public.refresh_sale_payment_plan_flag(old.sale_id);
+  end if;
+
+  return new;
 end;
 $$;
 
