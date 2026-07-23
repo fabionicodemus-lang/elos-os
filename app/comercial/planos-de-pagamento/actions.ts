@@ -72,7 +72,6 @@ export async function createReceivableSeries(formData: FormData) {
   const requestedQuantity = Number.parseInt(String(formData.get("quantity") ?? "1"), 10);
   const quantity = frequency === "once" ? 1 : requestedQuantity;
   const correctionIndexId = String(formData.get("correction_index_id") ?? "").trim() || null;
-  const correctionBaseMonthInput = String(formData.get("correction_base_month") ?? "").trim();
 
   if (
     !saleId ||
@@ -88,10 +87,6 @@ export async function createReceivableSeries(formData: FormData) {
     redirect(pageUrl("Informe venda, tipo, vencimento, quantidade e valor válidos.", "error", saleId, returnPath));
   }
 
-  if (correctionIndexId && !/^\d{4}-\d{2}$/.test(correctionBaseMonthInput)) {
-    redirect(pageUrl("Informe o mês-base da correção monetária.", "error", saleId, returnPath));
-  }
-
   const { supabase, companyId, projectId, userId } = await requireCompanyPermission("receivables.manage");
 
   if (!projectId) {
@@ -100,7 +95,7 @@ export async function createReceivableSeries(formData: FormData) {
 
   const { data: sale } = await supabase
     .from("sales")
-    .select("id, client_id, unit_id, status")
+    .select("id, client_id, unit_id, status, sale_date")
     .eq("id", saleId)
     .eq("company_id", companyId)
     .eq("project_id", projectId)
@@ -128,14 +123,16 @@ export async function createReceivableSeries(formData: FormData) {
     }
 
     correctionIndex = indexResult.data;
-    correctionBaseMonth = `${correctionBaseMonthInput}-01`;
+    correctionBaseMonth = `${sale.sale_date.slice(0, 7)}-01`;
 
     const baseValueResult = await supabase
       .from("correction_index_values")
       .select("value")
       .eq("company_id", companyId)
       .eq("correction_index_id", correctionIndexId)
-      .eq("reference_month", correctionBaseMonth)
+      .lte("reference_month", correctionBaseMonth)
+      .order("reference_month", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     correctionBaseValue = baseValueResult.data ? Number(baseValueResult.data.value) : null;
@@ -165,6 +162,7 @@ export async function createReceivableSeries(formData: FormData) {
     correction_base_value: correctionBaseValue,
     interest_rate_monthly: Number.isFinite(interestRate) && interestRate >= 0 ? interestRate : null,
     status: "open",
+    correction_locked: false,
     notes,
     source_system: "elos_os",
     source_id: `manual_${batchId}_${index + 1}`,
@@ -199,6 +197,7 @@ export async function markReceivablePaid(formData: FormData) {
       paid_at: paidAt,
       paid_amount: paidAmount,
       paid_account_name: optional(formData, "paid_account_name"),
+      correction_locked: true,
       updated_at: new Date().toISOString(),
     })
     .eq("id", receivableId)
@@ -211,7 +210,7 @@ export async function markReceivablePaid(formData: FormData) {
 
   revalidatePath(PATH);
   revalidatePath(returnPath);
-  redirect(pageUrl("Recebimento registrado.", "success", saleId, returnPath));
+  redirect(pageUrl("Recebimento registrado e correção travada.", "success", saleId, returnPath));
 }
 
 export async function cancelReceivable(formData: FormData) {
