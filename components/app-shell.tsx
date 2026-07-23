@@ -107,7 +107,8 @@ export async function AppShell({
   const can = (permission: string) => permissions.has(permission);
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
   const activeProject = projects.find((project) => project.id === projectId) ?? null;
-  const receivablesHref = can("receivables.view") ? "/comercial/planos-de-pagamento" : undefined;
+  const financeReceivablesHref = can("receivables.view") ? "/financeiro/contas-a-receber" : undefined;
+  const commercialReceivablesHref = can("receivables.view") ? "/comercial/planos-de-pagamento" : undefined;
   const indicesHref = can("indices.view") ? "/financeiro/indices-de-correcao" : undefined;
 
   const groups: ShellNavigationGroup[] = [
@@ -190,7 +191,7 @@ export async function AppShell({
       active: activeGroup === "finance",
       items: [
         { label: "Contas a Pagar", href: can("payables.view") ? "/financeiro/contas-a-pagar" : undefined, active: activeItem === "payables", disabled: !can("payables.view") },
-        { label: "Contas a Receber", href: receivablesHref, active: activeItem === "receivables", disabled: !receivablesHref },
+        { label: "Contas a Receber", href: financeReceivablesHref, active: activeItem === "receivables", disabled: !financeReceivablesHref },
         { label: "Índices de Correção", href: indicesHref, active: activeItem === "correction-indices", disabled: !indicesHref },
         { label: "Fluxo de Caixa", disabled: true },
         { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "finance-suppliers", disabled: !can("suppliers.view") },
@@ -210,7 +211,7 @@ export async function AppShell({
         { label: "Propostas", disabled: true },
         { label: "Corretores", disabled: true },
         { label: "Vendas", href: can("sales.view") ? "/comercial/vendas" : undefined, active: activeItem === "sales", disabled: !can("sales.view") },
-        { label: "Planos de Pagamento", href: receivablesHref, active: activeItem === "payment-plans", disabled: !receivablesHref },
+        { label: "Planos de Pagamento", href: commercialReceivablesHref, active: activeItem === "payment-plans", disabled: !commercialReceivablesHref },
       ],
     },
     {
