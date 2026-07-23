@@ -20,6 +20,16 @@ Este repositório transforma o protótipo HTML `Elos_OS_V0.25.3` em uma aplicaç
 - Listas grandes devem usar paginação e filtros no servidor.
 - O primeiro ambiente real de validação será Bossa Empreendimentos / Flow Aptos.
 
+## Padrão visual oficial
+
+- O arquivo de referência `Elos OS - Revisao.html`, entregue em 23/07/2026, é o padrão visual oficial e obrigatório.
+- Toda página protegida deve usar `components/app-shell.tsx` para sidebar, cabeçalho, breadcrumb, seletor de obra e usuário.
+- Não criar cabeçalhos, sidebars, paletas, botões, cards ou tabelas paralelos ao tema oficial.
+- A identidade usa sidebar escura, teal `#008780`, fundo `#eef1f0`, Space Grotesk nos títulos e IBM Plex Sans na interface.
+- Desktop: sidebar e conteúdo com rolagens independentes; cabeçalho sticky.
+- Mobile: menu lateral em drawer, cabeçalho fixo e tabelas com rolagem horizontal.
+- Regras e tokens detalhados estão em `docs/VISUAL_STANDARD.md`.
+
 ## Roadmap
 
 1. Fundação: login, empresas, usuários, perfis, permissões, seleção de empresa e obra, menu e dashboard.
@@ -30,4 +40,4 @@ Este repositório transforma o protótipo HTML `Elos_OS_V0.25.3` em uma aplicaç
 
 ## Passo atual
 
-Entregar integração com Supabase, login, cadastro, confirmação de e-mail, logout e uma página protegida mínima.
+Consolidar o padrão visual oficial nas telas existentes e seguir com o Financeiro e Comercial do Flow.

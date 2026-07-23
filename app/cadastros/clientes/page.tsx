@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppShell } from "@/components/app-shell";
 import { createClient, setClientStatus } from "@/app/cadastros/actions";
 import { requireCompanyPermission } from "@/lib/workspace";
 
@@ -25,7 +26,7 @@ export default async function ClientsPage({
   searchParams: Promise<{ q?: string; status?: string; page?: string; error?: string; success?: string }>;
 }) {
   const params = await searchParams;
-  const { supabase, company, companyId } = await requireCompanyPermission("clients.view");
+  const { supabase, company, companyId, roleKey } = await requireCompanyPermission("clients.view");
   const queryText = (params.q ?? "").trim();
   const status = params.status === "inactive" ? "inactive" : params.status === "active" ? "active" : "";
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
@@ -45,7 +46,7 @@ export default async function ClientsPage({
     listQuery = listQuery.or(`name.ilike.%${safe}%,tax_id.ilike.%${safe}%,email.ilike.%${safe}%`);
   }
 
-  const [{ data, count, error }, { count: activeCount }, { count: inactiveCount }, { data: canManage }] = await Promise.all([
+  const [{ data, count, error }, { count: activeCount }, { count: inactiveCount }, manageResult] = await Promise.all([
     listQuery,
     supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "active"),
     supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "inactive"),
@@ -55,21 +56,17 @@ export default async function ClientsPage({
   const clients = (data ?? []) as Client[];
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
 
   return (
-    <main className="registry-page">
-      <header className="settings-header registry-header">
-        <div>
-          <span>Comercial · Cadastros</span>
-          <h1>Clientes</h1>
-          <p>{company.name} · base central usada por propostas, vendas, contratos e contas a receber</p>
-        </div>
-        <div className="registry-header-actions">
-          <Link className="back-link" href="/cadastros/fornecedores">Fornecedores</Link>
-          <Link className="back-link" href="/dashboard">Voltar ao dashboard</Link>
-        </div>
-      </header>
-
+    <AppShell
+      activeGroup="commercial"
+      activeItem="commercial-clients"
+      eyebrow="Comercial · Cadastros"
+      title="Clientes"
+      description={`${company.name} · base central usada por propostas, vendas, contratos e contas a receber.`}
+      actions={<Link className="elos-button" href="/cadastros/fornecedores">Abrir fornecedores</Link>}
+    >
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {error ? <div className="auth-message error workspace-message">{error.message}</div> : null}
@@ -89,10 +86,10 @@ export default async function ClientsPage({
             <option value="inactive">Inativos</option>
           </select>
           <button type="submit">Filtrar</button>
-          {(queryText || status) ? <Link href="/cadastros/clientes">Limpar</Link> : null}
+          {(queryText || status) ? <Link href="/cadastros/clientes">Limpar</Link> : <span />}
         </form>
 
-        {canManage === true ? (
+        {canManage ? (
           <details className="registry-create">
             <summary>+ Novo cliente</summary>
             <form action={createClient}>
@@ -121,7 +118,7 @@ export default async function ClientsPage({
       <section className="registry-table-panel">
         <div className="section-heading">
           <div><span>Base comercial</span><h2>Clientes encontrados</h2></div>
-          <p>{total} registro(s) no filtro atual. Clientes vinculados a vendas e contratos são inativados, não excluídos.</p>
+          <p>{total} registro(s) no filtro atual. Clientes vinculados a vendas são inativados, nunca excluídos.</p>
         </div>
         <div className="registry-table-wrap">
           <table className="registry-table">
@@ -136,7 +133,7 @@ export default async function ClientsPage({
                   <td>{[client.city, client.state].filter(Boolean).join(" / ") || "—"}</td>
                   <td><span className={`status-badge ${client.status}`}>{client.status === "active" ? "Ativo" : "Inativo"}</span></td>
                   <td>
-                    {canManage === true ? (
+                    {canManage ? (
                       <form action={setClientStatus}>
                         <input type="hidden" name="client_id" value={client.id} />
                         <input type="hidden" name="status" value={client.status === "active" ? "inactive" : "active"} />
@@ -159,6 +156,6 @@ export default async function ClientsPage({
           </div>
         </div>
       </section>
-    </main>
+    </AppShell>
   );
 }

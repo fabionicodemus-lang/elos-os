@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppShell } from "@/components/app-shell";
 import { cancelPayable, createPayable, markPayablePaid } from "./actions";
 import { requireCompanyPermission } from "@/lib/workspace";
 
@@ -65,7 +66,7 @@ export default async function PayablesPage({
   }>;
 }) {
   const params = await searchParams;
-  const { supabase, company, companyId, projectId } = await requireCompanyPermission("payables.view");
+  const { supabase, company, companyId, projectId, roleKey } = await requireCompanyPermission("payables.view");
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
   const fromRow = (page - 1) * PAGE_SIZE;
   const toRow = fromRow + PAGE_SIZE - 1;
@@ -124,25 +125,21 @@ export default async function PayablesPage({
     open_amount: 0,
     paid_amount: 0,
   }) as Summary;
-  const canManage = manageResult.data === true;
+  const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const totalPages = Math.max(1, Math.ceil((listResult.count ?? 0) / PAGE_SIZE));
   const project = projectResult.data;
   const today = new Date().toISOString().slice(0, 10);
+  const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Todas as obras";
 
   return (
-    <main className="registry-page finance-page">
-      <header className="settings-header registry-header">
-        <div>
-          <span>Financeiro</span>
-          <h1>Contas a pagar</h1>
-          <p>{company.name}{project ? ` · ${project.code ? `${project.code} · ` : ""}${project.name}` : " · todas as obras"}</p>
-        </div>
-        <div className="registry-header-actions">
-          <Link className="back-link" href="/cadastros/fornecedores">Fornecedores</Link>
-          <Link className="back-link" href="/dashboard">Voltar ao dashboard</Link>
-        </div>
-      </header>
-
+    <AppShell
+      activeGroup="finance"
+      activeItem="payables"
+      eyebrow="Financeiro"
+      title="Contas a Pagar"
+      description={`${company.name} · ${context} · compromissos, pagamentos e fornecedores da obra.`}
+      actions={<Link className="elos-button" href="/cadastros/fornecedores">Abrir fornecedores</Link>}
+    >
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
 
@@ -229,7 +226,7 @@ export default async function PayablesPage({
                                   <label>Data<input name="paid_at" type="date" defaultValue={today} required /></label>
                                   <label>Valor<input name="paid_amount" defaultValue={payable.amount.toFixed(2)} required /></label>
                                   <label>Conta<input name="paid_account_name" /></label>
-                                  <button type="submit">Confirmar</button>
+                                  <button className="auth-primary" type="submit">Confirmar</button>
                                 </form>
                               </details>
                               <form action={cancelPayable}><input type="hidden" name="payable_id" value={payable.id} /><button className="table-action" type="submit">Cancelar</button></form>
@@ -254,6 +251,6 @@ export default async function PayablesPage({
           </section>
         </>
       )}
-    </main>
+    </AppShell>
   );
 }

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
 import { createClient } from "@/lib/supabase/server";
-import { bootstrapWorkspace, logout, selectWorkspace } from "./actions";
+import { bootstrapWorkspace, selectWorkspace } from "./actions";
 
 type Company = {
   id: string;
@@ -35,48 +36,13 @@ function relatedOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
 }
 
-const registryCatalog = [
-  {
-    key: "suppliers.view",
-    label: "Fornecedores",
-    description: "Base central compartilhada por Execução, Suprimentos e Financeiro.",
-    href: "/cadastros/fornecedores",
-  },
-  {
-    key: "clients.view",
-    label: "Clientes",
-    description: "Clientes e investidores vinculados a propostas, vendas e contratos.",
-    href: "/cadastros/clientes",
-  },
-];
-
 const moduleCatalog = [
-  {
-    key: "execution.view",
-    label: "Execução",
-    description: "Cronograma, diário de obras e rotinas de campo.",
-  },
-  {
-    key: "quality.view",
-    label: "Qualidade",
-    description: "Vistorias, critérios e não conformidades.",
-  },
-  {
-    key: "payables.view",
-    label: "Financeiro",
-    description: "Contas a pagar, pagamentos e compromissos da obra.",
-    href: "/financeiro/contas-a-pagar",
-  },
-  {
-    key: "commercial.view",
-    label: "Comercial",
-    description: "Clientes, unidades, vendas e contratos.",
-  },
-  {
-    key: "documents.view",
-    label: "Documentos",
-    description: "Arquivos, projetos e registros da obra.",
-  },
+  { key: "engineering", label: "Engenharia", description: "Orçamentos, linha de base e planejamento da obra." },
+  { key: "execution", label: "Execução", description: "Produção, diário, qualidade, contratos e controle de campo." },
+  { key: "procurement", label: "Suprimentos", description: "Cotações, pedidos, recebimentos e estoque." },
+  { key: "finance", label: "Financeiro", description: "Contas, pagamentos, notas fiscais e fluxo de caixa.", href: "/financeiro/contas-a-pagar", permission: "payables.view" },
+  { key: "commercial", label: "Comercial", description: "Clientes, propostas, corretores, vendas e contratos.", href: "/cadastros/clientes", permission: "clients.view" },
+  { key: "postwork", label: "Pós-Obra", description: "Assistências técnicas, chamados, vistorias e garantias." },
 ];
 
 export default async function DashboardPage({
@@ -93,7 +59,6 @@ export default async function DashboardPage({
   }
 
   const userId = typeof authData.claims.sub === "string" ? authData.claims.sub : "";
-  const email = typeof authData.claims.email === "string" ? authData.claims.email : "Usuário autenticado";
 
   const membershipResult = await supabase
     .from("company_memberships")
@@ -149,201 +114,157 @@ export default async function DashboardPage({
   const privilegedRole = activeRole?.key === "owner" || activeRole?.key === "admin";
   if (privilegedRole) {
     [
+      "admin.users.view",
       "suppliers.view",
-      "suppliers.manage",
       "clients.view",
-      "clients.manage",
       "payables.view",
-      "payables.manage",
+      "execution.view",
+      "quality.view",
+      "commercial.view",
+      "documents.view",
     ].forEach((permission) => permissionKeys.add(permission));
   }
 
-  const availableRegistries = registryCatalog.filter((registry) => permissionKeys.has(registry.key));
-  const availableModules = moduleCatalog.filter((module) => permissionKeys.has(module.key));
-
-  return (
-    <main className="protected-page">
-      <aside className="protected-sidebar app-sidebar">
-        <div className="sidebar-brand">
-          <div className="protected-logo">E</div>
+  if (schemaMissing || memberships.length === 0 || !activeCompany) {
+    return (
+      <main className="auth-page">
+        <section className="auth-brand">
+          <div className="auth-logo">E</div>
           <div>
-            <strong>Elos OS</strong>
-            <span>Sistema integrado de obras</span>
+            <span className="auth-kicker">Elos OS</span>
+            <h1>Construção conectada</h1>
+            <p>Configure o primeiro ambiente para iniciar a operação multiempresa.</p>
           </div>
-        </div>
-
-        <nav className="sidebar-nav" aria-label="Navegação principal">
-          <Link className="active" href="/dashboard">Início</Link>
-
-          {availableRegistries.length ? (
-            <>
-              <span className="sidebar-section">Cadastros</span>
-              {availableRegistries.map((registry) => (
-                <Link href={registry.href} key={registry.key}>{registry.label}</Link>
-              ))}
-            </>
-          ) : null}
-
-          {activeCompany ? <span className="sidebar-section">Módulos</span> : null}
-          {availableModules.map((module) =>
-            module.href ? (
-              <Link href={module.href} key={module.key}>{module.label}</Link>
-            ) : (
-              <span className="disabled-link" key={module.key}>{module.label}</span>
-            ),
-          )}
-
-          {permissionKeys.has("admin.users.view") ? (
-            <>
-              <span className="sidebar-section">Administração</span>
-              <Link href="/configuracoes/acessos">Usuários e acessos</Link>
-            </>
-          ) : null}
-        </nav>
-      </aside>
-
-      <section className="protected-content workspace-content">
-        <header className="protected-header">
-          <div>
-            <span>{activeCompany ? "Ambiente de trabalho" : "Configuração inicial"}</span>
-            <h1>{activeCompany ? activeCompany.name : "Bem-vindo ao Elos OS"}</h1>
-            {activeProject ? <p className="header-context">Obra: {activeProject.name}</p> : null}
-          </div>
-          <div className="header-actions">
-            <div className="user-chip">
-              <strong>{email}</strong>
-              <span>{activeRole?.name ?? "Novo usuário"}</span>
-            </div>
-            <form action={logout}>
-              <button className="logout-button">Sair</button>
-            </form>
-          </div>
-        </header>
-
-        {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
-        {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
+        </section>
 
         {schemaMissing ? (
-          <section className="setup-panel">
-            <span>Banco de dados pendente</span>
-            <h2>Instale a estrutura multiempresa no Supabase</h2>
-            <p>O login funciona, mas as tabelas de empresas, obras, papéis e permissões ainda precisam ser criadas.</p>
-            <ol>
-              <li>Abra o projeto no Supabase e entre em <strong>SQL Editor</strong>.</li>
-              <li>Abra no GitHub o arquivo <code>supabase/migrations/20260722_0001_multitenancy.sql</code>.</li>
-              <li>Copie todo o conteúdo, execute no Supabase e atualize esta página.</li>
-            </ol>
-          </section>
-        ) : memberships.length === 0 ? (
-          <section className="onboarding-layout">
-            <div className="welcome-card onboarding-copy">
-              <span>Primeiro ambiente</span>
-              <h2>Vamos cadastrar a Bossa e a primeira obra</h2>
-              <p>Esta empresa será isolada das futuras construtoras clientes. Você será cadastrado como proprietário.</p>
-              <div className="foundation-grid compact-grid">
-                <article><span>01</span><h3>Empresa isolada</h3><p>Dados separados por construtora.</p></article>
-                <article><span>02</span><h3>Papéis</h3><p>Diretoria, engenharia, financeiro, comercial e obra.</p></article>
-                <article><span>03</span><h3>Permissões</h3><p>Controle por módulo e ação.</p></article>
-              </div>
-            </div>
-
-            <form className="workspace-form" action={bootstrapWorkspace}>
-              <div><span className="form-kicker">Cadastro inicial</span><h2>Empresa e obra</h2></div>
-              <label>Nome da empresa<input name="company_name" defaultValue="Bossa Empreendimentos" required /></label>
-              <label>Identificador<input name="company_slug" defaultValue="bossa" /></label>
-              <label>Primeira obra<input name="project_name" defaultValue="Flow Aptos" /></label>
-              <label>Código da obra<input name="project_code" defaultValue="FLOW" /></label>
-              <button className="auth-primary" type="submit">Criar ambiente da Bossa</button>
-            </form>
+          <section className="auth-card">
+            <div className="auth-card-header"><span>Banco de dados</span><h2>Instalar estrutura inicial</h2></div>
+            <p>Execute no Supabase o arquivo <code>supabase/migrations/20260722_0001_multitenancy.sql</code>.</p>
           </section>
         ) : (
-          <>
-            <section className="workspace-hero">
-              <div>
-                <span>Ambiente ativo</span>
-                <h2>{activeProject?.name ?? "Visão geral da empresa"}</h2>
-                <p>Você está acessando como <strong>{activeRole?.name}</strong>. Os módulos respeitam as permissões desse papel.</p>
-              </div>
-              <div className="workspace-summary">
-                <div><span>Empresa</span><strong>{activeCompany?.name}</strong></div>
-                <div><span>Obra</span><strong>{activeProject?.name ?? "Todas"}</strong></div>
-                <div><span>Papel</span><strong>{activeRole?.name}</strong></div>
-              </div>
-            </section>
+          <form className="auth-card workspace-form" action={bootstrapWorkspace}>
+            <div className="auth-card-header"><span>Cadastro inicial</span><h2>Empresa e obra</h2></div>
+            <label>Nome da empresa<input name="company_name" defaultValue="Bossa Empreendimentos" required /></label>
+            <label>Identificador<input name="company_slug" defaultValue="bossa" /></label>
+            <label>Primeira obra<input name="project_name" defaultValue="Flow Aptos" /></label>
+            <label>Código da obra<input name="project_code" defaultValue="FLOW" /></label>
+            <button className="auth-primary" type="submit">Criar ambiente da Bossa</button>
+          </form>
+        )}
+      </main>
+    );
+  }
 
-            {availableRegistries.length ? (
-              <section className="registry-dashboard-section">
-                <div className="section-heading">
-                  <div><span>Cadastros integrados</span><h2>Bases centrais da empresa</h2></div>
-                  <p>Fornecedores e clientes são cadastrados antes dos lançamentos financeiros e comerciais.</p>
+  const [supplierCountResult, clientCountResult, payableSummaryResult] = await Promise.all([
+    supabase.from("suppliers").select("id", { count: "exact", head: true }).eq("company_id", activeCompany.id),
+    supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", activeCompany.id),
+    permissionKeys.has("payables.view")
+      ? supabase.rpc("payables_summary", { p_company_id: activeCompany.id, p_project_id: activeProject?.id ?? null })
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  const payableSummary = payableSummaryResult.data as { total_count?: number; total_amount?: number; open_count?: number } | null;
+  const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
+  return (
+    <AppShell
+      activeGroup="home"
+      eyebrow="Início"
+      title="Dashboard Geral"
+      description="Visão consolidada dos módulos, empreendimentos e atividades do Elos OS."
+      actions={permissionKeys.has("admin.users.view") ? <Link className="elos-button" href="/configuracoes/acessos">Usuários e acessos</Link> : undefined}
+    >
+      {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
+      {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
+
+      <section className="dashboard-welcome">
+        <div>
+          <span>VISÃO GERAL DO SISTEMA</span>
+          <h2>Gestão conectada da incorporação ao pós-obra</h2>
+          <p>Use o menu lateral para acessar cada módulo e suas divisões.</p>
+        </div>
+        <Link className="elos-button" href="/financeiro/contas-a-pagar">Abrir operação do Flow</Link>
+      </section>
+
+      <section className="access-summary">
+        <article><span>Fornecedores</span><strong>{supplierCountResult.count ?? 0}</strong></article>
+        <article><span>Clientes</span><strong>{clientCountResult.count ?? 0}</strong></article>
+        <article><span>Contas a pagar</span><strong>{payableSummary?.total_count ?? 0}</strong></article>
+      </section>
+
+      <section className="registry-dashboard-section">
+        <div className="section-heading">
+          <div><span>Módulos do sistema</span><h2>Operação integrada</h2></div>
+          <p>As telas disponíveis já estão ligadas ao ambiente ativo e às permissões do usuário.</p>
+        </div>
+        <div className="module-launch-grid">
+          {moduleCatalog.map((module) => {
+            const available = module.href && (!module.permission || permissionKeys.has(module.permission));
+            return (
+              <article key={module.key}>
+                <span>{available ? "Disponível" : "Em preparação"}</span>
+                <h3>{module.label}</h3>
+                <p>{module.description}</p>
+                {available ? <Link className="module-link" href={module.href!}>Abrir módulo</Link> : null}
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="workspace-hero">
+        <div>
+          <span>Ambiente ativo</span>
+          <h2>{activeProject?.name ?? "Visão geral da empresa"}</h2>
+          <p>Você está acessando como <strong>{activeRole?.name}</strong>. Todos os módulos respeitam esse contexto.</p>
+        </div>
+        <div className="workspace-summary">
+          <div><span>Empresa</span><strong>{activeCompany.name}</strong></div>
+          <div><span>Obra</span><strong>{activeProject?.name ?? "Todas"}</strong></div>
+          <div><span>Financeiro</span><strong>{money.format(Number(payableSummary?.total_amount ?? 0))}</strong></div>
+        </div>
+      </section>
+
+      <section className="environment-panel">
+        <div className="section-heading">
+          <div><span>Trocar ambiente</span><h2>Empresas e obras disponíveis</h2></div>
+          <p>A seleção também pode ser feita diretamente no cabeçalho.</p>
+        </div>
+        <div className="company-list">
+          {memberships.map((membership) => {
+            const company = relatedOne(membership.companies);
+            const role = relatedOne(membership.roles);
+            if (!company) return null;
+            const availableProjects = projects.filter((project) => project.company_id === company.id);
+
+            return (
+              <article key={company.id} className={company.id === activeCompany.id ? "selected" : ""}>
+                <div className="company-card-header">
+                  <div><strong>{company.name}</strong><span>{role?.name}</span></div>
+                  {company.id === activeCompany.id ? <em>Ativa</em> : null}
                 </div>
-                <div className="module-grid registry-module-grid">
-                  {availableRegistries.map((registry) => (
-                    <article key={registry.key}>
-                      <span>Disponível</span>
-                      <h3>{registry.label}</h3>
-                      <p>{registry.description}</p>
-                      <Link className="module-link" href={registry.href}>Abrir cadastro</Link>
-                    </article>
+                <div className="project-buttons">
+                  <form action={selectWorkspace}>
+                    <input type="hidden" name="company_id" value={company.id} />
+                    <input type="hidden" name="project_id" value="" />
+                    <button type="submit">Visão geral</button>
+                  </form>
+                  {availableProjects.map((project) => (
+                    <form action={selectWorkspace} key={project.id}>
+                      <input type="hidden" name="company_id" value={company.id} />
+                      <input type="hidden" name="project_id" value={project.id} />
+                      <button className={project.id === activeProject?.id ? "active" : ""} type="submit">
+                        {project.code ? `${project.code} · ` : ""}{project.name}
+                      </button>
+                    </form>
                   ))}
                 </div>
-              </section>
-            ) : null}
-
-            <section className="module-grid">
-              {availableModules.map((module) => (
-                <article key={module.key}>
-                  <span>{module.href ? "Disponível" : "Em preparação"}</span>
-                  <h3>{module.label}</h3>
-                  <p>{module.description}</p>
-                  {module.href ? (
-                    <Link className="module-link" href={module.href}>Abrir módulo</Link>
-                  ) : (
-                    <button disabled>Em construção</button>
-                  )}
-                </article>
-              ))}
-            </section>
-
-            <section className="environment-panel">
-              <div><span>Trocar ambiente</span><h2>Empresas e obras disponíveis</h2></div>
-              <div className="company-list">
-                {memberships.map((membership) => {
-                  const company = relatedOne(membership.companies);
-                  const role = relatedOne(membership.roles);
-                  if (!company) return null;
-                  const availableProjects = projects.filter((project) => project.company_id === company.id);
-
-                  return (
-                    <article key={company.id} className={company.id === activeCompany?.id ? "selected" : ""}>
-                      <div className="company-card-header">
-                        <div><strong>{company.name}</strong><span>{role?.name}</span></div>
-                        {company.id === activeCompany?.id ? <em>Ativa</em> : null}
-                      </div>
-                      <div className="project-buttons">
-                        <form action={selectWorkspace}>
-                          <input type="hidden" name="company_id" value={company.id} />
-                          <input type="hidden" name="project_id" value="" />
-                          <button type="submit">Visão geral</button>
-                        </form>
-                        {availableProjects.map((project) => (
-                          <form action={selectWorkspace} key={project.id}>
-                            <input type="hidden" name="company_id" value={company.id} />
-                            <input type="hidden" name="project_id" value={project.id} />
-                            <button className={project.id === activeProject?.id ? "active" : ""} type="submit">
-                              {project.code ? `${project.code} · ` : ""}{project.name}
-                            </button>
-                          </form>
-                        ))}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          </>
-        )}
+              </article>
+            );
+          })}
+        </div>
       </section>
-    </main>
+    </AppShell>
   );
 }
