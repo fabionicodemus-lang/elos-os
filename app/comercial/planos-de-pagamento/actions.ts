@@ -6,10 +6,21 @@ import { requireCompanyPermission } from "@/lib/workspace";
 
 const PATH = "/comercial/planos-de-pagamento";
 
-function pageUrl(message: string, type: "error" | "success" = "error", saleId?: string) {
+function safeReturnPath(formData: FormData) {
+  const requested = String(formData.get("return_path") ?? "").trim();
+  if (/^\/comercial\/vendas\/[0-9a-f-]+$/i.test(requested)) return requested;
+  return PATH;
+}
+
+function pageUrl(
+  message: string,
+  type: "error" | "success" = "error",
+  saleId?: string,
+  basePath = PATH,
+) {
   const params = new URLSearchParams({ [type]: message });
-  if (saleId) params.set("sale", saleId);
-  return `${PATH}?${params.toString()}`;
+  if (saleId && basePath === PATH) params.set("sale", saleId);
+  return `${basePath}?${params.toString()}`;
 }
 
 function optional(formData: FormData, key: string) {
@@ -53,6 +64,7 @@ const frequencyMonths: Record<string, number> = {
 
 export async function createReceivableSeries(formData: FormData) {
   const saleId = String(formData.get("sale_id") ?? "");
+  const returnPath = safeReturnPath(formData);
   const category = String(formData.get("category") ?? "");
   const firstDueDate = String(formData.get("first_due_date") ?? "");
   const frequency = String(formData.get("frequency") ?? "once");
@@ -71,13 +83,13 @@ export async function createReceivableSeries(formData: FormData) {
     quantity < 1 ||
     quantity > 240
   ) {
-    redirect(pageUrl("Informe venda, tipo, vencimento, quantidade e valor válidos.", "error", saleId));
+    redirect(pageUrl("Informe venda, tipo, vencimento, quantidade e valor válidos.", "error", saleId, returnPath));
   }
 
   const { supabase, companyId, projectId, userId } = await requireCompanyPermission("receivables.manage");
 
   if (!projectId) {
-    redirect(pageUrl("Selecione uma obra antes de montar o plano.", "error", saleId));
+    redirect(pageUrl("Selecione uma obra antes de montar o plano.", "error", saleId, returnPath));
   }
 
   const { data: sale } = await supabase
@@ -89,7 +101,7 @@ export async function createReceivableSeries(formData: FormData) {
     .maybeSingle();
 
   if (!sale || sale.status !== "active") {
-    redirect(pageUrl("A venda selecionada não pertence ao ambiente ativo ou está cancelada.", "error", saleId));
+    redirect(pageUrl("A venda selecionada não pertence ao ambiente ativo ou está cancelada.", "error", saleId, returnPath));
   }
 
   const description = optional(formData, "description") || categoryLabels[category];
@@ -121,21 +133,23 @@ export async function createReceivableSeries(formData: FormData) {
   }));
 
   const { error } = await supabase.from("receivables").insert(rows);
-  if (error) redirect(pageUrl(error.message, "error", saleId));
+  if (error) redirect(pageUrl(error.message, "error", saleId, returnPath));
 
   revalidatePath(PATH);
   revalidatePath("/comercial/vendas");
-  redirect(pageUrl(`${quantity} parcela(s) adicionada(s) ao plano.`, "success", saleId));
+  revalidatePath(returnPath);
+  redirect(pageUrl(`${quantity} parcela(s) adicionada(s) ao plano.`, "success", saleId, returnPath));
 }
 
 export async function markReceivablePaid(formData: FormData) {
   const receivableId = String(formData.get("receivable_id") ?? "");
   const saleId = String(formData.get("sale_id") ?? "");
+  const returnPath = safeReturnPath(formData);
   const paidAt = String(formData.get("paid_at") ?? "");
   const paidAmount = parseMoney(formData.get("paid_amount"));
 
   if (!receivableId || !paidAt || !Number.isFinite(paidAmount) || paidAmount < 0) {
-    redirect(pageUrl("Informe data e valor recebidos.", "error", saleId));
+    redirect(pageUrl("Informe data e valor recebidos.", "error", saleId, returnPath));
   }
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("receivables.manage");
@@ -154,16 +168,18 @@ export async function markReceivablePaid(formData: FormData) {
 
   if (projectId) query = query.eq("project_id", projectId);
   const { error } = await query;
-  if (error) redirect(pageUrl(error.message, "error", saleId));
+  if (error) redirect(pageUrl(error.message, "error", saleId, returnPath));
 
   revalidatePath(PATH);
-  redirect(pageUrl("Recebimento registrado.", "success", saleId));
+  revalidatePath(returnPath);
+  redirect(pageUrl("Recebimento registrado.", "success", saleId, returnPath));
 }
 
 export async function cancelReceivable(formData: FormData) {
   const receivableId = String(formData.get("receivable_id") ?? "");
   const saleId = String(formData.get("sale_id") ?? "");
-  if (!receivableId) redirect(pageUrl("Parcela inválida.", "error", saleId));
+  const returnPath = safeReturnPath(formData);
+  if (!receivableId) redirect(pageUrl("Parcela inválida.", "error", saleId, returnPath));
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("receivables.manage");
   let query = supabase
@@ -175,9 +191,10 @@ export async function cancelReceivable(formData: FormData) {
 
   if (projectId) query = query.eq("project_id", projectId);
   const { error } = await query;
-  if (error) redirect(pageUrl(error.message, "error", saleId));
+  if (error) redirect(pageUrl(error.message, "error", saleId, returnPath));
 
   revalidatePath(PATH);
   revalidatePath("/comercial/vendas");
-  redirect(pageUrl("Parcela cancelada.", "success", saleId));
+  revalidatePath(returnPath);
+  redirect(pageUrl("Parcela cancelada.", "success", saleId, returnPath));
 }

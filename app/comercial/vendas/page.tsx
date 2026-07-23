@@ -143,7 +143,12 @@ export default async function SalesPage({
       eyebrow="Comercial"
       title="Vendas"
       description={`${company.name}${project ? ` · ${project.code ? `${project.code} · ` : ""}${project.name}` : " · todas as obras"}`}
-      actions={<Link className="elos-button" href="/cadastros/clientes">Abrir clientes</Link>}
+      actions={
+        <>
+          <Link className="elos-button" href="/comercial/planos-de-pagamento">Planos de pagamento</Link>
+          <Link className="elos-button" href="/cadastros/clientes">Abrir clientes</Link>
+        </>
+      }
     >
       {schemaMissing ? (
         <section className="setup-panel">
@@ -162,7 +167,7 @@ export default async function SalesPage({
 
           {summary.payment_plan_missing_count > 0 ? (
             <div className="auth-message error workspace-message">
-              O relatório de vendas importado informa cliente, unidade, data, contrato e valor total, mas não contém o plano de pagamento. Nenhuma parcela a receber foi inventada pelo sistema.
+              Abra uma venda pelo botão <strong>Editar venda</strong> para conferir seus dados e cadastrar o plano de pagamento dentro do próprio contrato.
             </div>
           ) : null}
 
@@ -192,9 +197,9 @@ export default async function SalesPage({
             </div>
 
             <div className="registry-table-wrap">
-              <table className="registry-table finance-table">
+              <table className="registry-table finance-table sales-table">
                 <thead>
-                  <tr><th>Unidade</th><th>Cliente</th><th>Venda / contrato</th><th>Data</th><th>Valor</th><th>Corretor</th><th>Status</th><th>Plano financeiro</th></tr>
+                  <tr><th>Unidade</th><th>Cliente</th><th>Venda / contrato</th><th>Data</th><th>Valor</th><th>Corretor</th><th>Status</th><th>Plano financeiro</th><th>Ação</th></tr>
                 </thead>
                 <tbody>
                   {sales.map((sale) => {
@@ -210,10 +215,11 @@ export default async function SalesPage({
                         <td>{sale.broker_name || "—"}</td>
                         <td><span className={`status-badge ${sale.status}`}>{sale.status === "active" ? "Ativa" : "Cancelada"}</span></td>
                         <td><span className={`status-badge ${sale.payment_plan_available ? "active" : "inactive"}`}>{sale.payment_plan_available ? "Disponível" : "A detalhar"}</span></td>
+                        <td><Link className="table-action table-action-link" href={`/comercial/vendas/${sale.id}`}>Editar venda</Link></td>
                       </tr>
                     );
                   })}
-                  {sales.length === 0 ? <tr><td className="empty-table" colSpan={8}>Nenhuma venda encontrada.</td></tr> : null}
+                  {sales.length === 0 ? <tr><td className="empty-table" colSpan={9}>Nenhuma venda encontrada.</td></tr> : null}
                 </tbody>
               </table>
             </div>
