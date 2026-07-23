@@ -1,0 +1,8 @@
+.date-range-filter {
+  display: contents;
+}
+
+.date-range-filter select,
+.date-range-filter input[type="date"] {
+  min-width: 0;
+}

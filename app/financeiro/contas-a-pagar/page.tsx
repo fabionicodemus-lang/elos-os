@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { DateRangeFilter } from "@/components/date-range-filter";
 import { cancelPayable, createPayable, markPayablePaid } from "./actions";
+import { resolveDateRange } from "@/lib/date-range";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 type Supplier = {
@@ -58,6 +60,7 @@ export default async function PayablesPage({
     q?: string;
     status?: string;
     supplier?: string;
+    period?: string;
     from?: string;
     to?: string;
     page?: string;
@@ -73,8 +76,9 @@ export default async function PayablesPage({
   const queryText = (params.q ?? "").trim();
   const status = ["open", "paid", "cancelled"].includes(params.status ?? "") ? params.status! : "";
   const supplierId = params.supplier ?? "";
-  const dateFrom = params.from ?? "";
-  const dateTo = params.to ?? "";
+  const dateRange = resolveDateRange(params.period, params.from, params.to);
+  const dateFrom = dateRange.from;
+  const dateTo = dateRange.to;
 
   const projectQuery = projectId
     ? supabase.from("projects").select("id, name, code").eq("id", projectId).maybeSingle()
@@ -130,6 +134,7 @@ export default async function PayablesPage({
   const project = projectResult.data;
   const today = new Date().toISOString().slice(0, 10);
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Todas as obras";
+  const paginationQuery = `q=${encodeURIComponent(queryText)}&status=${status}&supplier=${supplierId}&period=${dateRange.preset}&from=${dateFrom}&to=${dateTo}`;
 
   return (
     <AppShell
@@ -171,8 +176,7 @@ export default async function PayablesPage({
                 <option value="">Todos os fornecedores</option>
                 {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.trade_name || supplier.legal_name}</option>)}
               </select>
-              <input name="from" type="date" defaultValue={dateFrom} />
-              <input name="to" type="date" defaultValue={dateTo} />
+              <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateFrom} defaultTo={dateTo} />
               <button type="submit">Filtrar</button>
               <Link href="/financeiro/contas-a-pagar">Limpar</Link>
             </form>
@@ -244,8 +248,8 @@ export default async function PayablesPage({
             <div className="registry-pagination">
               <span>Página {page} de {totalPages}</span>
               <div>
-                {page > 1 ? <Link href={`?q=${encodeURIComponent(queryText)}&status=${status}&supplier=${supplierId}&from=${dateFrom}&to=${dateTo}&page=${page - 1}`}>Anterior</Link> : null}
-                {page < totalPages ? <Link href={`?q=${encodeURIComponent(queryText)}&status=${status}&supplier=${supplierId}&from=${dateFrom}&to=${dateTo}&page=${page + 1}`}>Próxima</Link> : null}
+                {page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
+                {page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
               </div>
             </div>
           </section>

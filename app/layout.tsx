@@ -7,6 +7,7 @@ import "./finance.css";
 import "./receivables.css";
 import "./indices.css";
 import "./cashflow.css";
+import "./date-range.css";
 import "./elos-theme.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
