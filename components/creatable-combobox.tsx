@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 function normalize(value: string) {
   return value
@@ -67,6 +67,15 @@ export function CreatableCombobox({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [selectedValue]);
 
+  useEffect(() => {
+    const typedWithoutConfirmation = Boolean(query.trim()) && !selectedValue;
+    inputRef.current?.setCustomValidity(
+      typedWithoutConfirmation
+        ? "Escolha uma opção da lista ou clique em criar nova opção."
+        : "",
+    );
+  }, [query, selectedValue]);
+
   const normalizedQuery = normalize(query);
   const filteredOptions = allOptions.filter((option) =>
     normalize(option).includes(normalizedQuery),
@@ -96,7 +105,7 @@ export function CreatableCombobox({
     setActiveIndex(0);
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setOpen(true);
