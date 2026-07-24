@@ -1,0 +1,448 @@
+.composition-kpi-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.composition-kpi-grid article,
+.composition-guidance-card,
+.composition-toolbar-card,
+.composition-map-card,
+.composition-detail-card {
+  border: 1px solid var(--line);
+  background: white;
+  box-shadow: 0 10px 30px rgba(30, 51, 50, 0.05);
+}
+
+.composition-kpi-grid article {
+  min-height: 116px;
+  padding: 18px;
+  border-radius: 16px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+}
+
+.composition-kpi-grid span,
+.composition-guidance-card > div > span,
+.composition-map-card .budget-section-head span,
+.composition-detail-head > div > span {
+  color: var(--brand);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.composition-kpi-grid strong {
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 23px;
+}
+
+.composition-kpi-grid small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.composition-guidance-card {
+  margin-top: 18px;
+  padding: 22px;
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: minmax(300px, 0.85fr) minmax(620px, 1.55fr);
+  gap: 28px;
+  align-items: center;
+}
+
+.composition-guidance-card h2 {
+  margin: 6px 0 8px;
+  font-size: 20px;
+}
+
+.composition-guidance-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.composition-guidance-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.composition-guidance-flow article {
+  min-height: 88px;
+  padding: 13px;
+  border: 1px solid #dfe8e7;
+  border-radius: 13px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #f8fbfa;
+}
+
+.composition-guidance-flow b {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: white;
+  background: var(--brand);
+  font-size: 11px;
+}
+
+.composition-guidance-flow span {
+  display: grid;
+  gap: 4px;
+}
+
+.composition-guidance-flow strong {
+  font-size: 12px;
+}
+
+.composition-guidance-flow small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.composition-toolbar-card {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 16px;
+}
+
+.composition-filter {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) minmax(200px, 0.9fr) minmax(200px, 0.9fr) auto auto;
+  gap: 9px;
+  align-items: center;
+}
+
+.composition-filter input,
+.composition-filter select,
+.composition-filter button {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #d7e0df;
+  border-radius: 11px;
+  padding: 0 11px;
+  background: white;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.composition-filter button {
+  width: auto;
+  padding: 0 18px;
+  border-color: var(--brand);
+  background: var(--brand);
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.composition-filter > a {
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.composition-map-card,
+.composition-detail-card {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.composition-map-table {
+  min-width: 1740px;
+}
+
+.composition-map-table td > span,
+.composition-map-table td > strong + span,
+.composition-items-table td > span,
+.composition-items-table td > strong + span {
+  margin-top: 3px;
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.composition-service-selected td {
+  background: #eef8f5;
+}
+
+.composition-total-value {
+  color: var(--brand);
+  font-size: 13px;
+}
+
+.composition-status,
+.composition-price-scope {
+  display: inline-flex !important;
+  width: fit-content;
+  min-height: 24px;
+  margin: 0 !important;
+  padding: 0 8px;
+  border-radius: 999px;
+  align-items: center;
+  font-size: 10px !important;
+  font-weight: 800;
+}
+
+.composition-status.complete {
+  color: #176348;
+  background: #e4f5ea;
+}
+
+.composition-status.missing,
+.composition-price-scope.stale {
+  color: #8a5616;
+  background: #fff1d9;
+}
+
+.composition-status.empty {
+  color: #6f7777;
+  background: #edf0f0;
+}
+
+.composition-open-action {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.composition-detail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.composition-detail-head h2 {
+  margin: 5px 0 6px;
+  font-size: 21px;
+}
+
+.composition-detail-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.composition-cost-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.composition-cost-grid article {
+  min-height: 96px;
+  padding: 15px;
+  border: 1px solid #dfe8e7;
+  border-radius: 13px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  background: #f8fbfa;
+}
+
+.composition-cost-grid article.total {
+  border-color: #b7d9d3;
+  background: #eaf7f3;
+}
+
+.composition-cost-grid span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.composition-cost-grid strong {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 16px;
+}
+
+.composition-cost-grid small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.composition-items-wrap {
+  margin-top: 18px;
+}
+
+.composition-items-table {
+  min-width: 1880px;
+}
+
+.composition-item-missing td {
+  background: #fffaf0;
+}
+
+.composition-item-inactive td {
+  opacity: 0.62;
+}
+
+.composition-price-missing {
+  color: #a36a28 !important;
+  font-style: italic;
+}
+
+.composition-price-scope.project {
+  color: #176348;
+  background: #e4f5ea;
+}
+
+.composition-price-scope.corporate {
+  color: #315c57;
+  background: #e8f1f0;
+}
+
+.composition-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.composition-modal {
+  width: min(920px, calc(100vw - 28px));
+}
+
+.composition-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.composition-modal-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.composition-modal-grid label > span {
+  color: #425150;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.composition-modal-grid label > small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.composition-modal-grid input,
+.composition-modal-grid select,
+.composition-modal-grid textarea {
+  width: 100%;
+  border: 1px solid #d5dfde;
+  border-radius: 10px;
+  padding: 10px 11px;
+  background: white;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.composition-modal-wide,
+.composition-service-context {
+  grid-column: 1 / -1;
+}
+
+.composition-service-context {
+  padding: 13px 15px;
+  border: 1px solid #dce7e5;
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  background: #f6faf9;
+}
+
+.composition-service-context span {
+  color: var(--brand);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.composition-service-context strong {
+  font-size: 13px;
+}
+
+.composition-service-context small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.composition-formula-note {
+  padding: 12px;
+  border: 1px dashed #b9ceca;
+  border-radius: 11px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  color: #47635f;
+  background: #f8fbfa;
+}
+
+.composition-formula-note strong {
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.composition-formula-note span {
+  font-size: 11px;
+}
+
+@media (max-width: 1500px) {
+  .composition-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .composition-cost-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1050px) {
+  .composition-guidance-card {
+    grid-template-columns: 1fr;
+  }
+
+  .composition-guidance-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .composition-kpi-grid,
+  .composition-filter,
+  .composition-guidance-flow,
+  .composition-cost-grid,
+  .composition-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .composition-modal-wide,
+  .composition-service-context {
+    grid-column: auto;
+  }
+
+  .composition-detail-head {
+    display: grid;
+  }
+}
