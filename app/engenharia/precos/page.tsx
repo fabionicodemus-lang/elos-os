@@ -4,6 +4,7 @@ import { DateRangeFilter } from "@/components/date-range-filter";
 import { resolveDateRange } from "@/lib/date-range";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { adoptEngineeringInputPrice, toggleEngineeringInputPriceStatus } from "./actions";
+import { PriceImportDialog } from "./import-dialog";
 import {
   PriceCreateDialog,
   PriceEditDialog,
@@ -199,7 +200,12 @@ export default async function EngineeringPricesPage({
       eyebrow="Engenharia · Orçamento de Obras"
       title="Preços e Cotações"
       description={`${company.name} · histórico comercial dos insumos, com referência corporativa e preços específicos por obra.`}
-      actions={canManage ? <PriceCreateDialog inputs={inputs} suppliers={suppliers} projectName={projectName} /> : undefined}
+      actions={canManage ? (
+        <>
+          <PriceImportDialog projectName={projectName} />
+          <PriceCreateDialog inputs={inputs} suppliers={suppliers} projectName={projectName} />
+        </>
+      ) : undefined}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}

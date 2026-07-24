@@ -1,0 +1,137 @@
+.price-import-button {
+  border-color: #b8cfcc;
+  color: var(--brand);
+  background: #f6fbfa;
+}
+
+.price-import-modal {
+  width: min(860px, calc(100vw - 28px));
+}
+
+.price-import-body {
+  display: grid;
+  gap: 18px;
+}
+
+.price-import-intro {
+  padding: 16px;
+  border: 1px solid #cfe0dd;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: #f2f9f7;
+}
+
+.price-import-intro div {
+  display: grid;
+  gap: 5px;
+}
+
+.price-import-intro strong {
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.price-import-intro p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.price-template-link {
+  min-height: 42px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.price-import-rules {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.price-import-rules > div {
+  min-height: 105px;
+  padding: 14px;
+  border: 1px solid #dce6e4;
+  border-radius: 12px;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  background: #fbfdfc;
+}
+
+.price-import-rules span {
+  color: var(--brand);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.price-import-rules strong {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.price-import-rules small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.price-import-file-field {
+  padding: 18px;
+  border: 1px dashed #9bbab5;
+  border-radius: 14px;
+  display: grid;
+  gap: 10px;
+  background: #fafdfc;
+}
+
+.price-import-file-field > span {
+  color: #314340;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.price-import-file-field input[type="file"] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d4dfdd;
+  border-radius: 10px;
+  background: white;
+  font: inherit;
+}
+
+.price-import-file-field small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.budget-primary-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+@media (max-width: 720px) {
+  .price-import-intro {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .price-import-rules {
+    grid-template-columns: 1fr;
+  }
+
+  .price-template-link {
+    width: 100%;
+  }
+}
