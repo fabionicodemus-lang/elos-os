@@ -13,6 +13,11 @@ function dashboardUrl(message: string, type: "error" | "success" = "error") {
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+
+  const cookieStore = await cookies();
+  cookieStore.delete("elos_company_id");
+  cookieStore.delete("elos_project_id");
+
   redirect("/login");
 }
 
