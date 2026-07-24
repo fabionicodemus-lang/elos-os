@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { toggleEngineeringInputStatus } from "./actions";
 import { InputCreateDialog, InputEditDialog, type EngineeringInputDialogData } from "./input-dialogs";
+import { InputImportDialog } from "./import-dialog";
 
 type EngineeringInput = EngineeringInputDialogData & { updated_at: string };
 
@@ -89,7 +90,7 @@ export default async function EngineeringInputsPage({
       eyebrow="Engenharia · Orçamento de Obras"
       title="Catálogo de Insumos"
       description={`${company.name} · base corporativa de materiais, mão de obra, equipamentos e outros custos, separada do histórico de preços.`}
-      actions={canManage ? <InputCreateDialog families={families} /> : undefined}
+      actions={canManage ? <><InputImportDialog /><InputCreateDialog families={families} /></> : undefined}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
@@ -99,7 +100,8 @@ export default async function EngineeringInputsPage({
         <Link href="/engenharia/orcamentos">▦ Visão geral</Link>
         <Link href="/engenharia/servicos">≡ Serviços</Link>
         <span className="active">◈ Insumos</span>
-        <span>$ Preços e cotações</span>
+        <Link href="/engenharia/precos">$ Preços e cotações</Link>
+        <Link href="/engenharia/composicoes">⌘ Composições</Link>
         <span>∑ Levantamento</span>
         <span>R$ Orçamento analítico</span>
       </nav>
@@ -156,7 +158,7 @@ export default async function EngineeringInputsPage({
                   <td>{canManage ? <div className="input-row-actions"><InputEditDialog input={input} families={families} /><form action={toggleEngineeringInputStatus}><input type="hidden" name="input_id" value={input.id} /><input type="hidden" name="next_status" value={input.status === "active" ? "inactive" : "active"} /><button className={`table-action ${input.status === "active" ? "danger" : ""}`} type="submit">{input.status === "active" ? "Inativar" : "Reativar"}</button></form></div> : "—"}</td>
                 </tr>;
               })}
-              {pageInputs.length === 0 ? <tr><td className="budget-empty-state" colSpan={11}><strong>Nenhum insumo encontrado.</strong><span>Cadastre o primeiro insumo técnico ou altere os filtros.</span></td></tr> : null}
+              {pageInputs.length === 0 ? <tr><td className="budget-empty-state" colSpan={11}><strong>Nenhum insumo encontrado.</strong><span>Cadastre o primeiro insumo técnico, importe uma planilha ou altere os filtros.</span></td></tr> : null}
             </tbody>
           </table>
         </div>
