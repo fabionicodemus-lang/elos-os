@@ -3,6 +3,7 @@
 import * as XLSX from "xlsx";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const LIST_PATH = "/engenharia/precos";
@@ -207,33 +208,45 @@ export async function importEngineeringInputPrices(formData: FormData) {
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("prices.manage");
   const [inputsResult, suppliersResult, projectsResult] = await Promise.all([
-    supabase
-      .from("engineering_inputs")
-      .select("id, code, description")
-      .eq("company_id", companyId)
-      .eq("status", "active")
-      .limit(10000),
-    supabase
-      .from("suppliers")
-      .select("id, legal_name, trade_name, tax_id")
-      .eq("company_id", companyId)
-      .eq("status", "active")
-      .limit(10000),
-    supabase
-      .from("projects")
-      .select("id, name, code")
-      .eq("company_id", companyId)
-      .neq("status", "archived")
-      .limit(2000),
+    fetchAllRows<InputRecord>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("engineering_inputs")
+        .select("id, code, description")
+        .eq("company_id", companyId)
+        .eq("status", "active")
+        .order("code")
+        .range(from, to);
+      return { data: (data ?? []) as InputRecord[], error };
+    }),
+    fetchAllRows<SupplierRecord>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("id, legal_name, trade_name, tax_id")
+        .eq("company_id", companyId)
+        .eq("status", "active")
+        .order("legal_name")
+        .range(from, to);
+      return { data: (data ?? []) as SupplierRecord[], error };
+    }),
+    fetchAllRows<ProjectRecord>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, name, code")
+        .eq("company_id", companyId)
+        .neq("status", "archived")
+        .order("name")
+        .range(from, to);
+      return { data: (data ?? []) as ProjectRecord[], error };
+    }),
   ]);
 
   if (inputsResult.error || suppliersResult.error || projectsResult.error) {
     redirect(resultUrl("Não foi possível carregar os cadastros necessários para validar a planilha."));
   }
 
-  const inputs = (inputsResult.data ?? []) as InputRecord[];
-  const suppliers = (suppliersResult.data ?? []) as SupplierRecord[];
-  const projects = (projectsResult.data ?? []) as ProjectRecord[];
+  const inputs = inputsResult.data;
+  const suppliers = suppliersResult.data;
+  const projects = projectsResult.data;
   const inputMap = new Map(inputs.map((input) => [normalizeText(input.code), input]));
   const supplierTaxMap = new Map(suppliers.map((supplier) => [digits(supplier.tax_id), supplier]).filter(([key]) => Boolean(key)) as [string, SupplierRecord][]);
   const supplierNameMap = new Map<string, SupplierRecord[]>();
