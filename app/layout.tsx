@@ -15,6 +15,7 @@ import "./inputs.css";
 import "./prices.css";
 import "./price-import.css";
 import "./compositions.css";
+import "./takeoffs.css";
 import "./creatable-combobox.css";
 import "./elos-theme.css";
 
