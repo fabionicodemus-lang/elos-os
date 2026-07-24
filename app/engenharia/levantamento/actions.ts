@@ -18,8 +18,11 @@ function optional(formData: FormData, key: string) {
 }
 
 function numberValue(formData: FormData, key: string, fallback = Number.NaN) {
-  const raw = text(formData, key).replace(/\./g, "").replace(",", ".");
-  if (!raw) return fallback;
+  const original = text(formData, key);
+  if (!original) return fallback;
+  const raw = original.includes(",")
+    ? original.replace(/\./g, "").replace(",", ".")
+    : original;
   const value = Number(raw);
   return Number.isFinite(value) ? value : fallback;
 }
@@ -167,7 +170,10 @@ function takeoffPayload(formData: FormData, references: Awaited<ReturnType<typeo
   if (!allowedMethods.has(method) || !allowedStatuses.has(status)) return null;
   if (!Number.isFinite(elementCount) || elementCount < 0 || !Number.isFinite(adjustment)) return null;
   if (!Number.isFinite(repetitions) || repetitions <= 0) return null;
-  if (repetitionOverride && !optional(formData, "repetition_reason")) return null;
+  if (repetitionOverride !== null && !optional(formData, "repetition_reason")) return null;
+  if (method === "area" && (dimensionA === null || dimensionB === null)) return null;
+  if (method === "volume" && (dimensionA === null || dimensionB === null || dimensionC === null)) return null;
+  if (["length", "weight", "custom"].includes(method) && dimensionA === null) return null;
 
   const calculation = calculateTakeoff({
     method,
@@ -207,6 +213,28 @@ function takeoffPayload(formData: FormData, references: Awaited<ReturnType<typeo
   };
 }
 
+async function validateParentLocation({
+  supabase,
+  companyId,
+  projectId,
+  parentId,
+}: {
+  supabase: Awaited<ReturnType<typeof requireCompanyPermission>>["supabase"];
+  companyId: string;
+  projectId: string;
+  parentId: string | null;
+}) {
+  if (!parentId) return true;
+  const { data } = await supabase
+    .from("engineering_takeoff_locations")
+    .select("id")
+    .eq("id", parentId)
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 export async function createEngineeringTakeoffLocation(formData: FormData) {
   const code = text(formData, "code").toUpperCase();
   const name = text(formData, "name");
@@ -222,16 +250,8 @@ export async function createEngineeringTakeoffLocation(formData: FormData) {
 
   const { supabase, companyId, projectId, userId } = await requireCompanyPermission("takeoffs.manage");
   if (!projectId) redirect(resultUrl("Selecione uma obra.", "error", budgetId));
-
-  if (parentId) {
-    const { data: parent } = await supabase
-      .from("engineering_takeoff_locations")
-      .select("id")
-      .eq("id", parentId)
-      .eq("company_id", companyId)
-      .eq("project_id", projectId)
-      .maybeSingle();
-    if (!parent) redirect(resultUrl("O local superior selecionado não pertence à obra.", "error", budgetId));
+  if (!(await validateParentLocation({ supabase, companyId, projectId, parentId }))) {
+    redirect(resultUrl("O local superior selecionado não pertence à obra.", "error", budgetId));
   }
 
   const { error } = await supabase.from("engineering_takeoff_locations").insert({
@@ -274,6 +294,9 @@ export async function updateEngineeringTakeoffLocation(formData: FormData) {
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("takeoffs.manage");
   if (!projectId) redirect(resultUrl("Selecione uma obra.", "error", budgetId));
+  if (!(await validateParentLocation({ supabase, companyId, projectId, parentId }))) {
+    redirect(resultUrl("O local superior selecionado não pertence à obra.", "error", budgetId));
+  }
 
   const { error } = await supabase
     .from("engineering_takeoff_locations")
@@ -342,12 +365,14 @@ export async function advanceEngineeringTakeoffStatus(formData: FormData) {
   if (!takeoffId || !allowedStatuses.has(nextStatus)) redirect(resultUrl("Memória inválida.", "error", budgetId));
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("takeoffs.manage");
+  if (!projectId) redirect(resultUrl("Selecione uma obra.", "error", budgetId));
   const { error } = await supabase
     .from("engineering_takeoffs")
     .update({ status: nextStatus, updated_at: new Date().toISOString() })
     .eq("id", takeoffId)
     .eq("company_id", companyId)
-    .eq("project_id", projectId ?? "");
+    .eq("project_id", projectId)
+    .eq("budget_id", budgetId);
 
   if (error) redirect(resultUrl(error.message, "error", budgetId));
   const message = nextStatus === "approved" ? "Memória aprovada." : nextStatus === "in_review" ? "Memória enviada para conferência." : "Memória reaberta como rascunho.";
@@ -367,6 +392,7 @@ export async function duplicateEngineeringTakeoff(formData: FormData) {
     .eq("id", takeoffId)
     .eq("company_id", companyId)
     .eq("project_id", projectId)
+    .eq("budget_id", budgetId)
     .maybeSingle();
 
   if (readError || !data) redirect(resultUrl(readError?.message ?? "Memória não encontrada.", "error", budgetId));
@@ -393,12 +419,14 @@ export async function toggleEngineeringTakeoffRecordStatus(formData: FormData) {
   if (!takeoffId || !["active", "inactive"].includes(nextStatus)) redirect(resultUrl("Memória inválida.", "error", budgetId));
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("takeoffs.manage");
+  if (!projectId) redirect(resultUrl("Selecione uma obra.", "error", budgetId));
   const { error } = await supabase
     .from("engineering_takeoffs")
     .update({ record_status: nextStatus, updated_at: new Date().toISOString() })
     .eq("id", takeoffId)
     .eq("company_id", companyId)
-    .eq("project_id", projectId ?? "");
+    .eq("project_id", projectId)
+    .eq("budget_id", budgetId);
 
   if (error) redirect(resultUrl(error.message, "error", budgetId));
   revalidatePath(LIST_PATH);
