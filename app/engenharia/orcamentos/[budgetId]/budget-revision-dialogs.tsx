@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { CreatableCombobox } from "@/components/creatable-combobox";
 import {
   closeBudgetRevision,
   createBudgetGroup,
@@ -36,10 +37,12 @@ const statusLabels: Record<Budget["status"], string> = {
 export function BudgetRevisionDialogs({
   budget,
   groups,
+  units,
   itemCount,
 }: {
   budget: Budget;
   groups: BudgetGroup[];
+  units: string[];
   itemCount: number;
 }) {
   const generalRef = useRef<HTMLDialogElement>(null);
@@ -61,7 +64,7 @@ export function BudgetRevisionDialogs({
           </button>
         </>
       ) : null}
-      {!["approved", "archived"].includes(budget.status) ? (
+      {!['approved', 'archived'].includes(budget.status) ? (
         <form action={closeBudgetRevision}>
           <input type="hidden" name="budget_id" value={budget.id} />
           <button className="elos-button budget-close-revision-button" type="submit">
@@ -124,7 +127,17 @@ export function BudgetRevisionDialogs({
             <label><span>Grupo</span><select name="group_id" defaultValue=""><option value="">Sem grupo</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.code} · {group.name}</option>)}</select></label>
             <label><span>Código</span><input name="code" placeholder="Ex.: 01.001" /></label>
             <label className="budget-modal-wide"><span>Descrição do serviço</span><input name="description" placeholder="Serviço conforme projeto, memorial e critério de medição" required /></label>
-            <label><span>Unidade</span><input name="unit" defaultValue="un" required /></label>
+            <label>
+              <span>Unidade</span>
+              <CreatableCombobox
+                name="unit"
+                options={units}
+                initialValue="un"
+                placeholder="Pesquise uma unidade"
+                required
+                createLabel="Criar nova unidade"
+              />
+            </label>
             <label><span>Quantidade</span><input name="quantity" type="number" min="0" step="0.000001" defaultValue="0" /></label>
             <label><span>Material por un.</span><input name="material_unit_cost" type="number" min="0" step="0.000001" defaultValue="0" /></label>
             <label><span>Mão de obra por un.</span><input name="labor_unit_cost" type="number" min="0" step="0.000001" defaultValue="0" /></label>

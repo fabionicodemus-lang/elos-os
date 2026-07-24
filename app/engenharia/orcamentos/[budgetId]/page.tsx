@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { CreatableCombobox } from "@/components/creatable-combobox";
 import { requireCompanyPermission } from "@/lib/workspace";
 import {
   archiveBudget,
@@ -56,6 +57,8 @@ type BudgetSection = {
   allItems: BudgetItem[];
   visibleItems: BudgetItem[];
 };
+
+type UnitRecord = { unit: string };
 
 const statusLabels: Record<Budget["status"], string> = {
   draft: "Rascunho",
@@ -147,13 +150,33 @@ export default async function BudgetDetailPage({
         target_company_id: companyId,
         target_permission: "budgets.manage",
       });
+  const serviceUnitsQuery = supabase
+    .from("engineering_services")
+    .select("unit")
+    .eq("company_id", companyId)
+    .limit(10000);
+  const inputUnitsQuery = supabase
+    .from("engineering_inputs")
+    .select("unit")
+    .eq("company_id", companyId)
+    .limit(10000);
 
-  const [budgetResult, groupsResult, itemsResult, projectResult, manageResult] = await Promise.all([
+  const [
+    budgetResult,
+    groupsResult,
+    itemsResult,
+    projectResult,
+    manageResult,
+    serviceUnitsResult,
+    inputUnitsResult,
+  ] = await Promise.all([
     budgetQuery.maybeSingle(),
     groupsQuery,
     itemsQuery,
     projectQuery,
     managePromise,
+    serviceUnitsQuery,
+    inputUnitsQuery,
   ]);
 
   if (!budgetResult.data) redirect("/engenharia/orcamentos?error=Revisão%20não%20localizada.");
@@ -161,8 +184,15 @@ export default async function BudgetDetailPage({
   const budget = budgetResult.data as Budget;
   const groups = (groupsResult.data ?? []) as BudgetGroup[];
   const items = (itemsResult.data ?? []) as BudgetItem[];
+  const serviceUnits = (serviceUnitsResult.data ?? []) as UnitRecord[];
+  const inputUnits = (inputUnitsResult.data ?? []) as UnitRecord[];
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const project = projectResult.data;
+  const units = [...new Set([
+    ...items.map((item) => item.unit),
+    ...serviceUnits.map((service) => service.unit),
+    ...inputUnits.map((input) => input.unit),
+  ].map((value) => value?.trim()).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   const materialTotal = items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.material_unit_cost), 0);
   const laborTotal = items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.labor_unit_cost), 0);
@@ -222,7 +252,7 @@ export default async function BudgetDetailPage({
       actions={
         <>
           <Link className="elos-button" href="/engenharia/orcamentos">Voltar</Link>
-          {canManage ? <BudgetRevisionDialogs budget={budget} groups={groups} itemCount={items.length} /> : null}
+          {canManage ? <BudgetRevisionDialogs budget={budget} groups={groups} units={units} itemCount={items.length} /> : null}
           {canManage && budget.status !== "archived" ? (
             <form action={archiveBudget}>
               <input type="hidden" name="budget_id" value={budget.id} />
@@ -315,7 +345,17 @@ export default async function BudgetDetailPage({
                                 <label><span>Grupo</span><select name="group_id" defaultValue={item.group_id ?? ""}><option value="">Sem grupo</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.code} · {group.name}</option>)}</select></label>
                                 <label><span>Código</span><input name="code" defaultValue={item.code ?? ""} /></label>
                                 <label className="budget-edit-wide"><span>Descrição</span><input name="description" defaultValue={item.description} required /></label>
-                                <label><span>Unidade</span><input name="unit" defaultValue={item.unit} required /></label>
+                                <label>
+                                  <span>Unidade</span>
+                                  <CreatableCombobox
+                                    name="unit"
+                                    options={units}
+                                    initialValue={item.unit}
+                                    placeholder="Pesquise uma unidade"
+                                    required
+                                    createLabel="Criar nova unidade"
+                                  />
+                                </label>
                                 <label><span>Quantidade</span><input name="quantity" type="number" min="0" step="0.000001" defaultValue={item.quantity} /></label>
                                 <label><span>Material/un.</span><input name="material_unit_cost" type="number" min="0" step="0.000001" defaultValue={item.material_unit_cost} /></label>
                                 <label><span>Mão de obra/un.</span><input name="labor_unit_cost" type="number" min="0" step="0.000001" defaultValue={item.labor_unit_cost} /></label>

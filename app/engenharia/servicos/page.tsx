@@ -8,6 +8,8 @@ type EngineeringService = EngineeringServiceDialogData & {
   updated_at: string;
 };
 
+type UnitRecord = { unit: string };
+
 const PAGE_SIZE = 50;
 
 const methodLabels: Record<string, string> = {
@@ -59,7 +61,7 @@ export default async function EngineeringServicesPage({
         target_permission: "services.manage",
       });
 
-  const [servicesResult, manageResult] = await Promise.all([
+  const [servicesResult, inputUnitsResult, manageResult] = await Promise.all([
     supabase
       .from("engineering_services")
       .select("id, code, description, unit, group_code, default_method, takeoff_rule, measurement_rule, notes, status, updated_at")
@@ -67,12 +69,22 @@ export default async function EngineeringServicesPage({
       .order("group_code", { ascending: true, nullsFirst: false })
       .order("code", { ascending: true })
       .limit(10000),
+    supabase
+      .from("engineering_inputs")
+      .select("unit")
+      .eq("company_id", companyId)
+      .limit(10000),
     managePromise,
   ]);
 
   const services = (servicesResult.data ?? []) as EngineeringService[];
+  const inputUnits = (inputUnitsResult.data ?? []) as UnitRecord[];
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const groups = [...new Set(services.map((service) => service.group_code).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const units = [...new Set([
+    ...services.map((service) => service.unit),
+    ...inputUnits.map((input) => input.unit),
+  ].map((value) => value?.trim()).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const group = groups.includes(params.group ?? "") ? params.group! : "";
 
   const filteredServices = services.filter((service) => {
@@ -109,7 +121,7 @@ export default async function EngineeringServicesPage({
       eyebrow="Engenharia · Orçamento de Obras"
       title="Catálogo de Serviços"
       description={`${company.name} · base técnica corporativa reutilizada nos orçamentos, levantamentos e medições de todas as obras.`}
-      actions={canManage ? <ServiceCreateDialog groups={groups} /> : undefined}
+      actions={canManage ? <ServiceCreateDialog groups={groups} units={units} /> : undefined}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
@@ -199,7 +211,7 @@ export default async function EngineeringServicesPage({
                     <td>
                       {canManage ? (
                         <div className="service-row-actions">
-                          <ServiceEditDialog service={service} groups={groups} />
+                          <ServiceEditDialog service={service} groups={groups} units={units} />
                           <form action={toggleEngineeringServiceStatus}>
                             <input type="hidden" name="service_id" value={service.id} />
                             <input type="hidden" name="next_status" value={service.status === "active" ? "inactive" : "active"} />

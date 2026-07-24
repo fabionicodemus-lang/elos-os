@@ -15,6 +15,7 @@ import "./inputs.css";
 import "./prices.css";
 import "./price-import.css";
 import "./compositions.css";
+import "./creatable-combobox.css";
 import "./elos-theme.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
