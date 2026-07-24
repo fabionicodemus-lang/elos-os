@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { resolveDateRange } from "@/lib/date-range";
+import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { adoptEngineeringInputPrice, toggleEngineeringInputPriceStatus } from "./actions";
 import { PriceImportDialog } from "./import-dialog";
@@ -106,34 +107,43 @@ export default async function EngineeringPricesPage({
       });
 
   const [inputsResult, suppliersResult, pricesResult, projectResult, manageResult] = await Promise.all([
-    supabase
-      .from("engineering_inputs")
-      .select("id, code, description, unit, category, family_code")
-      .eq("company_id", companyId)
-      .eq("status", "active")
-      .order("code")
-      .limit(10000),
-    supabase
-      .from("suppliers")
-      .select("id, legal_name, trade_name")
-      .eq("company_id", companyId)
-      .eq("status", "active")
-      .order("legal_name")
-      .limit(2000),
-    supabase
-      .from("engineering_input_prices")
-      .select("id, input_id, supplier_id, project_id, price_date, unit_price, freight_unit_cost, other_unit_cost, discount_percentage, final_unit_price, currency, is_adopted, source, notes, status, created_at, updated_at, engineering_inputs(id, code, description, unit, category, family_code), suppliers(id, legal_name, trade_name), projects(id, name, code)")
-      .eq("company_id", companyId)
-      .order("price_date", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(10000),
+    fetchAllRows<PriceInput>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("engineering_inputs")
+        .select("id, code, description, unit, category, family_code")
+        .eq("company_id", companyId)
+        .eq("status", "active")
+        .order("code")
+        .range(from, to);
+      return { data: (data ?? []) as PriceInput[], error };
+    }),
+    fetchAllRows<PriceSupplier>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("id, legal_name, trade_name")
+        .eq("company_id", companyId)
+        .eq("status", "active")
+        .order("legal_name")
+        .range(from, to);
+      return { data: (data ?? []) as PriceSupplier[], error };
+    }),
+    fetchAllRows<EngineeringInputPrice>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("engineering_input_prices")
+        .select("id, input_id, supplier_id, project_id, price_date, unit_price, freight_unit_cost, other_unit_cost, discount_percentage, final_unit_price, currency, is_adopted, source, notes, status, created_at, updated_at, engineering_inputs(id, code, description, unit, category, family_code), suppliers(id, legal_name, trade_name), projects(id, name, code)")
+        .eq("company_id", companyId)
+        .order("price_date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+      return { data: (data ?? []) as unknown as EngineeringInputPrice[], error };
+    }),
     projectQuery,
     managePromise,
   ]);
 
-  const inputs = (inputsResult.data ?? []) as PriceInput[];
-  const suppliers = (suppliersResult.data ?? []) as PriceSupplier[];
-  const prices = (pricesResult.data ?? []) as unknown as EngineeringInputPrice[];
+  const inputs = inputsResult.data;
+  const suppliers = suppliersResult.data;
+  const prices = pricesResult.data;
   const project = projectResult.data as Project | null;
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const validInputId = inputs.some((input) => input.id === inputId) ? inputId : "";
