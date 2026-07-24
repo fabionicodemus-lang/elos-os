@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
@@ -45,6 +46,15 @@ type BudgetItem = {
   total_direct_cost: number;
   sort_order: number;
   notes: string | null;
+};
+
+type BudgetSection = {
+  id: string;
+  code: string;
+  name: string;
+  group: BudgetGroup | null;
+  allItems: BudgetItem[];
+  visibleItems: BudgetItem[];
 };
 
 const statusLabels: Record<Budget["status"], string> = {
@@ -175,7 +185,7 @@ export default async function BudgetDetailPage({
       .includes(queryText);
   });
 
-  const groupSections = groups
+  const groupSections: BudgetSection[] = groups
     .map((group) => ({
       id: group.id,
       code: group.code,
@@ -272,30 +282,12 @@ export default async function BudgetDetailPage({
 
       <section className="budget-table-card budget-analytic-card">
         <div className="budget-section-head">
-          <div>
-            <span>Planilha orçamentária</span>
-            <h2>Serviços e custos da revisão</h2>
-          </div>
+          <div><span>Planilha orçamentária</span><h2>Serviços e custos da revisão</h2></div>
           <p>{filteredItems.length} de {items.length} serviço(s).</p>
         </div>
         <div className="registry-table-wrap">
           <table className="registry-table budgets-items-table">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Serviço</th>
-                <th>Un.</th>
-                <th>Qtd.</th>
-                <th>Material/un.</th>
-                <th>M.O./un.</th>
-                <th>Equip./un.</th>
-                <th>Outros/un.</th>
-                <th>Custo un.</th>
-                <th>Custo total</th>
-                <th>Situação</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Código</th><th>Serviço</th><th>Un.</th><th>Qtd.</th><th>Material/un.</th><th>M.O./un.</th><th>Equip./un.</th><th>Outros/un.</th><th>Custo un.</th><th>Custo total</th><th>Situação</th><th>Ações</th></tr></thead>
             <tbody>
               {groupSections.map((section) => (
                 <Fragment key={section.id}>
@@ -311,14 +303,7 @@ export default async function BudgetDetailPage({
                     <tr key={item.id} className={itemIncomplete(item) ? "budget-item-incomplete" : ""}>
                       <td><strong className="budget-code">{item.code ?? "—"}</strong></td>
                       <td><strong>{item.description}</strong>{item.notes ? <span>{item.notes}</span> : null}</td>
-                      <td>{item.unit}</td>
-                      <td>{decimal(item.quantity, 3)}</td>
-                      <td>{money(item.material_unit_cost)}</td>
-                      <td>{money(item.labor_unit_cost)}</td>
-                      <td>{money(item.equipment_unit_cost)}</td>
-                      <td>{money(item.other_unit_cost)}</td>
-                      <td><strong>{money(item.unit_direct_cost)}</strong></td>
-                      <td><strong>{money(item.total_direct_cost)}</strong></td>
+                      <td>{item.unit}</td><td>{decimal(item.quantity, 3)}</td><td>{money(item.material_unit_cost)}</td><td>{money(item.labor_unit_cost)}</td><td>{money(item.equipment_unit_cost)}</td><td>{money(item.other_unit_cost)}</td><td><strong>{money(item.unit_direct_cost)}</strong></td><td><strong>{money(item.total_direct_cost)}</strong></td>
                       <td>{itemIncomplete(item) ? <span className="budget-situation review">Revisar</span> : <span className="budget-situation complete">Completo</span>}</td>
                       <td>
                         {canManage && budget.status !== "archived" ? (
@@ -326,8 +311,7 @@ export default async function BudgetDetailPage({
                             <details className="budget-inline-edit budget-item-edit">
                               <summary>Editar</summary>
                               <form action={updateBudgetItem}>
-                                <input type="hidden" name="budget_id" value={budget.id} />
-                                <input type="hidden" name="item_id" value={item.id} />
+                                <input type="hidden" name="budget_id" value={budget.id} /><input type="hidden" name="item_id" value={item.id} />
                                 <label><span>Grupo</span><select name="group_id" defaultValue={item.group_id ?? ""}><option value="">Sem grupo</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.code} · {group.name}</option>)}</select></label>
                                 <label><span>Código</span><input name="code" defaultValue={item.code ?? ""} /></label>
                                 <label className="budget-edit-wide"><span>Descrição</span><input name="description" defaultValue={item.description} required /></label>
@@ -342,39 +326,18 @@ export default async function BudgetDetailPage({
                                 <button type="submit">Salvar serviço</button>
                               </form>
                             </details>
-                            <form action={deactivateBudgetItem}>
-                              <input type="hidden" name="budget_id" value={budget.id} />
-                              <input type="hidden" name="item_id" value={item.id} />
-                              <button className="table-action danger" type="submit">Remover</button>
-                            </form>
+                            <form action={deactivateBudgetItem}><input type="hidden" name="budget_id" value={budget.id} /><input type="hidden" name="item_id" value={item.id} /><button className="table-action danger" type="submit">Remover</button></form>
                           </div>
                         ) : "—"}
                       </td>
                     </tr>
                   ))}
                   {section.group && canManage ? (
-                    <tr className="budget-group-edit-row">
-                      <td colSpan={12}>
-                        <details className="budget-inline-edit budget-group-inline-edit">
-                          <summary>Editar grupo {section.code}</summary>
-                          <form action={updateBudgetGroup}>
-                            <input type="hidden" name="budget_id" value={budget.id} />
-                            <input type="hidden" name="group_id" value={section.group.id} />
-                            <input name="code" defaultValue={section.group.code} required aria-label="Código do grupo" />
-                            <input name="name" defaultValue={section.group.name} required aria-label="Nome do grupo" />
-                            <input name="sort_order" type="number" defaultValue={section.group.sort_order} aria-label="Ordem do grupo" />
-                            <textarea name="notes" defaultValue={section.group.notes ?? ""} aria-label="Observações do grupo" />
-                            <button type="submit">Salvar grupo</button>
-                          </form>
-                        </details>
-                      </td>
-                    </tr>
+                    <tr className="budget-group-edit-row"><td colSpan={12}><details className="budget-inline-edit budget-group-inline-edit"><summary>Editar grupo {section.code}</summary><form action={updateBudgetGroup}><input type="hidden" name="budget_id" value={budget.id} /><input type="hidden" name="group_id" value={section.group.id} /><input name="code" defaultValue={section.group.code} required aria-label="Código do grupo" /><input name="name" defaultValue={section.group.name} required aria-label="Nome do grupo" /><input name="sort_order" type="number" defaultValue={section.group.sort_order} aria-label="Ordem do grupo" /><textarea name="notes" defaultValue={section.group.notes ?? ""} aria-label="Observações do grupo" /><button type="submit">Salvar grupo</button></form></details></td></tr>
                   ) : null}
                 </Fragment>
               ))}
-              {filteredItems.length === 0 ? (
-                <tr><td className="budget-empty-state" colSpan={12}><strong>Nenhum serviço encontrado.</strong><span>Adicione serviços ou altere os filtros da planilha.</span></td></tr>
-              ) : null}
+              {filteredItems.length === 0 ? <tr><td className="budget-empty-state" colSpan={12}><strong>Nenhum serviço encontrado.</strong><span>Adicione serviços ou altere os filtros da planilha.</span></td></tr> : null}
             </tbody>
           </table>
         </div>
@@ -382,5 +345,3 @@ export default async function BudgetDetailPage({
     </AppShell>
   );
 }
-
-import { Fragment } from "react";
