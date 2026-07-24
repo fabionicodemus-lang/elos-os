@@ -1,19 +1,10 @@
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { logout, selectWorkspace } from "@/app/dashboard/actions";
-import { createClient } from "@/lib/supabase/server";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { ShellNavigation, type ShellNavigationGroup } from "@/components/shell-navigation";
+import { resolveActiveWorkspace } from "@/lib/workspace";
 
-type Company = { id: string; name: string; slug: string };
 type Project = { id: string; name: string; code: string | null };
-type Role = { id: string; key: string; name: string };
-type Membership = { role_id: string; roles: Role | Role[] | null };
-
-function relatedOne<T>(value: T | T[] | null): T | null {
-  return Array.isArray(value) ? value[0] ?? null : value;
-}
 
 function initials(value: string) {
   const parts = value.trim().split(/\s+/).filter(Boolean);
@@ -38,47 +29,28 @@ export async function AppShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const supabase = await createClient();
-  const { data: authData, error: authError } = await supabase.auth.getClaims();
+  const { supabase, userId, email, company, companyId, projectId, role } = await resolveActiveWorkspace();
 
-  if (authError || !authData?.claims) redirect("/login");
-
-  const userId = typeof authData.claims.sub === "string" ? authData.claims.sub : "";
-  const email = typeof authData.claims.email === "string" ? authData.claims.email : "Usuário";
-  const cookieStore = await cookies();
-  const companyId = cookieStore.get("elos_company_id")?.value;
-  const projectId = cookieStore.get("elos_project_id")?.value ?? null;
-
-  if (!companyId) redirect("/workspace/initialize");
-
-  const [companyResult, projectsResult, membershipResult, profileResult] = await Promise.all([
-    supabase.from("companies").select("id, name, slug").eq("id", companyId).maybeSingle(),
-    supabase.from("projects").select("id, name, code").eq("company_id", companyId).neq("status", "archived").order("name"),
+  const [projectsResult, profileResult, permissionResult] = await Promise.all([
     supabase
-      .from("company_memberships")
-      .select("role_id, roles(id, key, name)")
+      .from("projects")
+      .select("id, name, code")
       .eq("company_id", companyId)
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .maybeSingle(),
+      .neq("status", "archived")
+      .order("name"),
     supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+    role.id
+      ? supabase
+          .from("role_permissions")
+          .select("permission_key")
+          .eq("role_id", role.id)
+          .eq("allowed", true)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  const company = companyResult.data as Company | null;
   const projects = (projectsResult.data ?? []) as Project[];
-  const membership = membershipResult.data as unknown as Membership | null;
-  const role = membership ? relatedOne(membership.roles) : null;
-
-  if (!company || !membership || !role) redirect("/workspace/initialize");
-
-  const { data: permissionData } = await supabase
-    .from("role_permissions")
-    .select("permission_key")
-    .eq("role_id", role.id)
-    .eq("allowed", true);
-
   const permissions = new Set(
-    ((permissionData ?? []) as { permission_key: string }[]).map((item) => item.permission_key),
+    ((permissionResult.data ?? []) as { permission_key: string }[]).map((item) => item.permission_key),
   );
 
   if (role.key === "owner" || role.key === "admin") {
@@ -107,7 +79,7 @@ export async function AppShell({
 
   const can = (permission: string) => permissions.has(permission);
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
-  const activeProject = projects.find((project) => project.id === projectId) ?? null;
+  const activeProject = projects.find((project) => project.id === projectId) ?? projects[0] ?? null;
   const financeReceivablesHref = can("receivables.view") ? "/financeiro/contas-a-receber" : undefined;
   const commercialReceivablesHref = can("receivables.view") ? "/comercial/planos-de-pagamento" : undefined;
   const indicesHref = can("indices.view") ? "/financeiro/indices-de-correcao" : undefined;
@@ -255,7 +227,7 @@ export async function AppShell({
           <div className="elos-page-top">
             <div>
               <div className="elos-eyebrow">{eyebrow}</div>
-              <h1>{title}<span className="elos-module-version">V0.25.6 · sistema integrado</span></h1>
+              <h1>{title}<span className="elos-module-version">V0.25.7 · sistema integrado</span></h1>
               {description ? <p>{description}</p> : null}
             </div>
             {actions ? <div className="elos-page-actions">{actions}</div> : null}
