@@ -1,6 +1,6 @@
 "use server";
 
-import ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCompanyPermission } from "@/lib/workspace";
@@ -84,18 +84,6 @@ function normalizeHeader(value: unknown) {
 
 function digits(value: unknown) {
   return String(value ?? "").replace(/\D/g, "");
-}
-
-function cellValue(cell: ExcelJS.Cell): unknown {
-  const value = cell.value;
-  if (value === null || value === undefined) return "";
-  if (value instanceof Date) return value;
-  if (typeof value !== "object") return value;
-
-  if ("result" in value && value.result !== undefined && value.result !== null) return value.result;
-  if ("richText" in value && Array.isArray(value.richText)) return value.richText.map((part) => part.text).join("");
-  if ("text" in value && typeof value.text === "string") return value.text;
-  return String(value);
 }
 
 function parseNumber(value: unknown, fallback = Number.NaN) {
@@ -182,6 +170,27 @@ function rowErrorSummary(errors: string[]) {
   return `A planilha não foi importada. ${visible.join(" | ")}${suffix}`;
 }
 
+function readSpreadsheetRows(buffer: ArrayBuffer) {
+  const workbook = XLSX.read(new Uint8Array(buffer), {
+    type: "array",
+    cellDates: true,
+    dense: true,
+  });
+
+  const sheetName = workbook.SheetNames.find((name) => normalizeText(name) === "cotacoes") ?? workbook.SheetNames[0];
+  if (!sheetName) return null;
+
+  const worksheet = workbook.Sheets[sheetName];
+  if (!worksheet) return null;
+
+  return XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
+    header: 1,
+    raw: true,
+    defval: "",
+    blankrows: false,
+  }) as unknown[][];
+}
+
 export async function importEngineeringInputPrices(formData: FormData) {
   const uploaded = formData.get("file");
   if (!(uploaded instanceof File) || uploaded.size === 0) {
@@ -235,21 +244,23 @@ export async function importEngineeringInputPrices(formData: FormData) {
   const projectCodeMap = new Map(projects.map((project) => [normalizeText(project.code), project]).filter(([key]) => Boolean(key)) as [string, ProjectRecord][]);
   const projectNameMap = new Map(projects.map((project) => [normalizeText(project.name), project]));
 
-  const workbook = new ExcelJS.Workbook();
+  let matrix: unknown[][] | null = null;
   try {
-    await workbook.xlsx.load(Buffer.from(await uploaded.arrayBuffer()));
-  } catch {
-    redirect(resultUrl("Não foi possível ler o arquivo. Baixe novamente o modelo e salve-o no formato XLSX."));
+    matrix = readSpreadsheetRows(await uploaded.arrayBuffer());
+  } catch (error) {
+    console.error("engineering_input_prices_xlsx_read_error", error);
+    redirect(resultUrl("Não foi possível ler o arquivo. O arquivo pode estar protegido, corrompido ou fora do padrão XLSX."));
   }
 
-  const worksheet = workbook.getWorksheet("Cotações") ?? workbook.worksheets[0];
-  if (!worksheet) redirect(resultUrl("A planilha não possui nenhuma aba para importar."));
+  if (!matrix || matrix.length === 0) {
+    redirect(resultUrl("A planilha não possui nenhuma aba para importar."));
+  }
 
-  const headerRow = worksheet.getRow(1);
   const columns = new Map<string, number>();
-  headerRow.eachCell({ includeEmpty: false }, (cell, columnNumber) => {
-    const header = normalizeHeader(cellValue(cell));
-    if (header) columns.set(header, columnNumber);
+  const headerRow = matrix[0] ?? [];
+  headerRow.forEach((value, columnIndex) => {
+    const header = normalizeHeader(value);
+    if (header) columns.set(header, columnIndex);
   });
 
   const requiredHeaders = ["codigo_insumo", "data_preco", "escopo", "preco_unitario"];
@@ -259,14 +270,13 @@ export async function importEngineeringInputPrices(formData: FormData) {
   }
 
   const rawRows: { rowNumber: number; values: Record<string, unknown> }[] = [];
-  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    if (rowNumber === 1) return;
+  matrix.slice(1).forEach((row, index) => {
     const values: Record<string, unknown> = {};
-    columns.forEach((columnNumber, header) => {
-      values[header] = cellValue(row.getCell(columnNumber));
+    columns.forEach((columnIndex, header) => {
+      values[header] = row[columnIndex] ?? "";
     });
     const hasContent = Object.values(values).some((value) => String(value ?? "").trim() !== "");
-    if (hasContent) rawRows.push({ rowNumber, values });
+    if (hasContent) rawRows.push({ rowNumber: index + 2, values });
   });
 
   if (rawRows.length === 0) redirect(resultUrl("A aba Cotações não possui linhas preenchidas."));
