@@ -49,7 +49,7 @@ export async function AppShell({
   const companyId = cookieStore.get("elos_company_id")?.value;
   const projectId = cookieStore.get("elos_project_id")?.value ?? null;
 
-  if (!companyId) redirect("/dashboard");
+  if (!companyId) redirect("/workspace/initialize");
 
   const [companyResult, projectsResult, membershipResult, profileResult] = await Promise.all([
     supabase.from("companies").select("id, name, slug").eq("id", companyId).maybeSingle(),
@@ -69,7 +69,7 @@ export async function AppShell({
   const membership = membershipResult.data as unknown as Membership | null;
   const role = membership ? relatedOne(membership.roles) : null;
 
-  if (!company || !membership || !role) redirect("/dashboard");
+  if (!company || !membership || !role) redirect("/workspace/initialize");
 
   const { data: permissionData } = await supabase
     .from("role_permissions")
@@ -255,7 +255,7 @@ export async function AppShell({
           <div className="elos-page-top">
             <div>
               <div className="elos-eyebrow">{eyebrow}</div>
-              <h1>{title}<span className="elos-module-version">V0.25.4 · sistema integrado</span></h1>
+              <h1>{title}<span className="elos-module-version">V0.25.6 · sistema integrado</span></h1>
               {description ? <p>{description}</p> : null}
             </div>
             {actions ? <div className="elos-page-actions">{actions}</div> : null}
