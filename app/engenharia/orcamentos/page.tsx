@@ -104,6 +104,7 @@ export default async function BudgetsPage({
     q?: string;
     status?: string;
     page?: string;
+    new?: string;
     success?: string;
     error?: string;
   }>;
@@ -113,6 +114,7 @@ export default async function BudgetsPage({
   const queryText = (params.q ?? "").trim().toLowerCase();
   const status = Object.keys(statusLabels).includes(params.status ?? "") ? params.status! : "";
   const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const showCreateForm = params.new === "1";
 
   const projectQuery = projectId
     ? supabase.from("projects").select("id, name, code").eq("id", projectId).maybeSingle()
@@ -199,7 +201,7 @@ export default async function BudgetsPage({
       eyebrow="Engenharia · Orçamentação"
       title="Cadastro de Orçamentos"
       description={`${company.name} · ${context} · versões, etapas e custos do orçamento da obra.`}
-      actions={canManage ? <a className="elos-button" href="#novo-orcamento">Novo orçamento</a> : undefined}
+      actions={canManage ? <Link className="elos-button" href="/engenharia/orcamentos?new=1#novo-orcamento">Novo orçamento</Link> : undefined}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
@@ -219,7 +221,7 @@ export default async function BudgetsPage({
       </section>
 
       {canManage ? (
-        <details id="novo-orcamento" className="registry-form-panel budgets-create-panel">
+        <details id="novo-orcamento" className="registry-form-panel budgets-create-panel" open={showCreateForm}>
           <summary>Novo orçamento</summary>
           <form action={createBudget} className="registry-form budgets-create-form">
             <label><span>Código</span><input name="code" placeholder="Ex.: ORC-FLOW" required /></label>
