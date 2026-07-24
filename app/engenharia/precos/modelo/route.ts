@@ -111,7 +111,7 @@ export async function GET() {
     5: "Obrigatório. Valores aceitos: Corporativo ou Obra.",
     6: "Obrigatório apenas para escopo Obra quando não desejar usar a obra selecionada no sistema.",
     7: "Obrigatório. Preço unitário maior que zero.",
-    8: "Opcional. Percentual entre 0 e 100.",
+    8: "Opcional. Percentual entre 0 e 100. Digite 5 para representar 5%.",
     9: "Opcional. Frete por unidade do insumo.",
     10: "Opcional. Impostos, descarga ou outros custos por unidade.",
     11: "Opcional. Valores aceitos: Sim ou Não. Só pode existir um Sim por insumo e escopo no arquivo.",
@@ -156,7 +156,7 @@ export async function GET() {
   quotes.getColumn(2).numFmt = "@";
   quotes.getColumn(4).numFmt = "dd/mm/yyyy";
   quotes.getColumn(7).numFmt = 'R$ #,##0.000000';
-  quotes.getColumn(8).numFmt = "0.0000%";
+  quotes.getColumn(8).numFmt = "0.0000";
   quotes.getColumn(9).numFmt = 'R$ #,##0.000000';
   quotes.getColumn(10).numFmt = 'R$ #,##0.000000';
   quotes.getColumn(13).alignment = { wrapText: true, vertical: "top" };
@@ -180,7 +180,7 @@ export async function GET() {
   instructions.addRow(["Escopo Obra", projectId ? "Se codigo_obra ficar vazio, o sistema usa a obra selecionada no momento da importação." : "Informe obrigatoriamente codigo_obra, pois nenhuma obra está selecionada no sistema."]);
   instructions.addRow(["Preço final", "O sistema calcula: preço unitário × (1 − desconto %) + frete unitário + outros custos unitários."]);
   instructions.addRow(["Preço adotado", "Use Sim somente quando a cotação deve virar referência. Deve existir no máximo um Sim por insumo e escopo no mesmo arquivo."]);
-  instructions.addRow(["Formato de números", "Aceita números brasileiros ou do Excel, por exemplo: 1.234,56 ou 1234.56. Não use fórmulas externas."]);
+  instructions.addRow(["Formato de números", "Aceita números brasileiros ou do Excel, por exemplo: 1.234,56 ou 1234.56. No desconto, digite 5 para representar 5%. Não use fórmulas externas."]);
   instructions.addRow(["Validação", "Se alguma linha tiver erro, nenhuma cotação do arquivo será importada. O sistema informa as primeiras linhas que precisam ser corrigidas."]);
   styleReferenceHeader(instructions.getRow(3));
   instructions.getColumn(2).alignment = { wrapText: true, vertical: "top" };
