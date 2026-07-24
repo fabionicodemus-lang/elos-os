@@ -10,6 +10,7 @@ import "./cashflow.css";
 import "./date-range.css";
 import "./reports.css";
 import "./budgets.css";
+import "./services.css";
 import "./elos-theme.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
