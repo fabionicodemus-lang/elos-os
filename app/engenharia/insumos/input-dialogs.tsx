@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { CreatableCombobox } from "@/components/creatable-combobox";
 import { createEngineeringInput, updateEngineeringInput } from "./actions";
 
 export type EngineeringInputDialogData = {
@@ -28,15 +29,50 @@ const categoryOptions = [
   ["other", "Outro custo"],
 ];
 
-function InputFields({ input, families }: { input?: EngineeringInputDialogData; families: string[] }) {
+function InputFields({
+  input,
+  familyCodes,
+  familyNames,
+  units,
+  familyCodeListId,
+}: {
+  input?: EngineeringInputDialogData;
+  familyCodes: string[];
+  familyNames: string[];
+  units: string[];
+  familyCodeListId: string;
+}) {
   return (
     <div className="input-modal-grid">
       <label><span>Código</span><input name="code" defaultValue={input?.code ?? ""} placeholder="Ex.: IE.CAB.001" required autoFocus /></label>
-      <label><span>Unidade</span><input name="unit" defaultValue={input?.unit ?? "un"} placeholder="un, m, m², kg..." required /></label>
+      <label>
+        <span>Unidade</span>
+        <CreatableCombobox
+          name="unit"
+          options={units}
+          initialValue={input?.unit ?? "un"}
+          placeholder="Pesquise uma unidade"
+          required
+          createLabel="Criar nova unidade"
+        />
+      </label>
       <label className="input-modal-wide"><span>Descrição</span><input name="description" defaultValue={input?.description ?? ""} placeholder="Descrição técnica padronizada" required /></label>
       <label><span>Natureza</span><select name="category" defaultValue={input?.category ?? "material"}>{categoryOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <label><span>Código da família</span><input name="family_code" defaultValue={input?.family_code ?? ""} list="input-family-codes" placeholder="Ex.: IE.CAB" /><datalist id="input-family-codes">{families.map((family) => <option key={family} value={family} />)}</datalist></label>
-      <label className="input-modal-wide"><span>Nome da família</span><input name="family_label" defaultValue={input?.family_label ?? ""} placeholder="Ex.: Elétrica · Cabos e fios" /></label>
+      <label>
+        <span>Código da família</span>
+        <input name="family_code" defaultValue={input?.family_code ?? ""} list={familyCodeListId} placeholder="Ex.: IE.CAB" />
+        <datalist id={familyCodeListId}>{familyCodes.map((family) => <option key={family} value={family} />)}</datalist>
+      </label>
+      <label className="input-modal-wide">
+        <span>Nome da família</span>
+        <CreatableCombobox
+          name="family_label"
+          options={familyNames}
+          initialValue={input?.family_label ?? ""}
+          placeholder="Pesquise uma família"
+          createLabel="Criar nova família"
+        />
+      </label>
       <label className="input-modal-wide"><span>Marca ou referência</span><input name="brand_reference" defaultValue={input?.brand_reference ?? ""} placeholder="Marca, modelo, referência ou desempenho mínimo" /></label>
       <label className="input-modal-wide"><span>Especificação técnica</span><textarea name="technical_specification" rows={3} defaultValue={input?.technical_specification ?? ""} placeholder="Dimensões, classe, resistência, acabamento e critérios de aceitação." /></label>
       <label><span>Sistema de origem</span><input name="source_system" defaultValue={input?.source_system ?? "elos_os"} placeholder="Elos OS, Koper, SINAPI..." /></label>
@@ -47,7 +83,15 @@ function InputFields({ input, families }: { input?: EngineeringInputDialogData; 
   );
 }
 
-export function InputCreateDialog({ families }: { families: string[] }) {
+export function InputCreateDialog({
+  familyCodes,
+  familyNames,
+  units,
+}: {
+  familyCodes: string[];
+  familyNames: string[];
+  units: string[];
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   return (
     <>
@@ -55,7 +99,9 @@ export function InputCreateDialog({ families }: { families: string[] }) {
       <dialog ref={dialogRef} className="budget-modal input-modal">
         <form action={createEngineeringInput} className="budget-modal-form">
           <header className="budget-modal-head"><div><span>Engenharia · Orçamento de Obras</span><h2>Novo insumo técnico</h2></div><button type="button" className="budget-modal-close" onClick={() => dialogRef.current?.close()} aria-label="Fechar">×</button></header>
-          <div className="budget-modal-body"><InputFields families={families} /></div>
+          <div className="budget-modal-body">
+            <InputFields familyCodes={familyCodes} familyNames={familyNames} units={units} familyCodeListId="input-family-codes-create" />
+          </div>
           <footer className="budget-modal-foot"><button type="button" className="budget-secondary-button" onClick={() => dialogRef.current?.close()}>Cancelar</button><button type="submit" className="budget-primary-button">Criar insumo</button></footer>
         </form>
       </dialog>
@@ -63,7 +109,17 @@ export function InputCreateDialog({ families }: { families: string[] }) {
   );
 }
 
-export function InputEditDialog({ input, families }: { input: EngineeringInputDialogData; families: string[] }) {
+export function InputEditDialog({
+  input,
+  familyCodes,
+  familyNames,
+  units,
+}: {
+  input: EngineeringInputDialogData;
+  familyCodes: string[];
+  familyNames: string[];
+  units: string[];
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   return (
     <>
@@ -72,7 +128,9 @@ export function InputEditDialog({ input, families }: { input: EngineeringInputDi
         <form action={updateEngineeringInput} className="budget-modal-form">
           <input type="hidden" name="input_id" value={input.id} />
           <header className="budget-modal-head"><div><span>{input.code}</span><h2>Editar insumo técnico</h2></div><button type="button" className="budget-modal-close" onClick={() => dialogRef.current?.close()} aria-label="Fechar">×</button></header>
-          <div className="budget-modal-body"><InputFields input={input} families={families} /></div>
+          <div className="budget-modal-body">
+            <InputFields input={input} familyCodes={familyCodes} familyNames={familyNames} units={units} familyCodeListId={`input-family-codes-${input.id}`} />
+          </div>
           <footer className="budget-modal-foot"><button type="button" className="budget-secondary-button" onClick={() => dialogRef.current?.close()}>Cancelar</button><button type="submit" className="budget-primary-button">Salvar alterações</button></footer>
         </form>
       </dialog>
