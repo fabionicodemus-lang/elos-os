@@ -89,11 +89,12 @@ export default async function EngineeringServicesPage({
   const totalPages = Math.max(1, Math.ceil(filteredServices.length / PAGE_SIZE));
   const page = Math.min(requestedPage, totalPages);
   const pageServices = filteredServices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const activeCount = services.filter((service) => service.status === "active").length;
+  const activeServices = services.filter((service) => service.status === "active");
+  const activeCount = activeServices.length;
   const inactiveCount = services.length - activeCount;
-  const takeoffDefined = services.filter((service) => Boolean(service.takeoff_rule?.trim())).length;
-  const measurementDefined = services.filter((service) => Boolean(service.measurement_rule?.trim())).length;
-  const completeCount = services.filter((service) => Boolean(service.takeoff_rule?.trim()) && Boolean(service.measurement_rule?.trim())).length;
+  const takeoffDefined = activeServices.filter((service) => Boolean(service.takeoff_rule?.trim())).length;
+  const measurementDefined = activeServices.filter((service) => Boolean(service.measurement_rule?.trim())).length;
+  const completeCount = activeServices.filter((service) => Boolean(service.takeoff_rule?.trim()) && Boolean(service.measurement_rule?.trim())).length;
   const filterParams = {
     q: params.q ?? "",
     group,
