@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
-import { createBudget } from "./actions";
+import { BudgetCreateDialog } from "./budget-create-dialog";
 
 type Budget = {
   id: string;
@@ -11,7 +11,6 @@ type Budget = {
   status: "draft" | "in_progress" | "review" | "approved" | "archived";
   reference_date: string | null;
   area_m2: number;
-  bdi_percentage: number;
   notes: string | null;
   updated_at: string;
 };
@@ -34,7 +33,6 @@ type BudgetMetrics = {
   equipment: number;
   other: number;
   direct: number;
-  totalWithBdi: number;
 };
 
 const PAGE_SIZE = 30;
@@ -43,7 +41,7 @@ const statusLabels: Record<Budget["status"], string> = {
   draft: "Rascunho",
   in_progress: "Em elaboração",
   review: "Em revisão",
-  approved: "Aprovado",
+  approved: "Revisão fechada",
   archived: "Arquivado",
 };
 
@@ -63,22 +61,22 @@ function decimal(value: number | null | undefined, digits = 2) {
 
 function dateBR(value: string | null | undefined) {
   if (!value) return "—";
-  const clean = value.slice(0, 10);
-  const [year, month, day] = clean.split("-");
+  const [year, month, day] = value.slice(0, 10).split("-");
   return `${day}/${month}/${year}`;
 }
 
-function buildMetrics(budget: Budget, items: BudgetItem[]): BudgetMetrics {
+function buildMetrics(items: BudgetItem[]): BudgetMetrics {
   return items.reduce<BudgetMetrics>((summary, item) => {
     const quantity = Number(item.quantity ?? 0);
     const materialUnit = Number(item.material_unit_cost ?? 0);
     const laborUnit = Number(item.labor_unit_cost ?? 0);
     const equipmentUnit = Number(item.equipment_unit_cost ?? 0);
     const otherUnit = Number(item.other_unit_cost ?? 0);
-    const direct = Number(item.total_direct_cost ?? quantity * (materialUnit + laborUnit + equipmentUnit + otherUnit));
+    const unitCost = materialUnit + laborUnit + equipmentUnit + otherUnit;
+    const direct = Number(item.total_direct_cost ?? quantity * unitCost);
 
     summary.itemCount += 1;
-    if (quantity <= 0 || materialUnit + laborUnit + equipmentUnit + otherUnit <= 0) summary.incompleteCount += 1;
+    if (quantity <= 0 || unitCost <= 0) summary.incompleteCount += 1;
     summary.material += quantity * materialUnit;
     summary.labor += quantity * laborUnit;
     summary.equipment += quantity * equipmentUnit;
@@ -93,7 +91,6 @@ function buildMetrics(budget: Budget, items: BudgetItem[]): BudgetMetrics {
     equipment: 0,
     other: 0,
     direct: 0,
-    totalWithBdi: 0,
   });
 }
 
@@ -104,7 +101,6 @@ export default async function BudgetsPage({
     q?: string;
     status?: string;
     page?: string;
-    new?: string;
     success?: string;
     error?: string;
   }>;
@@ -114,7 +110,6 @@ export default async function BudgetsPage({
   const queryText = (params.q ?? "").trim().toLowerCase();
   const status = Object.keys(statusLabels).includes(params.status ?? "") ? params.status! : "";
   const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
-  const showCreateForm = params.new === "1";
 
   const projectQuery = projectId
     ? supabase.from("projects").select("id, name, code").eq("id", projectId).maybeSingle()
@@ -122,7 +117,7 @@ export default async function BudgetsPage({
 
   let budgetsQuery = supabase
     .from("engineering_budgets")
-    .select("id, code, name, version, status, reference_date, area_m2, bdi_percentage, notes, updated_at")
+    .select("id, code, name, version, status, reference_date, area_m2, notes, updated_at")
     .eq("company_id", companyId)
     .order("updated_at", { ascending: false })
     .limit(10000);
@@ -157,6 +152,7 @@ export default async function BudgetsPage({
   const items = (itemsResult.data ?? []) as BudgetItem[];
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const itemsByBudget = new Map<string, BudgetItem[]>();
+
   items.forEach((item) => {
     const current = itemsByBudget.get(item.budget_id) ?? [];
     current.push(item);
@@ -165,9 +161,7 @@ export default async function BudgetsPage({
 
   const metricsByBudget = new Map<string, BudgetMetrics>();
   budgets.forEach((budget) => {
-    const metrics = buildMetrics(budget, itemsByBudget.get(budget.id) ?? []);
-    metrics.totalWithBdi = metrics.direct * (1 + Number(budget.bdi_percentage ?? 0) / 100);
-    metricsByBudget.set(budget.id, metrics);
+    metricsByBudget.set(budget.id, buildMetrics(itemsByBudget.get(budget.id) ?? []));
   });
 
   const filteredBudgets = budgets.filter((budget) => {
@@ -185,23 +179,25 @@ export default async function BudgetsPage({
   const paginationQuery = `q=${encodeURIComponent(params.q ?? "")}&status=${status}`;
 
   const activeBudgets = budgets.filter((budget) => budget.status !== "archived");
-  const approvedCount = budgets.filter((budget) => budget.status === "approved").length;
-  const inProgressCount = budgets.filter((budget) => ["draft", "in_progress", "review"].includes(budget.status)).length;
-  const directTotal = activeBudgets.reduce((sum, budget) => sum + (metricsByBudget.get(budget.id)?.direct ?? 0), 0);
-  const totalWithBdi = activeBudgets.reduce((sum, budget) => sum + (metricsByBudget.get(budget.id)?.totalWithBdi ?? 0), 0);
-  const incompleteItems = activeBudgets.reduce((sum, budget) => sum + (metricsByBudget.get(budget.id)?.incompleteCount ?? 0), 0);
+  const latestBudget = activeBudgets[0] ?? null;
+  const latestMetrics = latestBudget ? metricsByBudget.get(latestBudget.id) ?? buildMetrics([]) : buildMetrics([]);
+  const inProgressCount = activeBudgets.filter((budget) => ["draft", "in_progress", "review"].includes(budget.status)).length;
+  const approvedCount = activeBudgets.filter((budget) => budget.status === "approved").length;
   const project = projectResult.data;
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Todas as obras";
   const structureMissing = Boolean(budgetsResult.error || itemsResult.error);
+  const latestCostPerM2 = latestBudget && Number(latestBudget.area_m2) > 0
+    ? latestMetrics.direct / Number(latestBudget.area_m2)
+    : 0;
 
   return (
     <AppShell
       activeGroup="engineering"
       activeItem="budgets"
-      eyebrow="Engenharia · Orçamentação"
-      title="Cadastro de Orçamentos"
-      description={`${company.name} · ${context} · versões, etapas e custos do orçamento da obra.`}
-      actions={canManage ? <Link className="elos-button" href="/engenharia/orcamentos?new=1#novo-orcamento">Novo orçamento</Link> : undefined}
+      eyebrow="Engenharia · Orçamento de Obras"
+      title="Visão geral do orçamento"
+      description={`${company.name} · ${context} · quantitativos e custos reais de execução do empreendimento.`}
+      actions={canManage ? <BudgetCreateDialog /> : undefined}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
@@ -211,34 +207,57 @@ export default async function BudgetsPage({
         </div>
       ) : null}
 
-      <section className="finance-summary-grid budgets-summary-grid">
-        <article><span>Orçamentos ativos</span><strong>{activeBudgets.length}</strong><small>versões não arquivadas</small></article>
-        <article><span>Em elaboração</span><strong>{inProgressCount}</strong><small>rascunho, elaboração ou revisão</small></article>
-        <article><span>Aprovados</span><strong>{approvedCount}</strong><small>versões liberadas</small></article>
-        <article><span>Custo direto</span><strong>{money(directTotal)}</strong><small>soma dos serviços ativos</small></article>
-        <article><span>Total com BDI</span><strong>{money(totalWithBdi)}</strong><small>preço orçado das versões ativas</small></article>
-        <article><span>Itens incompletos</span><strong className={incompleteItems > 0 ? "budgets-alert" : ""}>{incompleteItems}</strong><small>sem quantidade ou custo</small></article>
+      <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">
+        <span className="active">▦ Visão geral</span>
+        <span>≡ Serviços</span>
+        <span>◈ Insumos</span>
+        <span>$ Preços e cotações</span>
+        <span>∑ Levantamento</span>
+        <span>R$ Orçamento analítico</span>
+      </nav>
+
+      <section className="budget-kpi-grid">
+        <article>
+          <span>Revisões ativas</span>
+          <strong>{activeBudgets.length}</strong>
+          <small>{inProgressCount} em elaboração · {approvedCount} fechada(s)</small>
+        </article>
+        <article>
+          <span>Serviços na revisão atual</span>
+          <strong>{latestMetrics.itemCount}</strong>
+          <small>{latestBudget ? `${latestBudget.code} · ${latestBudget.version}` : "nenhuma revisão criada"}</small>
+        </article>
+        <article>
+          <span>Custo total da revisão atual</span>
+          <strong>{money(latestMetrics.direct)}</strong>
+          <small>custo real previsto para execução</small>
+        </article>
+        <article>
+          <span>Custo por m²</span>
+          <strong>{latestBudget && Number(latestBudget.area_m2) > 0 ? money(latestCostPerM2) : "—"}</strong>
+          <small>{latestBudget ? `${decimal(latestBudget.area_m2)} m² cadastrados` : "informe a área da obra"}</small>
+        </article>
       </section>
 
-      {canManage ? (
-        <details id="novo-orcamento" className="registry-form-panel budgets-create-panel" open={showCreateForm}>
-          <summary>Novo orçamento</summary>
-          <form action={createBudget} className="registry-form budgets-create-form">
-            <label><span>Código</span><input name="code" placeholder="Ex.: ORC-FLOW" required /></label>
-            <label><span>Nome</span><input name="name" placeholder="Ex.: Orçamento executivo Flow" required /></label>
-            <label><span>Versão</span><input name="version" defaultValue="R00" required /></label>
-            <label><span>Data-base</span><input name="reference_date" type="date" /></label>
-            <label><span>Área construída (m²)</span><input name="area_m2" type="number" min="0" step="0.01" defaultValue="0" /></label>
-            <label><span>BDI (%)</span><input name="bdi_percentage" type="number" min="0" step="0.01" defaultValue="0" /></label>
-            <label className="registry-form-wide"><span>Observações</span><textarea name="notes" rows={3} placeholder="Escopo, premissas, exclusões e referência desta versão." /></label>
-            <div className="registry-form-actions"><button type="submit">Criar orçamento</button></div>
-          </form>
-        </details>
-      ) : null}
+      <section className="budget-flow-card">
+        <div className="budget-flow-head">
+          <div>
+            <span>Fluxo integrado</span>
+            <h2>Como o orçamento da obra é formado</h2>
+          </div>
+          <p>A revisão consolida estrutura, serviços, insumos, levantamentos e preços adotados.</p>
+        </div>
+        <div className="budget-flow-grid">
+          <article><b>1. Estrutura da obra</b><span>Grupos, etapas, locais e pavimentos.</span></article>
+          <article><b>2. Serviços e insumos</b><span>Composições e custos unitários rastreáveis.</span></article>
+          <article><b>3. Levantamento</b><span>Quantidades por local, repetição e memória de cálculo.</span></article>
+          <article><b>4. Orçamento analítico</b><span>Custo total, custo por m² e revisão fechada.</span></article>
+        </div>
+      </section>
 
-      <section className="registry-toolbar budgets-toolbar">
+      <section className="budget-toolbar-card">
         <form method="get" className="budgets-filter">
-          <input name="q" defaultValue={params.q ?? ""} placeholder="Código, nome, versão ou observação" />
+          <input name="q" defaultValue={params.q ?? ""} placeholder="Buscar código, revisão, nome ou premissa" />
           <select name="status" defaultValue={status}>
             <option value="">Todos os status</option>
             {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -248,39 +267,63 @@ export default async function BudgetsPage({
         </form>
       </section>
 
-      <section className="registry-table-panel budgets-table-panel">
-        <div className="section-heading">
-          <div><span>Orçamentos da obra</span><h2>Versões cadastradas</h2></div>
-          <p>{filteredBudgets.length} orçamento(s) no filtro atual.</p>
+      <section className="budget-table-card">
+        <div className="budget-section-head">
+          <div>
+            <span>Revisões do orçamento</span>
+            <h2>Histórico da obra</h2>
+          </div>
+          <p>{filteredBudgets.length} revisão(ões) no filtro atual.</p>
         </div>
         <div className="registry-table-wrap">
           <table className="registry-table budgets-table">
             <thead>
               <tr>
-                <th>Orçamento</th><th>Status</th><th>Data-base</th><th>Área</th><th>Serviços</th><th>Custo direto</th><th>BDI</th><th>Total orçado</th><th>Custo/m²</th><th>Revisão</th><th>Ação</th>
+                <th>Código / revisão</th>
+                <th>Status</th>
+                <th>Data-base</th>
+                <th>Área</th>
+                <th>Serviços</th>
+                <th>Custo total</th>
+                <th>Custo/m²</th>
+                <th>Atualização</th>
+                <th>Ação</th>
               </tr>
             </thead>
             <tbody>
               {pageBudgets.map((budget) => {
-                const metrics = metricsByBudget.get(budget.id)!;
-                const costPerM2 = Number(budget.area_m2) > 0 ? metrics.totalWithBdi / Number(budget.area_m2) : 0;
+                const metrics = metricsByBudget.get(budget.id) ?? buildMetrics([]);
+                const costPerM2 = Number(budget.area_m2) > 0 ? metrics.direct / Number(budget.area_m2) : 0;
                 return (
                   <tr key={budget.id}>
-                    <td><strong>{budget.code} · {budget.version}</strong><span>{budget.name}</span></td>
+                    <td>
+                      <strong className="budget-code">{budget.code} · {budget.version}</strong>
+                      <span>{budget.name}</span>
+                    </td>
                     <td><span className={`budget-status ${budget.status}`}>{statusLabels[budget.status]}</span></td>
                     <td>{dateBR(budget.reference_date)}</td>
                     <td>{decimal(budget.area_m2)} m²</td>
-                    <td><strong>{metrics.itemCount}</strong>{metrics.incompleteCount > 0 ? <span className="budgets-alert-text">{metrics.incompleteCount} incompleto(s)</span> : <span>completos</span>}</td>
-                    <td>{money(metrics.direct)}</td>
-                    <td>{decimal(budget.bdi_percentage)}%</td>
-                    <td><strong>{money(metrics.totalWithBdi)}</strong></td>
+                    <td>
+                      <strong>{metrics.itemCount}</strong>
+                      {metrics.incompleteCount > 0
+                        ? <span className="budgets-alert-text">{metrics.incompleteCount} a revisar</span>
+                        : <span>completos</span>}
+                    </td>
+                    <td><strong>{money(metrics.direct)}</strong></td>
                     <td>{Number(budget.area_m2) > 0 ? money(costPerM2) : "—"}</td>
                     <td>{dateBR(budget.updated_at)}</td>
                     <td><Link className="table-action" href={`/engenharia/orcamentos/${budget.id}`}>Abrir orçamento</Link></td>
                   </tr>
                 );
               })}
-              {pageBudgets.length === 0 ? <tr><td className="empty-table" colSpan={11}>Nenhum orçamento encontrado.</td></tr> : null}
+              {pageBudgets.length === 0 ? (
+                <tr>
+                  <td className="budget-empty-state" colSpan={9}>
+                    <strong>Nenhuma revisão cadastrada.</strong>
+                    <span>Crie a primeira revisão para iniciar a estrutura do orçamento da obra.</span>
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
