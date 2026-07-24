@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { CreatableCombobox } from "@/components/creatable-combobox";
 import { createEngineeringService, updateEngineeringService } from "./actions";
 
 export type EngineeringServiceDialogData = {
@@ -26,10 +27,14 @@ const methods = [
   ["custom", "Fórmula personalizada"],
 ] as const;
 
-function ServiceFields({ service, groups, listId }: {
+function ServiceFields({
+  service,
+  groups,
+  units,
+}: {
   service?: EngineeringServiceDialogData;
   groups: string[];
-  listId: string;
+  units: string[];
 }) {
   return (
     <div className="service-modal-body service-modal-grid">
@@ -39,7 +44,14 @@ function ServiceFields({ service, groups, listId }: {
       </label>
       <label>
         <span>Unidade</span>
-        <input name="unit" defaultValue={service?.unit ?? "un"} placeholder="m², m³, kg, vb..." required />
+        <CreatableCombobox
+          name="unit"
+          options={units}
+          initialValue={service?.unit ?? "un"}
+          placeholder="Pesquise uma unidade"
+          required
+          createLabel="Criar nova unidade"
+        />
       </label>
       <label className="service-modal-wide">
         <span>Nome / descrição do serviço</span>
@@ -47,8 +59,13 @@ function ServiceFields({ service, groups, listId }: {
       </label>
       <label>
         <span>Grupo</span>
-        <input name="group_code" list={listId} defaultValue={service?.group_code ?? ""} placeholder="Ex.: 04 · Alvenaria" />
-        <datalist id={listId}>{groups.map((group) => <option key={group} value={group} />)}</datalist>
+        <CreatableCombobox
+          name="group_code"
+          options={groups}
+          initialValue={service?.group_code ?? ""}
+          placeholder="Pesquise um grupo"
+          createLabel="Criar novo grupo"
+        />
       </label>
       <label>
         <span>Método padrão</span>
@@ -91,7 +108,7 @@ function ServiceFields({ service, groups, listId }: {
   );
 }
 
-export function ServiceCreateDialog({ groups }: { groups: string[] }) {
+export function ServiceCreateDialog({ groups, units }: { groups: string[]; units: string[] }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   return (
     <>
@@ -104,7 +121,7 @@ export function ServiceCreateDialog({ groups }: { groups: string[] }) {
             <div><span>Engenharia · Catálogo técnico</span><h2>Novo serviço</h2></div>
             <button type="button" className="service-modal-close" onClick={() => dialogRef.current?.close()} aria-label="Fechar">×</button>
           </header>
-          <ServiceFields groups={groups} listId="service-groups-create" />
+          <ServiceFields groups={groups} units={units} />
           <footer className="service-modal-foot">
             <button type="button" className="service-secondary-button" onClick={() => dialogRef.current?.close()}>Cancelar</button>
             <button type="submit" className="service-primary-button">Salvar serviço</button>
@@ -115,7 +132,7 @@ export function ServiceCreateDialog({ groups }: { groups: string[] }) {
   );
 }
 
-export function ServiceEditDialog({ service, groups }: { service: EngineeringServiceDialogData; groups: string[] }) {
+export function ServiceEditDialog({ service, groups, units }: { service: EngineeringServiceDialogData; groups: string[]; units: string[] }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   return (
     <>
@@ -127,7 +144,7 @@ export function ServiceEditDialog({ service, groups }: { service: EngineeringSer
             <div><span>{service.code}</span><h2>Editar serviço técnico</h2></div>
             <button type="button" className="service-modal-close" onClick={() => dialogRef.current?.close()} aria-label="Fechar">×</button>
           </header>
-          <ServiceFields service={service} groups={groups} listId={`service-groups-${service.id}`} />
+          <ServiceFields service={service} groups={groups} units={units} />
           <footer className="service-modal-foot">
             <button type="button" className="service-secondary-button" onClick={() => dialogRef.current?.close()}>Cancelar</button>
             <button type="submit" className="service-primary-button">Salvar alterações</button>
