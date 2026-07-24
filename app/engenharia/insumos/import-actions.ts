@@ -1,6 +1,6 @@
 "use server";
 
-import ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCompanyPermission } from "@/lib/workspace";
@@ -97,18 +97,8 @@ function normalizeHeader(value: unknown) {
   return headerAliases[normalized] ?? normalized;
 }
 
-function cellValue(cell: ExcelJS.Cell): unknown {
-  const value = cell.value;
-  if (value === null || value === undefined) return "";
-  if (typeof value !== "object") return value;
-  if (value instanceof Date) return value;
-  if ("result" in value && value.result !== undefined && value.result !== null) return value.result;
-  if ("richText" in value && Array.isArray(value.richText)) return value.richText.map((part) => part.text).join("");
-  if ("text" in value && typeof value.text === "string") return value.text;
-  return String(value);
-}
-
 function requiredText(value: unknown) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
   return String(value ?? "").trim();
 }
 
@@ -121,6 +111,27 @@ function rowErrorSummary(errors: string[]) {
   const visible = errors.slice(0, 10);
   const suffix = errors.length > visible.length ? ` Mais ${errors.length - visible.length} erro(s).` : "";
   return `A planilha não foi importada. ${visible.join(" | ")}${suffix}`;
+}
+
+function readSpreadsheetRows(buffer: ArrayBuffer) {
+  const workbook = XLSX.read(new Uint8Array(buffer), {
+    type: "array",
+    cellDates: true,
+    dense: true,
+  });
+
+  const sheetName = workbook.SheetNames.find((name) => normalizeText(name) === "insumos") ?? workbook.SheetNames[0];
+  if (!sheetName) return null;
+
+  const worksheet = workbook.Sheets[sheetName];
+  if (!worksheet) return null;
+
+  return XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
+    header: 1,
+    raw: true,
+    defval: "",
+    blankrows: false,
+  }) as unknown[][];
 }
 
 export async function importEngineeringInputs(formData: FormData) {
@@ -137,20 +148,23 @@ export async function importEngineeringInputs(formData: FormData) {
     redirect(resultUrl("O arquivo ultrapassa o limite de 5 MB."));
   }
 
-  const workbook = new ExcelJS.Workbook();
+  let matrix: unknown[][] | null = null;
   try {
-    await workbook.xlsx.load(Buffer.from(await uploaded.arrayBuffer()));
-  } catch {
-    redirect(resultUrl("Não foi possível ler a planilha. Confirme se o arquivo está salvo no formato XLSX."));
+    matrix = readSpreadsheetRows(await uploaded.arrayBuffer());
+  } catch (error) {
+    console.error("engineering_inputs_xlsx_read_error", error);
+    redirect(resultUrl("Não foi possível ler a planilha. O arquivo pode estar protegido, corrompido ou fora do padrão XLSX."));
   }
 
-  const worksheet = workbook.getWorksheet("Insumos") ?? workbook.worksheets[0];
-  if (!worksheet) redirect(resultUrl("A planilha não possui uma aba de insumos."));
+  if (!matrix || matrix.length === 0) {
+    redirect(resultUrl("A planilha não possui uma aba de insumos."));
+  }
 
   const columns = new Map<string, number>();
-  worksheet.getRow(1).eachCell({ includeEmpty: false }, (cell, columnNumber) => {
-    const header = normalizeHeader(cellValue(cell));
-    if (header) columns.set(header, columnNumber);
+  const headerRow = matrix[0] ?? [];
+  headerRow.forEach((value, columnIndex) => {
+    const header = normalizeHeader(value);
+    if (header) columns.set(header, columnIndex);
   });
 
   const requiredHeaders = ["codigo_insumo", "descricao", "unidade", "natureza"];
@@ -160,14 +174,13 @@ export async function importEngineeringInputs(formData: FormData) {
   }
 
   const rawRows: { rowNumber: number; values: Record<string, unknown> }[] = [];
-  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    if (rowNumber === 1) return;
+  matrix.slice(1).forEach((row, index) => {
     const values: Record<string, unknown> = {};
-    columns.forEach((columnNumber, header) => {
-      values[header] = cellValue(row.getCell(columnNumber));
+    columns.forEach((columnIndex, header) => {
+      values[header] = row[columnIndex] ?? "";
     });
     const hasContent = Object.values(values).some((value) => requiredText(value) !== "");
-    if (hasContent) rawRows.push({ rowNumber, values });
+    if (hasContent) rawRows.push({ rowNumber: index + 2, values });
   });
 
   if (rawRows.length === 0) redirect(resultUrl("A aba Insumos não possui linhas preenchidas."));
