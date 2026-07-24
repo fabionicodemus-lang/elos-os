@@ -77,6 +77,8 @@ export async function AppShell({
       "services.manage",
       "inputs.view",
       "inputs.manage",
+      "prices.view",
+      "prices.manage",
       "execution.view",
       "quality.view",
       "commercial.view",
@@ -95,6 +97,7 @@ export async function AppShell({
   const budgetsHref = can("budgets.view") ? "/engenharia/orcamentos" : undefined;
   const servicesHref = can("services.view") ? "/engenharia/servicos" : undefined;
   const inputsHref = can("inputs.view") ? "/engenharia/insumos" : undefined;
+  const pricesHref = can("prices.view") ? "/engenharia/precos" : undefined;
 
   const groups: ShellNavigationGroup[] = [
     {
@@ -133,6 +136,7 @@ export async function AppShell({
         { label: "Cadastro de Orçamentos", href: budgetsHref, active: activeItem === "budgets", disabled: !budgetsHref },
         { label: "Serviços", href: servicesHref, active: activeItem === "services", disabled: !servicesHref },
         { label: "Insumos", href: inputsHref, active: activeItem === "inputs", disabled: !inputsHref },
+        { label: "Preços e Cotações", href: pricesHref, active: activeItem === "prices", disabled: !pricesHref },
         { label: "Planejamento da obra", sectionLabel: "Planejamento da obra" },
         { label: "Cronograma Físico · Linha Base", disabled: true },
         { label: "Curvas Física e Financeira", disabled: true },
@@ -239,7 +243,7 @@ export async function AppShell({
           <div className="elos-page-top">
             <div>
               <div className="elos-eyebrow">{eyebrow}</div>
-              <h1>{title}<span className="elos-module-version">V0.26.1 · sistema integrado</span></h1>
+              <h1>{title}<span className="elos-module-version">V0.26.2 · sistema integrado</span></h1>
               {description ? <p>{description}</p> : null}
             </div>
             {actions ? <div className="elos-page-actions">{actions}</div> : null}
