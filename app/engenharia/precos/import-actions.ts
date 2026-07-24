@@ -131,7 +131,7 @@ function parseDate(value: unknown) {
   const iso = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
   if (iso) return isoDateParts(Number(iso[1]), Number(iso[2]), Number(iso[3]));
 
-  const brazilian = raw.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/);
+  const brazilian = raw.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
   if (brazilian) return isoDateParts(Number(brazilian[3]), Number(brazilian[2]), Number(brazilian[1]));
 
   return null;
@@ -295,13 +295,15 @@ export async function importEngineeringInputPrices(formData: FormData) {
     const supplierName = normalizeText(values.fornecedor_nome);
     let supplier: SupplierRecord | null = null;
 
-    if (taxId) supplier = supplierTaxMap.get(taxId) ?? null;
-    if (!supplier && supplierName) {
+    if (taxId) {
+      supplier = supplierTaxMap.get(taxId) ?? null;
+      if (!supplier) errors.push(`Linha ${rowNumber}: CNPJ do fornecedor não encontrado.`);
+    } else if (supplierName) {
       const matches = supplierNameMap.get(supplierName) ?? [];
       if (matches.length === 1) supplier = matches[0];
       else if (matches.length > 1) errors.push(`Linha ${rowNumber}: nome de fornecedor ambíguo; informe o CNPJ.`);
+      else errors.push(`Linha ${rowNumber}: fornecedor não encontrado; informe o nome exatamente como cadastrado.`);
     }
-    if (!supplier) errors.push(`Linha ${rowNumber}: fornecedor não encontrado; informe CNPJ ou nome exatamente como cadastrado.`);
 
     const priceDate = parseDate(values.data_preco);
     if (!priceDate) errors.push(`Linha ${rowNumber}: data do preço inválida.`);
@@ -334,12 +336,12 @@ export async function importEngineeringInputPrices(formData: FormData) {
       else adoptedKeys.set(key, rowNumber);
     }
 
-    if (!input || !supplier || !priceDate || !scope || (scope === "project" && !project)) return;
+    if (!input || !priceDate || !scope || (scope === "project" && !project)) return;
     if (!Number.isFinite(unitPrice) || unitPrice <= 0 || !Number.isFinite(discount) || discount < 0 || discount > 100 || !Number.isFinite(freight) || freight < 0 || !Number.isFinite(otherCosts) || otherCosts < 0) return;
 
     importRows.push({
       input_id: input.id,
-      supplier_id: supplier.id,
+      supplier_id: supplier?.id ?? null,
       project_id: project?.id ?? null,
       price_date: priceDate,
       unit_price: unitPrice,
