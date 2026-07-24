@@ -14,6 +14,7 @@ import "./services.css";
 import "./inputs.css";
 import "./prices.css";
 import "./price-import.css";
+import "./compositions.css";
 import "./elos-theme.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
