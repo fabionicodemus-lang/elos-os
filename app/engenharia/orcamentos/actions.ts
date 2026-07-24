@@ -62,14 +62,13 @@ export async function createBudget(formData: FormData) {
   const name = text(formData, "name");
   const version = text(formData, "version").toUpperCase() || "R00";
   const areaM2 = numberValue(formData, "area_m2", 0);
-  const bdiPercentage = numberValue(formData, "bdi_percentage", 0);
 
-  if (!code || !name || !Number.isFinite(areaM2) || areaM2 < 0 || !Number.isFinite(bdiPercentage) || bdiPercentage < 0) {
-    redirect(listUrl("Informe código, nome, área e BDI válidos."));
+  if (!code || !name || !Number.isFinite(areaM2) || areaM2 < 0) {
+    redirect(listUrl("Informe código, nome e área válidos."));
   }
 
   const { supabase, companyId, projectId, userId } = await requireCompanyPermission("budgets.manage");
-  if (!projectId) redirect(listUrl("Selecione uma obra antes de criar o orçamento."));
+  if (!projectId) redirect(listUrl("Selecione uma obra antes de criar a revisão."));
 
   const { data, error } = await supabase
     .from("engineering_budgets")
@@ -82,7 +81,7 @@ export async function createBudget(formData: FormData) {
       status: "draft",
       reference_date: optional(formData, "reference_date"),
       area_m2: areaM2,
-      bdi_percentage: bdiPercentage,
+      bdi_percentage: 0,
       notes: optional(formData, "notes"),
       source_system: "elos_os",
       source_id: `manual_${crypto.randomUUID()}`,
@@ -91,9 +90,9 @@ export async function createBudget(formData: FormData) {
     .select("id")
     .single();
 
-  if (error || !data?.id) redirect(listUrl(error?.message || "Não foi possível criar o orçamento."));
+  if (error || !data?.id) redirect(listUrl(error?.message || "Não foi possível criar a revisão."));
   revalidatePath(LIST_PATH);
-  redirect(detailUrl(data.id, "Orçamento criado. Agora estruture os grupos e serviços.", "success"));
+  redirect(detailUrl(data.id, "Revisão criada. Agora estruture os grupos e serviços.", "success"));
 }
 
 export async function updateBudget(formData: FormData) {
@@ -103,14 +102,13 @@ export async function updateBudget(formData: FormData) {
   const version = text(formData, "version").toUpperCase() || "R00";
   const status = text(formData, "status");
   const areaM2 = numberValue(formData, "area_m2", 0);
-  const bdiPercentage = numberValue(formData, "bdi_percentage", 0);
 
-  if (!budgetId || !code || !name || !budgetStatuses.has(status) || !Number.isFinite(areaM2) || areaM2 < 0 || !Number.isFinite(bdiPercentage) || bdiPercentage < 0) {
-    redirect(detailUrl(budgetId || "invalido", "Revise os dados gerais do orçamento."));
+  if (!budgetId || !code || !name || !budgetStatuses.has(status) || !Number.isFinite(areaM2) || areaM2 < 0) {
+    redirect(detailUrl(budgetId || "invalido", "Revise os dados gerais da revisão."));
   }
 
   const { supabase, companyId, projectId, budget } = await findBudget(budgetId, true);
-  if (!budget) redirect(listUrl("Orçamento não localizado."));
+  if (!budget) redirect(listUrl("Revisão não localizada."));
 
   let query = supabase
     .from("engineering_budgets")
@@ -121,7 +119,7 @@ export async function updateBudget(formData: FormData) {
       status,
       reference_date: optional(formData, "reference_date"),
       area_m2: areaM2,
-      bdi_percentage: bdiPercentage,
+      bdi_percentage: 0,
       notes: optional(formData, "notes"),
       updated_at: new Date().toISOString(),
     })
@@ -134,15 +132,37 @@ export async function updateBudget(formData: FormData) {
 
   revalidatePath(LIST_PATH);
   revalidatePath(detailPath(budgetId));
-  redirect(detailUrl(budgetId, "Dados gerais atualizados.", "success"));
+  redirect(detailUrl(budgetId, "Dados da revisão atualizados.", "success"));
+}
+
+export async function closeBudgetRevision(formData: FormData) {
+  const budgetId = text(formData, "budget_id");
+  if (!budgetId) redirect(listUrl("Revisão inválida."));
+
+  const { supabase, companyId, projectId, budget } = await findBudget(budgetId, true);
+  if (!budget) redirect(listUrl("Revisão não localizada."));
+
+  let query = supabase
+    .from("engineering_budgets")
+    .update({ status: "approved", updated_at: new Date().toISOString() })
+    .eq("id", budgetId)
+    .eq("company_id", companyId)
+    .neq("status", "archived");
+  if (projectId) query = query.eq("project_id", projectId);
+
+  const { error } = await query;
+  if (error) redirect(detailUrl(budgetId, error.message));
+  revalidatePath(LIST_PATH);
+  revalidatePath(detailPath(budgetId));
+  redirect(detailUrl(budgetId, "Revisão fechada e registrada como referência da obra.", "success"));
 }
 
 export async function archiveBudget(formData: FormData) {
   const budgetId = text(formData, "budget_id");
-  if (!budgetId) redirect(listUrl("Orçamento inválido."));
+  if (!budgetId) redirect(listUrl("Revisão inválida."));
 
   const { supabase, companyId, projectId, budget } = await findBudget(budgetId, true);
-  if (!budget) redirect(listUrl("Orçamento não localizado."));
+  if (!budget) redirect(listUrl("Revisão não localizada."));
 
   let query = supabase
     .from("engineering_budgets")
@@ -154,7 +174,7 @@ export async function archiveBudget(formData: FormData) {
   const { error } = await query;
   if (error) redirect(detailUrl(budgetId, error.message));
   revalidatePath(LIST_PATH);
-  redirect(listUrl("Orçamento arquivado.", "success"));
+  redirect(listUrl("Revisão arquivada.", "success"));
 }
 
 export async function createBudgetGroup(formData: FormData) {
@@ -166,7 +186,7 @@ export async function createBudgetGroup(formData: FormData) {
   if (!budgetId || !code || !name) redirect(detailUrl(budgetId || "invalido", "Informe código e nome do grupo."));
 
   const { supabase, companyId, projectId, userId, budget } = await findBudget(budgetId, true);
-  if (!budget || !projectId) redirect(listUrl("Orçamento ou obra não localizado."));
+  if (!budget || !projectId) redirect(listUrl("Revisão ou obra não localizada."));
 
   const { error } = await supabase.from("engineering_budget_groups").insert({
     company_id: companyId,
@@ -193,7 +213,7 @@ export async function updateBudgetGroup(formData: FormData) {
 
   if (!budgetId || !groupId || !code || !name) redirect(detailUrl(budgetId || "invalido", "Grupo inválido."));
   const { supabase, companyId, projectId, budget } = await findBudget(budgetId, true);
-  if (!budget) redirect(listUrl("Orçamento não localizado."));
+  if (!budget) redirect(listUrl("Revisão não localizada."));
 
   let query = supabase
     .from("engineering_budget_groups")
@@ -230,7 +250,7 @@ export async function createBudgetItem(formData: FormData) {
   }
 
   const { supabase, companyId, projectId, userId, budget } = await findBudget(budgetId, true);
-  if (!budget || !projectId) redirect(listUrl("Orçamento ou obra não localizado."));
+  if (!budget || !projectId) redirect(listUrl("Revisão ou obra não localizada."));
 
   const groupId = optional(formData, "group_id");
   if (groupId) {
@@ -242,7 +262,7 @@ export async function createBudgetItem(formData: FormData) {
       .eq("company_id", companyId)
       .eq("status", "active")
       .maybeSingle();
-    if (!group) redirect(detailUrl(budgetId, "O grupo selecionado não pertence a este orçamento."));
+    if (!group) redirect(detailUrl(budgetId, "O grupo selecionado não pertence a esta revisão."));
   }
 
   const { error } = await supabase.from("engineering_budget_items").insert({
@@ -285,7 +305,7 @@ export async function updateBudgetItem(formData: FormData) {
   }
 
   const { supabase, companyId, projectId, budget } = await findBudget(budgetId, true);
-  if (!budget) redirect(listUrl("Orçamento não localizado."));
+  if (!budget) redirect(listUrl("Revisão não localizada."));
 
   let query = supabase
     .from("engineering_budget_items")
@@ -322,7 +342,7 @@ export async function deactivateBudgetItem(formData: FormData) {
   if (!budgetId || !itemId) redirect(detailUrl(budgetId || "invalido", "Serviço inválido."));
 
   const { supabase, companyId, projectId, budget } = await findBudget(budgetId, true);
-  if (!budget) redirect(listUrl("Orçamento não localizado."));
+  if (!budget) redirect(listUrl("Revisão não localizada."));
 
   let query = supabase
     .from("engineering_budget_items")
