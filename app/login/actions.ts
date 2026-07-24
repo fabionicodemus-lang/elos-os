@@ -94,9 +94,7 @@ export async function login(formData: FormData) {
     redirect(loginUrl("E-mail ou senha inválidos."));
   }
 
-  // Em um aparelho ou domínio novo ainda não existem os cookies da empresa e da obra.
-  // A rota de inicialização grava o primeiro ambiente disponível antes de abrir o dashboard.
-  redirect("/workspace/initialize");
+  redirect("/dashboard");
 }
 
 export async function signup(formData: FormData) {
