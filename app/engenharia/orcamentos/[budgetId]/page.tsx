@@ -4,13 +4,11 @@ import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
 import {
   archiveBudget,
-  createBudgetGroup,
-  createBudgetItem,
   deactivateBudgetItem,
-  updateBudget,
   updateBudgetGroup,
   updateBudgetItem,
 } from "../actions";
+import { BudgetRevisionDialogs } from "./budget-revision-dialogs";
 
 type Budget = {
   id: string;
@@ -20,7 +18,6 @@ type Budget = {
   status: "draft" | "in_progress" | "review" | "approved" | "archived";
   reference_date: string | null;
   area_m2: number;
-  bdi_percentage: number;
   notes: string | null;
   updated_at: string;
 };
@@ -50,24 +47,11 @@ type BudgetItem = {
   notes: string | null;
 };
 
-type GroupSummary = {
-  id: string;
-  code: string;
-  name: string;
-  itemCount: number;
-  incompleteCount: number;
-  material: number;
-  labor: number;
-  equipment: number;
-  other: number;
-  direct: number;
-};
-
 const statusLabels: Record<Budget["status"], string> = {
   draft: "Rascunho",
   in_progress: "Em elaboração",
   review: "Em revisão",
-  approved: "Aprovado",
+  approved: "Revisão fechada",
   archived: "Arquivado",
 };
 
@@ -95,29 +79,8 @@ function itemIncomplete(item: BudgetItem) {
   return Number(item.quantity) <= 0 || Number(item.unit_direct_cost) <= 0;
 }
 
-function groupSummary(group: BudgetGroup | null, items: BudgetItem[]): GroupSummary {
-  return items.reduce<GroupSummary>((summary, item) => {
-    const quantity = Number(item.quantity ?? 0);
-    summary.itemCount += 1;
-    if (itemIncomplete(item)) summary.incompleteCount += 1;
-    summary.material += quantity * Number(item.material_unit_cost ?? 0);
-    summary.labor += quantity * Number(item.labor_unit_cost ?? 0);
-    summary.equipment += quantity * Number(item.equipment_unit_cost ?? 0);
-    summary.other += quantity * Number(item.other_unit_cost ?? 0);
-    summary.direct += Number(item.total_direct_cost ?? 0);
-    return summary;
-  }, {
-    id: group?.id ?? "ungrouped",
-    code: group?.code ?? "—",
-    name: group?.name ?? "Serviços sem grupo",
-    itemCount: 0,
-    incompleteCount: 0,
-    material: 0,
-    labor: 0,
-    equipment: 0,
-    other: 0,
-    direct: 0,
-  });
+function sumDirect(items: BudgetItem[]) {
+  return items.reduce((sum, item) => sum + Number(item.total_direct_cost ?? 0), 0);
 }
 
 export default async function BudgetDetailPage({
@@ -138,7 +101,7 @@ export default async function BudgetDetailPage({
 
   let budgetQuery = supabase
     .from("engineering_budgets")
-    .select("id, code, name, version, status, reference_date, area_m2, bdi_percentage, notes, updated_at")
+    .select("id, code, name, version, status, reference_date, area_m2, notes, updated_at")
     .eq("id", budgetId)
     .eq("company_id", companyId);
   let groupsQuery = supabase
@@ -183,7 +146,7 @@ export default async function BudgetDetailPage({
     managePromise,
   ]);
 
-  if (!budgetResult.data) redirect("/engenharia/orcamentos?error=Orçamento%20não%20localizado.");
+  if (!budgetResult.data) redirect("/engenharia/orcamentos?error=Revisão%20não%20localizada.");
 
   const budget = budgetResult.data as Budget;
   const groups = (groupsResult.data ?? []) as BudgetGroup[];
@@ -195,21 +158,9 @@ export default async function BudgetDetailPage({
   const laborTotal = items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.labor_unit_cost), 0);
   const equipmentTotal = items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.equipment_unit_cost), 0);
   const otherTotal = items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.other_unit_cost), 0);
-  const directTotal = items.reduce((sum, item) => sum + Number(item.total_direct_cost), 0);
-  const bdiValue = directTotal * Number(budget.bdi_percentage) / 100;
-  const budgetTotal = directTotal + bdiValue;
-  const costPerM2 = Number(budget.area_m2) > 0 ? budgetTotal / Number(budget.area_m2) : 0;
+  const directTotal = sumDirect(items);
+  const costPerM2 = Number(budget.area_m2) > 0 ? directTotal / Number(budget.area_m2) : 0;
   const incompleteCount = items.filter(itemIncomplete).length;
-
-  const itemsByGroup = new Map<string, BudgetItem[]>();
-  items.forEach((item) => {
-    const key = item.group_id ?? "ungrouped";
-    const current = itemsByGroup.get(key) ?? [];
-    current.push(item);
-    itemsByGroup.set(key, current);
-  });
-  const groupSummaries = groups.map((group) => groupSummary(group, itemsByGroup.get(group.id) ?? []));
-  if (itemsByGroup.has("ungrouped")) groupSummaries.push(groupSummary(null, itemsByGroup.get("ungrouped") ?? []));
 
   const queryText = (queryParams.q ?? "").trim().toLowerCase();
   const groupFilter = groups.some((group) => group.id === queryParams.group) ? queryParams.group! : "";
@@ -224,7 +175,30 @@ export default async function BudgetDetailPage({
       .includes(queryText);
   });
 
-  const groupNameById = new Map(groups.map((group) => [group.id, `${group.code} · ${group.name}`]));
+  const groupSections = groups
+    .map((group) => ({
+      id: group.id,
+      code: group.code,
+      name: group.name,
+      group,
+      allItems: items.filter((item) => item.group_id === group.id),
+      visibleItems: filteredItems.filter((item) => item.group_id === group.id),
+    }))
+    .filter((section) => section.visibleItems.length > 0 || (!queryText && !groupFilter && !incompleteOnly));
+
+  const ungroupedItems = items.filter((item) => !item.group_id);
+  const visibleUngroupedItems = filteredItems.filter((item) => !item.group_id);
+  if (visibleUngroupedItems.length > 0 || (ungroupedItems.length > 0 && !queryText && !groupFilter && !incompleteOnly)) {
+    groupSections.push({
+      id: "ungrouped",
+      code: "—",
+      name: "Serviços sem grupo",
+      group: null,
+      allItems: ungroupedItems,
+      visibleItems: visibleUngroupedItems,
+    });
+  }
+
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Obra ativa";
   const structureError = budgetResult.error || groupsResult.error || itemsResult.error;
 
@@ -232,12 +206,13 @@ export default async function BudgetDetailPage({
     <AppShell
       activeGroup="engineering"
       activeItem="budgets"
-      eyebrow="Engenharia · Orçamentação"
-      title={`${budget.code} · ${budget.version}`}
-      description={`${company.name} · ${context} · ${budget.name}.`}
+      eyebrow="Engenharia · Orçamento de Obras"
+      title="Orçamento analítico"
+      description={`${company.name} · ${context} · ${budget.code} · ${budget.version} · ${budget.name}.`}
       actions={
         <>
-          <Link className="elos-button" href="/engenharia/orcamentos">Voltar aos orçamentos</Link>
+          <Link className="elos-button" href="/engenharia/orcamentos">Voltar</Link>
+          {canManage ? <BudgetRevisionDialogs budget={budget} groups={groups} itemCount={items.length} /> : null}
           {canManage && budget.status !== "archived" ? (
             <form action={archiveBudget}>
               <input type="hidden" name="budget_id" value={budget.id} />
@@ -249,186 +224,157 @@ export default async function BudgetDetailPage({
     >
       {queryParams.success ? <div className="auth-message success workspace-message">{queryParams.success}</div> : null}
       {queryParams.error ? <div className="auth-message error workspace-message">{queryParams.error}</div> : null}
-      {structureError ? <div className="auth-message error workspace-message">Não foi possível carregar todos os dados do orçamento.</div> : null}
+      {structureError ? <div className="auth-message error workspace-message">Não foi possível carregar todos os dados da revisão.</div> : null}
 
-      <section className="finance-summary-grid budgets-detail-summary">
-        <article><span>Custo direto</span><strong>{money(directTotal)}</strong><small>sem BDI</small></article>
-        <article><span>BDI</span><strong>{money(bdiValue)}</strong><small>{decimal(budget.bdi_percentage)}% sobre o custo direto</small></article>
-        <article><span>Total orçado</span><strong>{money(budgetTotal)}</strong><small>custo direto mais BDI</small></article>
-        <article><span>Custo por m²</span><strong>{Number(budget.area_m2) > 0 ? money(costPerM2) : "—"}</strong><small>{decimal(budget.area_m2)} m² informados</small></article>
-        <article><span>Serviços</span><strong>{items.length}</strong><small>{groups.length} grupo(s) ativo(s)</small></article>
-        <article><span>Itens incompletos</span><strong className={incompleteCount > 0 ? "budgets-alert" : ""}>{incompleteCount}</strong><small>sem quantidade ou custo</small></article>
+      <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">
+        <Link href="/engenharia/orcamentos">▦ Visão geral</Link>
+        <span>≡ Serviços</span>
+        <span>◈ Insumos</span>
+        <span>$ Preços e cotações</span>
+        <span>∑ Levantamento</span>
+        <span className="active">R$ Orçamento analítico</span>
+      </nav>
+
+      <section className="budget-reference-bar">
+        <div>
+          <span>Base desta revisão</span>
+          <strong>Quantidades aprovadas · custos unitários adotados · composição por natureza</strong>
+        </div>
+        <div className="budget-reference-meta">
+          <span className={`budget-status ${budget.status}`}>{statusLabels[budget.status]}</span>
+          <small>Data-base {dateBR(budget.reference_date)} · atualização {dateBR(budget.updated_at)}</small>
+        </div>
+      </section>
+
+      <section className="budget-kpi-grid budget-detail-kpis">
+        <article><span>Custo total da obra</span><strong>{money(directTotal)}</strong><small>total dos serviços ativos</small></article>
+        <article><span>Custo por m²</span><strong>{Number(budget.area_m2) > 0 ? money(costPerM2) : "—"}</strong><small>{decimal(budget.area_m2)} m² cadastrados</small></article>
+        <article><span>Serviços</span><strong>{items.length}</strong><small>{groups.length} grupo(s) da estrutura analítica</small></article>
+        <article><span>Itens a revisar</span><strong className={incompleteCount > 0 ? "budgets-alert" : ""}>{incompleteCount}</strong><small>sem quantidade ou custo unitário</small></article>
       </section>
 
       <section className="budgets-cost-composition">
-        <article><span>Materiais</span><strong>{money(materialTotal)}</strong><i style={{ width: `${directTotal > 0 ? materialTotal / directTotal * 100 : 0}%` }} /></article>
-        <article><span>Mão de obra</span><strong>{money(laborTotal)}</strong><i style={{ width: `${directTotal > 0 ? laborTotal / directTotal * 100 : 0}%` }} /></article>
-        <article><span>Equipamentos</span><strong>{money(equipmentTotal)}</strong><i style={{ width: `${directTotal > 0 ? equipmentTotal / directTotal * 100 : 0}%` }} /></article>
-        <article><span>Outros custos</span><strong>{money(otherTotal)}</strong><i style={{ width: `${directTotal > 0 ? otherTotal / directTotal * 100 : 0}%` }} /></article>
+        <article><span>Materiais</span><strong>{money(materialTotal)}</strong><small>{directTotal > 0 ? decimal(materialTotal / directTotal * 100) : "0,00"}% do total</small><i style={{ width: `${directTotal > 0 ? materialTotal / directTotal * 100 : 0}%` }} /></article>
+        <article><span>Mão de obra</span><strong>{money(laborTotal)}</strong><small>{directTotal > 0 ? decimal(laborTotal / directTotal * 100) : "0,00"}% do total</small><i style={{ width: `${directTotal > 0 ? laborTotal / directTotal * 100 : 0}%` }} /></article>
+        <article><span>Equipamentos</span><strong>{money(equipmentTotal)}</strong><small>{directTotal > 0 ? decimal(equipmentTotal / directTotal * 100) : "0,00"}% do total</small><i style={{ width: `${directTotal > 0 ? equipmentTotal / directTotal * 100 : 0}%` }} /></article>
+        <article><span>Outros custos</span><strong>{money(otherTotal)}</strong><small>{directTotal > 0 ? decimal(otherTotal / directTotal * 100) : "0,00"}% do total</small><i style={{ width: `${directTotal > 0 ? otherTotal / directTotal * 100 : 0}%` }} /></article>
       </section>
 
-      <details className="registry-form-panel budgets-general-panel">
-        <summary>Dados gerais do orçamento</summary>
-        <form action={updateBudget} className="registry-form budgets-general-form">
-          <input type="hidden" name="budget_id" value={budget.id} />
-          <label><span>Código</span><input name="code" defaultValue={budget.code} required disabled={!canManage} /></label>
-          <label><span>Nome</span><input name="name" defaultValue={budget.name} required disabled={!canManage} /></label>
-          <label><span>Versão</span><input name="version" defaultValue={budget.version} required disabled={!canManage} /></label>
-          <label><span>Status</span><select name="status" defaultValue={budget.status} disabled={!canManage}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label><span>Data-base</span><input name="reference_date" type="date" defaultValue={budget.reference_date ?? ""} disabled={!canManage} /></label>
-          <label><span>Área construída (m²)</span><input name="area_m2" type="number" min="0" step="0.01" defaultValue={budget.area_m2} disabled={!canManage} /></label>
-          <label><span>BDI (%)</span><input name="bdi_percentage" type="number" min="0" step="0.01" defaultValue={budget.bdi_percentage} disabled={!canManage} /></label>
-          <label className="registry-form-wide"><span>Observações e premissas</span><textarea name="notes" rows={4} defaultValue={budget.notes ?? ""} disabled={!canManage} /></label>
-          {canManage ? <div className="registry-form-actions"><button type="submit">Salvar dados gerais</button></div> : null}
-        </form>
-      </details>
-
-      {canManage && budget.status !== "archived" ? (
-        <section className="budgets-entry-grid">
-          <details className="registry-form-panel" open={groups.length === 0}>
-            <summary>Adicionar grupo ou etapa</summary>
-            <form action={createBudgetGroup} className="registry-form budgets-group-form">
-              <input type="hidden" name="budget_id" value={budget.id} />
-              <label><span>Código</span><input name="code" placeholder="Ex.: 01" required /></label>
-              <label><span>Nome do grupo</span><input name="name" placeholder="Ex.: Serviços preliminares" required /></label>
-              <label><span>Ordem</span><input name="sort_order" type="number" defaultValue={groups.length + 1} /></label>
-              <label className="registry-form-wide"><span>Observações</span><textarea name="notes" rows={2} /></label>
-              <div className="registry-form-actions"><button type="submit">Adicionar grupo</button></div>
-            </form>
-          </details>
-
-          <details className="registry-form-panel" open={items.length === 0 && groups.length > 0}>
-            <summary>Adicionar serviço ao orçamento</summary>
-            <form action={createBudgetItem} className="registry-form budgets-item-form">
-              <input type="hidden" name="budget_id" value={budget.id} />
-              <label><span>Grupo</span><select name="group_id" defaultValue=""><option value="">Sem grupo</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.code} · {group.name}</option>)}</select></label>
-              <label><span>Código</span><input name="code" placeholder="Ex.: 01.001" /></label>
-              <label className="budgets-description-field"><span>Descrição do serviço</span><input name="description" required placeholder="Serviço conforme projeto e memorial" /></label>
-              <label><span>Unidade</span><input name="unit" defaultValue="un" required /></label>
-              <label><span>Quantidade</span><input name="quantity" type="number" min="0" step="0.000001" defaultValue="0" /></label>
-              <label><span>Material/un.</span><input name="material_unit_cost" type="number" min="0" step="0.000001" defaultValue="0" /></label>
-              <label><span>Mão de obra/un.</span><input name="labor_unit_cost" type="number" min="0" step="0.000001" defaultValue="0" /></label>
-              <label><span>Equipamento/un.</span><input name="equipment_unit_cost" type="number" min="0" step="0.000001" defaultValue="0" /></label>
-              <label><span>Outros/un.</span><input name="other_unit_cost" type="number" min="0" step="0.000001" defaultValue="0" /></label>
-              <label><span>Ordem</span><input name="sort_order" type="number" defaultValue={items.length + 1} /></label>
-              <label className="registry-form-wide"><span>Observações</span><textarea name="notes" rows={2} /></label>
-              <div className="registry-form-actions"><button type="submit">Incluir serviço</button></div>
-            </form>
-          </details>
-        </section>
-      ) : null}
-
-      <section className="registry-table-panel budgets-groups-panel">
-        <div className="section-heading">
-          <div><span>Estrutura do orçamento</span><h2>Resumo por grupo ou etapa</h2></div>
-          <p>{groups.length} grupo(s) · atualizado em {dateBR(budget.updated_at)}.</p>
-        </div>
-        <div className="registry-table-wrap">
-          <table className="registry-table budgets-groups-table">
-            <thead><tr><th>Grupo</th><th>Serviços</th><th>Materiais</th><th>Mão de obra</th><th>Equipamentos</th><th>Outros</th><th>Custo direto</th><th>Com BDI</th><th>Ação</th></tr></thead>
-            <tbody>
-              {groupSummaries.map((summary) => {
-                const group = groups.find((candidate) => candidate.id === summary.id);
-                return (
-                  <tr key={summary.id}>
-                    <td><strong>{summary.code} · {summary.name}</strong>{summary.incompleteCount > 0 ? <span className="budgets-alert-text">{summary.incompleteCount} incompleto(s)</span> : null}</td>
-                    <td>{summary.itemCount}</td>
-                    <td>{money(summary.material)}</td>
-                    <td>{money(summary.labor)}</td>
-                    <td>{money(summary.equipment)}</td>
-                    <td>{money(summary.other)}</td>
-                    <td><strong>{money(summary.direct)}</strong></td>
-                    <td><strong>{money(summary.direct * (1 + Number(budget.bdi_percentage) / 100))}</strong></td>
-                    <td>
-                      {canManage && group ? (
-                        <details className="budget-inline-edit">
-                          <summary>Editar</summary>
-                          <form action={updateBudgetGroup}>
-                            <input type="hidden" name="budget_id" value={budget.id} />
-                            <input type="hidden" name="group_id" value={group.id} />
-                            <input name="code" defaultValue={group.code} required aria-label="Código do grupo" />
-                            <input name="name" defaultValue={group.name} required aria-label="Nome do grupo" />
-                            <input name="sort_order" type="number" defaultValue={group.sort_order} aria-label="Ordem do grupo" />
-                            <textarea name="notes" defaultValue={group.notes ?? ""} aria-label="Observações do grupo" />
-                            <button type="submit">Salvar</button>
-                          </form>
-                        </details>
-                      ) : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-              {groupSummaries.length === 0 ? <tr><td className="empty-table" colSpan={9}>Crie o primeiro grupo para estruturar o orçamento.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="registry-toolbar budgets-items-toolbar">
+      <section className="budget-toolbar-card budget-analytic-toolbar">
         <form method="get" className="budgets-items-filter">
-          <input name="q" defaultValue={queryParams.q ?? ""} placeholder="Código, descrição, unidade ou observação" />
+          <input name="q" defaultValue={queryParams.q ?? ""} placeholder="Digite o nome ou código do serviço" />
           <select name="group" defaultValue={groupFilter}><option value="">Todos os grupos</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.code} · {group.name}</option>)}</select>
-          <select name="incomplete" defaultValue={incompleteOnly ? "1" : ""}><option value="">Todos os serviços</option><option value="1">Somente incompletos</option></select>
+          <select name="incomplete" defaultValue={incompleteOnly ? "1" : ""}><option value="">Todos os serviços</option><option value="1">Somente itens a revisar</option></select>
           <button type="submit">Filtrar</button>
           <Link href={`/engenharia/orcamentos/${budget.id}`}>Limpar</Link>
         </form>
       </section>
 
-      <section className="registry-table-panel budgets-items-panel">
-        <div className="section-heading">
-          <div><span>Planilha orçamentária</span><h2>Serviços e custos unitários</h2></div>
+      <section className="budget-table-card budget-analytic-card">
+        <div className="budget-section-head">
+          <div>
+            <span>Planilha orçamentária</span>
+            <h2>Serviços e custos da revisão</h2>
+          </div>
           <p>{filteredItems.length} de {items.length} serviço(s).</p>
         </div>
         <div className="registry-table-wrap">
           <table className="registry-table budgets-items-table">
-            <thead><tr><th>Grupo</th><th>Código / serviço</th><th>Un.</th><th>Qtd.</th><th>Material/un.</th><th>M.O./un.</th><th>Equip./un.</th><th>Outros/un.</th><th>Custo un.</th><th>Total direto</th><th>Total c/ BDI</th><th>Ação</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Serviço</th>
+                <th>Un.</th>
+                <th>Qtd.</th>
+                <th>Material/un.</th>
+                <th>M.O./un.</th>
+                <th>Equip./un.</th>
+                <th>Outros/un.</th>
+                <th>Custo un.</th>
+                <th>Custo total</th>
+                <th>Situação</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
             <tbody>
-              {filteredItems.map((item) => (
-                <tr key={item.id} className={itemIncomplete(item) ? "budget-item-incomplete" : ""}>
-                  <td>{item.group_id ? groupNameById.get(item.group_id) ?? "Grupo inativo" : "Sem grupo"}</td>
-                  <td><strong>{item.code ? `${item.code} · ` : ""}{item.description}</strong>{item.notes ? <span>{item.notes}</span> : null}{itemIncomplete(item) ? <span className="budgets-alert-text">Revisar quantidade ou custo</span> : null}</td>
-                  <td>{item.unit}</td>
-                  <td>{decimal(item.quantity, 3)}</td>
-                  <td>{money(item.material_unit_cost)}</td>
-                  <td>{money(item.labor_unit_cost)}</td>
-                  <td>{money(item.equipment_unit_cost)}</td>
-                  <td>{money(item.other_unit_cost)}</td>
-                  <td><strong>{money(item.unit_direct_cost)}</strong></td>
-                  <td><strong>{money(item.total_direct_cost)}</strong></td>
-                  <td><strong>{money(Number(item.total_direct_cost) * (1 + Number(budget.bdi_percentage) / 100))}</strong></td>
-                  <td>
-                    {canManage && budget.status !== "archived" ? (
-                      <div className="budget-item-actions">
-                        <details className="budget-inline-edit budget-item-edit">
-                          <summary>Editar</summary>
-                          <form action={updateBudgetItem}>
+              {groupSections.map((section) => (
+                <Fragment key={section.id}>
+                  <tr className="budget-group-row">
+                    <td colSpan={12}>
+                      <div className="budget-group-wrap">
+                        <div><span className="budget-group-code">{section.code}</span><strong>{section.name}</strong><small>{section.allItems.length} serviço(s)</small></div>
+                        <div><small>Custo do grupo</small><strong>{money(sumDirect(section.allItems))}</strong></div>
+                      </div>
+                    </td>
+                  </tr>
+                  {section.visibleItems.map((item) => (
+                    <tr key={item.id} className={itemIncomplete(item) ? "budget-item-incomplete" : ""}>
+                      <td><strong className="budget-code">{item.code ?? "—"}</strong></td>
+                      <td><strong>{item.description}</strong>{item.notes ? <span>{item.notes}</span> : null}</td>
+                      <td>{item.unit}</td>
+                      <td>{decimal(item.quantity, 3)}</td>
+                      <td>{money(item.material_unit_cost)}</td>
+                      <td>{money(item.labor_unit_cost)}</td>
+                      <td>{money(item.equipment_unit_cost)}</td>
+                      <td>{money(item.other_unit_cost)}</td>
+                      <td><strong>{money(item.unit_direct_cost)}</strong></td>
+                      <td><strong>{money(item.total_direct_cost)}</strong></td>
+                      <td>{itemIncomplete(item) ? <span className="budget-situation review">Revisar</span> : <span className="budget-situation complete">Completo</span>}</td>
+                      <td>
+                        {canManage && budget.status !== "archived" ? (
+                          <div className="budget-item-actions">
+                            <details className="budget-inline-edit budget-item-edit">
+                              <summary>Editar</summary>
+                              <form action={updateBudgetItem}>
+                                <input type="hidden" name="budget_id" value={budget.id} />
+                                <input type="hidden" name="item_id" value={item.id} />
+                                <label><span>Grupo</span><select name="group_id" defaultValue={item.group_id ?? ""}><option value="">Sem grupo</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.code} · {group.name}</option>)}</select></label>
+                                <label><span>Código</span><input name="code" defaultValue={item.code ?? ""} /></label>
+                                <label className="budget-edit-wide"><span>Descrição</span><input name="description" defaultValue={item.description} required /></label>
+                                <label><span>Unidade</span><input name="unit" defaultValue={item.unit} required /></label>
+                                <label><span>Quantidade</span><input name="quantity" type="number" min="0" step="0.000001" defaultValue={item.quantity} /></label>
+                                <label><span>Material/un.</span><input name="material_unit_cost" type="number" min="0" step="0.000001" defaultValue={item.material_unit_cost} /></label>
+                                <label><span>Mão de obra/un.</span><input name="labor_unit_cost" type="number" min="0" step="0.000001" defaultValue={item.labor_unit_cost} /></label>
+                                <label><span>Equipamento/un.</span><input name="equipment_unit_cost" type="number" min="0" step="0.000001" defaultValue={item.equipment_unit_cost} /></label>
+                                <label><span>Outros/un.</span><input name="other_unit_cost" type="number" min="0" step="0.000001" defaultValue={item.other_unit_cost} /></label>
+                                <label><span>Ordem</span><input name="sort_order" type="number" defaultValue={item.sort_order} /></label>
+                                <label className="budget-edit-wide"><span>Observações</span><textarea name="notes" defaultValue={item.notes ?? ""} /></label>
+                                <button type="submit">Salvar serviço</button>
+                              </form>
+                            </details>
+                            <form action={deactivateBudgetItem}>
+                              <input type="hidden" name="budget_id" value={budget.id} />
+                              <input type="hidden" name="item_id" value={item.id} />
+                              <button className="table-action danger" type="submit">Remover</button>
+                            </form>
+                          </div>
+                        ) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                  {section.group && canManage ? (
+                    <tr className="budget-group-edit-row">
+                      <td colSpan={12}>
+                        <details className="budget-inline-edit budget-group-inline-edit">
+                          <summary>Editar grupo {section.code}</summary>
+                          <form action={updateBudgetGroup}>
                             <input type="hidden" name="budget_id" value={budget.id} />
-                            <input type="hidden" name="item_id" value={item.id} />
-                            <label><span>Grupo</span><select name="group_id" defaultValue={item.group_id ?? ""}><option value="">Sem grupo</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.code} · {group.name}</option>)}</select></label>
-                            <label><span>Código</span><input name="code" defaultValue={item.code ?? ""} /></label>
-                            <label className="budget-edit-wide"><span>Descrição</span><input name="description" defaultValue={item.description} required /></label>
-                            <label><span>Unidade</span><input name="unit" defaultValue={item.unit} required /></label>
-                            <label><span>Quantidade</span><input name="quantity" type="number" min="0" step="0.000001" defaultValue={item.quantity} /></label>
-                            <label><span>Material/un.</span><input name="material_unit_cost" type="number" min="0" step="0.000001" defaultValue={item.material_unit_cost} /></label>
-                            <label><span>Mão de obra/un.</span><input name="labor_unit_cost" type="number" min="0" step="0.000001" defaultValue={item.labor_unit_cost} /></label>
-                            <label><span>Equipamento/un.</span><input name="equipment_unit_cost" type="number" min="0" step="0.000001" defaultValue={item.equipment_unit_cost} /></label>
-                            <label><span>Outros/un.</span><input name="other_unit_cost" type="number" min="0" step="0.000001" defaultValue={item.other_unit_cost} /></label>
-                            <label><span>Ordem</span><input name="sort_order" type="number" defaultValue={item.sort_order} /></label>
-                            <label className="budget-edit-wide"><span>Observações</span><textarea name="notes" defaultValue={item.notes ?? ""} /></label>
-                            <button type="submit">Salvar serviço</button>
+                            <input type="hidden" name="group_id" value={section.group.id} />
+                            <input name="code" defaultValue={section.group.code} required aria-label="Código do grupo" />
+                            <input name="name" defaultValue={section.group.name} required aria-label="Nome do grupo" />
+                            <input name="sort_order" type="number" defaultValue={section.group.sort_order} aria-label="Ordem do grupo" />
+                            <textarea name="notes" defaultValue={section.group.notes ?? ""} aria-label="Observações do grupo" />
+                            <button type="submit">Salvar grupo</button>
                           </form>
                         </details>
-                        <form action={deactivateBudgetItem}>
-                          <input type="hidden" name="budget_id" value={budget.id} />
-                          <input type="hidden" name="item_id" value={item.id} />
-                          <button className="table-action danger" type="submit">Remover</button>
-                        </form>
-                      </div>
-                    ) : "—"}
-                  </td>
-                </tr>
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
               ))}
-              {filteredItems.length === 0 ? <tr><td className="empty-table" colSpan={12}>Nenhum serviço encontrado.</td></tr> : null}
+              {filteredItems.length === 0 ? (
+                <tr><td className="budget-empty-state" colSpan={12}><strong>Nenhum serviço encontrado.</strong><span>Adicione serviços ou altere os filtros da planilha.</span></td></tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -436,3 +382,5 @@ export default async function BudgetDetailPage({
     </AppShell>
   );
 }
+
+import { Fragment } from "react";
