@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
+import { GlobalSearchableSelect } from "@/components/global-searchable-select";
 import { TakeoffImportGlobal } from "@/components/takeoff-import-global";
 import "./globals.css";
 import "./workspace.css";
@@ -22,6 +23,7 @@ import "./takeoff-import.css";
 import "./analytical-budget.css";
 import "./schedule.css";
 import "./creatable-combobox.css";
+import "./global-searchable-select.css";
 import "./elos-theme.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -57,6 +59,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${ibmPlexSans.variable} ${spaceGrotesk.variable}`}>
       <body>
         {children}
+        <GlobalSearchableSelect />
         <Suspense fallback={null}><TakeoffImportGlobal /></Suspense>
       </body>
     </html>

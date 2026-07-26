@@ -104,7 +104,7 @@ function PriceFields({
 
       <label className="price-modal-wide">
         <span>Origem / documento</span>
-        <input name="source" defaultValue={price?.source ?? ""} placeholder="Ex.: Cotação 153, histórico Koper, pedido de compra..." />
+        <input name="source" defaultValue={price?.source ?? ""} placeholder="Ex.: cotação, pedido de compra, contrato ou base corporativa" />
       </label>
 
       <label className="price-modal-wide">
