@@ -1,0 +1,47 @@
+.takeoff-import-launcher {
+  position: fixed;
+  top: 112px;
+  right: 28px;
+  z-index: 45;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #d4dfdd;
+  border-radius: 12px;
+  background: #fff;
+  color: #123432;
+  box-shadow: 0 10px 28px rgba(15, 52, 48, .12);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.takeoff-import-launcher:hover {
+  border-color: #00877f;
+  color: #00766f;
+}
+
+.takeoff-import-modal {
+  width: min(880px, calc(100vw - 28px));
+}
+
+.takeoff-import-modal .price-import-rules {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 1180px) {
+  .takeoff-import-launcher {
+    top: auto;
+    right: 18px;
+    bottom: 18px;
+    z-index: 90;
+    background: #007f78;
+    color: #fff;
+    border-color: #007f78;
+  }
+}
+
+@media (max-width: 720px) {
+  .takeoff-import-modal .price-import-rules {
+    grid-template-columns: 1fr;
+  }
+}

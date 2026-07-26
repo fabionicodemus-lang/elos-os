@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
+import { TakeoffImportGlobal } from "@/components/takeoff-import-global";
 import "./globals.css";
 import "./workspace.css";
 import "./registry.css";
@@ -16,6 +18,7 @@ import "./prices.css";
 import "./price-import.css";
 import "./compositions.css";
 import "./takeoffs.css";
+import "./takeoff-import.css";
 import "./creatable-combobox.css";
 import "./elos-theme.css";
 
@@ -50,7 +53,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${ibmPlexSans.variable} ${spaceGrotesk.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Suspense fallback={null}><TakeoffImportGlobal /></Suspense>
+      </body>
     </html>
   );
 }
