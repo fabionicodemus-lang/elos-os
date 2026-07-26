@@ -44,6 +44,7 @@ export type ScheduleActivityData = {
   planned_cost: number;
   sort_order: number;
   planning_status: "draft" | "reviewed" | "approved";
+  source?: "manual" | "takeoff";
   notes: string | null;
   record_status: "active" | "inactive";
 };
