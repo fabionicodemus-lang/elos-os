@@ -20,6 +20,7 @@ import "./compositions.css";
 import "./takeoffs.css";
 import "./takeoff-import.css";
 import "./analytical-budget.css";
+import "./schedule.css";
 import "./creatable-combobox.css";
 import "./elos-theme.css";
 

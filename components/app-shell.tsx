@@ -83,6 +83,8 @@ export async function AppShell({
       "compositions.manage",
       "takeoffs.view",
       "takeoffs.manage",
+      "schedule.view",
+      "schedule.manage",
       "execution.view",
       "quality.view",
       "commercial.view",
@@ -105,6 +107,7 @@ export async function AppShell({
   const compositionsHref = can("compositions.view") ? "/engenharia/composicoes" : undefined;
   const takeoffsHref = can("takeoffs.view") ? "/engenharia/levantamento" : undefined;
   const analyticalBudgetHref = can("budgets.view") ? "/engenharia/orcamento-analitico" : undefined;
+  const scheduleHref = can("schedule.view") ? "/engenharia/cronograma" : undefined;
 
   const groups: ShellNavigationGroup[] = [
     {
@@ -148,7 +151,7 @@ export async function AppShell({
         { label: "Levantamento de Quantitativos", href: takeoffsHref, active: activeItem === "takeoffs", disabled: !takeoffsHref },
         { label: "Orçamento Analítico", href: analyticalBudgetHref, active: activeItem === "analytical-budget", disabled: !analyticalBudgetHref },
         { label: "Planejamento da obra", sectionLabel: "Planejamento da obra" },
-        { label: "Cronograma Físico · Linha Base", disabled: true },
+        { label: "Cronograma Físico · Linha Base", href: scheduleHref, active: activeItem === "schedule", disabled: !scheduleHref },
         { label: "Curvas Física e Financeira", disabled: true },
         { label: "Plano de Contratações", disabled: true },
         { label: "Planejamento de Suprimentos", disabled: true },
@@ -253,7 +256,7 @@ export async function AppShell({
           <div className="elos-page-top">
             <div>
               <div className="elos-eyebrow">{eyebrow}</div>
-              <h1>{title}<span className="elos-module-version">V0.27.3 · sistema integrado</span></h1>
+              <h1>{title}<span className="elos-module-version">V0.28.0 · sistema integrado</span></h1>
               {description ? <p>{description}</p> : null}
             </div>
             {actions ? <div className="elos-page-actions">{actions}</div> : null}
