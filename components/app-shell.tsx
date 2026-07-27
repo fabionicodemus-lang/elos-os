@@ -31,6 +31,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
   const activeProject = projects.find((project) => project.id === projectId) ?? projects[0] ?? null;
   const projectsHref = can("projects.view") ? "/empreendimentos" : undefined;
+  const projectCharacteristicsHref = can("projects.view") ? "/empreendimentos/caracteristicas" : undefined;
   const financeReceivablesHref = can("receivables.view") ? "/financeiro/contas-a-receber" : undefined;
   const commercialReceivablesHref = can("receivables.view") ? "/comercial/planos-de-pagamento" : undefined;
   const indicesHref = can("indices.view") ? "/financeiro/indices-de-correcao" : undefined;
@@ -59,7 +60,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
     { key: "projects", label: "Empreendimentos", icon: "▦", active: activeGroup === "projects", items: [
       { label: "Empresas / SPEs", disabled: true },
       { label: "Cadastro de Empreendimentos", href: projectsHref, active: activeItem === "projects", disabled: !projectsHref },
-      { label: "Características do Empreendimento", disabled: true },
+      { label: "Características do Empreendimento", href: projectCharacteristicsHref, active: activeItem === "project-characteristics", disabled: !projectCharacteristicsHref },
       { label: "Locais / Pavimentos", disabled: true },
       { label: "Unidades privativas", disabled: true },
     ]},
@@ -121,7 +122,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.33.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.34.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
