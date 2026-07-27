@@ -74,7 +74,11 @@ as $$
 declare
   target_project_id uuid;
 begin
-  target_project_id := coalesce(new.project_id, old.project_id);
+  if tg_op = 'DELETE' then
+    target_project_id := old.project_id;
+  else
+    target_project_id := new.project_id;
+  end if;
 
   update public.projects
   set
@@ -88,7 +92,11 @@ begin
     updated_at = now()
   where id = target_project_id;
 
-  return coalesce(new, old);
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+
+  return new;
 end;
 $$;
 
