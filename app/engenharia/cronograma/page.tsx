@@ -141,11 +141,16 @@ export default async function EngineeringSchedulePage({
       eyebrow="Engenharia · Planejamento da Obra"
       title="Cronograma Físico"
       description={`${company.name} · ${context} · linha de balanço, equipes e planejamento físico da obra.`}
-      actions={
-        <Link className="elos-button elos-button-primary" href={selectedBaseline ? `/engenharia/curvas?baseline=${selectedBaseline.id}` : "/engenharia/curvas"}>
-          Curvas física e financeira
-        </Link>
-      }
+      actions={(
+        <>
+          <Link className="elos-button secondary" href={selectedBaseline ? `/engenharia/curvas?baseline=${selectedBaseline.id}` : "/engenharia/curvas"}>
+            Curvas física e financeira
+          </Link>
+          <Link className="elos-button" href={selectedBaseline ? `/engenharia/plano-contratacoes?baseline=${selectedBaseline.id}` : "/engenharia/plano-contratacoes"}>
+            Plano de contratações
+          </Link>
+        </>
+      )}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
