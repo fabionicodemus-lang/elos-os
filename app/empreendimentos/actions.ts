@@ -41,6 +41,23 @@ function listUrl(message: string, type: "error" | "success" = "error") {
   return `${LIST_PATH}?${new URLSearchParams({ [type]: message }).toString()}`;
 }
 
+function digits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function validCnpj(value: string) {
+  const cnpj = digits(value);
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+  const calculate = (base: string, weights: number[]) => {
+    const sum = base.split("").reduce((total, digit, index) => total + Number(digit) * weights[index], 0);
+    const remainder = sum % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+  const first = calculate(cnpj.slice(0, 12), [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  const second = calculate(`${cnpj.slice(0, 12)}${first}`, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  return cnpj.endsWith(`${first}${second}`);
+}
+
 function projectPayload(formData: FormData) {
   const status = text(formData, "status") || "planning";
   const projectType = text(formData, "project_type") || "residential";
@@ -48,6 +65,7 @@ function projectPayload(formData: FormData) {
   return {
     name: text(formData, "name"),
     code: optional(formData, "code")?.toUpperCase() ?? null,
+    legal_entity_id: text(formData, "legal_entity_id"),
     project_type: projectTypes.has(projectType) ? projectType : "other",
     status: statuses.has(status) ? status : "planning",
     description: optional(formData, "description"),
@@ -88,9 +106,32 @@ function validatePayload(payload: ReturnType<typeof projectPayload>) {
 
   return Boolean(
     payload.name &&
+    payload.legal_entity_id &&
     numericValues.every((value) => Number.isFinite(value) && value >= 0) &&
     (!payload.state || payload.state.length === 2)
   );
+}
+
+async function legalEntityError({
+  supabase,
+  companyId,
+  legalEntityId,
+}: {
+  supabase: Awaited<ReturnType<typeof requireCompanyPermission>>["supabase"];
+  companyId: string;
+  legalEntityId: string;
+}) {
+  const { data, error } = await supabase
+    .from("legal_entities")
+    .select("id, status, cnpj")
+    .eq("id", legalEntityId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (error) return `Execute a migration 20260727_0030_legal_entities.sql: ${error.message}`;
+  if (!data) return "A empresa/SPE selecionada não pertence ao ambiente atual.";
+  if (data.status !== "active") return "A empresa/SPE selecionada está inativa.";
+  if (!validCnpj(data.cnpj ?? "")) return "A empresa/SPE selecionada precisa ter um CNPJ válido.";
+  return null;
 }
 
 function coverImage(formData: FormData) {
@@ -130,7 +171,7 @@ async function uploadCoverImage({
 
 export async function createProject(formData: FormData) {
   const payload = projectPayload(formData);
-  if (!validatePayload(payload)) redirect(listUrl("Revise o nome, o estado e os valores numéricos do empreendimento."));
+  if (!validatePayload(payload)) redirect(listUrl("Revise o nome, a empresa fiscal, o estado e os valores numéricos do empreendimento."));
 
   let image: File | null = null;
   try {
@@ -140,6 +181,9 @@ export async function createProject(formData: FormData) {
   }
 
   const { supabase, companyId, userId } = await requireCompanyPermission("projects.manage");
+  const entityError = await legalEntityError({ supabase, companyId, legalEntityId: payload.legal_entity_id });
+  if (entityError) redirect(listUrl(entityError));
+
   const { data: project, error } = await supabase
     .from("projects")
     .insert({ company_id: companyId, ...payload, created_by: userId })
@@ -166,6 +210,7 @@ export async function createProject(formData: FormData) {
   }
 
   revalidatePath(LIST_PATH);
+  revalidatePath("/empreendimentos/empresas");
   revalidatePath("/dashboard");
   redirect(listUrl("Empreendimento cadastrado com sucesso.", "success"));
 }
@@ -173,7 +218,7 @@ export async function createProject(formData: FormData) {
 export async function updateProject(formData: FormData) {
   const projectId = text(formData, "project_id");
   const payload = projectPayload(formData);
-  if (!projectId || !validatePayload(payload)) redirect(listUrl("Revise os dados do empreendimento."));
+  if (!projectId || !validatePayload(payload)) redirect(listUrl("Revise os dados e a empresa fiscal do empreendimento."));
 
   let image: File | null = null;
   try {
@@ -184,6 +229,9 @@ export async function updateProject(formData: FormData) {
 
   const removeCover = text(formData, "remove_cover_image") === "true";
   const { supabase, companyId } = await requireCompanyPermission("projects.manage");
+  const entityError = await legalEntityError({ supabase, companyId, legalEntityId: payload.legal_entity_id });
+  if (entityError) redirect(listUrl(entityError));
+
   const { data: existingProject } = await supabase
     .from("projects")
     .select("id, cover_image_path")
@@ -219,6 +267,8 @@ export async function updateProject(formData: FormData) {
   }
 
   revalidatePath(LIST_PATH);
+  revalidatePath("/empreendimentos/empresas");
+  revalidatePath("/empreendimentos/caracteristicas");
   revalidatePath("/dashboard");
   redirect(listUrl("Empreendimento atualizado.", "success"));
 }
