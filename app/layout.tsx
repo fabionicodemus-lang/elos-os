@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
+import { CurvesBarValues } from "@/components/curves-bar-values";
 import { GlobalSearchableSelect } from "@/components/global-searchable-select";
 import { TakeoffImportGlobal } from "@/components/takeoff-import-global";
 import "./globals.css";
@@ -23,6 +24,7 @@ import "./takeoff-import.css";
 import "./analytical-budget.css";
 import "./schedule.css";
 import "./curves.css";
+import "./curves-bar-values.css";
 import "./creatable-combobox.css";
 import "./global-searchable-select.css";
 import "./elos-theme.css";
@@ -60,6 +62,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${ibmPlexSans.variable} ${spaceGrotesk.variable}`}>
       <body>
         {children}
+        <CurvesBarValues />
         <GlobalSearchableSelect />
         <Suspense fallback={null}><TakeoffImportGlobal /></Suspense>
       </body>
