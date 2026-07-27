@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import { CurvesBarValues } from "@/components/curves-bar-values";
 import { GlobalSearchableSelect } from "@/components/global-searchable-select";
-import { ScheduleServicePresentation } from "@/components/schedule-service-presentation";
 import { TakeoffImportGlobal } from "@/components/takeoff-import-global";
 import "./globals.css";
 import "./workspace.css";
@@ -24,7 +23,6 @@ import "./takeoffs.css";
 import "./takeoff-import.css";
 import "./analytical-budget.css";
 import "./schedule.css";
-import "./schedule-service-presentation.css";
 import "./curves.css";
 import "./curves-bar-values.css";
 import "./creatable-combobox.css";
@@ -65,7 +63,6 @@ export default function RootLayout({
       <body>
         {children}
         <CurvesBarValues />
-        <ScheduleServicePresentation />
         <GlobalSearchableSelect />
         <Suspense fallback={null}><TakeoffImportGlobal /></Suspense>
       </body>
