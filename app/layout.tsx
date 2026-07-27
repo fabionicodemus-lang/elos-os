@@ -24,6 +24,7 @@ import "./takeoff-import.css";
 import "./analytical-budget.css";
 import "./schedule.css";
 import "./schedule-scrollbar.css";
+import "./execution-schedule.css";
 import "./projects.css";
 import "./project-details.css";
 import "./project-locations.css";
