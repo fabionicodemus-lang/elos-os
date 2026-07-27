@@ -18,6 +18,13 @@ type Project = { id: string; name: string; code: string | null };
 type PriceInput = PriceInputOption & { category: string; family_code: string | null };
 type PriceSupplier = PriceSupplierOption;
 type PriceProject = Project;
+type PriceStat = {
+  input_id: string;
+  supplier_id: string | null;
+  project_id: string | null;
+  price_date: string;
+  is_adopted: boolean;
+};
 
 type EngineeringInputPrice = EngineeringInputPriceDialogData & {
   final_unit_price: number;
@@ -30,6 +37,7 @@ type EngineeringInputPrice = EngineeringInputPriceDialogData & {
 };
 
 const PAGE_SIZE = 50;
+const PRICE_SELECT = "id, input_id, supplier_id, project_id, price_date, unit_price, freight_unit_cost, other_unit_cost, discount_percentage, final_unit_price, currency, is_adopted, source, notes, status, created_at, updated_at, engineering_inputs(id, code, description, unit, category, family_code), suppliers(id, legal_name, trade_name), projects(id, name, code)";
 
 function relatedOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
@@ -68,6 +76,12 @@ function buildQuery(params: Record<string, string>, page: number) {
   return `?${query.toString()}`;
 }
 
+function staleDate() {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - 90);
+  return date.toISOString().slice(0, 10);
+}
+
 export default async function EngineeringPricesPage({
   searchParams,
 }: {
@@ -87,7 +101,7 @@ export default async function EngineeringPricesPage({
 }) {
   const params = await searchParams;
   const { supabase, company, companyId, projectId, roleKey } = await requireCompanyPermission("prices.view");
-  const queryText = (params.q ?? "").trim().toLowerCase();
+  const queryText = (params.q ?? "").trim().toLocaleLowerCase("pt-BR");
   const inputId = params.input ?? "";
   const supplierId = params.supplier ?? "";
   const scope = ["corporate", "project"].includes(params.scope ?? "") ? params.scope! : "";
@@ -106,7 +120,9 @@ export default async function EngineeringPricesPage({
         target_permission: "prices.manage",
       });
 
-  const [inputsResult, suppliersResult, pricesResult, projectResult, manageResult] = await Promise.all([
+  // O histórico detalhado é paginado abaixo. Aqui trazemos apenas dados leves
+  // necessários para filtros, formulários e indicadores da visão geral.
+  const [inputsResult, suppliersResult, statsResult, projectResult, manageResult] = await Promise.all([
     fetchAllRows<PriceInput>(async (from, to) => {
       const { data, error } = await supabase
         .from("engineering_inputs")
@@ -127,15 +143,14 @@ export default async function EngineeringPricesPage({
         .range(from, to);
       return { data: (data ?? []) as PriceSupplier[], error };
     }),
-    fetchAllRows<EngineeringInputPrice>(async (from, to) => {
+    fetchAllRows<PriceStat>(async (from, to) => {
       const { data, error } = await supabase
         .from("engineering_input_prices")
-        .select("id, input_id, supplier_id, project_id, price_date, unit_price, freight_unit_cost, other_unit_cost, discount_percentage, final_unit_price, currency, is_adopted, source, notes, status, created_at, updated_at, engineering_inputs(id, code, description, unit, category, family_code), suppliers(id, legal_name, trade_name), projects(id, name, code)")
+        .select("input_id, supplier_id, project_id, price_date, is_adopted")
         .eq("company_id", companyId)
-        .order("price_date", { ascending: false })
-        .order("created_at", { ascending: false })
+        .eq("status", "active")
         .range(from, to);
-      return { data: (data ?? []) as unknown as EngineeringInputPrice[], error };
+      return { data: (data ?? []) as PriceStat[], error };
     }),
     projectQuery,
     managePromise,
@@ -143,47 +158,60 @@ export default async function EngineeringPricesPage({
 
   const inputs = inputsResult.data;
   const suppliers = suppliersResult.data;
-  const prices = pricesResult.data;
+  const activePrices = statsResult.data;
   const project = projectResult.data as Project | null;
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const validInputId = inputs.some((input) => input.id === inputId) ? inputId : "";
   const validSupplierId = suppliers.some((supplier) => supplier.id === supplierId) ? supplierId : "";
 
-  const filteredPrices = prices.filter((price) => {
-    const input = relatedOne(price.engineering_inputs);
-    const supplier = relatedOne(price.suppliers);
-    const priceProject = relatedOne(price.projects);
-    const age = daysSince(price.price_date);
+  let pricesQuery = supabase
+    .from("engineering_input_prices")
+    .select(PRICE_SELECT, { count: "exact" })
+    .eq("company_id", companyId);
 
-    if (validInputId && price.input_id !== validInputId) return false;
-    if (validSupplierId && price.supplier_id !== validSupplierId) return false;
-    if (scope === "corporate" && price.project_id) return false;
-    if (scope === "project" && (!price.project_id || (projectId && price.project_id !== projectId))) return false;
-    if (dateRange.from && price.price_date < dateRange.from) return false;
-    if (dateRange.to && price.price_date > dateRange.to) return false;
-    if (situation === "adopted" && !(price.status === "active" && price.is_adopted)) return false;
-    if (situation === "quoted" && !(price.status === "active" && !price.is_adopted)) return false;
-    if (situation === "inactive" && price.status !== "inactive") return false;
-    if (situation === "stale" && !(price.status === "active" && price.is_adopted && age > 90)) return false;
+  if (validInputId) pricesQuery = pricesQuery.eq("input_id", validInputId);
+  if (validSupplierId) pricesQuery = pricesQuery.eq("supplier_id", validSupplierId);
+  if (scope === "corporate") pricesQuery = pricesQuery.is("project_id", null);
+  if (scope === "project") {
+    pricesQuery = projectId ? pricesQuery.eq("project_id", projectId) : pricesQuery.not("project_id", "is", null);
+  }
+  if (dateRange.from) pricesQuery = pricesQuery.gte("price_date", dateRange.from);
+  if (dateRange.to) pricesQuery = pricesQuery.lte("price_date", dateRange.to);
+  if (situation === "adopted") pricesQuery = pricesQuery.eq("status", "active").eq("is_adopted", true);
+  if (situation === "quoted") pricesQuery = pricesQuery.eq("status", "active").eq("is_adopted", false);
+  if (situation === "inactive") pricesQuery = pricesQuery.eq("status", "inactive");
+  if (situation === "stale") pricesQuery = pricesQuery.eq("status", "active").eq("is_adopted", true).lt("price_date", staleDate());
 
-    if (!queryText) return true;
-    return [
-      input?.code ?? "",
-      input?.description ?? "",
-      input?.family_code ?? "",
-      supplier?.trade_name ?? "",
-      supplier?.legal_name ?? "",
-      priceProject?.code ?? "",
-      priceProject?.name ?? "",
-      price.source ?? "",
-      price.notes ?? "",
-    ].join(" ").toLowerCase().includes(queryText);
-  });
+  if (queryText) {
+    const normalized = queryText.replace(/[,%()]/g, " ").replace(/\s+/g, " ").trim();
+    const matchingInputs = inputs
+      .filter((input) => [input.code, input.description, input.family_code ?? ""].join(" ").toLocaleLowerCase("pt-BR").includes(queryText))
+      .slice(0, 80)
+      .map((input) => input.id);
+    const matchingSuppliers = suppliers
+      .filter((supplier) => [supplier.trade_name ?? "", supplier.legal_name].join(" ").toLocaleLowerCase("pt-BR").includes(queryText))
+      .slice(0, 80)
+      .map((supplier) => supplier.id);
+    const clauses = [
+      `source.ilike.*${normalized}*`,
+      `notes.ilike.*${normalized}*`,
+      ...(matchingInputs.length ? [`input_id.in.(${matchingInputs.join(",")})`] : []),
+      ...(matchingSuppliers.length ? [`supplier_id.in.(${matchingSuppliers.join(",")})`] : []),
+      ...(projectId && [project?.code ?? "", project?.name ?? ""].join(" ").toLocaleLowerCase("pt-BR").includes(queryText) ? [`project_id.eq.${projectId}`] : []),
+    ];
+    pricesQuery = pricesQuery.or(clauses.join(","));
+  }
 
-  const totalPages = Math.max(1, Math.ceil(filteredPrices.length / PAGE_SIZE));
+  const pageFrom = (requestedPage - 1) * PAGE_SIZE;
+  const pricesResult = await pricesQuery
+    .order("price_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .range(pageFrom, pageFrom + PAGE_SIZE - 1);
+
+  const prices = (pricesResult.data ?? []) as unknown as EngineeringInputPrice[];
+  const filteredCount = pricesResult.count ?? prices.length;
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
   const page = Math.min(requestedPage, totalPages);
-  const pagePrices = filteredPrices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const activePrices = prices.filter((price) => price.status === "active");
   const adoptedPrices = activePrices.filter((price) => price.is_adopted);
   const pricedInputs = new Set(activePrices.map((price) => price.input_id)).size;
   const quotedSuppliers = new Set(activePrices.map((price) => price.supplier_id).filter(Boolean)).size;
@@ -230,8 +258,8 @@ export default async function EngineeringPricesPage({
         <Link href="/engenharia/servicos">≡ Serviços</Link>
         <Link href="/engenharia/insumos">◈ Insumos</Link>
         <span className="active">$ Preços e cotações</span>
-        <span>∑ Levantamento</span>
-        <span>R$ Orçamento analítico</span>
+        <Link href="/engenharia/levantamento">∑ Levantamento</Link>
+        <Link href="/engenharia/orcamento-analitico">R$ Orçamento analítico</Link>
       </nav>
 
       <section className="price-kpi-grid">
@@ -289,7 +317,7 @@ export default async function EngineeringPricesPage({
       <section className="price-table-card">
         <div className="budget-section-head">
           <div><span>Histórico comercial</span><h2>Cotações e preços adotados</h2></div>
-          <p>{filteredPrices.length} registro(s) no filtro atual.</p>
+          <p>{filteredCount} registro(s) no filtro atual.</p>
         </div>
         <div className="registry-table-wrap">
           <table className="registry-table price-catalog-table">
@@ -297,7 +325,7 @@ export default async function EngineeringPricesPage({
               <tr><th>Insumo</th><th>Escopo</th><th>Fornecedor</th><th>Data</th><th>Preço base</th><th>Desconto</th><th>Frete + outros</th><th>Preço final</th><th>Situação</th><th>Origem</th><th>Ações</th></tr>
             </thead>
             <tbody>
-              {pagePrices.map((price) => {
+              {prices.map((price) => {
                 const input = relatedOne(price.engineering_inputs);
                 const supplier = relatedOne(price.suppliers);
                 const priceProject = relatedOne(price.projects);
@@ -335,7 +363,7 @@ export default async function EngineeringPricesPage({
                   </tr>
                 );
               })}
-              {pagePrices.length === 0 ? <tr><td className="budget-empty-state" colSpan={11}><strong>Nenhuma cotação encontrada.</strong><span>Cadastre o primeiro preço ou altere os filtros.</span></td></tr> : null}
+              {prices.length === 0 ? <tr><td className="budget-empty-state" colSpan={11}><strong>Nenhuma cotação encontrada.</strong><span>Cadastre o primeiro preço ou altere os filtros.</span></td></tr> : null}
             </tbody>
           </table>
         </div>
