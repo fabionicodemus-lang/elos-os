@@ -25,7 +25,7 @@ function compactBRL(value: number) {
 }
 
 function valueFromTitle(title: string) {
-  const match = title.match(/R\$\s*([\d.]+(?:,\d+)?)/);
+  const match = title.match(/R\$[\s\u00a0]*([\d.]+(?:,\d+)?)/);
   if (!match) return null;
 
   const value = Number(match[1].replace(/\./g, "").replace(",", "."));
@@ -33,6 +33,8 @@ function valueFromTitle(title: string) {
 }
 
 function applyLabels() {
+  let applied = 0;
+
   document.querySelectorAll<HTMLElement>(".curves-bars > div > span[title]").forEach((bar) => {
     const value = valueFromTitle(bar.getAttribute("title") ?? "");
     if (value === null) return;
@@ -41,12 +43,16 @@ function applyLabels() {
     if (!label) {
       label = document.createElement("b");
       label.className = "curves-bar-value";
+      label.setAttribute("aria-hidden", "true");
       bar.appendChild(label);
     }
 
-    label.textContent = compactBRL(value);
-    label.setAttribute("aria-hidden", "true");
+    const compactValue = compactBRL(value);
+    if (label.textContent !== compactValue) label.textContent = compactValue;
+    applied += 1;
   });
+
+  return applied;
 }
 
 export function CurvesBarValues() {
@@ -55,13 +61,28 @@ export function CurvesBarValues() {
   useEffect(() => {
     if (pathname !== "/engenharia/curvas") return;
 
-    const frame = window.requestAnimationFrame(applyLabels);
-    const observer = new MutationObserver(applyLabels);
-    observer.observe(document.body, { childList: true, subtree: true });
+    let cancelled = false;
+    let attempts = 0;
+    let timeout: number | undefined;
+
+    const run = () => {
+      if (cancelled) return;
+      const applied = applyLabels();
+      attempts += 1;
+
+      // A página pode chegar em partes pelo streaming do Next.js. Fazemos
+      // poucas tentativas e paramos, sem manter um observador global ativo.
+      if (applied === 0 && attempts < 20) {
+        timeout = window.setTimeout(run, 100);
+      }
+    };
+
+    const frame = window.requestAnimationFrame(run);
 
     return () => {
+      cancelled = true;
       window.cancelAnimationFrame(frame);
-      observer.disconnect();
+      if (timeout) window.clearTimeout(timeout);
     };
   }, [pathname]);
 
