@@ -1,6 +1,9 @@
 import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
+import { selectProjectFromRegistry } from "./actions";
 import { ProjectCreateDialog, ProjectEditDialog, type ProjectRegistryData } from "./project-dialogs";
+
+const IMAGE_BUCKET = "project-images";
 
 const statusLabels: Record<string, string> = {
   planning: "Planejamento",
@@ -23,27 +26,14 @@ function decimal(value: number | null | undefined) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(Number(value ?? 0));
 }
 
-function dateBR(value: string | null | undefined) {
-  if (!value) return "—";
-  const [year, month, day] = value.slice(0, 10).split("-");
-  return `${day}/${month}/${year}`;
-}
-
-function address(project: ProjectRegistryData) {
-  const line = [project.street, project.address_number].filter(Boolean).join(", ");
-  const city = [project.district, project.city, project.state].filter(Boolean).join(" · ");
-  return [line, city].filter(Boolean).join(" — ") || "Endereço não informado";
-}
-
 export default async function ProjectsRegistryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; success?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; success?: string; error?: string }>;
 }) {
   const params = await searchParams;
-  const { supabase, company, companyId, roleKey } = await requireCompanyPermission("projects.view");
+  const { supabase, company, companyId, projectId, roleKey } = await requireCompanyPermission("projects.view");
   const queryText = (params.q ?? "").trim().toLocaleLowerCase("pt-BR");
-  const status = Object.keys(statusLabels).includes(params.status ?? "") ? params.status! : "";
 
   const managePromise = roleKey === "owner" || roleKey === "admin"
     ? Promise.resolve({ data: true, error: null })
@@ -55,102 +45,118 @@ export default async function ProjectsRegistryPage({
   const [projectsResult, manageResult] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, code, project_type, status, description, postal_code, street, address_number, complement, district, city, state, land_area_m2, built_area_m2, private_area_m2, common_area_m2, total_units, total_towers, total_floors, parking_spaces, launch_date, construction_start_date, delivery_date, registration_number, notes")
+      .select("id, name, code, project_type, status, description, postal_code, street, address_number, complement, district, city, state, land_area_m2, built_area_m2, private_area_m2, common_area_m2, total_units, total_towers, total_floors, parking_spaces, launch_date, construction_start_date, delivery_date, registration_number, notes, cover_image_path")
       .eq("company_id", companyId)
-      .order("status")
       .order("name"),
     managePromise,
   ]);
 
   const structureMissing = Boolean(projectsResult.error);
-  const projects = (projectsResult.data ?? []) as ProjectRegistryData[];
+  const projects = ((projectsResult.data ?? []) as Omit<ProjectRegistryData, "cover_image_url">[]).map((project) => ({
+    ...project,
+    cover_image_url: project.cover_image_path
+      ? supabase.storage.from(IMAGE_BUCKET).getPublicUrl(project.cover_image_path).data.publicUrl
+      : null,
+  }));
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const filtered = projects.filter((project) => {
-    if (status && project.status !== status) return false;
     if (!queryText) return true;
-    return [project.name, project.code ?? "", project.city ?? "", project.state ?? "", project.description ?? ""]
+    return [project.name, project.code ?? "", project.city ?? "", project.state ?? "", company.name]
       .join(" ")
       .toLocaleLowerCase("pt-BR")
       .includes(queryText);
   });
 
-  const operating = projects.filter((project) => project.status === "active");
-  const portfolio = projects.filter((project) => project.status !== "archived");
-  const totalUnits = portfolio.reduce((sum, project) => sum + Number(project.total_units ?? 0), 0);
-  const totalBuiltArea = portfolio.reduce((sum, project) => sum + Number(project.built_area_m2 ?? 0), 0);
-  const nextDelivery = portfolio
-    .filter((project) => project.delivery_date && project.status !== "completed")
-    .sort((a, b) => String(a.delivery_date).localeCompare(String(b.delivery_date)))[0] ?? null;
-
   return (
     <AppShell
       activeGroup="projects"
       activeItem="projects"
-      eyebrow="Empreendimentos · Portfólio"
+      eyebrow="Empreendimentos"
       title="Cadastro de Empreendimentos"
-      description={`${company.name} · visão consolidada dos empreendimentos, áreas, unidades e datas principais.`}
-      actions={canManage ? <ProjectCreateDialog /> : undefined}
+      description="Cadastre cada empreendimento e mantenha seus dados principais."
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
       {structureMissing ? (
         <div className="auth-message error workspace-message">
-          A estrutura completa de Empreendimentos ainda não está instalada no Supabase. Execute a migration <strong>20260727_0026_projects_registry.sql</strong>.
+          Execute no Supabase a migration <strong>20260727_0027_project_cover_images.sql</strong> para liberar as imagens das obras.
         </div>
       ) : null}
 
-      <nav className="project-module-nav" aria-label="Etapas do módulo Empreendimentos">
-        <span>▣ Empresas / SPEs</span>
-        <span className="active">▦ Cadastro de Empreendimentos</span>
-        <span>◇ Características</span>
-        <span>≡ Locais / Pavimentos</span>
-        <span>⌂ Unidades privativas</span>
-      </nav>
-
-      <section className="project-kpi-grid">
-        <article><span>Portfólio ativo</span><strong>{portfolio.length}</strong><small>{operating.length} em construção</small></article>
-        <article><span>Unidades privativas</span><strong>{totalUnits}</strong><small>soma dos empreendimentos ativos</small></article>
-        <article><span>Área construída</span><strong>{decimal(totalBuiltArea)} m²</strong><small>área total cadastrada</small></article>
-        <article><span>Próxima entrega</span><strong>{nextDelivery ? dateBR(nextDelivery.delivery_date) : "—"}</strong><small>{nextDelivery?.name ?? "nenhuma data futura cadastrada"}</small></article>
-      </section>
-
-      <section className="project-filter-card">
-        <form method="get">
-          <label><span>Buscar</span><input name="q" defaultValue={params.q ?? ""} placeholder="Nome, código, cidade ou descrição" /></label>
-          <label><span>Status</span><select name="status" defaultValue={status}><option value="">Todos</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <button type="submit">Aplicar filtros</button>
-          {(params.q || status) ? <a href="/empreendimentos">Limpar</a> : null}
+      <section className="project-prototype-toolbar">
+        <form method="get" className="project-prototype-search-form">
+          <input
+            name="q"
+            className="project-prototype-search"
+            defaultValue={params.q ?? ""}
+            placeholder="Buscar obra, incorporadora ou cidade"
+            aria-label="Buscar empreendimento"
+          />
+          <button type="submit" className="project-search-submit">Buscar</button>
+          {params.q ? <a href="/empreendimentos" className="project-search-clear">Limpar</a> : null}
         </form>
-        <p>{filtered.length} empreendimento(s) no filtro atual.</p>
+        {canManage ? <ProjectCreateDialog /> : null}
       </section>
 
-      <section className="project-card-grid">
-        {filtered.map((project) => (
-          <article className="project-card" key={project.id}>
-            <header>
-              <div className="project-code">{project.code || project.name.slice(0, 3).toUpperCase()}</div>
-              <div><span>{typeLabels[project.project_type] ?? "Empreendimento"}</span><h2>{project.name}</h2><p>{address(project)}</p></div>
-              <em className={`project-status ${project.status}`}>{statusLabels[project.status] ?? project.status}</em>
-            </header>
-
-            <div className="project-card-metrics">
-              <div><span>Área construída</span><strong>{decimal(project.built_area_m2)} m²</strong></div>
-              <div><span>Unidades</span><strong>{project.total_units}</strong></div>
-              <div><span>Pavimentos</span><strong>{project.total_floors}</strong></div>
-              <div><span>Vagas</span><strong>{project.parking_spaces}</strong></div>
-            </div>
-
-            <div className="project-card-dates">
-              <div><span>Início da obra</span><strong>{dateBR(project.construction_start_date)}</strong></div>
-              <div><span>Entrega</span><strong>{dateBR(project.delivery_date)}</strong></div>
-              <div><span>Matrícula / incorporação</span><strong>{project.registration_number || "—"}</strong></div>
-            </div>
-
-            <p className="project-description">{project.description || "Cadastre o conceito e as principais características deste empreendimento."}</p>
-            <footer>{canManage ? <ProjectEditDialog project={project} /> : <span>Somente leitura</span>}<small>{project.total_towers} torre(s) · {decimal(project.land_area_m2)} m² de terreno</small></footer>
-          </article>
-        ))}
-        {!structureMissing && filtered.length === 0 ? <div className="project-empty"><strong>Nenhum empreendimento encontrado.</strong><span>Altere os filtros ou cadastre o primeiro empreendimento.</span></div> : null}
+      <section className="project-prototype-card">
+        <div className="project-prototype-table-wrap">
+          <table className="project-prototype-table">
+            <thead>
+              <tr>
+                <th>Imagem</th>
+                <th>Código</th>
+                <th>Empreendimento</th>
+                <th>Cliente / incorporadora</th>
+                <th>Cidade</th>
+                <th>Área</th>
+                <th>Unidades</th>
+                <th>Pavimentos</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((project) => (
+                <tr key={project.id} className={project.id === projectId ? "is-active-project" : undefined}>
+                  <td>
+                    <div className="project-table-cover">
+                      {project.cover_image_url ? (
+                        <img src={project.cover_image_url} alt={`Imagem do ${project.name}`} />
+                      ) : (
+                        <span>{(project.code || project.name).slice(0, 4).toUpperCase()}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="project-table-code">{project.code || "—"}</td>
+                  <td>
+                    <div className="project-table-name">
+                      <b>{project.name}</b>
+                      <small>{typeLabels[project.project_type] ?? "Empreendimento"}</small>
+                    </div>
+                  </td>
+                  <td>{company.name}</td>
+                  <td>{[project.city, project.state].filter(Boolean).join(" / ") || "—"}</td>
+                  <td>{Number(project.built_area_m2) > 0 ? `${decimal(project.built_area_m2)} m²` : "—"}</td>
+                  <td>{project.total_units || "—"}</td>
+                  <td>{project.total_floors || "—"}</td>
+                  <td><span className={`project-status ${project.status}`}>{statusLabels[project.status] ?? project.status}</span></td>
+                  <td>
+                    <div className="project-table-actions">
+                      {canManage ? <ProjectEditDialog project={project} /> : null}
+                      <form action={selectProjectFromRegistry}>
+                        <input type="hidden" name="project_id" value={project.id} />
+                        <button className="project-table-action project-table-open" type="submit">Abrir</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!structureMissing && filtered.length === 0 ? (
+                <tr><td colSpan={10} className="project-table-empty">Nenhum empreendimento encontrado.</td></tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </section>
     </AppShell>
   );
