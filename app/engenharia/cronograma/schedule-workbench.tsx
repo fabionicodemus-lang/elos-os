@@ -33,6 +33,14 @@ export type ScheduleWorkbenchBaseline = {
 export type ScheduleWorkbenchActivity = ScheduleActivityData & { baseline_id: string };
 export type ScheduleWorkbenchDependency = ScheduleDependencyData & { baseline_id: string };
 
+type ServiceVisualReference = {
+  abbreviation: string;
+  color: string;
+  textColor: "#111827" | "#ffffff";
+  codes: string[];
+  terms: string[];
+};
+
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const baselineStatusLabels: Record<ScheduleWorkbenchBaseline["status"], string> = {
   draft: "Planejamento aberto",
@@ -40,6 +48,55 @@ const baselineStatusLabels: Record<ScheduleWorkbenchBaseline["status"], string> 
   approved: "Linha de base ativa",
   archived: "Arquivada",
 };
+
+const serviceVisualReferences: ServiceVisualReference[] = [
+  { abbreviation: "ALV", color: "#e0e0e0", textColor: "#111827", codes: ["ALV"], terms: ["alvenaria interna", "alvenaria"] },
+  { abbreviation: "ELE", color: "#ffd54f", textColor: "#111827", codes: ["ELE"], terms: ["inst eletricas", "instalacoes eletricas", "instalacao eletrica", "acabamento eletrico", "acabamento eletrica"] },
+  { abbreviation: "HID", color: "#4fc3f7", textColor: "#111827", codes: ["HID"], terms: ["hidrossanit", "inst hidraul", "instalacoes hidraul"] },
+  { abbreviation: "CPI", color: "#bcaaa4", textColor: "#111827", codes: ["CPI"], terms: ["contrapiso"] },
+  { abbreviation: "RBI", color: "#ffb74d", textColor: "#111827", codes: ["RBI"], terms: ["reboco interno"] },
+  { abbreviation: "CER", color: "#d7bc8a", textColor: "#111827", codes: ["CER"], terms: ["revestimento ceramico"] },
+  { abbreviation: "FRG", color: "#ce93d8", textColor: "#111827", codes: ["FRG"], terms: ["forro de gesso", "forro gesso"] },
+  { abbreviation: "PPO", color: "#595959", textColor: "#ffffff", codes: ["PPO"], terms: ["piso porcelanato", "porcelanato"] },
+  { abbreviation: "PII", color: "#aed581", textColor: "#111827", codes: ["PII"], terms: ["pintura interna"] },
+  { abbreviation: "ESQ", color: "#80deea", textColor: "#111827", codes: ["ESQ"], terms: ["esquadrias", "esquadria"] },
+  { abbreviation: "POR", color: "#f48fb1", textColor: "#111827", codes: ["POR"], terms: ["portas e rodapes", "portas rodapes", "porta e rodape"] },
+  { abbreviation: "UDP", color: "#a5d6a7", textColor: "#111827", codes: ["UDP"], terms: ["ultima demao de pintura", "ultima demao", "demao final"] },
+  { abbreviation: "LMP", color: "#bdbdbd", textColor: "#111827", codes: ["LMP"], terms: ["limpeza final"] },
+  { abbreviation: "RBE", color: "#bf360c", textColor: "#ffffff", codes: ["RBE"], terms: ["reboco externo"] },
+  { abbreviation: "PIE", color: "#1b5e20", textColor: "#ffffff", codes: ["PIE"], terms: ["pintura externa"] },
+];
+
+function normalizeServiceText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function fallbackServiceColor(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
+  return `hsl(${Math.abs(hash) % 300 + 20} 52% 43%)`;
+}
+
+function serviceVisual(service: ScheduleServiceOption | null | undefined, fallbackValue = "") {
+  const code = normalizeServiceText(service?.code ?? "").replace(/\s/g, "").toUpperCase();
+  const description = normalizeServiceText(`${service?.description ?? ""} ${fallbackValue}`);
+  const reference = serviceVisualReferences.find((item) => item.codes.includes(code) || item.terms.some((term) => description.includes(term)));
+  const fallbackLabel = normalizeServiceText(service?.code || service?.description || fallbackValue)
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 3)
+    .toUpperCase() || "SRV";
+
+  return {
+    abbreviation: reference?.abbreviation ?? fallbackLabel,
+    color: reference?.color ?? fallbackServiceColor(service?.id || fallbackValue || fallbackLabel),
+    textColor: reference?.textColor ?? "#ffffff",
+  };
+}
 
 function parseDate(value: string) {
   return new Date(`${value.slice(0, 10)}T12:00:00Z`);
@@ -78,12 +135,6 @@ function money(value: number | null | undefined) {
     currency: "BRL",
     maximumFractionDigits: 0,
   }).format(Number(value ?? 0));
-}
-
-function serviceColor(value: string) {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
-  return `hsl(${Math.abs(hash) % 300 + 20} 52% 43%)`;
 }
 
 function downloadJson(filename: string, payload: unknown) {
@@ -155,7 +206,7 @@ function TeamView({ activities, services, timeline }: {
           <table>
             <thead><tr><th>Serviço</th>{timeline.weeks.map((week) => <th key={isoDate(week)}>{dateBR(week)}</th>)}</tr></thead>
             <tbody>{rows.map((row) => (
-              <tr key={row.serviceId}><td><strong>{row.service?.code ?? "—"}</strong><span>{row.service?.description ?? "Sem serviço"}</span></td>
+              <tr key={row.serviceId}><td><strong>{serviceVisual(row.service).abbreviation}</strong><span>{row.service?.description ?? "Sem serviço"}</span></td>
                 {row.weekly.map((value, index) => <td key={`${row.serviceId}-${index}`} className={value > 0 ? "active" : ""}>{value || "—"}</td>)}
               </tr>
             ))}</tbody>
@@ -250,14 +301,18 @@ function BalanceLineView({ activities, services, locations, timeline }: {
               const points = activities.filter((activity) => activity.record_status === "active" && activity.service_id === serviceId && activity.location_id)
                 .sort((a, b) => (locationIndex.get(a.location_id ?? "") ?? 0) - (locationIndex.get(b.location_id ?? "") ?? 0))
                 .map((activity) => `${x(activity.planned_start)},${y(activity.location_id)}`).join(" ");
-              const color = serviceColor(serviceId);
-              return <g key={serviceId}><polyline points={points} fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.86" />
-                {activities.filter((activity) => activity.record_status === "active" && activity.service_id === serviceId && activity.location_id).map((activity) => <circle key={activity.id} cx={x(activity.planned_start)} cy={y(activity.location_id)} r="3.2" fill={color}><title>{serviceMap.get(serviceId)?.description} · {dateBR(activity.planned_start)}</title></circle>)}
+              const visual = serviceVisual(serviceMap.get(serviceId), serviceId);
+              return <g key={serviceId}><polyline points={points} fill="none" stroke={visual.color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.86" />
+                {activities.filter((activity) => activity.record_status === "active" && activity.service_id === serviceId && activity.location_id).map((activity) => <circle key={activity.id} cx={x(activity.planned_start)} cy={y(activity.location_id)} r="3.2" fill={visual.color}><title>{serviceMap.get(serviceId)?.description} · {dateBR(activity.planned_start)}</title></circle>)}
               </g>;
             })}
           </svg>
         </div>
-        <div className="prevision-lob-legend">{serviceRows.map((serviceId) => <span key={serviceId}><i style={{ background: serviceColor(serviceId) }} />{serviceMap.get(serviceId)?.code ?? "—"} · {serviceMap.get(serviceId)?.description ?? "Serviço"}</span>)}</div>
+        <div className="prevision-lob-legend">{serviceRows.map((serviceId) => {
+          const service = serviceMap.get(serviceId);
+          const visual = serviceVisual(service, serviceId);
+          return <span key={serviceId}><i style={{ background: visual.color }} />{visual.abbreviation} · {service?.description ?? "Serviço"}</span>;
+        })}</div>
       </div>
     </div>
   );
@@ -330,21 +385,24 @@ export function SchedulePrevisionWorkbench({
 
   const groupEntries = useMemo(() => {
     if (groupMode === "service") {
-      return services.map((service) => ({ key: service.id, label: `${service.code} · ${service.description}`, items: filtered.filter((activity) => activity.service_id === service.id) })).filter((entry) => entry.items.length);
+      return services.map((service) => ({ key: service.id, label: `${serviceVisual(service).abbreviation} · ${service.description}`, items: filtered.filter((activity) => activity.service_id === service.id) })).filter((entry) => entry.items.length);
     }
     return locations.map((location) => ({ key: location.id, label: `${location.code} · ${location.name}`, items: filtered.filter((activity) => activity.location_id === location.id) })).filter((entry) => entry.items.length);
   }, [groupMode, services, locations, filtered]);
 
+  const activityVisual = (activity: ScheduleWorkbenchActivity) => serviceVisual(serviceMap.get(activity.service_id ?? ""), `${activity.code} ${activity.name}`);
+
   const barStyle = (activity: ScheduleWorkbenchActivity): CSSProperties => {
     const left = Math.max(0, daysBetween(timeline.start, parseDate(activity.planned_start)) / totalDays * timelineWidth);
     const width = Math.max(7, (daysBetween(parseDate(activity.planned_start), parseDate(activity.planned_finish)) + 1) / totalDays * timelineWidth);
-    return { left, width, "--bar": serviceColor(activity.service_id ?? activity.code) } as CSSProperties;
+    const visual = activityVisual(activity);
+    return { left, width, "--bar": visual.color, color: visual.textColor } as CSSProperties;
   };
 
   const summaryBars = (items: ScheduleWorkbenchActivity[]) => items.map((activity) => activity.duration_days <= 0 ? (
     <button type="button" className="prevision-summary-milestone" key={activity.id} style={barStyle(activity)} title={`${activity.name} · ${dateBR(activity.planned_start)}`} />
   ) : (
-    <button type="button" className="prevision-summary-task-bar" key={activity.id} style={barStyle(activity)} title={`${activity.name} · ${dateBR(activity.planned_start)} a ${dateBR(activity.planned_finish)}`}>{activity.code}</button>
+    <button type="button" className="prevision-summary-task-bar" key={activity.id} style={barStyle(activity)} title={`${activity.name} · ${dateBR(activity.planned_start)} a ${dateBR(activity.planned_finish)}`}>{activityVisual(activity).abbreviation}</button>
   ));
 
   const latestFinish = activeActivities.reduce((latest, activity) => !latest || activity.planned_finish > latest ? activity.planned_finish : latest, "");
@@ -390,7 +448,7 @@ export function SchedulePrevisionWorkbench({
           <div className="prevision-toolbar">
             <label><span>Buscar</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pavimento, serviço ou código" /></label>
             <label><span>Agrupar</span><select value={groupMode} onChange={(event) => setGroupMode(event.target.value as "location" | "service")}><option value="location">Por pavimento/local</option><option value="service">Por serviço</option></select></label>
-            <label><span>Serviço</span><select value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}><option value="">Todos</option>{services.map((service) => <option key={service.id} value={service.id}>{service.code} · {service.description}</option>)}</select></label>
+            <label><span>Serviço</span><select value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}><option value="">Todos</option>{services.map((service) => <option key={service.id} value={service.id}>{serviceVisual(service).abbreviation} · {service.description}</option>)}</select></label>
             <label><span>Visualização</span><select value={locationView} onChange={(event) => setLocationView(event.target.value as "compact" | "expanded")}><option value="compact">Só pavimentos</option><option value="expanded">Pavimentos + serviços</option></select></label>
             <Link className="prevision-button prominent" href="/engenharia/levantamento">＋ Novo pavimento</Link>
             {canManage && selectedBaseline ? <ScheduleActivityCreateDialog baselineId={selectedBaseline.id} services={services} locations={locations} activities={activities} /> : null}
@@ -434,9 +492,10 @@ export function SchedulePrevisionWorkbench({
                     const service = serviceMap.get(activity.service_id ?? "");
                     const location = locationMap.get(activity.location_id ?? "");
                     const dependency = dependencyMap.get(activity.id) ?? null;
+                    const visual = activityVisual(activity);
                     return <div className="prevision-gantt-row" key={activity.id}>
                       <div className="prevision-task-meta"><div>{activity.code}</div><div title={location?.name}>{location?.name ?? "Geral da obra"}</div><div title={activity.name}><strong>{activity.name}</strong>{canManage && selectedBaseline ? <ScheduleActivityEditDialog baselineId={selectedBaseline.id} activity={activity} services={services} locations={locations} activities={activities} dependency={dependency} /> : null}</div><div>{dateBR(activity.planned_start)}</div><div>{activity.duration_days}d</div><div>{money(activity.planned_cost)}</div></div>
-                      <div className="prevision-timeline-row" style={{ width: timelineWidth }}><div className="prevision-baseline-bar" style={barStyle(activity)} /><div className={`prevision-task-bar ${activity.planning_status}`} style={barStyle(activity)} title={`${service?.code ?? activity.code} · ${activity.name}`}><span>{activity.code}</span></div>{todayX >= 0 && todayX <= timelineWidth ? <div className="prevision-today-line" style={{ left: todayX }} /> : null}</div>
+                      <div className="prevision-timeline-row" style={{ width: timelineWidth }}><div className="prevision-baseline-bar" style={barStyle(activity)} /><div className={`prevision-task-bar ${activity.planning_status}`} style={barStyle(activity)} title={`${visual.abbreviation} · ${service?.description ?? activity.name}`}><span>{visual.abbreviation}</span></div>{todayX >= 0 && todayX <= timelineWidth ? <div className="prevision-today-line" style={{ left: todayX }} /> : null}</div>
                     </div>;
                   }) : null}
                 </div>;
