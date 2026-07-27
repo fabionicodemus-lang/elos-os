@@ -89,6 +89,19 @@ begin
     updated_at = now()
   where id = target_project_id;
 
+  if tg_op = 'UPDATE' and old.project_id is distinct from new.project_id then
+    update public.projects
+    set
+      total_units = (
+        select count(*)::integer
+        from public.units unit_record
+        where unit_record.project_id = old.project_id
+          and unit_record.status <> 'inactive'
+      ),
+      updated_at = now()
+    where id = old.project_id;
+  end if;
+
   if tg_op = 'DELETE' then
     return old;
   end if;
@@ -98,8 +111,16 @@ end;
 $$;
 
 drop trigger if exists units_project_count_sync on public.units;
-create trigger units_project_count_sync
-after insert or delete or update of status, project_id
+drop trigger if exists units_project_count_insert_delete_sync on public.units;
+create trigger units_project_count_insert_delete_sync
+after insert or delete
+on public.units
+for each row
+execute function public.sync_project_unit_count();
+
+drop trigger if exists units_project_count_update_sync on public.units;
+create trigger units_project_count_update_sync
+after update of status, project_id
 on public.units
 for each row
 execute function public.sync_project_unit_count();
@@ -170,7 +191,7 @@ begin
       end if;
     end if;
 
-    insert into public.units (
+    insert into public.units as target_unit (
       company_id,
       project_id,
       code,
@@ -236,7 +257,7 @@ begin
       status = case
         when exists (
           select 1 from public.sales sale
-          where sale.unit_id = units.id
+          where sale.unit_id = target_unit.id
             and sale.status = 'active'
         ) then 'sold'
         else excluded.status
