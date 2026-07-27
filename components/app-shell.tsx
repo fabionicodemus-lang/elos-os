@@ -30,6 +30,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const can = (permission: string) => permissions.has(permission);
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
   const activeProject = projects.find((project) => project.id === projectId) ?? projects[0] ?? null;
+  const legalEntitiesHref = can("projects.view") ? "/empreendimentos/empresas" : undefined;
   const projectsHref = can("projects.view") ? "/empreendimentos" : undefined;
   const projectCharacteristicsHref = can("projects.view") ? "/empreendimentos/caracteristicas" : undefined;
   const projectLocationsHref = can("projects.view") ? "/empreendimentos/locais" : undefined;
@@ -60,7 +61,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Dados & Backup", disabled: true },
     ]},
     { key: "projects", label: "Empreendimentos", icon: "▦", active: activeGroup === "projects", items: [
-      { label: "Empresas / SPEs", disabled: true },
+      { label: "Empresas / SPEs", href: legalEntitiesHref, active: activeItem === "legal-entities", disabled: !legalEntitiesHref },
       { label: "Cadastro de Empreendimentos", href: projectsHref, active: activeItem === "projects", disabled: !projectsHref },
       { label: "Características do Empreendimento", href: projectCharacteristicsHref, active: activeItem === "project-characteristics", disabled: !projectCharacteristicsHref },
       { label: "Locais / Pavimentos", href: projectLocationsHref, active: activeItem === "project-locations", disabled: !projectLocationsHref },
@@ -124,7 +125,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.36.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.37.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }

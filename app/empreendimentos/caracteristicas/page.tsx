@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
-import { ProjectEditDialog, type ProjectRegistryData } from "../project-dialogs";
+import { ProjectEditDialog, type LegalEntityOption, type ProjectRegistryData } from "../project-dialogs";
 
 const IMAGE_BUCKET = "project-images";
 
@@ -32,6 +32,12 @@ function dateBR(value: string | null | undefined) {
   return `${day}/${month}/${year}`;
 }
 
+function formatCnpj(value: string | null | undefined) {
+  const digits = (value ?? "").replace(/\D/g, "");
+  if (digits.length !== 14) return "CNPJ pendente";
+  return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+}
+
 function address(project: ProjectRegistryData) {
   const firstLine = [project.street, project.address_number].filter(Boolean).join(", ");
   const secondLine = [project.complement, project.district].filter(Boolean).join(" · ");
@@ -39,15 +45,20 @@ function address(project: ProjectRegistryData) {
 }
 
 export default async function ProjectCharacteristicsPage() {
-  const { supabase, company, companyId, projectId, roleKey } = await requireCompanyPermission("projects.view");
+  const { supabase, companyId, projectId, roleKey } = await requireCompanyPermission("projects.view");
 
-  const [projectsResult, manageResult] = await Promise.all([
+  const [projectsResult, entitiesResult, manageResult] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, code, project_type, status, description, postal_code, street, address_number, complement, district, city, state, land_area_m2, built_area_m2, private_area_m2, common_area_m2, total_units, total_towers, total_floors, parking_spaces, launch_date, construction_start_date, delivery_date, registration_number, notes, cover_image_path")
+      .select("id, name, code, legal_entity_id, project_type, status, description, postal_code, street, address_number, complement, district, city, state, land_area_m2, built_area_m2, private_area_m2, common_area_m2, total_units, total_towers, total_floors, parking_spaces, launch_date, construction_start_date, delivery_date, registration_number, notes, cover_image_path")
       .eq("company_id", companyId)
       .neq("status", "archived")
       .order("name"),
+    supabase
+      .from("legal_entities")
+      .select("id, legal_name, trade_name, cnpj, status")
+      .eq("company_id", companyId)
+      .order("legal_name"),
     roleKey === "owner" || roleKey === "admin"
       ? Promise.resolve({ data: true, error: null })
       : supabase.rpc("has_company_permission", {
@@ -62,7 +73,10 @@ export default async function ProjectCharacteristicsPage() {
       ? supabase.storage.from(IMAGE_BUCKET).getPublicUrl(project.cover_image_path).data.publicUrl
       : null,
   }));
+  const legalEntities = (entitiesResult.data ?? []) as LegalEntityOption[];
+  const entityMap = new Map(legalEntities.map((entity) => [entity.id, entity]));
   const project = projects.find((item) => item.id === projectId) ?? projects[0] ?? null;
+  const legalEntity = project?.legal_entity_id ? entityMap.get(project.legal_entity_id) : null;
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
 
   return (
@@ -73,9 +87,9 @@ export default async function ProjectCharacteristicsPage() {
       title="Características do Empreendimento"
       description="Visualize área, endereço, unidades, pavimentos e demais características."
     >
-      {projectsResult.error ? (
+      {projectsResult.error || entitiesResult.error ? (
         <div className="auth-message error workspace-message">
-          Não foi possível carregar os dados do empreendimento: {projectsResult.error.message}
+          Não foi possível carregar a ficha completa. Execute a migration <strong>20260727_0030_legal_entities.sql</strong> e atualize a página.
         </div>
       ) : null}
 
@@ -102,6 +116,7 @@ export default async function ProjectCharacteristicsPage() {
             {canManage ? (
               <ProjectEditDialog
                 project={project}
+                legalEntities={legalEntities}
                 buttonLabel="Editar empreendimento"
                 buttonClassName="project-details-edit-button"
               />
@@ -120,7 +135,8 @@ export default async function ProjectCharacteristicsPage() {
               <h3>Identificação e localização</h3>
               <dl>
                 <dt>Código</dt><dd>{project.code || "—"}</dd>
-                <dt>Cliente / incorporadora</dt><dd>{company.name}</dd>
+                <dt>Empresa / SPE responsável</dt><dd>{legalEntity?.trade_name || legalEntity?.legal_name || "Não vinculada"}</dd>
+                <dt>CNPJ fiscal da obra</dt><dd>{formatCnpj(legalEntity?.cnpj)}</dd>
                 <dt>Endereço</dt><dd>{address(project)}</dd>
                 <dt>CEP</dt><dd>{project.postal_code || "—"}</dd>
                 <dt>Cidade / UF</dt><dd>{[project.city, project.state].filter(Boolean).join(" / ") || "—"}</dd>

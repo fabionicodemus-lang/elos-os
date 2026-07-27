@@ -28,6 +28,7 @@ import "./projects.css";
 import "./project-details.css";
 import "./project-locations.css";
 import "./project-units.css";
+import "./legal-entities.css";
 import "./curves.css";
 import "./curves-bar-values.css";
 import "./creatable-combobox.css";
