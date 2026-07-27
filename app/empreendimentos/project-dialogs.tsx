@@ -159,11 +159,19 @@ export function ProjectCreateDialog() {
   );
 }
 
-export function ProjectEditDialog({ project }: { project: ProjectRegistryData }) {
+export function ProjectEditDialog({
+  project,
+  buttonLabel = "Editar",
+  buttonClassName = "project-table-action",
+}: {
+  project: ProjectRegistryData;
+  buttonLabel?: string;
+  buttonClassName?: string;
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   return (
     <>
-      <button className="project-table-action" type="button" onClick={() => dialogRef.current?.showModal()}>Editar</button>
+      <button className={buttonClassName} type="button" onClick={() => dialogRef.current?.showModal()}>{buttonLabel}</button>
       <dialog ref={dialogRef} className="budget-modal project-modal">
         <form action={updateProject} className="budget-modal-form">
           <input type="hidden" name="project_id" value={project.id} />
