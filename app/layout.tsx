@@ -22,6 +22,7 @@ import "./takeoffs.css";
 import "./takeoff-import.css";
 import "./analytical-budget.css";
 import "./schedule.css";
+import "./curves.css";
 import "./creatable-combobox.css";
 import "./global-searchable-select.css";
 import "./elos-theme.css";
