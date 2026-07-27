@@ -4,7 +4,6 @@ import { setLegalEntityStatus } from "./actions";
 import {
   LegalEntityCreateDialog,
   LegalEntityEditDialog,
-  formatCnpj,
   type LegalEntityData,
 } from "./legal-entity-dialogs";
 
@@ -17,6 +16,16 @@ const typeLabels: Record<string, string> = {
 
 function normalize(value: string | null | undefined) {
   return (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
+}
+
+function formatCnpj(value: string | null | undefined) {
+  const raw = (value ?? "").replace(/\D/g, "").slice(0, 14);
+  if (!raw) return "";
+  return raw
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
 }
 
 export default async function LegalEntitiesPage({
@@ -80,15 +89,15 @@ export default async function LegalEntitiesPage({
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
-      {entitiesResult.error ? (
+      {entitiesResult.error || projectsResult.error ? (
         <div className="auth-message error workspace-message">
-          Execute no Supabase a migration <strong>20260727_0030_legal_entities.sql</strong> para liberar esta tela: {entitiesResult.error.message}
+          Execute no Supabase a migration <strong>20260727_0030_legal_entities.sql</strong> para liberar esta tela: {entitiesResult.error?.message || projectsResult.error?.message}
         </div>
       ) : null}
 
       <section className="legal-entity-hero">
         <div><span>Empreendimentos</span><h2>Empresas e SPEs</h2><p>Cadastro fiscal central das incorporadoras, matrizes, holdings e sociedades de propósito específico vinculadas aos empreendimentos.</p></div>
-        {canManage ? <LegalEntityCreateDialog entities={entities} /> : null}
+        {canManage && !entitiesResult.error ? <LegalEntityCreateDialog entities={entities} /> : null}
       </section>
 
       <section className="legal-entity-kpis">
