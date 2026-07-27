@@ -17,23 +17,15 @@ alter table public.units
 alter table public.units
   add constraint units_nonnegative_details_check
   check (
-    private_area is null or private_area >= 0
-  ) and (
-    total_area is null or total_area >= 0
-  ) and (
-    common_area is null or common_area >= 0
-  ) and (
-    uncovered_private_area is null or uncovered_private_area >= 0
-  ) and (
-    fractional_share is null or fractional_share >= 0
-  ) and (
-    bedrooms is null or bedrooms >= 0
-  ) and (
-    suites is null or suites >= 0
-  ) and (
-    parking_spaces is null or parking_spaces >= 0
-  ) and (
-    list_price is null or list_price >= 0
+    (private_area is null or private_area >= 0)
+    and (total_area is null or total_area >= 0)
+    and (common_area is null or common_area >= 0)
+    and (uncovered_private_area is null or uncovered_private_area >= 0)
+    and (fractional_share is null or fractional_share >= 0)
+    and (bedrooms is null or bedrooms >= 0)
+    and (suites is null or suites >= 0)
+    and (parking_spaces is null or parking_spaces >= 0)
+    and (list_price is null or list_price >= 0)
   );
 
 create index if not exists units_floor_location_idx
@@ -107,7 +99,7 @@ $$;
 
 drop trigger if exists units_project_count_sync on public.units;
 create trigger units_project_count_sync
-after insert or update of status, project_id or delete
+after insert or delete or update of status, project_id
 on public.units
 for each row
 execute function public.sync_project_unit_count();
