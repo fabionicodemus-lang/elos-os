@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createEngineeringInputPrice, updateEngineeringInputPrice } from "./actions";
 
 export type PriceInputOption = {
@@ -36,27 +36,61 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function useLazyDialog() {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const frame = window.requestAnimationFrame(() => dialogRef.current?.showModal());
+    return () => window.cancelAnimationFrame(frame);
+  }, [mounted]);
+
+  const open = () => setMounted(true);
+  const close = () => {
+    dialogRef.current?.close();
+    setMounted(false);
+  };
+
+  return { dialogRef, mounted, open, close, unmount: () => setMounted(false) };
+}
+
 function PriceFields({
   price,
   inputs,
   suppliers,
   projectName,
+  lockInput = false,
 }: {
   price?: EngineeringInputPriceDialogData;
   inputs: PriceInputOption[];
   suppliers: PriceSupplierOption[];
   projectName: string | null;
+  lockInput?: boolean;
 }) {
+  const selectedInput = price ? inputs.find((input) => input.id === price.input_id) ?? null : null;
+
   return (
     <div className="price-modal-grid">
       <label className="price-modal-wide">
         <span>Insumo</span>
-        <select name="input_id" defaultValue={price?.input_id ?? ""} required autoFocus>
-          <option value="">Selecione o insumo</option>
-          {inputs.map((input) => (
-            <option key={input.id} value={input.id}>{input.code} · {input.description} ({input.unit})</option>
-          ))}
-        </select>
+        {lockInput && price ? (
+          <>
+            <input type="hidden" name="input_id" value={price.input_id} />
+            <input
+              value={selectedInput ? `${selectedInput.code} · ${selectedInput.description} (${selectedInput.unit})` : "Insumo vinculado à cotação"}
+              readOnly
+              aria-label="Insumo da cotação"
+            />
+          </>
+        ) : (
+          <select name="input_id" defaultValue={price?.input_id ?? ""} required autoFocus>
+            <option value="">Selecione o insumo</option>
+            {inputs.map((input) => (
+              <option key={input.id} value={input.id}>{input.code} · {input.description} ({input.unit})</option>
+            ))}
+          </select>
+        )}
       </label>
 
       <label>
@@ -139,26 +173,28 @@ export function PriceCreateDialog({
   suppliers: PriceSupplierOption[];
   projectName: string | null;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialog = useLazyDialog();
 
   return (
     <>
-      <button className="elos-button budget-primary-button" type="button" onClick={() => dialogRef.current?.showModal()}>
+      <button className="elos-button budget-primary-button" type="button" onClick={dialog.open}>
         + Nova cotação
       </button>
-      <dialog ref={dialogRef} className="budget-modal price-modal">
-        <form action={createEngineeringInputPrice} className="budget-modal-form">
-          <header className="budget-modal-head">
-            <div><span>Engenharia · Preços e cotações</span><h2>Novo preço de insumo</h2></div>
-            <button type="button" className="budget-modal-close" onClick={() => dialogRef.current?.close()} aria-label="Fechar">×</button>
-          </header>
-          <div className="budget-modal-body"><PriceFields inputs={inputs} suppliers={suppliers} projectName={projectName} /></div>
-          <footer className="budget-modal-foot">
-            <button type="button" className="budget-secondary-button" onClick={() => dialogRef.current?.close()}>Cancelar</button>
-            <button type="submit" className="budget-primary-button">Salvar cotação</button>
-          </footer>
-        </form>
-      </dialog>
+      {dialog.mounted ? (
+        <dialog ref={dialog.dialogRef} className="budget-modal price-modal" onClose={dialog.unmount}>
+          <form action={createEngineeringInputPrice} className="budget-modal-form">
+            <header className="budget-modal-head">
+              <div><span>Engenharia · Preços e cotações</span><h2>Novo preço de insumo</h2></div>
+              <button type="button" className="budget-modal-close" onClick={dialog.close} aria-label="Fechar">×</button>
+            </header>
+            <div className="budget-modal-body"><PriceFields inputs={inputs} suppliers={suppliers} projectName={projectName} /></div>
+            <footer className="budget-modal-foot">
+              <button type="button" className="budget-secondary-button" onClick={dialog.close}>Cancelar</button>
+              <button type="submit" className="budget-primary-button">Salvar cotação</button>
+            </footer>
+          </form>
+        </dialog>
+      ) : null}
     </>
   );
 }
@@ -174,25 +210,27 @@ export function PriceEditDialog({
   suppliers: PriceSupplierOption[];
   projectName: string | null;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialog = useLazyDialog();
 
   return (
     <>
-      <button className="table-action" type="button" onClick={() => dialogRef.current?.showModal()}>Editar</button>
-      <dialog ref={dialogRef} className="budget-modal price-modal">
-        <form action={updateEngineeringInputPrice} className="budget-modal-form">
-          <input type="hidden" name="price_id" value={price.id} />
-          <header className="budget-modal-head">
-            <div><span>Preço registrado</span><h2>Editar cotação</h2></div>
-            <button type="button" className="budget-modal-close" onClick={() => dialogRef.current?.close()} aria-label="Fechar">×</button>
-          </header>
-          <div className="budget-modal-body"><PriceFields price={price} inputs={inputs} suppliers={suppliers} projectName={projectName} /></div>
-          <footer className="budget-modal-foot">
-            <button type="button" className="budget-secondary-button" onClick={() => dialogRef.current?.close()}>Cancelar</button>
-            <button type="submit" className="budget-primary-button">Salvar alterações</button>
-          </footer>
-        </form>
-      </dialog>
+      <button className="table-action" type="button" onClick={dialog.open}>Editar</button>
+      {dialog.mounted ? (
+        <dialog ref={dialog.dialogRef} className="budget-modal price-modal" onClose={dialog.unmount}>
+          <form action={updateEngineeringInputPrice} className="budget-modal-form">
+            <input type="hidden" name="price_id" value={price.id} />
+            <header className="budget-modal-head">
+              <div><span>Preço registrado</span><h2>Editar cotação</h2></div>
+              <button type="button" className="budget-modal-close" onClick={dialog.close} aria-label="Fechar">×</button>
+            </header>
+            <div className="budget-modal-body"><PriceFields price={price} inputs={inputs} suppliers={suppliers} projectName={projectName} lockInput /></div>
+            <footer className="budget-modal-foot">
+              <button type="button" className="budget-secondary-button" onClick={dialog.close}>Cancelar</button>
+              <button type="submit" className="budget-primary-button">Salvar alterações</button>
+            </footer>
+          </form>
+        </dialog>
+      ) : null}
     </>
   );
 }
