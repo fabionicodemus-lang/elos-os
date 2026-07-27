@@ -3,10 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import { createProject, updateProject } from "./actions";
 
+export type LegalEntityOption = {
+  id: string;
+  legal_name: string;
+  trade_name: string | null;
+  cnpj: string | null;
+  status: string;
+};
+
 export type ProjectRegistryData = {
   id: string;
   name: string;
   code: string | null;
+  legal_entity_id: string | null;
   project_type: string;
   status: string;
   description: string | null;
@@ -53,6 +62,12 @@ const statusLabels: Record<string, string> = {
 
 function iso(value: string | null | undefined) {
   return value ? value.slice(0, 10) : "";
+}
+
+function formatCnpj(value: string | null | undefined) {
+  const digits = (value ?? "").replace(/\D/g, "");
+  if (digits.length !== 14) return value || "CNPJ pendente";
+  return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 }
 
 function ProjectCoverField({ project }: { project?: ProjectRegistryData }) {
@@ -104,12 +119,14 @@ function ProjectCoverField({ project }: { project?: ProjectRegistryData }) {
   );
 }
 
-function ProjectFields({ project }: { project?: ProjectRegistryData }) {
+function ProjectFields({ project, legalEntities }: { project?: ProjectRegistryData; legalEntities: LegalEntityOption[] }) {
+  const options = legalEntities.filter((entity) => entity.status === "active" || entity.id === project?.legal_entity_id);
   return (
     <div className="project-form-grid">
       <ProjectCoverField project={project} />
       <label className="project-span-2"><span>Nome do empreendimento</span><input name="name" defaultValue={project?.name ?? ""} required autoFocus /></label>
       <label><span>Código</span><input name="code" defaultValue={project?.code ?? ""} placeholder="FLOW" /></label>
+      <label className="project-span-2"><span>Empresa / SPE responsável</span><select name="legal_entity_id" defaultValue={project?.legal_entity_id ?? ""} required><option value="">Selecione a empresa fiscal…</option>{options.map((entity) => <option key={entity.id} value={entity.id}>{entity.trade_name || entity.legal_name} · {formatCnpj(entity.cnpj)}{entity.status === "inactive" ? " · INATIVA" : ""}</option>)}</select><small className="project-field-help">O CNPJ da empresa selecionada será a referência fiscal oficial da obra.</small></label>
       <label><span>Tipo</span><select name="project_type" defaultValue={project?.project_type ?? "residential"}>{Object.entries(projectTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label><span>Status</span><select name="status" defaultValue={project?.status ?? "planning"}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label><span>Matrícula / incorporação</span><input name="registration_number" defaultValue={project?.registration_number ?? ""} /></label>
@@ -143,7 +160,7 @@ function ProjectFields({ project }: { project?: ProjectRegistryData }) {
   );
 }
 
-export function ProjectCreateDialog() {
+export function ProjectCreateDialog({ legalEntities }: { legalEntities: LegalEntityOption[] }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   return (
     <>
@@ -151,7 +168,7 @@ export function ProjectCreateDialog() {
       <dialog ref={dialogRef} className="budget-modal project-modal">
         <form action={createProject} className="budget-modal-form">
           <header className="budget-modal-head"><div><span>Empreendimentos</span><h2>Novo empreendimento</h2></div><button type="button" className="budget-modal-close" onClick={() => dialogRef.current?.close()} aria-label="Fechar">×</button></header>
-          <div className="budget-modal-body"><ProjectFields /></div>
+          <div className="budget-modal-body"><ProjectFields legalEntities={legalEntities} /></div>
           <footer className="budget-modal-foot"><button type="button" className="budget-secondary-button" onClick={() => dialogRef.current?.close()}>Cancelar</button><button type="submit" className="budget-primary-button">Salvar obra</button></footer>
         </form>
       </dialog>
@@ -161,10 +178,12 @@ export function ProjectCreateDialog() {
 
 export function ProjectEditDialog({
   project,
+  legalEntities,
   buttonLabel = "Editar",
   buttonClassName = "project-table-action",
 }: {
   project: ProjectRegistryData;
+  legalEntities: LegalEntityOption[];
   buttonLabel?: string;
   buttonClassName?: string;
 }) {
@@ -176,7 +195,7 @@ export function ProjectEditDialog({
         <form action={updateProject} className="budget-modal-form">
           <input type="hidden" name="project_id" value={project.id} />
           <header className="budget-modal-head"><div><span>{project.code || "Empreendimento"}</span><h2>Editar {project.name}</h2></div><button type="button" className="budget-modal-close" onClick={() => dialogRef.current?.close()} aria-label="Fechar">×</button></header>
-          <div className="budget-modal-body"><ProjectFields project={project} /></div>
+          <div className="budget-modal-body"><ProjectFields project={project} legalEntities={legalEntities} /></div>
           <footer className="budget-modal-foot"><button type="button" className="budget-secondary-button" onClick={() => dialogRef.current?.close()}>Cancelar</button><button type="submit" className="budget-primary-button">Salvar alterações</button></footer>
         </form>
       </dialog>
