@@ -32,19 +32,10 @@ export async function AppShell({
   const { supabase, userId, email, company, companyId, projectId, role } = await resolveActiveWorkspace();
 
   const [projectsResult, profileResult, permissionResult] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("id, name, code")
-      .eq("company_id", companyId)
-      .neq("status", "archived")
-      .order("name"),
+    supabase.from("projects").select("id, name, code").eq("company_id", companyId).neq("status", "archived").order("name"),
     supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
     role.id
-      ? supabase
-          .from("role_permissions")
-          .select("permission_key")
-          .eq("role_id", role.id)
-          .eq("allowed", true)
+      ? supabase.from("role_permissions").select("permission_key").eq("role_id", role.id).eq("allowed", true)
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -55,46 +46,22 @@ export async function AppShell({
 
   if (role.key === "owner" || role.key === "admin") {
     [
-      "admin.users.view",
-      "admin.users.manage",
-      "suppliers.view",
-      "suppliers.manage",
-      "clients.view",
-      "clients.manage",
-      "payables.view",
-      "payables.manage",
-      "sales.view",
-      "sales.manage",
-      "receivables.view",
-      "receivables.manage",
-      "indices.view",
-      "indices.manage",
-      "cashflow.view",
-      "reports.view",
-      "budgets.view",
-      "budgets.manage",
-      "services.view",
-      "services.manage",
-      "inputs.view",
-      "inputs.manage",
-      "prices.view",
-      "prices.manage",
-      "compositions.view",
-      "compositions.manage",
-      "takeoffs.view",
-      "takeoffs.manage",
-      "schedule.view",
-      "schedule.manage",
-      "execution.view",
-      "quality.view",
-      "commercial.view",
-      "documents.view",
+      "admin.users.view", "admin.users.manage", "suppliers.view", "suppliers.manage",
+      "clients.view", "clients.manage", "payables.view", "payables.manage",
+      "sales.view", "sales.manage", "receivables.view", "receivables.manage",
+      "indices.view", "indices.manage", "cashflow.view", "reports.view",
+      "budgets.view", "budgets.manage", "services.view", "services.manage",
+      "inputs.view", "inputs.manage", "prices.view", "prices.manage",
+      "compositions.view", "compositions.manage", "takeoffs.view", "takeoffs.manage",
+      "schedule.view", "schedule.manage", "execution.view", "quality.view",
+      "commercial.view", "documents.view",
     ].forEach((permission) => permissions.add(permission));
   }
 
   const can = (permission: string) => permissions.has(permission);
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
   const activeProject = projects.find((project) => project.id === projectId) ?? projects[0] ?? null;
+
   const financeReceivablesHref = can("receivables.view") ? "/financeiro/contas-a-receber" : undefined;
   const commercialReceivablesHref = can("receivables.view") ? "/comercial/planos-de-pagamento" : undefined;
   const indicesHref = can("indices.view") ? "/financeiro/indices-de-correcao" : undefined;
@@ -108,13 +75,12 @@ export async function AppShell({
   const takeoffsHref = can("takeoffs.view") ? "/engenharia/levantamento" : undefined;
   const analyticalBudgetHref = can("budgets.view") ? "/engenharia/orcamento-analitico" : undefined;
   const scheduleHref = can("schedule.view") ? "/engenharia/cronograma" : undefined;
+  const curvesHref = can("schedule.view") ? "/engenharia/curvas" : undefined;
+  const contractPlanHref = can("schedule.view") ? "/engenharia/plano-contratacoes" : undefined;
 
   const groups: ShellNavigationGroup[] = [
     {
-      key: "system",
-      label: "Sistema",
-      icon: "⚙",
-      active: activeGroup === "system",
+      key: "system", label: "Sistema", icon: "⚙", active: activeGroup === "system",
       items: [
         { label: "Usuários", href: can("admin.users.view") ? "/configuracoes/acessos" : undefined, active: activeItem === "users", disabled: !can("admin.users.view") },
         { label: "Permissões", disabled: true },
@@ -125,10 +91,7 @@ export async function AppShell({
       ],
     },
     {
-      key: "projects",
-      label: "Empreendimentos",
-      icon: "▦",
-      active: activeGroup === "projects",
+      key: "projects", label: "Empreendimentos", icon: "▦", active: activeGroup === "projects",
       items: [
         { label: "Empresas / SPEs", disabled: true },
         { label: "Cadastro de Empreendimentos", disabled: true },
@@ -137,10 +100,7 @@ export async function AppShell({
       ],
     },
     {
-      key: "engineering",
-      label: "Engenharia",
-      icon: "♙",
-      active: activeGroup === "engineering",
+      key: "engineering", label: "Engenharia", icon: "♙", active: activeGroup === "engineering",
       items: [
         { label: "Orçamentos", sectionLabel: "Orçamentos" },
         { label: "Cadastro de Orçamentos", href: budgetsHref, active: activeItem === "budgets", disabled: !budgetsHref },
@@ -152,16 +112,13 @@ export async function AppShell({
         { label: "Orçamento Analítico", href: analyticalBudgetHref, active: activeItem === "analytical-budget", disabled: !analyticalBudgetHref },
         { label: "Planejamento da obra", sectionLabel: "Planejamento da obra" },
         { label: "Cronograma Físico · Linha Base", href: scheduleHref, active: activeItem === "schedule", disabled: !scheduleHref },
-        { label: "Curvas Física e Financeira", disabled: true },
-        { label: "Plano de Contratações", disabled: true },
+        { label: "Curvas Física e Financeira", href: curvesHref, active: activeItem === "curves", disabled: !curvesHref },
+        { label: "Plano de Contratações", href: contractPlanHref, active: activeItem === "contract-plan", disabled: !contractPlanHref },
         { label: "Planejamento de Suprimentos", disabled: true },
       ],
     },
     {
-      key: "execution",
-      label: "Execução",
-      icon: "✓",
-      active: activeGroup === "execution",
+      key: "execution", label: "Execução", icon: "✓", active: activeGroup === "execution",
       items: [
         { label: "Controle do Cronograma", disabled: true },
         { label: "Solicitações de Materiais", disabled: true },
@@ -174,10 +131,7 @@ export async function AppShell({
       ],
     },
     {
-      key: "procurement",
-      label: "Suprimentos",
-      icon: "🛒",
-      active: activeGroup === "procurement",
+      key: "procurement", label: "Suprimentos", icon: "🛒", active: activeGroup === "procurement",
       items: [
         { label: "Orçamentos de Materiais", disabled: true },
         { label: "Pedidos de Compras", disabled: true },
@@ -187,10 +141,7 @@ export async function AppShell({
       ],
     },
     {
-      key: "finance",
-      label: "Financeiro",
-      icon: "$",
-      active: activeGroup === "finance",
+      key: "finance", label: "Financeiro", icon: "$", active: activeGroup === "finance",
       items: [
         { label: "Contas a Pagar", href: can("payables.view") ? "/financeiro/contas-a-pagar" : undefined, active: activeItem === "payables", disabled: !can("payables.view") },
         { label: "Contas a Receber", href: financeReceivablesHref, active: activeItem === "receivables", disabled: !financeReceivablesHref },
@@ -205,10 +156,7 @@ export async function AppShell({
       ],
     },
     {
-      key: "commercial",
-      label: "Comercial",
-      icon: "◇",
-      active: activeGroup === "commercial",
+      key: "commercial", label: "Comercial", icon: "◇", active: activeGroup === "commercial",
       items: [
         { label: "Clientes", href: can("clients.view") ? "/cadastros/clientes" : undefined, active: activeItem === "commercial-clients", disabled: !can("clients.view") },
         { label: "Propostas", disabled: true },
@@ -218,10 +166,7 @@ export async function AppShell({
       ],
     },
     {
-      key: "postwork",
-      label: "Pós-Obra",
-      icon: "⌁",
-      active: activeGroup === "postwork",
+      key: "postwork", label: "Pós-Obra", icon: "⌁", active: activeGroup === "postwork",
       items: [
         { label: "Assistências Técnicas", disabled: true },
         { label: "Vistorias e Chamados", disabled: true },
@@ -256,7 +201,7 @@ export async function AppShell({
           <div className="elos-page-top">
             <div>
               <div className="elos-eyebrow">{eyebrow}</div>
-              <h1>{title}<span className="elos-module-version">V0.29.0 · sistema integrado</span></h1>
+              <h1>{title}<span className="elos-module-version">V0.31.0 · sistema integrado</span></h1>
               {description ? <p>{description}</p> : null}
             </div>
             {actions ? <div className="elos-page-actions">{actions}</div> : null}
