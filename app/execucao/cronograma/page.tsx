@@ -13,7 +13,14 @@ import type { ExecutionScheduleActivity, ExecutionScheduleMeasurement } from "./
 type Project = { id: string; code: string | null; name: string };
 
 function todayIso() {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function validDate(value: string | undefined) {
@@ -122,7 +129,7 @@ export default async function ExecutionSchedulePage({
       eyebrow="Execução · Controle da Obra"
       title="Controle do Cronograma"
       description={`${company.name} · ${context} · avanço físico, desvios e reprogramação do cronograma atual.`}
-      actions={<><Link className="elos-button secondary" href={selectedBaseline ? `/engenharia/cronograma?baseline=${selectedBaseline.id}` : "/engenharia/cronograma"}>Linha de base</Link><Link className="elos-button" href="/execucao/diario-de-obras">Diário de Obras</Link></>}
+      actions={<Link className="elos-button secondary" href={selectedBaseline ? `/engenharia/cronograma?baseline=${selectedBaseline.id}` : "/engenharia/cronograma"}>Abrir linha de base</Link>}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
