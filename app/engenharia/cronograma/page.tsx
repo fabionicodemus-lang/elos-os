@@ -61,7 +61,7 @@ export default async function EngineeringSchedulePage({ searchParams }: {
   return (
     <AppShell activeGroup="engineering" activeItem="schedule" eyebrow="Engenharia · Planejamento da Obra" title="Cronograma Físico"
       description={`${company.name} · ${context} · linha de balanço, equipes e planejamento físico da obra.`}
-      actions={<><Link className="elos-button secondary" href={selectedBaseline ? `/engenharia/curvas?baseline=${selectedBaseline.id}` : "/engenharia/curvas"}>Curvas física e financeira</Link><Link className="elos-button" href={selectedBaseline ? `/engenharia/plano-contratacoes?baseline=${selectedBaseline.id}` : "/engenharia/plano-contratacoes"}>Plano de contratações</Link></>}>
+      actions={<><Link className="elos-button secondary" href={selectedBaseline ? `/engenharia/curvas?baseline=${selectedBaseline.id}` : "/engenharia/curvas"}>Curvas física e financeira</Link><Link className="elos-button secondary" href={selectedBaseline ? `/engenharia/plano-contratacoes?baseline=${selectedBaseline.id}` : "/engenharia/plano-contratacoes"}>Plano de contratações</Link><Link className="elos-button" href={selectedBaseline ? `/engenharia/planejamento-suprimentos?baseline=${selectedBaseline.id}` : "/engenharia/planejamento-suprimentos"}>Planejamento de suprimentos</Link></>}>
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
       {structureError ? <div className="auth-message error workspace-message">A estrutura do cronograma ainda não está instalada. Execute a migration <strong>20260726_0023_engineering_schedule_baseline.sql</strong> no Supabase.</div> : null}

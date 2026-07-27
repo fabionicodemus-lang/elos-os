@@ -25,7 +25,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const projects = (projectsResult.data ?? []) as Project[];
   const permissions = new Set(((permissionResult.data ?? []) as { permission_key: string }[]).map((item) => item.permission_key));
   if (role.key === "owner" || role.key === "admin") {
-    ["admin.users.view","admin.users.manage","suppliers.view","suppliers.manage","clients.view","clients.manage","payables.view","payables.manage","sales.view","sales.manage","receivables.view","receivables.manage","indices.view","indices.manage","cashflow.view","reports.view","budgets.view","budgets.manage","services.view","services.manage","inputs.view","inputs.manage","prices.view","prices.manage","compositions.view","compositions.manage","takeoffs.view","takeoffs.manage","schedule.view","schedule.manage","execution.view","quality.view","commercial.view","documents.view"].forEach((permission) => permissions.add(permission));
+    ["admin.users.view","admin.users.manage","suppliers.view","suppliers.manage","clients.view","clients.manage","payables.view","payables.manage","sales.view","sales.manage","receivables.view","receivables.manage","indices.view","indices.manage","cashflow.view","reports.view","budgets.view","budgets.manage","services.view","services.manage","inputs.view","inputs.manage","prices.view","prices.manage","compositions.view","compositions.manage","takeoffs.view","takeoffs.manage","schedule.view","schedule.manage","supply_plan.view","supply_plan.manage","execution.view","quality.view","commercial.view","documents.view"].forEach((permission) => permissions.add(permission));
   }
   const can = (permission: string) => permissions.has(permission);
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
@@ -45,6 +45,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const scheduleHref = can("schedule.view") ? "/engenharia/cronograma" : undefined;
   const curvesHref = can("schedule.view") ? "/engenharia/curvas" : undefined;
   const contractPlanHref = can("schedule.view") ? "/engenharia/plano-contratacoes" : undefined;
+  const supplyPlanHref = can("supply_plan.view") ? "/engenharia/planejamento-suprimentos" : undefined;
 
   const groups: ShellNavigationGroup[] = [
     { key: "system", label: "Sistema", icon: "⚙", active: activeGroup === "system", items: [
@@ -71,7 +72,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Cronograma Físico · Linha Base", href: scheduleHref, active: activeItem === "schedule", disabled: !scheduleHref },
       { label: "Curvas Física e Financeira", href: curvesHref, active: activeItem === "curves", disabled: !curvesHref },
       { label: "Plano de Contratações", href: contractPlanHref, active: activeItem === "contract-plan", disabled: !contractPlanHref },
-      { label: "Planejamento de Suprimentos", disabled: true },
+      { label: "Planejamento de Suprimentos", href: supplyPlanHref, active: activeItem === "supply-plan", disabled: !supplyPlanHref },
     ]},
     { key: "execution", label: "Execução", icon: "✓", active: activeGroup === "execution", items: [
       { label: "Controle do Cronograma", disabled: true }, { label: "Solicitações de Materiais", disabled: true },
@@ -116,7 +117,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.31.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.32.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
