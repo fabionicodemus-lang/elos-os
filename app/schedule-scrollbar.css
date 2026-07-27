@@ -1,0 +1,39 @@
+.prevision-gantt-shell{
+  overflow-x:scroll!important;
+  overflow-y:auto;
+  scrollbar-gutter:stable;
+  scrollbar-width:auto;
+  scrollbar-color:#6f8798 #e7eef3;
+}
+
+.prevision-gantt-shell::-webkit-scrollbar{
+  width:13px;
+  height:16px;
+}
+
+.prevision-gantt-shell::-webkit-scrollbar-track{
+  background:#e7eef3;
+  border-top:1px solid #c8d5de;
+}
+
+.prevision-gantt-shell::-webkit-scrollbar-thumb{
+  min-width:80px;
+  border:3px solid #e7eef3;
+  border-radius:999px;
+  background:#6f8798;
+}
+
+.prevision-gantt-shell::-webkit-scrollbar-thumb:hover{
+  background:#4f697b;
+}
+
+.prevision-gantt-shell::-webkit-scrollbar-corner{
+  background:#e7eef3;
+}
+
+@media print{
+  .prevision-gantt-shell{
+    overflow:visible!important;
+    scrollbar-width:none;
+  }
+}
