@@ -23,6 +23,7 @@ import "./takeoffs.css";
 import "./takeoff-import.css";
 import "./analytical-budget.css";
 import "./schedule.css";
+import "./schedule-scrollbar.css";
 import "./curves.css";
 import "./curves-bar-values.css";
 import "./creatable-combobox.css";
