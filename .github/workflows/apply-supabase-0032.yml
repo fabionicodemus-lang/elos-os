@@ -13,27 +13,49 @@ permissions:
 
 concurrency:
   group: apply-supabase-0032
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   migrate:
     name: Aplicar pesos físicos no Supabase
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       PGSSLMODE: require
+      PGCONNECT_TIMEOUT: "15"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validar conexão configurada
+      - name: Validar e classificar conexão
+        id: connection
         shell: bash
         run: |
           if [ -z "$SUPABASE_DB_URL" ]; then
             echo "O secret SUPABASE_DB_URL não está configurado."
             exit 1
           fi
+
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          from urllib.parse import urlparse
+
+          value = os.environ.get('SUPABASE_DB_URL', '')
+          lowered = value.lower()
+          placeholder = any(marker in lowered for marker in ('[your-password]', '<your-password>', 'your-password', '[password]'))
+          host = (urlparse(value).hostname or '').lower()
+
+          if '.pooler.supabase.com' in host:
+              kind = 'pooler'
+          elif host.startswith('db.') and host.endswith('.supabase.co'):
+              kind = 'direct'
+          else:
+              kind = 'other'
+
+          print(f'kind={kind}')
+          print(f'placeholder={str(placeholder).lower()}')
+          PY
 
       - name: Instalar cliente PostgreSQL
         shell: bash
@@ -46,12 +68,18 @@ jobs:
         shell: bash
         run: |
           set +e
-          psql "$SUPABASE_DB_URL" \
-            --no-psqlrc \
-            --set=ON_ERROR_STOP=1 \
-            --file=supabase/migrations/20260727_0032_schedule_physical_weights.sql \
-            > /tmp/migration.log 2>&1
-          status=$?
+
+          if [ "${{ steps.connection.outputs.placeholder }}" = "true" ]; then
+            echo "A URI ainda contém o marcador de senha. Substitua [YOUR-PASSWORD] pela senha real do banco." > /tmp/migration.log
+            status=90
+          else
+            psql "$SUPABASE_DB_URL" \
+              --no-psqlrc \
+              --set=ON_ERROR_STOP=1 \
+              --file=supabase/migrations/20260727_0032_schedule_physical_weights.sql \
+              > /tmp/migration.log 2>&1
+            status=$?
+          fi
 
           if [ "$status" -eq 0 ]; then
             psql "$SUPABASE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 >> /tmp/migration.log 2>&1 <<'SQL'
@@ -96,7 +124,7 @@ jobs:
         run: |
           gh issue create \
             --title "[DB] Migration Supabase 0032 aplicada" \
-            --body "A migration \`20260727_0032_schedule_physical_weights.sql\` foi aplicada e validada com sucesso. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            --body "A migration \`20260727_0032_schedule_physical_weights.sql\` foi aplicada e validada com sucesso. Tipo de conexão: \`${{ steps.connection.outputs.kind }}\`. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
       - name: Registrar falha com diagnóstico
         if: steps.apply.outputs.status != '0'
@@ -107,6 +135,8 @@ jobs:
           {
             echo "A migration \`20260727_0032_schedule_physical_weights.sql\` falhou."
             echo
+            echo "Tipo de conexão detectado: \`${{ steps.connection.outputs.kind }}\`"
+            echo "Senha-placeholder detectada: \`${{ steps.connection.outputs.placeholder }}\`"
             echo "Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo
             echo '```text'
