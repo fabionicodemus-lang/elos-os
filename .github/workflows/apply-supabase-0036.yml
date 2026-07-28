@@ -1,0 +1,212 @@
+name: Aplicar migrations Supabase Qualidade
+
+on:
+  issues:
+    types:
+      - opened
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: apply-supabase-quality-0036
+  cancel-in-progress: true
+
+jobs:
+  migrate:
+    name: Aplicar Qualidade no Supabase
+    if: github.event.issue.title == '[RUN] Supabase 0036'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: require
+      PGCONNECT_TIMEOUT: "10"
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Informar início
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Iniciando a aplicação controlada das migrations \`20260728_0036_execution_quality.sql\` e \`20260728_0037_execution_quality_function_fixes.sql\`."
+
+      - name: Validar, normalizar e classificar conexão
+        id: connection
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from urllib.parse import quote, unquote, urlparse
+
+          raw = os.environ.get('SUPABASE_DB_URL', '').strip()
+          placeholder = any(marker in raw.lower() for marker in ('[your-password]', '<your-password>', 'your-password', '[password]'))
+          normalized = raw
+          repaired = False
+          parseable = True
+
+          if raw:
+              try:
+                  scheme, remainder = raw.split('://', 1)
+                  credentials, server = remainder.rsplit('@', 1)
+                  username, password = credentials.split(':', 1)
+                  normalized = f"{scheme}://{quote(unquote(username), safe='')}:{quote(unquote(password), safe='')}@{server}"
+                  repaired = normalized != raw
+              except Exception:
+                  normalized = raw
+
+          try:
+              host = (urlparse(normalized).hostname or '').lower()
+          except Exception:
+              host = ''
+              parseable = False
+
+          if '.pooler.supabase.com' in host:
+              kind = 'pooler'
+          elif host.startswith('db.') and host.endswith('.supabase.co'):
+              kind = 'direct'
+          elif host:
+              kind = 'other'
+          else:
+              kind = 'invalid'
+              parseable = False
+
+          if normalized:
+              print(f'::add-mask::{normalized}')
+
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env_file:
+              env_file.write('EFFECTIVE_DB_URL<<__ELOS_DB_URL__\n')
+              env_file.write(normalized + '\n')
+              env_file.write('__ELOS_DB_URL__\n')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output_file:
+              output_file.write(f'kind={kind}\n')
+              output_file.write(f'placeholder={str(placeholder).lower()}\n')
+              output_file.write(f'repaired={str(repaired).lower()}\n')
+              output_file.write(f'parseable={str(parseable).lower()}\n')
+              output_file.write(f'configured={str(bool(raw)).lower()}\n')
+          PY
+
+      - name: Informar tipo de conexão
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Conexão detectada: \`${{ steps.connection.outputs.kind }}\`. URI normalizada: \`${{ steps.connection.outputs.repaired }}\`. Senha-placeholder: \`${{ steps.connection.outputs.placeholder }}\`."
+
+      - name: Instalar cliente PostgreSQL
+        shell: bash
+        run: |
+          sudo timeout 60s apt-get update
+          sudo timeout 60s apt-get install -y postgresql-client
+
+      - name: Executar e validar migrations da Qualidade
+        id: apply
+        shell: bash
+        run: |
+          set +e
+
+          if [ "${{ steps.connection.outputs.configured }}" != "true" ]; then
+            echo "O secret SUPABASE_DB_URL não está configurado." > /tmp/migration.log
+            status=89
+          elif [ "${{ steps.connection.outputs.placeholder }}" = "true" ]; then
+            echo "A URI ainda contém o marcador de senha." > /tmp/migration.log
+            status=90
+          elif [ "${{ steps.connection.outputs.kind }}" = "direct" ]; then
+            echo "Foi detectada uma Direct Connection. Use a URI Session Pooler." > /tmp/migration.log
+            status=91
+          elif [ "${{ steps.connection.outputs.parseable }}" != "true" ]; then
+            echo "A URI do Session Pooler não pôde ser interpretada." > /tmp/migration.log
+            status=92
+          else
+            timeout 120s psql "$EFFECTIVE_DB_URL" \
+              --no-psqlrc \
+              --set=ON_ERROR_STOP=1 \
+              --file=supabase/migrations/20260728_0036_execution_quality.sql \
+              > /tmp/migration.log 2>&1
+            status=$?
+
+            if [ "$status" -eq 0 ]; then
+              timeout 60s psql "$EFFECTIVE_DB_URL" \
+                --no-psqlrc \
+                --set=ON_ERROR_STOP=1 \
+                --file=supabase/migrations/20260728_0037_execution_quality_function_fixes.sql \
+                >> /tmp/migration.log 2>&1
+              status=$?
+            fi
+
+            if [ "$status" -eq 124 ]; then
+              echo "A execução excedeu o tempo máximo e foi encerrada." >> /tmp/migration.log
+            fi
+          fi
+
+          if [ "$status" -eq 0 ]; then
+            timeout 35s psql "$EFFECTIVE_DB_URL" \
+              --no-psqlrc \
+              --set=ON_ERROR_STOP=1 \
+              --command="do \$\$ begin
+                if to_regclass('public.quality_checklist_templates') is null then raise exception 'Tabela de modelos não criada'; end if;
+                if to_regclass('public.quality_checklist_versions') is null then raise exception 'Tabela de versões não criada'; end if;
+                if to_regclass('public.quality_inspections') is null then raise exception 'Tabela de vistorias não criada'; end if;
+                if to_regclass('public.quality_inspection_items') is null then raise exception 'Tabela de itens não criada'; end if;
+                if to_regclass('public.quality_nonconformities') is null then raise exception 'Tabela de não conformidades não criada'; end if;
+                if to_regclass('public.quality_reinspections') is null then raise exception 'Tabela de reinspeções não criada'; end if;
+                if to_regprocedure('public.sync_quality_inspections(uuid,uuid)') is null then raise exception 'Função de sincronização não criada'; end if;
+                if to_regprocedure('public.save_quality_inspection(uuid,uuid,uuid,uuid,text,text,boolean,jsonb)') is null then raise exception 'Função de preenchimento não criada'; end if;
+                if to_regprocedure('public.complete_quality_inspection(uuid,uuid,uuid)') is null then raise exception 'Função de conclusão não criada'; end if;
+                if to_regprocedure('public.save_quality_template(uuid,uuid,uuid,text,text,text,text,numeric,text,text,text,text,boolean,text,jsonb)') is null then raise exception 'Função de modelos não criada'; end if;
+                if not exists (select 1 from storage.buckets where id='quality-evidence') then raise exception 'Bucket de evidências não criado'; end if;
+                if not exists (select 1 from public.permissions where key='execution.quality.view') then raise exception 'Permissões da qualidade não criadas'; end if;
+              end \$\$;" \
+              >> /tmp/migration.log 2>&1
+            status=$?
+          fi
+          set -e
+
+          cat /tmp/migration.log
+
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+          text = Path('/tmp/migration.log').read_text(encoding='utf-8', errors='replace')
+          for secret_name in ('SUPABASE_DB_URL', 'EFFECTIVE_DB_URL'):
+              secret = os.environ.get(secret_name, '')
+              if secret:
+                  text = text.replace(secret, '[REDACTED]')
+          text = re.sub(r'postgres(?:ql)?://[^\s]+', 'postgresql://[REDACTED]', text)
+          Path('/tmp/migration-sanitized.log').write_text(text, encoding='utf-8')
+          PY
+
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Confirmar sucesso
+        if: steps.apply.outputs.status == '0'
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "✅ Migrations 0036 e 0037 aplicadas e validadas com sucesso. Tabelas, funções, permissões e bucket privado da Qualidade foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh issue close "$ISSUE_NUMBER" --reason completed
+
+      - name: Registrar falha com diagnóstico
+        if: steps.apply.outputs.status != '' && steps.apply.outputs.status != '0'
+        shell: bash
+        run: |
+          {
+            echo "❌ As migrations da Qualidade falharam."
+            echo
+            echo "Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+            echo '```text'
+            tail -n 80 /tmp/migration-sanitized.log
+            echo '```'
+          } > /tmp/issue-body.md
+          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/issue-body.md
+          exit 1
+
+      - name: Registrar falha inesperada
+        if: always() && steps.apply.outputs.status == ''
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "❌ O workflow foi interrompido antes da execução das migrations da Qualidade. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          exit 1
