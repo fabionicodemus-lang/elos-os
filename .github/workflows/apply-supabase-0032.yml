@@ -18,11 +18,11 @@ jobs:
     name: Aplicar pesos físicos no Supabase
     if: github.event.issue.title == '[RUN] Supabase 0032'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       PGSSLMODE: require
-      PGCONNECT_TIMEOUT: "15"
+      PGCONNECT_TIMEOUT: "10"
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -63,11 +63,16 @@ jobs:
           print(f'placeholder={str(placeholder).lower()}')
           PY
 
+      - name: Informar tipo de conexão
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Conexão detectada: \`${{ steps.connection.outputs.kind }}\`. Senha-placeholder: \`${{ steps.connection.outputs.placeholder }}\`."
+
       - name: Instalar cliente PostgreSQL
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          sudo timeout 60s apt-get update
+          sudo timeout 60s apt-get install -y postgresql-client
 
       - name: Executar e validar migration 0032
         id: apply
@@ -78,29 +83,28 @@ jobs:
           if [ "${{ steps.connection.outputs.placeholder }}" = "true" ]; then
             echo "A URI ainda contém o marcador de senha. Substitua [YOUR-PASSWORD] pela senha real do banco." > /tmp/migration.log
             status=90
+          elif [ "${{ steps.connection.outputs.kind }}" = "direct" ]; then
+            echo "Foi detectada uma Direct Connection do Supabase. O GitHub Actions precisa da URI Session Pooler, que usa host *.pooler.supabase.com e porta 5432." > /tmp/migration.log
+            status=91
           else
-            psql "$SUPABASE_DB_URL" \
+            timeout 30s psql "$SUPABASE_DB_URL" \
               --no-psqlrc \
               --set=ON_ERROR_STOP=1 \
               --file=supabase/migrations/20260727_0032_schedule_physical_weights.sql \
               > /tmp/migration.log 2>&1
             status=$?
+
+            if [ "$status" -eq 124 ]; then
+              echo "A conexão com o banco excedeu 30 segundos e foi encerrada." >> /tmp/migration.log
+            fi
           fi
 
           if [ "$status" -eq 0 ]; then
-            psql "$SUPABASE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 >> /tmp/migration.log 2>&1 <<'SQL'
-            do $$
-            begin
-              if to_regclass('public.engineering_schedule_service_weights') is null then
-                raise exception 'Tabela engineering_schedule_service_weights não foi criada.';
-              end if;
-
-              if to_regprocedure('public.save_schedule_service_weights(uuid,uuid,uuid,jsonb)') is null then
-                raise exception 'Função save_schedule_service_weights não foi criada.';
-              end if;
-            end
-            $$;
-            SQL
+            timeout 30s psql "$SUPABASE_DB_URL" \
+              --no-psqlrc \
+              --set=ON_ERROR_STOP=1 \
+              --command="do \$\$ begin if to_regclass('public.engineering_schedule_service_weights') is null then raise exception 'Tabela não criada'; end if; if to_regprocedure('public.save_schedule_service_weights(uuid,uuid,uuid,jsonb)') is null then raise exception 'Função não criada'; end if; end \$\$;" \
+              >> /tmp/migration.log 2>&1
             status=$?
           fi
           set -e
