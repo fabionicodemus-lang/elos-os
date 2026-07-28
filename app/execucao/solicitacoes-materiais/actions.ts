@@ -9,6 +9,7 @@ const LIST_PATH = "/execucao/solicitacoes-materiais";
 type RequestItemPayload = {
   input_id: string;
   quantity: number;
+  cost_center_service_id: string;
   cost_center_code: string;
   notes?: string;
 };
@@ -37,11 +38,12 @@ function parseItems(raw: string): RequestItemPayload[] | null {
       return {
         input_id: String(row.input_id ?? "").trim(),
         quantity: Number(row.quantity ?? 0),
+        cost_center_service_id: String(row.cost_center_service_id ?? "").trim(),
         cost_center_code: String(row.cost_center_code ?? "").trim(),
         notes: String(row.notes ?? "").trim(),
       };
     });
-    if (rows.some((row) => !row.input_id || !row.cost_center_code || !Number.isFinite(row.quantity) || row.quantity <= 0)) return null;
+    if (rows.some((row) => !row.input_id || !row.cost_center_service_id || !row.cost_center_code || !Number.isFinite(row.quantity) || row.quantity <= 0)) return null;
     return rows;
   } catch {
     return null;
@@ -62,7 +64,7 @@ export async function saveMaterialRequest(formData: FormData) {
   const items = parseItems(text(formData, "items_json"));
 
   if (!budgetId || !validDate(neededDate) || !items) {
-    redirect(resultUrl("Revise o orçamento, a data de necessidade e os materiais da solicitação.", "error"));
+    redirect(resultUrl("Revise o orçamento, a data, os materiais e os serviços usados como centros de custo.", "error"));
   }
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("execution.material_requests.manage");
