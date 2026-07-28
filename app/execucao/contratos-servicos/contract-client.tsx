@@ -11,7 +11,8 @@ export type ActivityOption = { id: string; service_id: string | null; location_i
 export type ContractItem = {
   id?: string; service_id: string; location_id: string | null; schedule_activity_id: string | null;
   service_code: string; service_name: string; location_name: string | null; unit_snapshot: string;
-  contracted_quantity: number; unit_price: number; total_value: number; planned_start: string | null; planned_finish: string | null; scope_notes: string | null;
+  contracted_quantity: number; unit_price: number; total_value: number; measured_quantity: number; measured_value: number;
+  planned_start: string | null; planned_finish: string | null; scope_notes: string | null;
 };
 export type ContractRecord = {
   id: string; supplier_id: string; budget_id: string | null; title: string; scope_summary: string;
@@ -22,7 +23,7 @@ export type ContractRecord = {
 };
 
 function emptyItem(): ContractItem {
-  return { service_id: "", location_id: null, schedule_activity_id: null, service_code: "", service_name: "", location_name: null, unit_snapshot: "", contracted_quantity: 1, unit_price: 0, total_value: 0, planned_start: null, planned_finish: null, scope_notes: null };
+  return { service_id: "", location_id: null, schedule_activity_id: null, service_code: "", service_name: "", location_name: null, unit_snapshot: "", contracted_quantity: 1, unit_price: 0, total_value: 0, measured_quantity: 0, measured_value: 0, planned_start: null, planned_finish: null, scope_notes: null };
 }
 function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0)); }
 function today() { return new Date().toISOString().slice(0, 10); }
