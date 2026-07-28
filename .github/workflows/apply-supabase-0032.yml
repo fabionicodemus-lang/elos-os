@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: apply-supabase-0032
@@ -64,3 +65,23 @@ jobs:
           end
           $$;
           SQL
+
+      - name: Registrar sucesso
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh issue create \
+            --title "[DB] Migration Supabase 0032 aplicada" \
+            --body "A migration \`20260727_0032_schedule_physical_weights.sql\` foi aplicada e validada com sucesso. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Registrar falha
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh issue create \
+            --title "[DB] Migration Supabase 0032 falhou" \
+            --body "A execução da migration \`20260727_0032_schedule_physical_weights.sql\` falhou. Consulte o log: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
