@@ -1,11 +1,9 @@
 name: Aplicar migration Supabase 0032
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/apply-supabase-0032.yml
+  issues:
+    types:
+      - opened
 
 permissions:
   contents: read
@@ -18,15 +16,23 @@ concurrency:
 jobs:
   migrate:
     name: Aplicar pesos físicos no Supabase
+    if: github.event.issue.title == '[RUN] Supabase 0032'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       PGSSLMODE: require
       PGCONNECT_TIMEOUT: "15"
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Informar início
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Iniciando a aplicação controlada da migration \`20260727_0032_schedule_physical_weights.sql\`."
 
       - name: Validar e classificar conexão
         id: connection
@@ -116,24 +122,19 @@ jobs:
 
           echo "status=$status" >> "$GITHUB_OUTPUT"
 
-      - name: Registrar sucesso
+      - name: Confirmar sucesso
         if: steps.apply.outputs.status == '0'
-        env:
-          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh issue create \
-            --title "[DB] Migration Supabase 0032 aplicada" \
-            --body "A migration \`20260727_0032_schedule_physical_weights.sql\` foi aplicada e validada com sucesso. Tipo de conexão: \`${{ steps.connection.outputs.kind }}\`. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh issue comment "$ISSUE_NUMBER" --body "✅ Migration aplicada e validada com sucesso. Tipo de conexão: \`${{ steps.connection.outputs.kind }}\`. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh issue close "$ISSUE_NUMBER" --reason completed
 
       - name: Registrar falha com diagnóstico
         if: steps.apply.outputs.status != '0'
-        env:
-          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           {
-            echo "A migration \`20260727_0032_schedule_physical_weights.sql\` falhou."
+            echo "❌ A migration falhou."
             echo
             echo "Tipo de conexão detectado: \`${{ steps.connection.outputs.kind }}\`"
             echo "Senha-placeholder detectada: \`${{ steps.connection.outputs.placeholder }}\`"
@@ -144,8 +145,5 @@ jobs:
             echo '```'
           } > /tmp/issue-body.md
 
-          gh issue create \
-            --title "[DB] Migration Supabase 0032 falhou — diagnóstico" \
-            --body-file /tmp/issue-body.md
-
+          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/issue-body.md
           exit 1
