@@ -1,0 +1,66 @@
+.daily-log-create-dialog {
+  --teal: #087f75;
+  --navy: #102522;
+}
+
+.daily-log-create-dialog > form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.daily-log-dialog-body::after {
+  content: "Depois de confirmar, o formulário completo abrirá automaticamente com clima, equipes, serviços, ocorrências, segurança, fotos e confirmação do responsável.";
+  grid-column: 1 / -1;
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid #cfe3df;
+  border-radius: 9px;
+  background: #f1f9f7;
+  color: #385f59;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.daily-log-dialog-foot {
+  align-items: center;
+  background: #fff;
+}
+
+.daily-log-dialog-foot .primary {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  visibility: visible !important;
+  opacity: 1 !important;
+  min-width: 220px;
+  background: #087f75 !important;
+  border-color: #087f75 !important;
+  color: #fff !important;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: 0 7px 18px rgba(8, 127, 117, 0.2);
+}
+
+.daily-log-dialog-foot .primary:hover {
+  background: #066a62 !important;
+  border-color: #066a62 !important;
+}
+
+.daily-log-dialog-foot .primary:focus-visible {
+  outline: 3px solid rgba(8, 127, 117, 0.25);
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .daily-log-dialog-foot {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .daily-log-dialog-foot button,
+  .daily-log-dialog-foot .primary {
+    width: 100%;
+    min-width: 0;
+  }
+}
