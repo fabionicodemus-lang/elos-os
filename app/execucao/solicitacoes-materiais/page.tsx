@@ -12,9 +12,12 @@ import {
   type SupplyPlanReference,
 } from "./material-request-dialogs";
 import "../../execution-material-requests.css";
+import "../../execution-material-requests-fixes.css";
 
 type Project = { id: string; code: string | null; name: string };
 type Budget = { id: string; code: string; name: string; version: string; status: string; updated_at: string };
+type ServiceCenter = { id: string; code: string; description: string; unit: string | null; group_code: string | null };
+type BudgetServiceReference = { budget_id: string; service_id: string };
 type RequestStatus = "requested" | "approved" | "partially_ordered" | "attended" | "cancelled";
 type MaterialRequest = {
   id: string; budget_id: string; request_number: string; status: RequestStatus; needed_date: string;
@@ -23,7 +26,7 @@ type MaterialRequest = {
 };
 type MaterialRequestItem = {
   id: string; request_id: string; input_id: string; input_code: string; input_name: string; unit_snapshot: string;
-  category_snapshot: string; cost_center_code: string; cost_center_name: string; requested_quantity: number;
+  category_snapshot: string; cost_center_service_id: string | null; cost_center_code: string; cost_center_name: string; requested_quantity: number;
   ordered_quantity: number; notes: string | null; sort_order: number;
 };
 
@@ -67,19 +70,28 @@ export default async function MaterialRequestsPage({ searchParams }: {
         return { data: (data ?? []) as Budget[], error };
       })
     : Promise.resolve({ data: [] as Budget[], error: null });
-  const groupsPromise = projectId
-    ? fetchAllRows<MaterialCostCenterOption>(async (from, to) => {
-        const { data, error } = await supabase.from("engineering_budget_groups")
-          .select("budget_id, code, name").eq("company_id", companyId).eq("project_id", projectId)
-          .eq("status", "active").order("sort_order").range(from, to);
-        return { data: (data ?? []) as MaterialCostCenterOption[], error };
+  const servicesPromise = fetchAllRows<ServiceCenter>(async (from, to) => {
+    const { data, error } = await supabase.from("engineering_services")
+      .select("id, code, description, unit, group_code")
+      .eq("company_id", companyId).eq("status", "active")
+      .order("group_code", { ascending: true, nullsFirst: false }).order("code").range(from, to);
+    return { data: (data ?? []) as ServiceCenter[], error };
+  });
+  const budgetServicesPromise = projectId
+    ? fetchAllRows<BudgetServiceReference>(async (from, to) => {
+        const { data, error } = await supabase.from("engineering_takeoffs")
+          .select("budget_id, service_id")
+          .eq("company_id", companyId).eq("project_id", projectId).eq("record_status", "active")
+          .range(from, to);
+        return { data: (data ?? []) as BudgetServiceReference[], error };
       })
-    : Promise.resolve({ data: [] as MaterialCostCenterOption[], error: null });
+    : Promise.resolve({ data: [] as BudgetServiceReference[], error: null });
 
-  const [projectResult, budgetsResult, groupsResult, inputsResult, requestsResult, itemsResult, supplyResult, manageResult, approveResult] = await Promise.all([
+  const [projectResult, budgetsResult, servicesResult, budgetServicesResult, inputsResult, requestsResult, itemsResult, supplyResult, manageResult, approveResult] = await Promise.all([
     projectPromise,
     budgetsPromise,
-    groupsPromise,
+    servicesPromise,
+    budgetServicesPromise,
     fetchAllRows<MaterialInputOption>(async (from, to) => {
       const { data, error } = await supabase.from("engineering_inputs")
         .select("id, code, description, unit, category").eq("company_id", companyId).eq("status", "active")
@@ -95,7 +107,7 @@ export default async function MaterialRequestsPage({ searchParams }: {
     }) : Promise.resolve({ data: [] as MaterialRequest[], error: null }),
     projectId ? fetchAllRows<MaterialRequestItem>(async (from, to) => {
       const { data, error } = await supabase.from("execution_material_request_items")
-        .select("id, request_id, input_id, input_code, input_name, unit_snapshot, category_snapshot, cost_center_code, cost_center_name, requested_quantity, ordered_quantity, notes, sort_order")
+        .select("id, request_id, input_id, input_code, input_name, unit_snapshot, category_snapshot, cost_center_service_id, cost_center_code, cost_center_name, requested_quantity, ordered_quantity, notes, sort_order")
         .eq("company_id", companyId).eq("project_id", projectId).order("sort_order").range(from, to);
       return { data: (data ?? []) as MaterialRequestItem[], error };
     }) : Promise.resolve({ data: [] as MaterialRequestItem[], error: null }),
@@ -113,6 +125,26 @@ export default async function MaterialRequestsPage({ searchParams }: {
   const project = projectResult.data as Project | null;
   const budgets = budgetsResult.data;
   const approvedBudget = budgets[0] ?? null;
+  const referenceMap = new Map<string, Set<string>>();
+  budgetServicesResult.data.forEach((reference) => {
+    const values = referenceMap.get(reference.budget_id) ?? new Set<string>();
+    values.add(reference.service_id);
+    referenceMap.set(reference.budget_id, values);
+  });
+  const centers: MaterialCostCenterOption[] = budgets.flatMap((budget) => {
+    const linkedServices = referenceMap.get(budget.id) ?? new Set<string>();
+    const services = linkedServices.size
+      ? servicesResult.data.filter((service) => linkedServices.has(service.id))
+      : servicesResult.data;
+    return services.map((service) => ({
+      id: service.id,
+      budget_id: budget.id,
+      code: service.code,
+      name: service.description,
+      unit: service.unit,
+      group_code: service.group_code,
+    }));
+  });
   const requests = requestsResult.data;
   const items = itemsResult.data;
   const itemMap = new Map<string, MaterialRequestItem[]>();
@@ -133,14 +165,15 @@ export default async function MaterialRequestsPage({ searchParams }: {
   const pendingItems = pendingRequests.reduce((total, request) => total + (itemMap.get(request.id) ?? []).filter((item) => Number(item.ordered_quantity) < Number(item.requested_quantity)).length, 0);
   const approved = requests.filter((request) => ["approved", "partially_ordered"].includes(request.status)).length;
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
-  const dialogBase = { inputs: inputsResult.data, centers: groupsResult.data, supplyPlan: supplyResult.data, approvedBudgetId: approvedBudget?.id ?? "" };
+  const dialogBase = { inputs: inputsResult.data, centers, supplyPlan: supplyResult.data, approvedBudgetId: approvedBudget?.id ?? "" };
+  const structureError = requestsResult.error || itemsResult.error;
 
   return <AppShell activeGroup="execution" activeItem="material-requests" eyebrow="Execução · Suprimentos" title="Solicitações de Materiais"
-    description={`${company.name} · ${context} · necessidades da obra vinculadas aos insumos e centros de custo do orçamento.`}
+    description={`${company.name} · ${context} · materiais apropriados diretamente aos serviços do orçamento.`}
     actions={canManage && approvedBudget ? <MaterialRequestCreateDialog {...dialogBase} /> : undefined}>
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
-    {requestsResult.error || itemsResult.error ? <div className="auth-message error workspace-message">A estrutura das solicitações ainda não está instalada. Execute a migration <strong>20260728_0033_execution_material_requests.sql</strong>.</div> : null}
+    {structureError ? <div className="auth-message error workspace-message">A atualização dos centros de custo ainda não está instalada. Execute a migration <strong>20260728_0035_material_request_service_centers.sql</strong>.</div> : null}
     {!projectId ? <div className="material-requests-empty-page">Selecione uma obra no topo.</div> : null}
     {projectId && !approvedBudget ? <div className="auth-message error workspace-message">A obra precisa ter um orçamento com status <strong>Revisão fechada</strong> antes de solicitar materiais.</div> : null}
 
@@ -152,7 +185,7 @@ export default async function MaterialRequestsPage({ searchParams }: {
     </section>
 
     <section className="material-request-flow">
-      {[['1','Solicitação','Obra informa a necessidade'],['2','Aprovação','Engenharia valida'],['3','Cotação','Suprimentos negocia'],['4','Pedido','Quantidade é comprometida'],['5','Atendimento','Saldo solicitado chega a zero']].map(([number,title,caption]) => <div key={number}><i>{number}</i><strong>{title}</strong><span>{caption}</span></div>)}
+      {[["1","Solicitação","Obra informa a necessidade"],["2","Aprovação","Engenharia valida"],["3","Cotação","Suprimentos negocia"],["4","Pedido","Quantidade é comprometida"],["5","Atendimento","Saldo solicitado chega a zero"]].map(([number,title,caption]) => <div key={number}><i>{number}</i><strong>{title}</strong><span>{caption}</span></div>)}
     </section>
 
     <nav className="material-request-tabs">
@@ -166,19 +199,26 @@ export default async function MaterialRequestsPage({ searchParams }: {
 
     <section className="material-request-table-card">
       <div className="budget-section-head"><div><span>{view === "history" ? "Histórico da obra" : "Necessidades abertas"}</span><h2>{view === "history" ? "Solicitações concluídas" : "Materiais ainda pendentes"}</h2></div><p>{visible.length} solicitação(ões).</p></div>
-      <div className="registry-table-wrap"><table className="registry-table material-request-table"><thead><tr><th>Solicitação</th><th>Materiais</th><th>Necessidade</th><th>Solicitante automático</th><th>Centros de custo</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+      <div className="registry-table-wrap"><table className="registry-table material-request-table"><thead><tr><th>Solicitação</th><th>Materiais</th><th>Necessidade</th><th>Solicitante automático</th><th>Serviços / centros de custo</th><th>Status</th><th>Ações</th></tr></thead><tbody>
         {visible.map((request) => {
           const requestItems = itemMap.get(request.id) ?? [];
           const remaining = requestItems.filter((item) => Number(item.ordered_quantity) < Number(item.requested_quantity));
           const shownItems = view === "history" ? requestItems : remaining;
-          const centers = [...new Map(requestItems.map((item) => [item.cost_center_code, item.cost_center_name])).entries()];
-          const dialogRequest: MaterialRequestDialogData = { id: request.id, request_number: request.request_number, budget_id: request.budget_id, needed_date: request.needed_date, notes: request.notes, status: request.status, items: requestItems.map((item) => ({ id: item.id, input_id: item.input_id, quantity: Number(item.requested_quantity), cost_center_code: item.cost_center_code, notes: item.notes })) };
+          const requestCenters = [...new Map(requestItems.map((item) => [item.cost_center_code, item.cost_center_name])).entries()];
+          const dialogRequest: MaterialRequestDialogData = {
+            id: request.id, request_number: request.request_number, budget_id: request.budget_id,
+            needed_date: request.needed_date, notes: request.notes, status: request.status,
+            items: requestItems.map((item) => ({
+              id: item.id, input_id: item.input_id, quantity: Number(item.requested_quantity),
+              cost_center_service_id: item.cost_center_service_id, cost_center_code: item.cost_center_code, notes: item.notes,
+            })),
+          };
           return <tr key={request.id}>
             <td><strong>{request.request_number}</strong><span>{dateBR(request.created_at)}</span><small>{requestItems.length} item(ns)</small></td>
             <td><div className="material-request-item-summary">{shownItems.slice(0, 4).map((item) => <div key={item.id}><code>{item.input_code}</code><span>{item.input_name}</span><b>{quantity(view === "history" ? Number(item.requested_quantity) : Number(item.requested_quantity) - Number(item.ordered_quantity))} {item.unit_snapshot}</b>{Number(item.ordered_quantity) > 0 ? <small>{quantity(Number(item.ordered_quantity))} já pedido</small> : null}</div>)}{shownItems.length > 4 ? <small>+ {shownItems.length - 4} outro(s)</small> : null}{!shownItems.length ? <span>Sem saldo pendente.</span> : null}</div></td>
             <td><strong>{dateBR(request.needed_date)}</strong>{request.approved_at ? <small>Aprovada em {dateBR(request.approved_at)}</small> : null}</td>
             <td><strong>{request.requester_name}</strong><small>preenchido pelo login</small></td>
-            <td><div className="material-request-centers">{centers.map(([code,name]) => <span key={code}>{code}<small>{name}</small></span>)}</div></td>
+            <td><div className="material-request-centers">{requestCenters.map(([code,name]) => <span key={code}>{code}<small>{name}</small></span>)}</div></td>
             <td><span className={`material-request-status status-${request.status}`}>{statusLabels[request.status]}</span>{request.cancellation_reason ? <small>{request.cancellation_reason}</small> : null}</td>
             <td><div className="material-request-actions">
               {canManage && request.status === "requested" ? <MaterialRequestEditDialog {...dialogBase} request={dialogRequest} /> : null}
