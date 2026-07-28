@@ -1,0 +1,191 @@
+name: Aplicar migration Supabase 0033
+
+on:
+  issues:
+    types:
+      - opened
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: apply-supabase-0033
+  cancel-in-progress: true
+
+jobs:
+  migrate:
+    name: Aplicar solicitações de materiais no Supabase
+    if: github.event.issue.title == '[RUN] Supabase 0033'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: require
+      PGCONNECT_TIMEOUT: "10"
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Informar início
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Iniciando a aplicação controlada da migration \`20260728_0033_execution_material_requests.sql\`."
+
+      - name: Validar, normalizar e classificar conexão
+        id: connection
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from urllib.parse import quote, unquote, urlparse
+
+          raw = os.environ.get('SUPABASE_DB_URL', '').strip()
+          placeholder = any(marker in raw.lower() for marker in ('[your-password]', '<your-password>', 'your-password', '[password]'))
+          normalized = raw
+          repaired = False
+          parseable = True
+
+          if raw:
+              try:
+                  scheme, remainder = raw.split('://', 1)
+                  credentials, server = remainder.rsplit('@', 1)
+                  username, password = credentials.split(':', 1)
+                  normalized = f"{scheme}://{quote(unquote(username), safe='')}:{quote(unquote(password), safe='')}@{server}"
+                  repaired = normalized != raw
+              except Exception:
+                  normalized = raw
+
+          try:
+              host = (urlparse(normalized).hostname or '').lower()
+          except Exception:
+              host = ''
+              parseable = False
+
+          if '.pooler.supabase.com' in host:
+              kind = 'pooler'
+          elif host.startswith('db.') and host.endswith('.supabase.co'):
+              kind = 'direct'
+          elif host:
+              kind = 'other'
+          else:
+              kind = 'invalid'
+              parseable = False
+
+          if normalized:
+              print(f'::add-mask::{normalized}')
+
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env_file:
+              env_file.write('EFFECTIVE_DB_URL<<__ELOS_DB_URL__\n')
+              env_file.write(normalized + '\n')
+              env_file.write('__ELOS_DB_URL__\n')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output_file:
+              output_file.write(f'kind={kind}\n')
+              output_file.write(f'placeholder={str(placeholder).lower()}\n')
+              output_file.write(f'repaired={str(repaired).lower()}\n')
+              output_file.write(f'parseable={str(parseable).lower()}\n')
+              output_file.write(f'configured={str(bool(raw)).lower()}\n')
+          PY
+
+      - name: Informar tipo de conexão
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Conexão detectada: \`${{ steps.connection.outputs.kind }}\`. URI normalizada: \`${{ steps.connection.outputs.repaired }}\`. Senha-placeholder: \`${{ steps.connection.outputs.placeholder }}\`."
+
+      - name: Instalar cliente PostgreSQL
+        shell: bash
+        run: |
+          sudo timeout 60s apt-get update
+          sudo timeout 60s apt-get install -y postgresql-client
+
+      - name: Executar e validar migration 0033
+        id: apply
+        shell: bash
+        run: |
+          set +e
+
+          if [ "${{ steps.connection.outputs.configured }}" != "true" ]; then
+            echo "O secret SUPABASE_DB_URL não está configurado." > /tmp/migration.log
+            status=89
+          elif [ "${{ steps.connection.outputs.placeholder }}" = "true" ]; then
+            echo "A URI ainda contém o marcador de senha. Substitua [YOUR-PASSWORD] pela senha real do banco." > /tmp/migration.log
+            status=90
+          elif [ "${{ steps.connection.outputs.kind }}" = "direct" ]; then
+            echo "Foi detectada uma Direct Connection do Supabase. O GitHub Actions precisa da URI Session Pooler." > /tmp/migration.log
+            status=91
+          elif [ "${{ steps.connection.outputs.parseable }}" != "true" ]; then
+            echo "A URI não pôde ser interpretada. Copie novamente a URI completa do Session Pooler." > /tmp/migration.log
+            status=92
+          else
+            timeout 45s psql "$EFFECTIVE_DB_URL" \
+              --no-psqlrc \
+              --set=ON_ERROR_STOP=1 \
+              --file=supabase/migrations/20260728_0033_execution_material_requests.sql \
+              > /tmp/migration.log 2>&1
+            status=$?
+
+            if [ "$status" -eq 124 ]; then
+              echo "A conexão com o banco excedeu 45 segundos e foi encerrada." >> /tmp/migration.log
+            fi
+          fi
+
+          if [ "$status" -eq 0 ]; then
+            timeout 30s psql "$EFFECTIVE_DB_URL" \
+              --no-psqlrc \
+              --set=ON_ERROR_STOP=1 \
+              --command="do \$\$ begin if to_regclass('public.execution_material_requests') is null then raise exception 'Tabela de solicitações não criada'; end if; if to_regclass('public.execution_material_request_items') is null then raise exception 'Tabela de itens não criada'; end if; if to_regprocedure('public.save_execution_material_request(uuid,uuid,uuid,uuid,date,text,jsonb)') is null then raise exception 'Função de gravação não criada'; end if; end \$\$;" \
+              >> /tmp/migration.log 2>&1
+            status=$?
+          fi
+          set -e
+
+          cat /tmp/migration.log
+
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          text = Path('/tmp/migration.log').read_text(encoding='utf-8', errors='replace')
+          for secret_name in ('SUPABASE_DB_URL', 'EFFECTIVE_DB_URL'):
+              secret = os.environ.get(secret_name, '')
+              if secret:
+                  text = text.replace(secret, '[REDACTED]')
+          text = re.sub(r'postgres(?:ql)?://[^\s]+', 'postgresql://[REDACTED]', text)
+          Path('/tmp/migration-sanitized.log').write_text(text, encoding='utf-8')
+          PY
+
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Confirmar sucesso
+        if: steps.apply.outputs.status == '0'
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "✅ Migration 0033 aplicada e validada com sucesso. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh issue close "$ISSUE_NUMBER" --reason completed
+
+      - name: Registrar falha com diagnóstico
+        if: steps.apply.outputs.status != '' && steps.apply.outputs.status != '0'
+        shell: bash
+        run: |
+          {
+            echo "❌ A migration 0033 falhou."
+            echo
+            echo "Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+            echo '```text'
+            tail -n 50 /tmp/migration-sanitized.log
+            echo '```'
+          } > /tmp/issue-body.md
+          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/issue-body.md
+          exit 1
+
+      - name: Registrar falha inesperada
+        if: always() && steps.apply.outputs.status == ''
+        shell: bash
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "❌ O workflow foi interrompido antes da execução da migration 0033. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          exit 1
