@@ -8,6 +8,7 @@ import {
   type ExecutionScheduleLocation,
   type ExecutionScheduleService,
 } from "./execution-schedule-workbench";
+import { PhysicalProgressPanel, type PhysicalWeightRecord } from "./physical-progress-panel";
 import type { ExecutionScheduleActivity, ExecutionScheduleMeasurement } from "./progress-dialog";
 
 type Project = { id: string; code: string | null; name: string };
@@ -118,6 +119,21 @@ export default async function ExecutionSchedulePage({
   const activities = selectedBaseline ? activitiesResult.data.filter((activity) => activity.baseline_id === selectedBaseline.id) : [];
   const activityIds = new Set(activities.map((activity) => activity.id));
   const measurements = measurementsResult.data.filter((measurement) => activityIds.has(measurement.activity_id));
+
+  const weightsResult = selectedBaseline && projectId
+    ? await fetchAllRows<PhysicalWeightRecord>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("engineering_schedule_service_weights")
+          .select("service_id, physical_weight_percent, distribution_method, source, notes")
+          .eq("company_id", companyId)
+          .eq("project_id", projectId)
+          .eq("baseline_id", selectedBaseline.id)
+          .order("created_at")
+          .range(from, to);
+        return { data: (data ?? []) as PhysicalWeightRecord[], error };
+      })
+    : { data: [] as PhysicalWeightRecord[], error: null };
+
   const canManage = (manageResult.data === true || roleKey === "owner" || roleKey === "admin") && !measurementsResult.error;
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
   const structureError = baselinesResult.error || activitiesResult.error || measurementsResult.error;
@@ -138,20 +154,36 @@ export default async function ExecutionSchedulePage({
           Execute no Supabase a migration <strong>20260727_0031_execution_schedule_tracking.sql</strong> para liberar medições e reprogramações.
         </div>
       ) : null}
+      {weightsResult.error ? (
+        <div className="auth-message error workspace-message">
+          Execute no Supabase a migration <strong>20260727_0032_schedule_physical_weights.sql</strong> para salvar os pesos físicos por serviço. Até lá, a tela usa apenas a sugestão automática.
+        </div>
+      ) : null}
       {!projectId ? <div className="schedule-empty">Selecione uma obra no topo para acompanhar o cronograma.</div> : null}
       {projectId && !selectedBaseline ? <div className="schedule-empty">Esta obra ainda não possui cronograma. Crie e aprove a linha de base em Engenharia.</div> : null}
       {projectId && selectedBaseline ? (
-        <ExecutionScheduleWorkbench
-          projectName={project?.name ?? "Obra selecionada"}
-          baselines={baselines}
-          selectedBaseline={selectedBaseline}
-          activities={activities}
-          measurements={measurements}
-          services={servicesResult.data}
-          locations={locationsResult.data}
-          selectedDate={selectedDate}
-          canManage={canManage}
-        />
+        <>
+          <PhysicalProgressPanel
+            baselineId={selectedBaseline.id}
+            selectedDate={selectedDate}
+            activities={activities}
+            measurements={measurements}
+            services={servicesResult.data}
+            weights={weightsResult.data}
+            canManage={canManage && !weightsResult.error}
+          />
+          <ExecutionScheduleWorkbench
+            projectName={project?.name ?? "Obra selecionada"}
+            baselines={baselines}
+            selectedBaseline={selectedBaseline}
+            activities={activities}
+            measurements={measurements}
+            services={servicesResult.data}
+            locations={locationsResult.data}
+            selectedDate={selectedDate}
+            canManage={canManage}
+          />
+        </>
       ) : null}
     </AppShell>
   );
