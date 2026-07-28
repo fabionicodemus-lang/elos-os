@@ -41,33 +41,55 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Aplicar migration 0032
+      - name: Executar e validar migration 0032
+        id: apply
         shell: bash
         run: |
+          set +e
           psql "$SUPABASE_DB_URL" \
             --no-psqlrc \
             --set=ON_ERROR_STOP=1 \
-            --file=supabase/migrations/20260727_0032_schedule_physical_weights.sql
+            --file=supabase/migrations/20260727_0032_schedule_physical_weights.sql \
+            > /tmp/migration.log 2>&1
+          status=$?
 
-      - name: Verificar objetos criados
-        shell: bash
-        run: |
-          psql "$SUPABASE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 <<'SQL'
-          do $$
-          begin
-            if to_regclass('public.engineering_schedule_service_weights') is null then
-              raise exception 'Tabela engineering_schedule_service_weights não foi criada.';
-            end if;
+          if [ "$status" -eq 0 ]; then
+            psql "$SUPABASE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 >> /tmp/migration.log 2>&1 <<'SQL'
+            do $$
+            begin
+              if to_regclass('public.engineering_schedule_service_weights') is null then
+                raise exception 'Tabela engineering_schedule_service_weights não foi criada.';
+              end if;
 
-            if to_regprocedure('public.save_schedule_service_weights(uuid,uuid,uuid,jsonb)') is null then
-              raise exception 'Função save_schedule_service_weights não foi criada.';
-            end if;
-          end
-          $$;
-          SQL
+              if to_regprocedure('public.save_schedule_service_weights(uuid,uuid,uuid,jsonb)') is null then
+                raise exception 'Função save_schedule_service_weights não foi criada.';
+              end if;
+            end
+            $$;
+            SQL
+            status=$?
+          fi
+          set -e
+
+          cat /tmp/migration.log
+
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          text = Path('/tmp/migration.log').read_text(encoding='utf-8', errors='replace')
+          secret = os.environ.get('SUPABASE_DB_URL', '')
+          if secret:
+              text = text.replace(secret, '[REDACTED]')
+          text = re.sub(r'postgres(?:ql)?://[^\s]+', 'postgresql://[REDACTED]', text)
+          Path('/tmp/migration-sanitized.log').write_text(text, encoding='utf-8')
+          PY
+
+          echo "status=$status" >> "$GITHUB_OUTPUT"
 
       - name: Registrar sucesso
-        if: success()
+        if: steps.apply.outputs.status == '0'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -76,12 +98,24 @@ jobs:
             --title "[DB] Migration Supabase 0032 aplicada" \
             --body "A migration \`20260727_0032_schedule_physical_weights.sql\` foi aplicada e validada com sucesso. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
-      - name: Registrar falha
-        if: failure()
+      - name: Registrar falha com diagnóstico
+        if: steps.apply.outputs.status != '0'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          {
+            echo "A migration \`20260727_0032_schedule_physical_weights.sql\` falhou."
+            echo
+            echo "Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+            echo '```text'
+            tail -n 40 /tmp/migration-sanitized.log
+            echo '```'
+          } > /tmp/issue-body.md
+
           gh issue create \
-            --title "[DB] Migration Supabase 0032 falhou" \
-            --body "A execução da migration \`20260727_0032_schedule_physical_weights.sql\` falhou. Consulte o log: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            --title "[DB] Migration Supabase 0032 falhou — diagnóstico" \
+            --body-file /tmp/issue-body.md
+
+          exit 1
