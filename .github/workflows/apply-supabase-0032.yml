@@ -1,0 +1,66 @@
+name: Aplicar migration Supabase 0032
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-supabase-0032.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apply-supabase-0032
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Aplicar pesos físicos no Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: require
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validar conexão configurada
+        shell: bash
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "O secret SUPABASE_DB_URL não está configurado."
+            exit 1
+          fi
+
+      - name: Instalar cliente PostgreSQL
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Aplicar migration 0032
+        shell: bash
+        run: |
+          psql "$SUPABASE_DB_URL" \
+            --no-psqlrc \
+            --set=ON_ERROR_STOP=1 \
+            --file=supabase/migrations/20260727_0032_schedule_physical_weights.sql
+
+      - name: Verificar objetos criados
+        shell: bash
+        run: |
+          psql "$SUPABASE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          begin
+            if to_regclass('public.engineering_schedule_service_weights') is null then
+              raise exception 'Tabela engineering_schedule_service_weights não foi criada.';
+            end if;
+
+            if to_regprocedure('public.save_schedule_service_weights(uuid,uuid,uuid,jsonb)') is null then
+              raise exception 'Função save_schedule_service_weights não foi criada.';
+            end if;
+          end
+          $$;
+          SQL
