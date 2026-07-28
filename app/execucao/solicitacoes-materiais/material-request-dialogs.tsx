@@ -205,6 +205,7 @@ function MaterialRequestDialog({ inputs, centers, supplyPlan, approvedBudgetId, 
                   const input = inputMap.get(row.input_id);
                   const planned = supplyMap.get(row.input_id);
                   const selectedCenter = row.cost_center_service_id ? centerMap.get(row.cost_center_service_id) : undefined;
+                  const centerCode = selectedCenter?.code ?? row.cost_center_code ?? "";
                   return <tr key={row.row_id}>
                     <td><strong>{input?.code ?? "—"}</strong><span>{input?.description ?? "Material não encontrado"}</span><small>{input?.unit ?? "un"}</small></td>
                     <td>{planned ? <><strong>{quantity(planned.purchase_quantity)} {planned.unit_snapshot}</strong><span>Pedido até {dateBR(planned.order_deadline)}</span><small>1º uso {dateBR(planned.first_use_date)}</small></> : <span>Fora do plano atual</span>}</td>
@@ -212,7 +213,7 @@ function MaterialRequestDialog({ inputs, centers, supplyPlan, approvedBudgetId, 
                     <td className="material-center-cell">
                       <div className="material-center-picker">
                         <button className={`material-center-trigger ${selectedCenter ? "selected" : ""}`} type="button" onClick={() => { setOpenCenterRow((current) => current === row.row_id ? null : row.row_id); setCenterSearch(""); }}>
-                          <strong>{selectedCenter?.code ?? row.cost_center_code || "Selecionar serviço"}</strong>
+                          <strong>{centerCode || "Selecionar serviço"}</strong>
                           <span>{selectedCenter?.name ?? (row.cost_center_code ? "Centro anterior — selecione um serviço" : "Usar serviço como centro de custo")}</span>
                           <i>⌄</i>
                         </button>
