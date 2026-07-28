@@ -25,7 +25,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const projects = (projectsResult.data ?? []) as Project[];
   const permissions = new Set(((permissionResult.data ?? []) as { permission_key: string }[]).map((item) => item.permission_key));
   if (role.key === "owner" || role.key === "admin") {
-    ["admin.users.view","admin.users.manage","projects.view","projects.manage","suppliers.view","suppliers.manage","clients.view","clients.manage","payables.view","payables.manage","sales.view","sales.manage","receivables.view","receivables.manage","indices.view","indices.manage","cashflow.view","reports.view","budgets.view","budgets.manage","services.view","services.manage","inputs.view","inputs.manage","prices.view","prices.manage","compositions.view","compositions.manage","takeoffs.view","takeoffs.manage","schedule.view","schedule.manage","execution.schedule.view","execution.schedule.manage","execution.material_requests.view","execution.material_requests.manage","execution.material_requests.approve","supply_plan.view","supply_plan.manage","execution.view","quality.view","commercial.view","documents.view"].forEach((permission) => permissions.add(permission));
+    ["admin.users.view","admin.users.manage","projects.view","projects.manage","suppliers.view","suppliers.manage","clients.view","clients.manage","payables.view","payables.manage","sales.view","sales.manage","receivables.view","receivables.manage","indices.view","indices.manage","cashflow.view","reports.view","budgets.view","budgets.manage","services.view","services.manage","inputs.view","inputs.manage","prices.view","prices.manage","compositions.view","compositions.manage","takeoffs.view","takeoffs.manage","schedule.view","schedule.manage","execution.schedule.view","execution.schedule.manage","execution.material_requests.view","execution.material_requests.manage","execution.material_requests.approve","execution.daily_logs.view","execution.daily_logs.manage","execution.daily_logs.submit","execution.daily_logs.approve","execution.daily_logs.reopen","execution.daily_logs.settings","supply_plan.view","supply_plan.manage","execution.view","quality.view","commercial.view","documents.view"].forEach((permission) => permissions.add(permission));
   }
   const can = (permission: string) => permissions.has(permission);
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
@@ -53,6 +53,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const supplyPlanHref = can("supply_plan.view") ? "/engenharia/planejamento-suprimentos" : undefined;
   const executionScheduleHref = can("execution.schedule.view") || can("schedule.view") ? "/execucao/cronograma" : undefined;
   const materialRequestsHref = can("execution.material_requests.view") ? "/execucao/solicitacoes-materiais" : undefined;
+  const dailyLogsHref = can("execution.daily_logs.view") ? "/execucao/diario-obras" : undefined;
 
   const groups: ShellNavigationGroup[] = [
     { key: "system", label: "Sistema", icon: "⚙", active: activeGroup === "system", items: [
@@ -87,7 +88,8 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
     { key: "execution", label: "Execução", icon: "✓", active: activeGroup === "execution", items: [
       { label: "Controle do Cronograma", href: executionScheduleHref, active: activeItem === "execution-schedule", disabled: !executionScheduleHref },
       { label: "Solicitações de Materiais", href: materialRequestsHref, active: activeItem === "material-requests", disabled: !materialRequestsHref },
-      { label: "Diário de Obras", disabled: true }, { label: "Qualidade", disabled: true },
+      { label: "Diário de Obras", href: dailyLogsHref, active: activeItem === "daily-logs", disabled: !dailyLogsHref },
+      { label: "Qualidade", disabled: true },
       { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "execution-suppliers", disabled: !can("suppliers.view") },
       { label: "Contratos de Serviços", disabled: true }, { label: "Medições dos Contratos", disabled: true }, { label: "Ordens de Serviço", disabled: true },
     ]},
@@ -128,7 +130,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.39.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.40.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
