@@ -9,6 +9,7 @@ const PAGE_SIZE = 50;
 
 type Client = { id: string; name: string; tax_id: string | null };
 type Unit = { id: string; code: string; floor: number | null; type: string | null; list_price: number | null; status: string };
+type Broker = { id: string; name: string; kind: string; default_commission_pct: number };
 type Proposal = {
   id: string;
   number: string;
@@ -61,9 +62,6 @@ function dateBR(value: string | null | undefined) {
   const [year, month, day] = value.slice(0, 10).split("-");
   return `${day}/${month}/${year}`;
 }
-function inputMoney(value: number | null | undefined) {
-  return Number(value ?? 0).toFixed(2).replace(".", ",");
-}
 
 export default async function ProposalsPage({ searchParams }: {
   searchParams: Promise<{ q?: string; status?: string; client?: string; period?: string; from?: string; to?: string; page?: string; error?: string; success?: string }>;
@@ -82,6 +80,7 @@ export default async function ProposalsPage({ searchParams }: {
     ? supabase.from("projects").select("id,name,code").eq("id", projectId).eq("company_id", companyId).maybeSingle()
     : Promise.resolve({ data: null, error: null });
   const clientsQuery = supabase.from("clients").select("id,name,tax_id").eq("company_id", companyId).eq("status", "active").order("name").limit(1500);
+  const brokersQuery = supabase.from("commercial_brokers").select("id,name,kind,default_commission_pct").eq("company_id", companyId).eq("status", "active").order("name").limit(1500);
   const unitsQuery = projectId
     ? supabase.from("units").select("id,code,floor,type,list_price,status").eq("company_id", companyId).eq("project_id", projectId).in("status", ["available", "reserved"]).order("code")
     : Promise.resolve({ data: [], error: null });
@@ -103,9 +102,10 @@ export default async function ProposalsPage({ searchParams }: {
     proposalsQuery = proposalsQuery.or(`number.ilike.%${safe}%,broker_name.ilike.%${safe}%,source_channel.ilike.%${safe}%,notes.ilike.%${safe}%`);
   }
 
-  const [projectResult, clientsResult, unitsResult, proposalsResult, summaryResult, manageResult] = await Promise.all([
+  const [projectResult, clientsResult, brokersResult, unitsResult, proposalsResult, summaryResult, manageResult] = await Promise.all([
     projectQuery,
     clientsQuery,
+    brokersQuery,
     unitsQuery,
     proposalsQuery,
     supabase.rpc("commercial_proposals_summary", { p_company_id: companyId, p_project_id: projectId }),
@@ -114,6 +114,7 @@ export default async function ProposalsPage({ searchParams }: {
 
   const schemaMissing = proposalsResult.error?.code === "42P01" || proposalsResult.error?.message.includes("commercial_proposals");
   const clients = (clientsResult.data ?? []) as Client[];
+  const brokers = (brokersResult.data ?? []) as Broker[];
   const units = (unitsResult.data ?? []) as Unit[];
   const proposals = (proposalsResult.data ?? []) as unknown as Proposal[];
   const summary = (summaryResult.data ?? { total_count: 0, draft_count: 0, pipeline_count: 0, approved_count: 0, converted_count: 0, pipeline_amount: 0, approved_amount: 0, converted_amount: 0, expiring_count: 0, expired_open_count: 0 }) as Summary;
@@ -131,7 +132,7 @@ export default async function ProposalsPage({ searchParams }: {
     eyebrow="Comercial"
     title="Propostas"
     description={`${company.name}${project ? ` · ${project.code ? `${project.code} · ` : ""}${project.name}` : " · todos os empreendimentos"} · negociações antes da venda.`}
-    actions={<><Link className="elos-button" href="/comercial/vendas">Abrir vendas</Link><Link className="elos-button" href="/cadastros/clientes">Abrir clientes</Link></>}
+    actions={<><Link className="elos-button" href="/comercial/corretores">Abrir corretores</Link><Link className="elos-button" href="/comercial/vendas">Abrir vendas</Link><Link className="elos-button" href="/cadastros/clientes">Abrir clientes</Link></>}
   >
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
@@ -164,7 +165,7 @@ export default async function ProposalsPage({ searchParams }: {
               <label>Valor de tabela<input name="list_price" inputMode="decimal" placeholder="0,00" required /></label>
               <label>Valor proposto<input name="proposed_amount" inputMode="decimal" placeholder="0,00" required /></label>
               <label>Comissão (%)<input name="commission_pct" inputMode="decimal" defaultValue="0,00" /></label>
-              <label>Corretor / imobiliária<input name="broker_name" /></label>
+              <label>Corretor / imobiliária<select name="broker_name" defaultValue=""><option value="">Sem corretor</option>{brokers.map((broker) => <option key={broker.id} value={broker.name}>{broker.name}{broker.default_commission_pct > 0 ? ` · padrão ${Number(broker.default_commission_pct).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%` : ""}</option>)}</select></label>
               <label>Origem do atendimento<input name="source_channel" placeholder="Ex.: indicação, portal, plantão" /></label>
               <label className="registry-wide">Condições gerais<textarea name="terms" rows={3} placeholder="Condições comerciais, ressalvas e premissas" /></label>
               <label className="registry-wide">Observações internas<textarea name="notes" rows={3} /></label>
