@@ -21,9 +21,11 @@ function optionLabel(account: AccountOption) {
 export function BankAccountPaymentSelector() {
   useEffect(() => {
     let accounts: AccountOption[] = [];
+    let loaded = false;
     let disposed = false;
 
     const enhance = () => {
+      if (!loaded || disposed) return;
       document.querySelectorAll<HTMLInputElement>('input[name="paid_account_name"]:not([data-bank-selector-enhanced])').forEach((input) => {
         input.dataset.bankSelectorEnhanced = "1";
         const select = document.createElement("select");
@@ -60,13 +62,14 @@ export function BankAccountPaymentSelector() {
       .then((payload) => {
         if (disposed) return;
         accounts = Array.isArray(payload.accounts) ? payload.accounts : [];
-        document.querySelectorAll('select[data-bank-account-selector="1"]').forEach((node) => node.remove());
-        document.querySelectorAll<HTMLInputElement>('input[data-bank-selector-enhanced="1"]').forEach((input) => delete input.dataset.bankSelectorEnhanced);
+        loaded = true;
         enhance();
       })
-      .catch(() => enhance());
+      .catch(() => {
+        loaded = true;
+        enhance();
+      });
 
-    enhance();
     return () => {
       disposed = true;
       observer.disconnect();
