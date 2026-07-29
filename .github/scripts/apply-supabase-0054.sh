@@ -24,7 +24,7 @@ report_failure() {
   local exit_code=$?
   sanitize_log
   {
-    echo '❌ A migration 0054 de Vistorias e Chamados falhou.'
+    echo '❌ As migrations 0054 de Vistorias e Chamados falharam.'
     echo
     echo '```text'
     tail -n 280 "$SAFE_LOG"
@@ -35,7 +35,7 @@ report_failure() {
 }
 trap report_failure ERR
 
-gh pr comment "$PR_NUMBER" --body 'Iniciando a migration `0054`: modelos, checklists, pendências, reinspeções, Assistência Técnica e termo de entrega.'
+gh pr comment "$PR_NUMBER" --body 'Iniciando as migrations `0054` e `0054a`: modelos, checklists, pendências, reinspeções, Assistência Técnica e termo de entrega.'
 
 python - <<'PY'
 import os
@@ -73,6 +73,12 @@ psql "$EFFECTIVE_DB_URL" \
 psql "$EFFECTIVE_DB_URL" \
   --no-psqlrc \
   --set=ON_ERROR_STOP=1 \
+  --file=supabase/migrations/20260729_0054a_postwork_inspections_runtime_fix.sql \
+  >>"$LOG_FILE" 2>&1
+
+psql "$EFFECTIVE_DB_URL" \
+  --no-psqlrc \
+  --set=ON_ERROR_STOP=1 \
   --command="do \$\$ begin
     if to_regclass('public.postwork_inspection_templates') is null then raise exception 'Tabela de modelos não criada'; end if;
     if to_regclass('public.postwork_inspection_template_items') is null then raise exception 'Itens dos modelos não criados'; end if;
@@ -82,6 +88,7 @@ psql "$EFFECTIVE_DB_URL" \
     if to_regprocedure('public.save_postwork_inspection_template(uuid,uuid,uuid,text,text,text,jsonb)') is null then raise exception 'Função de modelos ausente'; end if;
     if to_regprocedure('public.create_postwork_unit_inspection(uuid,uuid,uuid,uuid,uuid,text,timestamp with time zone,text,text,text,text,text)') is null then raise exception 'Criação de vistoria ausente'; end if;
     if to_regprocedure('public.complete_postwork_unit_inspection(uuid,uuid,uuid,jsonb,text)') is null then raise exception 'Conclusão do checklist ausente'; end if;
+    if position('v_is_reinspection' in pg_get_functiondef('public.complete_postwork_unit_inspection(uuid,uuid,uuid,jsonb,text)'::regprocedure))=0 then raise exception 'Proteção do histórico de reinspeção ausente'; end if;
     if to_regprocedure('public.transfer_postwork_inspection_item_to_assistance(uuid,uuid,uuid,uuid,text,timestamp with time zone)') is null then raise exception 'Integração com Assistência Técnica ausente'; end if;
     if to_regprocedure('public.deliver_postwork_unit_inspection(uuid,uuid,uuid,text,text,text,integer,integer,text,text,text,integer)') is null then raise exception 'Termo de entrega ausente'; end if;
     if not exists(select 1 from public.permissions where key='postwork.inspections.view') then raise exception 'Permissão de visualização ausente'; end if;
@@ -92,5 +99,5 @@ psql "$EFFECTIVE_DB_URL" \
 
 sanitize_log
 cat "$SAFE_LOG"
-gh pr comment "$PR_NUMBER" --body "✅ Migration 0054 aplicada e validada. Modelos, vistorias, pendências, reinspeções, transferência para Assistência Técnica, evidências e termo de entrega foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+gh pr comment "$PR_NUMBER" --body "✅ Migrations 0054 e 0054a aplicadas e validadas. Modelos, vistorias, pendências, reinspeções com histórico preservado, transferência para Assistência Técnica, evidências e termo de entrega foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 trap - ERR
