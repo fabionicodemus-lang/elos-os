@@ -47,3 +47,16 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/apply-supabase-0049.sh
+      - name: Instalar PostgreSQL para limpeza da Bossa
+        if: "${{ github.event_name == 'pull_request' && github.event.pull_request.title == '[RUN] Limpar catálogo Bossa' }}"
+        run: sudo timeout 60s apt-get update && sudo timeout 60s apt-get install -y postgresql-client
+      - name: Executar limpeza confirmada do catálogo da Bossa
+        if: "${{ github.event_name == 'pull_request' && github.event.pull_request.title == '[RUN] Limpar catálogo Bossa' }}"
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: "10"
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+          CONFIRMATION: DELETE_BOSSA_ENGINEERING_CATALOG_20260729
+        run: bash .github/scripts/run-bossa-catalog-cleanup.sh
