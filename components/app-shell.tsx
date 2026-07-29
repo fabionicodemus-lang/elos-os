@@ -25,7 +25,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const projects = (projectsResult.data ?? []) as Project[];
   const permissions = new Set(((permissionResult.data ?? []) as { permission_key: string }[]).map((item) => item.permission_key));
   if (role.key === "owner" || role.key === "admin") {
-    ["admin.users.view","admin.users.manage","projects.view","projects.manage","suppliers.view","suppliers.manage","clients.view","clients.manage","payables.view","payables.manage","sales.view","sales.manage","receivables.view","receivables.manage","indices.view","indices.manage","cashflow.view","reports.view","budgets.view","budgets.manage","services.view","services.manage","inputs.view","inputs.manage","prices.view","prices.manage","compositions.view","compositions.manage","takeoffs.view","takeoffs.manage","schedule.view","schedule.manage","execution.schedule.view","execution.schedule.manage","execution.material_requests.view","execution.material_requests.manage","execution.material_requests.approve","execution.daily_logs.view","execution.daily_logs.manage","execution.daily_logs.submit","execution.daily_logs.approve","execution.daily_logs.reopen","execution.daily_logs.settings","execution.quality.view","execution.quality.fill","execution.quality.complete","execution.quality.nonconformity","execution.quality.reinspect","execution.quality.cancel","execution.quality.exception","execution.quality.templates","execution.quality.settings","execution.quality.indicators","execution.contracts.view","execution.contracts.manage","execution.contracts.approve","execution.contracts.amend","execution.contracts.cancel","supply_plan.view","supply_plan.manage","execution.view","quality.view","commercial.view","documents.view"].forEach((permission) => permissions.add(permission));
+    ["admin.users.view","admin.users.manage","projects.view","projects.manage","suppliers.view","suppliers.manage","clients.view","clients.manage","payables.view","payables.manage","sales.view","sales.manage","receivables.view","receivables.manage","indices.view","indices.manage","cashflow.view","reports.view","budgets.view","budgets.manage","services.view","services.manage","inputs.view","inputs.manage","prices.view","prices.manage","compositions.view","compositions.manage","takeoffs.view","takeoffs.manage","schedule.view","schedule.manage","execution.schedule.view","execution.schedule.manage","execution.material_requests.view","execution.material_requests.manage","execution.material_requests.approve","execution.daily_logs.view","execution.daily_logs.manage","execution.daily_logs.submit","execution.daily_logs.approve","execution.daily_logs.reopen","execution.daily_logs.settings","execution.quality.view","execution.quality.fill","execution.quality.complete","execution.quality.nonconformity","execution.quality.reinspect","execution.quality.cancel","execution.quality.exception","execution.quality.templates","execution.quality.settings","execution.quality.indicators","execution.contracts.view","execution.contracts.manage","execution.contracts.approve","execution.contracts.amend","execution.contracts.cancel","execution.measurements.view","execution.measurements.manage","execution.measurements.submit","execution.measurements.approve","execution.measurements.finance","execution.measurements.cancel","supply_plan.view","supply_plan.manage","execution.view","quality.view","commercial.view","documents.view"].forEach((permission) => permissions.add(permission));
   }
   const can = (permission: string) => permissions.has(permission);
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
@@ -56,6 +56,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const dailyLogsHref = can("execution.daily_logs.view") ? "/execucao/diario-obras" : undefined;
   const qualityHref = can("execution.quality.view") ? "/execucao/qualidade" : undefined;
   const serviceContractsHref = can("execution.contracts.view") ? "/execucao/contratos-servicos" : undefined;
+  const contractMeasurementsHref = can("execution.measurements.view") ? "/execucao/medicoes-contratos" : undefined;
 
   const groups: ShellNavigationGroup[] = [
     { key: "system", label: "Sistema", icon: "⚙", active: activeGroup === "system", items: [
@@ -94,7 +95,8 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Qualidade", href: qualityHref, active: activeItem === "quality", disabled: !qualityHref },
       { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "execution-suppliers", disabled: !can("suppliers.view") },
       { label: "Contratos de Serviços", href: serviceContractsHref, active: activeItem === "service-contracts", disabled: !serviceContractsHref },
-      { label: "Medições dos Contratos", disabled: true }, { label: "Ordens de Serviço", disabled: true },
+      { label: "Medições dos Contratos", href: contractMeasurementsHref, active: activeItem === "contract-measurements", disabled: !contractMeasurementsHref },
+      { label: "Ordens de Serviço", disabled: true },
     ]},
     { key: "procurement", label: "Suprimentos", icon: "🛒", active: activeGroup === "procurement", items: [
       { label: "Orçamentos de Materiais", disabled: true }, { label: "Pedidos de Compras", disabled: true }, { label: "Estoque", disabled: true },
@@ -133,7 +135,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.42.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.43.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
