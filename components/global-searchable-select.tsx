@@ -27,12 +27,24 @@ export function GlobalSearchableSelect() {
   const [target, setTarget] = useState<HTMLSelectElement | null>(null);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  function closePicker(restoreFocus = true) {
+    const currentTarget = target;
+    const dialog = dialogRef.current;
+
+    if (dialog?.open) dialog.close();
+    setTarget(null);
+
+    if (restoreFocus && currentTarget?.isConnected) {
+      window.setTimeout(() => currentTarget.focus(), 0);
+    }
+  }
 
   useEffect(() => {
     function open(select: HTMLSelectElement) {
       setTarget(select);
       setQuery("");
-      window.setTimeout(() => inputRef.current?.focus(), 0);
     }
 
     function handlePointerDown(event: PointerEvent) {
@@ -59,12 +71,24 @@ export function GlobalSearchableSelect() {
   }, []);
 
   useEffect(() => {
-    function closeWithEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setTarget(null);
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (!target) {
+      if (dialog.open) dialog.close();
+      return;
     }
-    document.addEventListener("keydown", closeWithEscape);
-    return () => document.removeEventListener("keydown", closeWithEscape);
-  }, []);
+
+    if (!dialog.open) {
+      try {
+        dialog.showModal();
+      } catch {
+        return;
+      }
+    }
+
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  }, [target]);
 
   const options = useMemo<SelectOption[]>(() => {
     if (!target) return [];
@@ -93,55 +117,72 @@ export function GlobalSearchableSelect() {
 
   function choose(option: SelectOption) {
     if (!target) return;
-    target.value = option.value;
-    target.dispatchEvent(new Event("input", { bubbles: true }));
-    target.dispatchEvent(new Event("change", { bubbles: true }));
-    setTarget(null);
-    window.setTimeout(() => target.focus(), 0);
+    const selectedTarget = target;
+    selectedTarget.value = option.value;
+    selectedTarget.dispatchEvent(new Event("input", { bubbles: true }));
+    selectedTarget.dispatchEvent(new Event("change", { bubbles: true }));
+    closePicker(false);
+    window.setTimeout(() => selectedTarget.isConnected && selectedTarget.focus(), 0);
   }
 
-  if (!target) return null;
-
-  const totalMatches = options.filter((option) => !option.disabled && normalize(`${option.label} ${option.value}`).includes(normalize(query))).length;
+  const totalMatches = target
+    ? options.filter((option) => !option.disabled && normalize(`${option.label} ${option.value}`).includes(normalize(query))).length
+    : 0;
 
   return (
-    <div className="global-select-backdrop" role="presentation" onMouseDown={() => setTarget(null)}>
-      <section className="global-select-panel" role="dialog" aria-modal="true" aria-label="Pesquisar opção" onMouseDown={(event) => event.stopPropagation()}>
-        <header>
-          <div><span>Seleção pesquisável</span><strong>{target.closest("label")?.querySelector("span")?.textContent || "Escolha uma opção"}</strong></div>
-          <button type="button" onClick={() => setTarget(null)} aria-label="Fechar">×</button>
-        </header>
-        <div className="global-select-search">
-          <span>⌕</span>
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Digite código, nome ou parte da descrição"
-            autoComplete="off"
-          />
-        </div>
-        <div className="global-select-results" role="listbox">
-          {filtered.map((option) => (
-            <button
-              key={`${option.value}-${option.label}`}
-              type="button"
-              role="option"
-              aria-selected={option.value === target.value}
-              className={option.value === target.value ? "selected" : ""}
-              onClick={() => choose(option)}
-            >
-              <span>{option.label}</span>
-              {option.value === target.value ? <b>✓</b> : null}
-            </button>
-          ))}
-          {filtered.length === 0 ? <div className="global-select-empty">Nenhuma opção contém o texto digitado.</div> : null}
-        </div>
-        <footer>
-          <span>{totalMatches} resultado(s)</span>
-          {totalMatches > 100 ? <small>Continue digitando para refinar a pesquisa.</small> : null}
-        </footer>
-      </section>
-    </div>
+    <dialog
+      ref={dialogRef}
+      className="global-select-dialog"
+      aria-label="Pesquisar opção"
+      onCancel={(event) => {
+        event.preventDefault();
+        closePicker();
+      }}
+      onClose={() => {
+        if (target) setTarget(null);
+      }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) closePicker();
+      }}
+    >
+      {target ? (
+        <section className="global-select-panel" onMouseDown={(event) => event.stopPropagation()}>
+          <header>
+            <div><span>Seleção pesquisável</span><strong>{target.closest("label")?.querySelector("span")?.textContent || "Escolha uma opção"}</strong></div>
+            <button type="button" onClick={() => closePicker()} aria-label="Fechar">×</button>
+          </header>
+          <div className="global-select-search">
+            <span>⌕</span>
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Digite código, nome ou parte da descrição"
+              autoComplete="off"
+            />
+          </div>
+          <div className="global-select-results" role="listbox">
+            {filtered.map((option) => (
+              <button
+                key={`${option.value}-${option.label}`}
+                type="button"
+                role="option"
+                aria-selected={option.value === target.value}
+                className={option.value === target.value ? "selected" : ""}
+                onClick={() => choose(option)}
+              >
+                <span>{option.label}</span>
+                {option.value === target.value ? <b>✓</b> : null}
+              </button>
+            ))}
+            {filtered.length === 0 ? <div className="global-select-empty">Nenhuma opção contém o texto digitado.</div> : null}
+          </div>
+          <footer>
+            <span>{totalMatches} resultado(s)</span>
+            {totalMatches > 100 ? <small>Continue digitando para refinar a pesquisa.</small> : null}
+          </footer>
+        </section>
+      ) : null}
+    </dialog>
   );
 }
