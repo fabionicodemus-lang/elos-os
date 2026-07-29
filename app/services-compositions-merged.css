@@ -1,0 +1,147 @@
+.budget-module-nav a[href="/engenharia/composicoes"] {
+  display: none !important;
+}
+
+.services-composition-kpis {
+  margin-bottom: 18px;
+}
+
+.merged-service-guidance {
+  margin-bottom: 18px;
+}
+
+.merged-service-filter {
+  grid-template-columns: minmax(230px, 1.6fr) repeat(4, minmax(145px, 0.8fr)) auto auto;
+}
+
+.merged-services-map,
+.merged-service-detail {
+  scroll-margin-top: 24px;
+}
+
+.merged-services-table th:nth-child(1) {
+  min-width: 260px;
+}
+
+.merged-services-table th:nth-child(6) {
+  min-width: 250px;
+}
+
+.merged-services-table td:nth-child(6) small,
+.merged-services-table td:nth-child(8) small {
+  display: block;
+  margin-top: 4px;
+}
+
+.outsourced-labor-name {
+  display: block;
+  color: #173f39;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.labor-policy-badge,
+.outsourced-labor-tag {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.labor-policy-badge.excluded {
+  background: #edf1f0;
+  color: #5d6d69;
+}
+
+.labor-policy-badge.pending {
+  background: #fff2d5;
+  color: #80580b;
+}
+
+.outsourced-labor-tag {
+  margin-top: 5px;
+  background: #def3ec;
+  color: #176a55;
+}
+
+.merged-service-actions,
+.merged-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.merged-service-detail {
+  margin-top: 18px;
+}
+
+.service-technical-strip {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.7fr) minmax(170px, 0.8fr) minmax(260px, 1.4fr) minmax(260px, 1.4fr);
+  gap: 10px;
+  margin: 14px 0 16px;
+}
+
+.service-technical-strip article {
+  min-width: 0;
+  border: 1px solid #dce6e3;
+  border-radius: 10px;
+  background: #f7faf9;
+  padding: 11px 12px;
+}
+
+.service-technical-strip span {
+  display: block;
+  margin-bottom: 5px;
+  color: #70817d;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.service-technical-strip strong {
+  display: block;
+  color: #203834;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.merged-service-items-table th:first-child {
+  min-width: 270px;
+}
+
+.merged-service-items-table td:first-child span,
+.merged-services-table td:first-child span {
+  display: block;
+}
+
+@media (max-width: 1380px) {
+  .merged-service-filter {
+    grid-template-columns: repeat(3, minmax(170px, 1fr));
+  }
+
+  .service-technical-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .merged-service-filter,
+  .service-technical-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .merged-detail-actions {
+    width: 100%;
+  }
+
+  .merged-detail-actions > * {
+    flex: 1 1 auto;
+  }
+}
