@@ -14,6 +14,7 @@ import {
 type Client = { id: string; name: string; tax_id: string | null; status: string };
 type Unit = { id: string; code: string; floor: number | null; type: string | null; list_price: number | null; status: string };
 type Project = { id: string; name: string; code: string | null };
+type Broker = { id: string; name: string; kind: string; default_commission_pct: number; status: string };
 type Proposal = {
   id: string;
   project_id: string;
@@ -99,9 +100,10 @@ export default async function ProposalDetailPage({ params, searchParams }: {
   if (!proposalResult.data) notFound();
   const proposal = proposalResult.data as unknown as Proposal;
 
-  const [clientsResult, unitsResult, itemsResult, versionsResult, indicesResult, manageResult, approveResult, convertResult] = await Promise.all([
+  const [clientsResult, unitsResult, brokersResult, itemsResult, versionsResult, indicesResult, manageResult, approveResult, convertResult] = await Promise.all([
     supabase.from("clients").select("id,name,tax_id,status").eq("company_id", companyId).order("name").limit(1500),
     supabase.from("units").select("id,code,floor,type,list_price,status").eq("company_id", companyId).eq("project_id", proposal.project_id).neq("status", "inactive").order("code"),
+    supabase.from("commercial_brokers").select("id,name,kind,default_commission_pct,status").eq("company_id", companyId).order("status").order("name").limit(1500),
     supabase.from("commercial_proposal_payment_items").select("id,category,description,installment_count,first_due_date,interval_months,amount_per_installment,total_amount,adjustment_index,interest_rate_monthly,sort_order,notes").eq("company_id", companyId).eq("proposal_id", proposalId).order("sort_order").order("first_due_date"),
     supabase.from("commercial_proposals").select("id,version_no,status,proposal_date,valid_until,proposed_amount").eq("company_id", companyId).eq("project_id", proposal.project_id).eq("number", proposal.number).order("version_no", { ascending: false }),
     supabase.from("correction_indices").select("code,name").eq("company_id", companyId).eq("status", "active").order("code"),
@@ -115,6 +117,7 @@ export default async function ProposalDetailPage({ params, searchParams }: {
   const project = relatedOne(proposal.projects);
   const clients = (clientsResult.data ?? []) as Client[];
   const units = (unitsResult.data ?? []) as Unit[];
+  const brokers = (brokersResult.data ?? []) as Broker[];
   const items = (itemsResult.data ?? []) as PaymentItem[];
   const versions = (versionsResult.data ?? []) as { id: string; version_no: number; status: string; proposal_date: string; valid_until: string; proposed_amount: number }[];
   const correctionIndices = (indicesResult.data ?? []) as CorrectionIndex[];
@@ -134,7 +137,7 @@ export default async function ProposalDetailPage({ params, searchParams }: {
     activeGroup="commercial" activeItem="proposals" eyebrow="Comercial · Negociação"
     title={`${proposal.number} · V${proposal.version_no}`}
     description={`${company.name}${project ? ` · ${project.code ? `${project.code} · ` : ""}${project.name}` : ""}`}
-    actions={<><Link className="elos-button" href="/comercial/propostas">Voltar às propostas</Link>{proposal.converted_sale_id ? <Link className="elos-button" href={`/comercial/vendas/${proposal.converted_sale_id}`}>Abrir venda</Link> : null}</>}
+    actions={<><Link className="elos-button" href="/comercial/propostas">Voltar às propostas</Link><Link className="elos-button" href="/comercial/corretores">Abrir corretores</Link>{proposal.converted_sale_id ? <Link className="elos-button" href={`/comercial/vendas/${proposal.converted_sale_id}`}>Abrir venda</Link> : null}</>}
   >
     {messages.error ? <div className="auth-message error workspace-message">{messages.error}</div> : null}
     {messages.success ? <div className="auth-message success workspace-message">{messages.success}</div> : null}
@@ -165,7 +168,7 @@ export default async function ProposalDetailPage({ params, searchParams }: {
             <label>Valor de tabela<input name="list_price" inputMode="decimal" defaultValue={inputMoney(proposal.list_price)} required /></label>
             <label>Valor proposto<input name="proposed_amount" inputMode="decimal" defaultValue={inputMoney(proposal.proposed_amount)} required /></label>
             <label>Comissão (%)<input name="commission_pct" inputMode="decimal" defaultValue={inputMoney(proposal.commission_pct)} /></label>
-            <label>Corretor / imobiliária<input name="broker_name" defaultValue={proposal.broker_name ?? ""} /></label>
+            <label>Corretor / imobiliária<select name="broker_name" defaultValue={proposal.broker_name ?? ""}><option value="">Sem corretor</option>{brokers.map((broker) => <option key={broker.id} value={broker.name} disabled={broker.status === "inactive" && broker.name !== proposal.broker_name}>{broker.name}{broker.status === "inactive" ? " · inativo" : broker.default_commission_pct > 0 ? ` · padrão ${percent(broker.default_commission_pct)}%` : ""}</option>)}</select></label>
             <label>Origem<input name="source_channel" defaultValue={proposal.source_channel ?? ""} /></label>
             <label className="registry-wide">Condições gerais<textarea name="terms" rows={4} defaultValue={proposal.terms ?? ""} /></label>
             <label className="registry-wide">Observações internas<textarea name="notes" rows={3} defaultValue={proposal.notes ?? ""} /></label>
@@ -178,7 +181,7 @@ export default async function ProposalDetailPage({ params, searchParams }: {
         {proposal.status === "draft" && canManage ? <form action={setProposalStatus}><input type="hidden" name="proposal_id" value={proposal.id} /><input type="hidden" name="status" value="sent" /><button className="auth-primary" type="submit">Marcar como enviada</button></form> : null}
         {proposal.status === "sent" && canManage ? <form action={setProposalStatus}><input type="hidden" name="proposal_id" value={proposal.id} /><input type="hidden" name="status" value="negotiation" /><button className="auth-primary" type="submit">Iniciar negociação</button></form> : null}
         {["sent", "negotiation"].includes(proposal.status) && canApprove ? <form action={setProposalStatus} className="proposal-approval-form"><input type="hidden" name="proposal_id" value={proposal.id} /><input type="hidden" name="status" value="approved" /><label>Reservar unidade até<input name="reservation_until" type="date" defaultValue={proposal.valid_until} required /></label><button className="auth-primary" type="submit" disabled={!planClosed || overdue}>Aprovar e reservar unidade</button>{!planClosed ? <small>Feche o plano financeiro para aprovar.</small> : null}</form> : null}
-        {proposal.status === "approved" && canConvert ? <form action={convertProposalToSale} className="proposal-convert-form"><input type="hidden" name="proposal_id" value={proposal.id} /><label>Data da venda<input name="sale_date" type="date" defaultValue={today} required /></label><label>Número do contrato<input name="contract_number" /></label><button className="auth-primary" type="submit" disabled={!planClosed || overdue}>Converter em venda</button><small>Cria o contrato e todas as parcelas automaticamente.</small></form> : null}
+        {proposal.status === "approved" && canConvert ? <form action={convertProposalToSale} className="proposal-convert-form"><input type="hidden" name="proposal_id" value={proposal.id} /><label>Data da venda<input name="sale_date" type="date" defaultValue={today} required /></label><label>Número do contrato<input name="contract_number" /></label><button className="auth-primary" type="submit" disabled={!planClosed || overdue}>Converter em venda</button><small>Cria o contrato, as parcelas e a comissão automaticamente.</small></form> : null}
         {proposal.status === "converted" ? <div className="proposal-completed"><strong>Negociação concluída</strong><p>Esta versão originou uma venda e não pode mais ser alterada.</p>{proposal.converted_sale_id ? <Link href={`/comercial/vendas/${proposal.converted_sale_id}`}>Abrir venda gerada</Link> : null}</div> : null}
         {!['converted','cancelled'].includes(proposal.status) && canManage ? <div className="proposal-secondary-actions">
           {!['rejected','expired'].includes(proposal.status) ? <form action={setProposalStatus}><input type="hidden" name="proposal_id" value={proposal.id} /><input type="hidden" name="status" value="rejected" /><button type="submit">Marcar como recusada</button></form> : null}
