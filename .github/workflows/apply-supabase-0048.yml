@@ -53,6 +53,19 @@ jobs:
       - name: Instalar PostgreSQL
         run: sudo timeout 60s apt-get update && sudo timeout 60s apt-get install -y postgresql-client
 
+      - name: Preparar SQL corrigido
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source=Path('supabase/migrations/20260729_0048_finance_bank_accounts.sql').read_text(encoding='utf-8')
+          old='on conflict(company_id,source_system,source_id) do nothing;'
+          count=source.count(old)
+          if count != 2:
+              raise SystemExit(f'Esperadas 2 ocorrências do backfill, encontradas {count}.')
+          Path('/tmp/0048-fixed.sql').write_text(source.replace(old,'on conflict do nothing;'),encoding='utf-8')
+          PY
+
       - name: Executar e validar
         id: apply
         shell: bash
@@ -62,7 +75,7 @@ jobs:
           elif [ "${{ steps.connection.outputs.placeholder }}" = "true" ]; then echo "URI contém senha-placeholder." >/tmp/migration.log; status=90
           elif [ "${{ steps.connection.outputs.kind }}" != "pooler" ]; then echo "Use a URI Session Pooler." >/tmp/migration.log; status=91
           else
-            timeout 180s psql "$EFFECTIVE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=supabase/migrations/20260729_0048_finance_bank_accounts.sql >/tmp/migration.log 2>&1
+            timeout 180s psql "$EFFECTIVE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=/tmp/0048-fixed.sql >/tmp/migration.log 2>&1
             status=$?
             if [ "$status" -eq 0 ]; then
               timeout 90s psql "$EFFECTIVE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=supabase/migrations/20260729_0048a_finance_bank_accounts_security_fix.sql >>/tmp/migration.log 2>&1
