@@ -1,0 +1,111 @@
+name: Aplicar migrations Supabase 0045
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: apply-supabase-0045
+  cancel-in-progress: true
+
+jobs:
+  migrate:
+    if: github.event.issue.title == '[RUN] Supabase 0045'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: require
+      PGCONNECT_TIMEOUT: "10"
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Informar início
+        run: gh issue comment "$ISSUE_NUMBER" --body "Iniciando as migrations \`0045\` e \`0045a\` do módulo Notas Eletrônicas · XML."
+
+      - name: Normalizar conexão
+        id: connection
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from urllib.parse import quote, unquote, urlparse
+          raw=os.environ.get('SUPABASE_DB_URL','').strip(); normalized=raw
+          placeholder=any(x in raw.lower() for x in ('[your-password]','your-password','[password]'))
+          try:
+            scheme,remainder=raw.split('://',1); credentials,server=remainder.rsplit('@',1); username,password=credentials.split(':',1)
+            normalized=f"{scheme}://{quote(unquote(username),safe='')}:{quote(unquote(password),safe='')}@{server}"
+          except Exception: pass
+          try: host=(urlparse(normalized).hostname or '').lower()
+          except Exception: host=''
+          kind='pooler' if '.pooler.supabase.com' in host else ('direct' if host.startswith('db.') and host.endswith('.supabase.co') else ('other' if host else 'invalid'))
+          if normalized: print(f'::add-mask::{normalized}')
+          with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as f: f.write('EFFECTIVE_DB_URL<<ELOS\n'+normalized+'\nELOS\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as f: f.write(f'kind={kind}\nplaceholder={str(placeholder).lower()}\nconfigured={str(bool(raw)).lower()}\n')
+          PY
+
+      - name: Instalar PostgreSQL
+        run: sudo timeout 60s apt-get update && sudo timeout 60s apt-get install -y postgresql-client
+
+      - name: Executar e validar
+        id: apply
+        shell: bash
+        run: |
+          set +e
+          if [ "${{ steps.connection.outputs.configured }}" != "true" ]; then echo "Secret não configurado." >/tmp/migration.log; status=89
+          elif [ "${{ steps.connection.outputs.placeholder }}" = "true" ]; then echo "URI contém senha-placeholder." >/tmp/migration.log; status=90
+          elif [ "${{ steps.connection.outputs.kind }}" != "pooler" ]; then echo "Use a URI Session Pooler." >/tmp/migration.log; status=91
+          else
+            timeout 150s psql "$EFFECTIVE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=supabase/migrations/20260729_0045_finance_electronic_invoices.sql >/tmp/migration.log 2>&1
+            status=$?
+            if [ "$status" -eq 0 ]; then
+              timeout 90s psql "$EFFECTIVE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=supabase/migrations/20260729_0045a_finance_electronic_invoice_runtime_fix.sql >>/tmp/migration.log 2>&1
+              status=$?
+            fi
+          fi
+          if [ "$status" -eq 0 ]; then
+            timeout 40s psql "$EFFECTIVE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --command="do \$\$ begin
+              if to_regclass('public.finance_electronic_invoices') is null then raise exception 'Tabela de notas não criada'; end if;
+              if to_regclass('public.finance_electronic_invoice_items') is null then raise exception 'Tabela de itens não criada'; end if;
+              if to_regclass('public.finance_electronic_invoice_installments') is null then raise exception 'Tabela de parcelas não criada'; end if;
+              if to_regclass('public.finance_electronic_invoice_divergences') is null then raise exception 'Tabela de divergências não criada'; end if;
+              if to_regprocedure('public.save_finance_electronic_invoice(uuid,uuid,uuid,uuid,uuid,text,text,text,jsonb,jsonb,jsonb)') is null then raise exception 'Função de importação não criada'; end if;
+              if to_regprocedure('public.approve_finance_electronic_invoice(uuid,uuid,uuid,text)') is null then raise exception 'Função de aprovação não criada'; end if;
+              if position('v_access_key' in pg_get_functiondef('public.save_finance_electronic_invoice(uuid,uuid,uuid,uuid,uuid,text,text,text,jsonb,jsonb,jsonb)'::regprocedure))=0 then raise exception 'Correção da chave não aplicada'; end if;
+              if position('v_payable_id' in pg_get_functiondef('public.approve_finance_electronic_invoice(uuid,uuid,uuid,text)'::regprocedure))=0 then raise exception 'Correção financeira não aplicada'; end if;
+              if not exists(select 1 from storage.buckets where id='electronic-invoice-xml' and public=false) then raise exception 'Bucket privado não criado'; end if;
+              if not exists(select 1 from public.permissions where key='finance.invoices.view') then raise exception 'Permissões não criadas'; end if;
+            end \$\$;" >>/tmp/migration.log 2>&1
+            status=$?
+          fi
+          set -e
+          cat /tmp/migration.log
+          python - <<'PY'
+          import os,re
+          from pathlib import Path
+          text=Path('/tmp/migration.log').read_text(errors='replace')
+          for name in ('SUPABASE_DB_URL','EFFECTIVE_DB_URL'):
+            if os.environ.get(name): text=text.replace(os.environ[name],'[REDACTED]')
+          text=re.sub(r'postgres(?:ql)?://[^\s]+','postgresql://[REDACTED]',text)
+          Path('/tmp/safe.log').write_text(text)
+          PY
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Confirmar sucesso
+        if: steps.apply.outputs.status == '0'
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "✅ Migrations 0045/0045a aplicadas e validadas. Tabelas, funções corrigidas, permissões e bucket privado de XML foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh issue close "$ISSUE_NUMBER" --reason completed
+
+      - name: Registrar falha
+        if: steps.apply.outputs.status != '' && steps.apply.outputs.status != '0'
+        run: |
+          { echo '❌ As migrations 0045/0045a falharam.'; echo; echo '```text'; tail -n 100 /tmp/safe.log; echo '```'; } >/tmp/body.md
+          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/body.md
+          exit 1
