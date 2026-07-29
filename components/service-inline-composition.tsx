@@ -60,11 +60,18 @@ export function ServiceInlineComposition() {
         if (href) window.location.assign(href);
       };
 
+      const navigateFromAction = (event: MouseEvent) => {
+        event.preventDefault();
+        window.location.assign(actionLink.href);
+      };
+
       row.addEventListener("click", navigate);
       row.addEventListener("keydown", keyboardNavigate);
+      actionLink.addEventListener("click", navigateFromAction);
       cleanups.push(() => {
         row.removeEventListener("click", navigate);
         row.removeEventListener("keydown", keyboardNavigate);
+        actionLink.removeEventListener("click", navigateFromAction);
       });
     });
 
