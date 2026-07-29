@@ -7,6 +7,7 @@ import { InputImportDialog } from "./import-dialog";
 
 type EngineeringInput = EngineeringInputDialogData & { updated_at: string };
 type UnitRecord = { unit: string };
+type FamilyOption = { code: string; label: string; exact: boolean };
 
 const PAGE_SIZE = 50;
 
@@ -23,6 +24,10 @@ function dateBR(value: string | null | undefined) {
   if (!value) return "—";
   const [year, month, day] = value.slice(0, 10).split("-");
   return `${day}/${month}/${year}`;
+}
+
+function primaryFamilyCode(value: string | null | undefined) {
+  return (value ?? "").trim().split(".")[0]?.toUpperCase() ?? "";
 }
 
 function buildQuery(params: Record<string, string>, page: number) {
@@ -66,16 +71,34 @@ export default async function EngineeringInputsPage({
   const inputs = (inputsResult.data ?? []) as EngineeringInput[];
   const serviceUnits = (serviceUnitsResult.data ?? []) as UnitRecord[];
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
-  const familyCodes = [...new Set(inputs.map((input) => input.family_code).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const allFamilyCodes = [...new Set(inputs.map((input) => input.family_code).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const familyOptionMap = new Map<string, FamilyOption>();
+
+  inputs.forEach((input) => {
+    const sourceCode = input.family_code?.trim() ?? "";
+    const code = primaryFamilyCode(sourceCode);
+    if (!code) return;
+
+    const label = input.family_label?.trim() ?? "";
+    const exact = sourceCode.toUpperCase() === code;
+    const current = familyOptionMap.get(code);
+
+    if (!current || (exact && !current.exact) || (!current.label && label)) {
+      familyOptionMap.set(code, { code, label, exact });
+    }
+  });
+
+  const familyOptions = [...familyOptionMap.values()].sort((a, b) => a.code.localeCompare(b.code, "pt-BR"));
+  const familyCodes = familyOptions.map((item) => item.code);
   const familyNames = [...new Set(inputs.map((input) => input.family_label?.trim()).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const units = [...new Set([
     ...inputs.map((input) => input.unit),
     ...serviceUnits.map((service) => service.unit),
   ].map((value) => value?.trim()).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  const family = familyCodes.includes(params.family ?? "") ? params.family! : "";
+  const family = familyCodes.includes((params.family ?? "").toUpperCase()) ? (params.family ?? "").toUpperCase() : "";
 
   const filteredInputs = inputs.filter((input) => {
-    if (family && input.family_code !== family) return false;
+    if (family && primaryFamilyCode(input.family_code) !== family) return false;
     if (category && input.category !== category) return false;
     if (status && input.status !== status) return false;
     if (!queryText) return true;
@@ -102,7 +125,7 @@ export default async function EngineeringInputsPage({
       eyebrow="Engenharia · Orçamento de Obras"
       title="Catálogo de Insumos"
       description={`${company.name} · base corporativa de materiais, mão de obra, equipamentos e outros custos, separada do histórico de preços.`}
-      actions={canManage ? <><InputImportDialog /><InputCreateDialog familyCodes={familyCodes} familyNames={familyNames} units={units} /></> : undefined}
+      actions={canManage ? <><InputImportDialog /><InputCreateDialog familyCodes={allFamilyCodes} familyNames={familyNames} units={units} /></> : undefined}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
@@ -120,7 +143,7 @@ export default async function EngineeringInputsPage({
 
       <section className="input-kpi-grid">
         <article><span>Insumos ativos</span><strong>{activeCount}</strong><small>disponíveis para composições</small></article>
-        <article><span>Famílias técnicas</span><strong>{familyCodes.length}</strong><small>agrupamentos padronizados</small></article>
+        <article><span>Famílias técnicas</span><strong>{familyOptions.length}</strong><small>agrupamentos principais</small></article>
         <article><span>Com especificação</span><strong>{technicalCount}</strong><small>critérios técnicos registrados</small></article>
         <article><span>Marca ou referência</span><strong>{referenceCount}</strong><small>referências de desempenho ou produto</small></article>
         <article><span>Origem externa</span><strong>{externalCount}</strong><small>Koper, SINAPI e outras bases</small></article>
@@ -140,7 +163,10 @@ export default async function EngineeringInputsPage({
       <section className="input-toolbar-card">
         <form method="get" className="input-filter">
           <input name="q" defaultValue={params.q ?? ""} placeholder="Digite código, descrição, marca, referência ou código externo" />
-          <select name="family" defaultValue={family}><option value="">Todas as famílias</option>{familyCodes.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+          <select name="family" defaultValue={family}>
+            <option value="">Todas as famílias</option>
+            {familyOptions.map((item) => <option key={item.code} value={item.code}>{item.code} — {item.label || `Família ${item.code}`}</option>)}
+          </select>
           <select name="category" defaultValue={category}><option value="">Todas as naturezas</option>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           <select name="status" defaultValue={status}><option value="">Ativos e inativos</option><option value="active">Somente ativos</option><option value="inactive">Somente inativos</option></select>
           <button type="submit">Filtrar</button>
@@ -167,7 +193,7 @@ export default async function EngineeringInputsPage({
                   <td>{input.source_system}</td>
                   <td><span className={`service-status ${input.status}`}>{input.status === "active" ? "Ativo" : "Inativo"}</span></td>
                   <td>{dateBR(input.updated_at)}</td>
-                  <td>{canManage ? <div className="input-row-actions"><InputEditDialog input={input} familyCodes={familyCodes} familyNames={familyNames} units={units} /><form action={toggleEngineeringInputStatus}><input type="hidden" name="input_id" value={input.id} /><input type="hidden" name="next_status" value={input.status === "active" ? "inactive" : "active"} /><button className={`table-action ${input.status === "active" ? "danger" : ""}`} type="submit">{input.status === "active" ? "Inativar" : "Reativar"}</button></form></div> : "—"}</td>
+                  <td>{canManage ? <div className="input-row-actions"><InputEditDialog input={input} familyCodes={allFamilyCodes} familyNames={familyNames} units={units} /><form action={toggleEngineeringInputStatus}><input type="hidden" name="input_id" value={input.id} /><input type="hidden" name="next_status" value={input.status === "active" ? "inactive" : "active"} /><button className={`table-action ${input.status === "active" ? "danger" : ""}`} type="submit">{input.status === "active" ? "Inativar" : "Reativar"}</button></form></div> : "—"}</td>
                 </tr>;
               })}
               {pageInputs.length === 0 ? <tr><td className="budget-empty-state" colSpan={11}><strong>Nenhum insumo encontrado.</strong><span>Cadastre o primeiro insumo técnico, importe uma planilha ou altere os filtros.</span></td></tr> : null}
