@@ -19,6 +19,7 @@ import "./inputs.css";
 import "./prices.css";
 import "./price-import.css";
 import "./compositions.css";
+import "./services-compositions-merged.css";
 import "./takeoffs.css";
 import "./takeoff-import.css";
 import "./analytical-budget.css";
