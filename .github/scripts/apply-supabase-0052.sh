@@ -35,7 +35,7 @@ report_failure() {
 }
 trap report_failure ERR
 
-gh pr comment "$PR_NUMBER" --body 'Iniciando as migrations `0052` e `0052a`: corretores, comissões, Contas a Pagar e sincronização bancária.'
+gh pr comment "$PR_NUMBER" --body 'Iniciando as migrations `0052`, `0052a` e `0052b`: corretores, comissões, Contas a Pagar e sincronização bancária.'
 
 python - <<'PY'
 import os
@@ -79,6 +79,12 @@ psql "$EFFECTIVE_DB_URL" \
 psql "$EFFECTIVE_DB_URL" \
   --no-psqlrc \
   --set=ON_ERROR_STOP=1 \
+  --file=supabase/migrations/20260729_0052b_commercial_brokers_runtime_fix.sql \
+  >>"$LOG_FILE" 2>&1
+
+psql "$EFFECTIVE_DB_URL" \
+  --no-psqlrc \
+  --set=ON_ERROR_STOP=1 \
   --command="do \$\$ begin
     if to_regclass('public.commercial_brokers') is null then raise exception 'Tabela de corretores não criada'; end if;
     if to_regclass('public.commercial_sale_commissions') is null then raise exception 'Tabela de comissões não criada'; end if;
@@ -87,13 +93,15 @@ psql "$EFFECTIVE_DB_URL" \
     if to_regprocedure('public.commercial_brokers_summary(uuid,uuid)') is null then raise exception 'Resumo de corretores ausente'; end if;
     if to_regprocedure('public.commercial_set_commission_status(uuid,uuid,text,date,uuid)') is null then raise exception 'Aprovação de comissão ausente'; end if;
     if to_regprocedure('public.commercial_generate_commission_payable(uuid)') is null then raise exception 'Geração financeira da comissão ausente'; end if;
+    if to_regprocedure('public.commercial_resolve_broker_reference()') is null then raise exception 'Resolução de vínculo do corretor ausente'; end if;
     if not exists(select 1 from pg_trigger where tgname='sales_sync_commission' and not tgisinternal) then raise exception 'Trigger automático de comissão ausente'; end if;
     if not exists(select 1 from pg_trigger where tgname='finance_payables_broker_commission_sync' and not tgisinternal) then raise exception 'Trigger financeiro da comissão ausente'; end if;
     if not exists(select 1 from public.permissions where key='commercial.brokers.view') then raise exception 'Permissão de visualização ausente'; end if;
     if not exists(select 1 from public.permissions where key='commercial.brokers.finance') then raise exception 'Permissão financeira ausente'; end if;
+    if position('v_name_changed' in pg_get_functiondef('public.commercial_resolve_broker_reference()'::regprocedure)) = 0 then raise exception 'Correção da troca de corretor ausente'; end if;
   end \$\$;" >>"$LOG_FILE" 2>&1
 
 sanitize_log
 cat "$SAFE_LOG"
-gh pr comment "$PR_NUMBER" --body "✅ Migrations 0052 e 0052a aplicadas e validadas. Corretores, comissões automáticas, Contas a Pagar e sincronização após a baixa bancária foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+gh pr comment "$PR_NUMBER" --body "✅ Migrations 0052, 0052a e 0052b aplicadas e validadas. Corretores, troca de vínculo, comissões automáticas, Contas a Pagar e sincronização após a baixa bancária foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 trap - ERR
