@@ -76,42 +76,48 @@ export async function createProposal(formData: FormData) {
   const { supabase, companyId, projectId, userId } = await requireCompanyPermission("commercial.proposals.manage");
   if (!projectId) redirect(pageUrl("Selecione um empreendimento antes de criar a proposta."));
 
+  let unit: Awaited<ReturnType<typeof validateProposalEnvironment>>;
   try {
-    const unit = await validateProposalEnvironment(companyId, projectId, clientId, unitId, supabase);
-    const resolvedListPrice = listPrice > 0 ? listPrice : Number(unit.list_price ?? 0);
-    const numberResult = await supabase.rpc("commercial_proposal_next_number", {
-      p_company_id: companyId,
-      p_project_id: projectId,
-      p_proposal_date: proposalDate,
-    });
-    if (numberResult.error || !numberResult.data) throw new Error(numberResult.error?.message || "Não foi possível numerar a proposta.");
-
-    const insertResult = await supabase.from("commercial_proposals").insert({
-      company_id: companyId,
-      project_id: projectId,
-      unit_id: unitId,
-      client_id: clientId,
-      number: String(numberResult.data),
-      proposal_date: proposalDate,
-      valid_until: validUntil,
-      list_price: resolvedListPrice,
-      proposed_amount: proposedAmount,
-      commission_pct: commissionPct,
-      broker_name: optional(formData, "broker_name"),
-      source_channel: optional(formData, "source_channel"),
-      terms: optional(formData, "terms"),
-      notes: optional(formData, "notes"),
-      status: "draft",
-      created_by: userId,
-      updated_by: userId,
-    }).select("id").single();
-
-    if (insertResult.error || !insertResult.data) throw new Error(insertResult.error?.message || "Não foi possível criar a proposta.");
-    revalidateProposal(insertResult.data.id);
-    redirect(detailUrl(insertResult.data.id, "Proposta criada. Cadastre agora as condições de pagamento.", "success"));
+    unit = await validateProposalEnvironment(companyId, projectId, clientId, unitId, supabase);
   } catch (error) {
-    redirect(pageUrl(error instanceof Error ? error.message : "Não foi possível criar a proposta."));
+    redirect(pageUrl(error instanceof Error ? error.message : "Não foi possível validar a proposta."));
   }
+
+  const resolvedListPrice = listPrice > 0 ? listPrice : Number(unit.list_price ?? 0);
+  const numberResult = await supabase.rpc("commercial_proposal_next_number", {
+    p_company_id: companyId,
+    p_project_id: projectId,
+    p_proposal_date: proposalDate,
+  });
+  if (numberResult.error || !numberResult.data) {
+    redirect(pageUrl(numberResult.error?.message || "Não foi possível numerar a proposta."));
+  }
+
+  const insertResult = await supabase.from("commercial_proposals").insert({
+    company_id: companyId,
+    project_id: projectId,
+    unit_id: unitId,
+    client_id: clientId,
+    number: String(numberResult.data),
+    proposal_date: proposalDate,
+    valid_until: validUntil,
+    list_price: resolvedListPrice,
+    proposed_amount: proposedAmount,
+    commission_pct: commissionPct,
+    broker_name: optional(formData, "broker_name"),
+    source_channel: optional(formData, "source_channel"),
+    terms: optional(formData, "terms"),
+    notes: optional(formData, "notes"),
+    status: "draft",
+    created_by: userId,
+    updated_by: userId,
+  }).select("id").single();
+
+  if (insertResult.error || !insertResult.data) {
+    redirect(pageUrl(insertResult.error?.message || "Não foi possível criar a proposta."));
+  }
+  revalidateProposal(insertResult.data.id);
+  redirect(detailUrl(insertResult.data.id, "Proposta criada. Cadastre agora as condições de pagamento.", "success"));
 }
 
 export async function updateProposal(formData: FormData) {
@@ -132,33 +138,34 @@ export async function updateProposal(formData: FormData) {
   const { supabase, companyId, userId } = await requireCompanyPermission("commercial.proposals.manage");
   const currentResult = await supabase.from("commercial_proposals").select("id,project_id,status").eq("id", proposalId).eq("company_id", companyId).maybeSingle();
   if (!currentResult.data) redirect(detailUrl(proposalId, "Proposta não encontrada."));
-  if (!['draft','sent','negotiation'].includes(currentResult.data.status)) {
+  if (!["draft", "sent", "negotiation"].includes(currentResult.data.status)) {
     redirect(detailUrl(proposalId, "Crie uma nova versão para alterar uma proposta aprovada ou encerrada."));
   }
 
   try {
     await validateProposalEnvironment(companyId, currentResult.data.project_id, clientId, unitId, supabase);
-    const result = await supabase.from("commercial_proposals").update({
-      client_id: clientId,
-      unit_id: unitId,
-      proposal_date: proposalDate,
-      valid_until: validUntil,
-      list_price: listPrice,
-      proposed_amount: proposedAmount,
-      commission_pct: commissionPct,
-      broker_name: optional(formData, "broker_name"),
-      source_channel: optional(formData, "source_channel"),
-      terms: optional(formData, "terms"),
-      notes: optional(formData, "notes"),
-      updated_by: userId,
-      updated_at: new Date().toISOString(),
-    }).eq("id", proposalId).eq("company_id", companyId);
-    if (result.error) throw new Error(result.error.message);
-    revalidateProposal(proposalId);
-    redirect(detailUrl(proposalId, "Dados da proposta atualizados.", "success"));
   } catch (error) {
-    redirect(detailUrl(proposalId, error instanceof Error ? error.message : "Não foi possível atualizar a proposta."));
+    redirect(detailUrl(proposalId, error instanceof Error ? error.message : "Não foi possível validar a proposta."));
   }
+
+  const result = await supabase.from("commercial_proposals").update({
+    client_id: clientId,
+    unit_id: unitId,
+    proposal_date: proposalDate,
+    valid_until: validUntil,
+    list_price: listPrice,
+    proposed_amount: proposedAmount,
+    commission_pct: commissionPct,
+    broker_name: optional(formData, "broker_name"),
+    source_channel: optional(formData, "source_channel"),
+    terms: optional(formData, "terms"),
+    notes: optional(formData, "notes"),
+    updated_by: userId,
+    updated_at: new Date().toISOString(),
+  }).eq("id", proposalId).eq("company_id", companyId);
+  if (result.error) redirect(detailUrl(proposalId, result.error.message));
+  revalidateProposal(proposalId);
+  redirect(detailUrl(proposalId, "Dados da proposta atualizados.", "success"));
 }
 
 export async function saveProposalPaymentItem(formData: FormData) {
@@ -174,13 +181,13 @@ export async function saveProposalPaymentItem(formData: FormData) {
   const interestRate = Number.isFinite(interestRaw) && interestRaw >= 0 ? interestRaw : null;
   const sortOrder = parseInteger(formData.get("sort_order"), 0);
 
-  if (!proposalId || !['entry','monthly','reinforcement','keys','post_keys','other'].includes(category) || !description || !firstDueDate || installmentCount <= 0 || installmentCount > 240 || intervalMonths < 0 || !Number.isFinite(amountPerInstallment) || amountPerInstallment <= 0) {
+  if (!proposalId || !["entry", "monthly", "reinforcement", "keys", "post_keys", "other"].includes(category) || !description || !firstDueDate || installmentCount <= 0 || installmentCount > 240 || intervalMonths < 0 || !Number.isFinite(amountPerInstallment) || amountPerInstallment <= 0) {
     redirect(detailUrl(proposalId, "Informe uma condição de pagamento válida."));
   }
 
   const { supabase, companyId, userId } = await requireCompanyPermission("commercial.proposals.manage");
   const proposalResult = await supabase.from("commercial_proposals").select("id,status").eq("id", proposalId).eq("company_id", companyId).maybeSingle();
-  if (!proposalResult.data || !['draft','sent','negotiation'].includes(proposalResult.data.status)) {
+  if (!proposalResult.data || !["draft", "sent", "negotiation"].includes(proposalResult.data.status)) {
     redirect(detailUrl(proposalId, "As condições só podem ser editadas antes da aprovação."));
   }
 
@@ -216,7 +223,7 @@ export async function deleteProposalPaymentItem(formData: FormData) {
 
   const { supabase, companyId } = await requireCompanyPermission("commercial.proposals.manage");
   const proposalResult = await supabase.from("commercial_proposals").select("status").eq("id", proposalId).eq("company_id", companyId).maybeSingle();
-  if (!proposalResult.data || !['draft','sent','negotiation'].includes(proposalResult.data.status)) {
+  if (!proposalResult.data || !["draft", "sent", "negotiation"].includes(proposalResult.data.status)) {
     redirect(detailUrl(proposalId, "As condições só podem ser excluídas antes da aprovação."));
   }
 
@@ -230,7 +237,7 @@ export async function setProposalStatus(formData: FormData) {
   const proposalId = String(formData.get("proposal_id") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim();
   const reservationUntil = optional(formData, "reservation_until");
-  if (!proposalId || !['draft','sent','negotiation','approved','rejected','expired','cancelled'].includes(status)) {
+  if (!proposalId || !["draft", "sent", "negotiation", "approved", "rejected", "expired", "cancelled"].includes(status)) {
     redirect(detailUrl(proposalId, "Situação inválida."));
   }
 
