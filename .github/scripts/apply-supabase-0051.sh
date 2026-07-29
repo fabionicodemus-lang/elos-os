@@ -24,10 +24,10 @@ report_failure() {
   local exit_code=$?
   sanitize_log
   {
-    echo '❌ A migration 0051 de Propostas Comerciais falhou.'
+    echo '❌ As migrations 0051 de Propostas Comerciais falharam.'
     echo
     echo '```text'
-    tail -n 200 "$SAFE_LOG"
+    tail -n 220 "$SAFE_LOG"
     echo '```'
   } >/tmp/migration-0051-comment.md
   gh pr comment "$PR_NUMBER" --body-file /tmp/migration-0051-comment.md || true
@@ -35,7 +35,7 @@ report_failure() {
 }
 trap report_failure ERR
 
-gh pr comment "$PR_NUMBER" --body 'Iniciando a migration `0051`: propostas, versões, condições financeiras, reservas e conversão em vendas.'
+gh pr comment "$PR_NUMBER" --body 'Iniciando as migrations `0051` e `0051a`: propostas, versões, condições financeiras, reservas e conversão em vendas.'
 
 python - <<'PY'
 import os
@@ -73,6 +73,12 @@ psql "$EFFECTIVE_DB_URL" \
 psql "$EFFECTIVE_DB_URL" \
   --no-psqlrc \
   --set=ON_ERROR_STOP=1 \
+  --file=supabase/migrations/20260729_0051a_commercial_proposals_runtime_fix.sql \
+  >>"$LOG_FILE" 2>&1
+
+psql "$EFFECTIVE_DB_URL" \
+  --no-psqlrc \
+  --set=ON_ERROR_STOP=1 \
   --command="do \$\$ begin
     if to_regclass('public.commercial_proposals') is null then raise exception 'Tabela de propostas não criada'; end if;
     if to_regclass('public.commercial_proposal_payment_items') is null then raise exception 'Tabela de condições não criada'; end if;
@@ -83,9 +89,10 @@ psql "$EFFECTIVE_DB_URL" \
     if to_regprocedure('public.commercial_convert_proposal(uuid,uuid,date,text,uuid)') is null then raise exception 'Função de conversão não criada'; end if;
     if not exists(select 1 from public.permissions where key='commercial.proposals.view') then raise exception 'Permissão de visualização ausente'; end if;
     if not exists(select 1 from public.permissions where key='commercial.proposals.convert') then raise exception 'Permissão de conversão ausente'; end if;
+    if position('plano financeiro' in lower(pg_get_functiondef('public.commercial_set_proposal_status(uuid,uuid,text,date,uuid)'::regprocedure))) = 0 then raise exception 'Validação do plano financeiro ausente'; end if;
   end \$\$;" >>"$LOG_FILE" 2>&1
 
 sanitize_log
 cat "$SAFE_LOG"
-gh pr comment "$PR_NUMBER" --body "✅ Migration 0051 aplicada e validada. Propostas, versões, condições de pagamento, reservas e conversão em vendas foram confirmadas. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+gh pr comment "$PR_NUMBER" --body "✅ Migrations 0051 e 0051a aplicadas e validadas. Propostas, versões, plano financeiro, reservas e conversão em vendas foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 trap - ERR
