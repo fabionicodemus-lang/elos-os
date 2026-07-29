@@ -37,6 +37,7 @@ import "./curves.css";
 import "./curves-bar-values.css";
 import "./creatable-combobox.css";
 import "./global-searchable-select.css";
+import "./taxes.css";
 import "./elos-theme.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
