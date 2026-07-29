@@ -1,0 +1,231 @@
+.broker-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.broker-summary-grid article {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--elos-border);
+  border-radius: 16px;
+  background: var(--elos-panel);
+  box-shadow: var(--elos-shadow-soft);
+}
+
+.broker-summary-grid span,
+.broker-summary-grid small {
+  display: block;
+  color: var(--elos-text-muted);
+}
+
+.broker-summary-grid strong {
+  display: block;
+  margin: 8px 0 4px;
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+  color: var(--elos-text);
+}
+
+.broker-toolbar,
+.commission-toolbar {
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.broker-create,
+.commission-create {
+  min-width: min(100%, 420px);
+}
+
+.broker-form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.commission-form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.broker-table {
+  min-width: 1180px;
+}
+
+.commission-table {
+  min-width: 1320px;
+}
+
+.broker-status,
+.commission-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: .74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--elos-text-muted) 10%, transparent);
+  color: var(--elos-text-muted);
+}
+
+.broker-status.active,
+.commission-status.paid {
+  background: color-mix(in srgb, #2f9f71 15%, transparent);
+  color: #18704d;
+}
+
+.broker-status.inactive,
+.commission-status.cancelled {
+  background: color-mix(in srgb, #6f7776 14%, transparent);
+  color: #5c6463;
+}
+
+.commission-status.planned {
+  background: color-mix(in srgb, #c99833 16%, transparent);
+  color: #815f16;
+}
+
+.commission-status.approved {
+  background: color-mix(in srgb, #2f7d99 15%, transparent);
+  color: #1d6178;
+}
+
+.commission-status.payable_generated {
+  background: color-mix(in srgb, #6157a8 15%, transparent);
+  color: #4e448e;
+}
+
+.broker-row-edit {
+  position: relative;
+}
+
+.broker-row-edit > summary {
+  cursor: pointer;
+  color: var(--elos-accent);
+  font-weight: 700;
+  list-style: none;
+}
+
+.broker-row-edit > summary::-webkit-details-marker {
+  display: none;
+}
+
+.broker-row-edit[open] > summary {
+  position: fixed;
+  z-index: 42;
+  top: calc(7vh + 13px);
+  right: calc(5vw + 18px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--elos-border);
+  border-radius: 9px;
+  background: var(--elos-panel);
+  box-shadow: var(--elos-shadow-soft);
+  font-size: 0;
+}
+
+.broker-row-edit[open] > summary::after {
+  content: "Fechar";
+  font-size: .78rem;
+}
+
+.broker-row-edit[open] form {
+  position: fixed;
+  z-index: 40;
+  inset: 7vh 5vw auto;
+  max-height: 86vh;
+  overflow: auto;
+  padding: 58px 22px 22px;
+  border: 1px solid var(--elos-border);
+  border-radius: 18px;
+  background: var(--elos-panel);
+  box-shadow: 0 30px 90px rgba(15, 28, 27, .25);
+}
+
+.broker-row-edit[open]::before {
+  content: "";
+  position: fixed;
+  z-index: 39;
+  inset: 0;
+  background: rgba(10, 18, 18, .42);
+}
+
+.commission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.commission-actions form {
+  margin: 0;
+}
+
+.commission-actions button,
+.commission-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid var(--elos-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--elos-text);
+  font-size: .75rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.commission-actions button:hover,
+.commission-actions a:hover {
+  border-color: var(--elos-accent);
+  color: var(--elos-accent);
+}
+
+.commission-actions button.danger:hover {
+  border-color: #b74a4a;
+  color: #a53636;
+}
+
+.commission-overdue {
+  background: color-mix(in srgb, #b85a45 6%, transparent);
+}
+
+.commission-panel {
+  margin-top: 12px;
+}
+
+@media (max-width: 1180px) {
+  .broker-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .broker-form-grid,
+  .commission-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .broker-summary-grid,
+  .broker-form-grid,
+  .commission-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .broker-row-edit[open] > summary {
+    top: calc(3vh + 10px);
+    right: calc(3vw + 12px);
+  }
+
+  .broker-row-edit[open] form {
+    inset: 3vh 3vw auto;
+    max-height: 94vh;
+  }
+}
