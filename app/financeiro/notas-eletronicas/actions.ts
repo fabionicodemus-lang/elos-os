@@ -3,7 +3,7 @@
 import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { normalizeTaxId, parseNfeXml, type ParsedNfe } from "@/lib/nfe-xml";
+import { normalizeMatchText, normalizeTaxId, parseNfeXml, type ParsedNfe } from "@/lib/nfe-xml";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const PATH = "/financeiro/notas-eletronicas";
@@ -30,6 +30,13 @@ function pageUrl(message: string, type: "success" | "error", invoiceId?: string)
 }
 function cleanFileName(name: string) {
   return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9_.-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120) || "nfe.xml";
+}
+function supplierProductKey(item: ParsedNfe["items"][number]) {
+  const code = normalizeMatchText(item.supplierCode);
+  if (code) return `code:${code}`;
+  const ean = String(item.ean ?? "").replace(/\D/g, "");
+  if (ean) return `ean:${ean}`;
+  return `desc:${normalizeMatchText(item.description)}`;
 }
 
 export async function importElectronicInvoice(formData: FormData) {
@@ -163,8 +170,30 @@ export async function importElectronicInvoice(formData: FormData) {
     await supabase.storage.from("electronic-invoice-xml").remove([storagePath]);
     redirect(pageUrl(saved.error?.message ?? "Não foi possível importar a NF-e.", "error"));
   }
+
+  let mappingWarnings = 0;
+  for (const item of parsed.items) {
+    const mapping = mappingByLine.get(item.lineNumber);
+    const inputId = String(mapping?.input_id ?? "").trim();
+    if (!inputId) continue;
+    const remembered = await supabase.rpc("remember_finance_supplier_product_mapping", {
+      p_company_id: companyId,
+      p_supplier_id: supplierId,
+      p_product_key: supplierProductKey(item),
+      p_supplier_product_code: item.supplierCode || null,
+      p_ean: item.ean || null,
+      p_description: item.description,
+      p_description_normalized: normalizeMatchText(item.description),
+      p_input_id: inputId,
+    });
+    if (remembered.error) mappingWarnings += 1;
+  }
+
   revalidatePath(PATH);
-  redirect(pageUrl("XML importado. Revise os vínculos e divergências antes da aprovação.", "success", String(saved.data)));
+  const message = mappingWarnings
+    ? `XML importado. ${mappingWarnings} associação(ões) não puderam ser memorizadas; revise a migration 0046.`
+    : "XML importado. As associações fornecedor × produto × insumo foram memorizadas para as próximas notas.";
+  redirect(pageUrl(message, "success", String(saved.data)));
 }
 
 export async function resolveInvoiceDivergence(formData: FormData) {
