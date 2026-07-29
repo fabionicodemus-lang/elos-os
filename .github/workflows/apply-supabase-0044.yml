@@ -21,7 +21,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-      - run: gh issue comment "$ISSUE_NUMBER" --body "Iniciando a migration \`20260729_0044_procurement_inventory.sql\`."
+      - run: gh issue comment "$ISSUE_NUMBER" --body "Iniciando as migrations \`20260729_0044_procurement_inventory.sql\` e \`20260729_0044a_procurement_inventory_backfill_fix.sql\`."
       - id: connection
         shell: bash
         run: |
@@ -41,6 +41,17 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write(f'kind={kind}\nplaceholder={str(placeholder).lower()}\nconfigured={str(bool(raw)).lower()}\n')
           PY
       - run: sudo timeout 60s apt-get update && sudo timeout 60s apt-get install -y postgresql-client
+      - name: Preparar migration base sem carga antecipada
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source=Path('supabase/migrations/20260729_0044_procurement_inventory.sql').read_text()
+          marker='-- Registra no estoque recebimentos aprovados antes da instalação desta migration.'
+          grants='grant select,insert,update,delete on public.procurement_inventory_locations'
+          if marker in source and grants in source:
+              source=source[:source.index(marker)] + source[source.index(grants):]
+          Path('/tmp/0044-base.sql').write_text(source)
+          PY
       - id: apply
         shell: bash
         run: |
@@ -48,7 +59,14 @@ jobs:
           if [ "${{ steps.connection.outputs.configured }}" != "true" ]; then echo "Secret não configurado" >/tmp/migration.log; status=89
           elif [ "${{ steps.connection.outputs.placeholder }}" = "true" ]; then echo "Senha-placeholder" >/tmp/migration.log; status=90
           elif [ "${{ steps.connection.outputs.kind }}" != "pooler" ]; then echo "Use Session Pooler" >/tmp/migration.log; status=91
-          else timeout 180s psql "$EFFECTIVE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=supabase/migrations/20260729_0044_procurement_inventory.sql >/tmp/migration.log 2>&1; status=$?; fi
+          else
+            timeout 180s psql "$EFFECTIVE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=/tmp/0044-base.sql >/tmp/migration.log 2>&1
+            status=$?
+            if [ "$status" -eq 0 ]; then
+              timeout 120s psql "$EFFECTIVE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=supabase/migrations/20260729_0044a_procurement_inventory_backfill_fix.sql >>/tmp/migration.log 2>&1
+              status=$?
+            fi
+          fi
           if [ "$status" -eq 0 ]; then
             timeout 45s psql "$EFFECTIVE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --command="do \$\$ begin
               if to_regclass('public.procurement_inventory_locations') is null then raise exception 'Tabela de locais não criada'; end if;
@@ -63,10 +81,10 @@ jobs:
           set -e; cat /tmp/migration.log; echo "status=$status" >> "$GITHUB_OUTPUT"
       - if: steps.apply.outputs.status == '0'
         run: |
-          gh issue comment "$ISSUE_NUMBER" --body "✅ Migration 0044 aplicada e validada. Locais, saldos, movimentos, inventários, permissões e entrada automática dos recebimentos foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh issue comment "$ISSUE_NUMBER" --body "✅ Migrations 0044/0044a aplicadas e validadas. Locais, saldos, movimentos, inventários, permissões, entradas automáticas e carga dos recebimentos anteriores foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           gh issue close "$ISSUE_NUMBER" --reason completed
       - if: steps.apply.outputs.status != '' && steps.apply.outputs.status != '0'
         run: |
-          { echo '❌ A migration 0044 falhou.'; echo '```text'; tail -n 100 /tmp/migration.log; echo '```'; } >/tmp/body.md
+          { echo '❌ As migrations 0044/0044a falharam.'; echo '```text'; tail -n 100 /tmp/migration.log; echo '```'; } >/tmp/body.md
           gh issue comment "$ISSUE_NUMBER" --body-file /tmp/body.md
           exit 1
