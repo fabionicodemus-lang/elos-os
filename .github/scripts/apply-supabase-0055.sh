@@ -24,7 +24,7 @@ report_failure() {
   local exit_code=$?
   sanitize_log
   {
-    echo '❌ A migration 0055 de Garantias falhou.'
+    echo '❌ As migrations 0055 de Garantias falharam.'
     echo
     echo '```text'
     tail -n 320 "$SAFE_LOG"
@@ -35,7 +35,7 @@ report_failure() {
 }
 trap report_failure ERR
 
-gh pr comment "$PR_NUMBER" --body 'Iniciando a migration `0055`: regras de garantia, itens cobertos, manutenções, documentos e análise dos chamados.'
+gh pr comment "$PR_NUMBER" --body 'Iniciando as migrations `0055` e `0055a`: regras de garantia, itens cobertos, manutenções, documentos e análise dos chamados.'
 
 python - <<'PY'
 import os
@@ -73,17 +73,25 @@ psql "$EFFECTIVE_DB_URL" \
 psql "$EFFECTIVE_DB_URL" \
   --no-psqlrc \
   --set=ON_ERROR_STOP=1 \
+  --file=supabase/migrations/20260729_0055a_postwork_warranties_runtime_fix.sql \
+  >>"$LOG_FILE" 2>&1
+
+psql "$EFFECTIVE_DB_URL" \
+  --no-psqlrc \
+  --set=ON_ERROR_STOP=1 \
   --command="do \$\$ begin
     if to_regclass('public.postwork_warranty_policies') is null then raise exception 'Tabela de regras não criada'; end if;
     if to_regclass('public.postwork_warranty_assets') is null then raise exception 'Tabela de itens garantidos não criada'; end if;
     if to_regclass('public.postwork_warranty_maintenance') is null then raise exception 'Tabela de manutenção não criada'; end if;
     if to_regclass('public.postwork_warranty_documents') is null then raise exception 'Tabela de documentos não criada'; end if;
     if to_regclass('public.postwork_warranty_audit') is null then raise exception 'Histórico de garantias não criado'; end if;
+    if exists(select 1 from information_schema.columns where table_schema='public' and table_name='postwork_warranty_audit' and column_name='project_id' and is_nullable='NO') then raise exception 'Histórico de regras gerais ainda exige obra arbitrária'; end if;
     if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='postwork_assistance_tickets' and column_name='warranty_asset_id') then raise exception 'Vínculo do chamado com o item garantido ausente'; end if;
     if to_regprocedure('public.save_postwork_warranty_policy(uuid,uuid,uuid,text,text,text,text,text,integer,integer,uuid,text,text,text,text,text)') is null then raise exception 'Função de regras ausente'; end if;
     if to_regprocedure('public.create_postwork_warranty_asset(uuid,uuid,uuid,uuid,uuid,text,text,text,text,text,text,date,date,date,text)') is null then raise exception 'Função de itens garantidos ausente'; end if;
     if to_regprocedure('public.schedule_postwork_warranty_maintenance(uuid,uuid,uuid,uuid,text,date)') is null then raise exception 'Agenda de manutenção ausente'; end if;
     if to_regprocedure('public.analyze_postwork_assistance_warranty(uuid,uuid,uuid,uuid,uuid,text,text)') is null then raise exception 'Análise de chamados ausente'; end if;
+    if position('v_reference_date' in pg_get_functiondef('public.analyze_postwork_assistance_warranty(uuid,uuid,uuid,uuid,uuid,text,text)'::regprocedure))=0 then raise exception 'Análise não considera a data de abertura do chamado'; end if;
     if to_regprocedure('public.postwork_warranties_summary(uuid,uuid)') is null then raise exception 'Indicadores de garantias ausentes'; end if;
     if not exists(select 1 from public.permissions where key='postwork.warranties.view') then raise exception 'Permissão de visualização ausente'; end if;
     if not exists(select 1 from public.permissions where key='postwork.warranties.analyze') then raise exception 'Permissão de análise ausente'; end if;
@@ -93,5 +101,5 @@ psql "$EFFECTIVE_DB_URL" \
 
 sanitize_log
 cat "$SAFE_LOG"
-gh pr comment "$PR_NUMBER" --body "✅ Migration 0055 aplicada e validada. Regras, vigências, itens garantidos, manutenção, documentos privados e análise dos chamados foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+gh pr comment "$PR_NUMBER" --body "✅ Migrations 0055 e 0055a aplicadas e validadas. Regras, vigências pela data do chamado, itens garantidos, manutenção, documentos privados e histórico de cobertura foram confirmados. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 trap - ERR
