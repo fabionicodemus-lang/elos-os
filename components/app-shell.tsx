@@ -45,7 +45,6 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const servicesHref = can("services.view") ? "/engenharia/servicos" : undefined;
   const inputsHref = can("inputs.view") ? "/engenharia/insumos" : undefined;
   const pricesHref = can("prices.view") ? "/engenharia/precos" : undefined;
-  const compositionsHref = can("compositions.view") ? "/engenharia/composicoes" : undefined;
   const takeoffsHref = can("takeoffs.view") ? "/engenharia/levantamento" : undefined;
   const analyticalBudgetHref = can("budgets.view") ? "/engenharia/orcamento-analitico" : undefined;
   const scheduleHref = can("schedule.view") ? "/engenharia/cronograma" : undefined;
@@ -88,7 +87,6 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Serviços", href: servicesHref, active: activeItem === "services", disabled: !servicesHref },
       { label: "Insumos", href: inputsHref, active: activeItem === "inputs", disabled: !inputsHref },
       { label: "Preços e Cotações", href: pricesHref, active: activeItem === "prices", disabled: !pricesHref },
-      { label: "Composições", href: compositionsHref, active: activeItem === "compositions", disabled: !compositionsHref },
       { label: "Levantamento de Quantitativos", href: takeoffsHref, active: activeItem === "takeoffs", disabled: !takeoffsHref },
       { label: "Orçamento Analítico", href: analyticalBudgetHref, active: activeItem === "analytical-budget", disabled: !analyticalBudgetHref },
       { label: "Planejamento da obra", sectionLabel: "Planejamento da obra" },
@@ -150,7 +148,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.51.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.52.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
