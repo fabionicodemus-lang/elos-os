@@ -111,13 +111,35 @@
   display: none;
 }
 
+.broker-row-edit[open] > summary {
+  position: fixed;
+  z-index: 42;
+  top: calc(7vh + 13px);
+  right: calc(5vw + 18px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--elos-border);
+  border-radius: 9px;
+  background: var(--elos-panel);
+  box-shadow: var(--elos-shadow-soft);
+  font-size: 0;
+}
+
+.broker-row-edit[open] > summary::after {
+  content: "Fechar";
+  font-size: .78rem;
+}
+
 .broker-row-edit[open] form {
   position: fixed;
   z-index: 40;
   inset: 7vh 5vw auto;
   max-height: 86vh;
   overflow: auto;
-  padding: 22px;
+  padding: 58px 22px 22px;
   border: 1px solid var(--elos-border);
   border-radius: 18px;
   background: var(--elos-panel);
@@ -195,6 +217,11 @@
   .broker-form-grid,
   .commission-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .broker-row-edit[open] > summary {
+    top: calc(3vh + 10px);
+    right: calc(3vw + 12px);
   }
 
   .broker-row-edit[open] form {
