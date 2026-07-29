@@ -76,34 +76,43 @@ export async function createPayable(formData: FormData) {
 }
 
 export async function markPayablePaid(formData: FormData) {
-  const payableId = String(formData.get("payable_id") ?? "");
-  const paidAt = String(formData.get("paid_at") ?? "");
+  const payableId = String(formData.get("payable_id") ?? "").trim();
+  const bankAccountId = String(formData.get("bank_account_id") ?? "").trim();
+  const paidAt = String(formData.get("paid_at") ?? "").trim();
   const paidAmount = parseMoney(formData.get("paid_amount"));
-  const paidAccountName = optional(formData, "paid_account_name");
 
-  if (!payableId || !paidAt || !Number.isFinite(paidAmount) || paidAmount < 0) {
-    redirect(pageUrl("Informe data e valor pagos."));
+  if (!payableId || !bankAccountId || !paidAt || !Number.isFinite(paidAmount) || paidAmount <= 0) {
+    redirect(pageUrl("Informe conta bancária, data e valor pagos."));
   }
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("payables.manage");
-  let query = supabase
+  const payableResult = await supabase
     .from("payables")
-    .update({
-      status: "paid",
-      paid_at: paidAt,
-      paid_amount: paidAmount,
-      paid_account_name: paidAccountName,
-      updated_at: new Date().toISOString(),
-    })
+    .select("id,project_id,status")
     .eq("id", payableId)
-    .eq("company_id", companyId);
+    .eq("company_id", companyId)
+    .maybeSingle();
 
-  if (projectId) query = query.eq("project_id", projectId);
-  const { error } = await query;
+  if (!payableResult.data || payableResult.data.status !== "open") {
+    redirect(pageUrl("A conta não está disponível para pagamento."));
+  }
 
-  if (error) redirect(pageUrl(error.message));
+  const resolvedProjectId = projectId ?? payableResult.data.project_id;
+  const result = await supabase.rpc("pay_finance_payable", {
+    p_company_id: companyId,
+    p_project_id: resolvedProjectId,
+    p_payable_id: payableId,
+    p_account_id: bankAccountId,
+    p_paid_at: paidAt,
+    p_paid_amount: paidAmount,
+  });
+
+  if (result.error) redirect(pageUrl(result.error.message));
   revalidatePath(PATH);
-  redirect(pageUrl("Pagamento registrado.", "success"));
+  revalidatePath("/financeiro/contas-bancarias");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/execucao/medicoes-contratos");
+  redirect(pageUrl("Pagamento registrado e lançado no extrato bancário.", "success"));
 }
 
 export async function cancelPayable(formData: FormData) {

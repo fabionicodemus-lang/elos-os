@@ -179,38 +179,47 @@ export async function createReceivableSeries(formData: FormData) {
 }
 
 export async function markReceivablePaid(formData: FormData) {
-  const receivableId = String(formData.get("receivable_id") ?? "");
-  const saleId = String(formData.get("sale_id") ?? "");
+  const receivableId = String(formData.get("receivable_id") ?? "").trim();
+  const saleId = String(formData.get("sale_id") ?? "").trim();
+  const bankAccountId = String(formData.get("bank_account_id") ?? "").trim();
   const returnPath = safeReturnPath(formData);
-  const paidAt = String(formData.get("paid_at") ?? "");
+  const paidAt = String(formData.get("paid_at") ?? "").trim();
   const paidAmount = parseMoney(formData.get("paid_amount"));
 
-  if (!receivableId || !paidAt || !Number.isFinite(paidAmount) || paidAmount < 0) {
-    redirect(pageUrl("Informe data e valor recebidos.", "error", saleId, returnPath));
+  if (!receivableId || !bankAccountId || !paidAt || !Number.isFinite(paidAmount) || paidAmount <= 0) {
+    redirect(pageUrl("Informe conta bancária, data e valor recebidos.", "error", saleId, returnPath));
   }
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("receivables.manage");
-  let query = supabase
+  const receivableResult = await supabase
     .from("receivables")
-    .update({
-      status: "paid",
-      paid_at: paidAt,
-      paid_amount: paidAmount,
-      paid_account_name: optional(formData, "paid_account_name"),
-      correction_locked: true,
-      updated_at: new Date().toISOString(),
-    })
+    .select("id,project_id,status")
     .eq("id", receivableId)
     .eq("company_id", companyId)
-    .eq("status", "open");
+    .maybeSingle();
 
-  if (projectId) query = query.eq("project_id", projectId);
-  const { error } = await query;
-  if (error) redirect(pageUrl(error.message, "error", saleId, returnPath));
+  if (!receivableResult.data || receivableResult.data.status !== "open") {
+    redirect(pageUrl("A parcela não está disponível para recebimento.", "error", saleId, returnPath));
+  }
+
+  const resolvedProjectId = projectId ?? receivableResult.data.project_id;
+  const result = await supabase.rpc("receive_finance_receivable", {
+    p_company_id: companyId,
+    p_project_id: resolvedProjectId,
+    p_receivable_id: receivableId,
+    p_account_id: bankAccountId,
+    p_paid_at: paidAt,
+    p_paid_amount: paidAmount,
+  });
+
+  if (result.error) redirect(pageUrl(result.error.message, "error", saleId, returnPath));
 
   revalidatePath(PATH);
+  revalidatePath("/financeiro/contas-a-receber");
+  revalidatePath("/financeiro/contas-bancarias");
+  revalidatePath("/financeiro/fluxo-de-caixa");
   revalidatePath(returnPath);
-  redirect(pageUrl("Recebimento registrado e correção travada.", "success", saleId, returnPath));
+  redirect(pageUrl("Recebimento registrado, correção travada e extrato atualizado.", "success", saleId, returnPath));
 }
 
 export async function cancelReceivable(formData: FormData) {
