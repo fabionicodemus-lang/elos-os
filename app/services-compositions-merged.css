@@ -121,6 +121,47 @@
   display: block;
 }
 
+/* A composição é exibida somente depois de ser movida para baixo da linha clicada. */
+.merged-services-map + .merged-service-detail {
+  display: none;
+}
+
+.service-clickable-row {
+  cursor: pointer;
+}
+
+.service-clickable-row:hover td {
+  background: #f4faf8;
+}
+
+.service-clickable-row.composition-service-selected td {
+  background: #e9f6f2;
+}
+
+.service-clickable-row:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.service-inline-composition-row > td.service-inline-composition-cell {
+  padding: 0 !important;
+  border-bottom: 2px solid #bcd8d2;
+  background: #eef6f4;
+}
+
+.service-inline-composition-row .merged-service-detail {
+  display: block;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 1px 0 #d9e8e4;
+  background: #fbfdfc;
+}
+
+.service-inline-composition-row .composition-detail-head {
+  padding-top: 2px;
+}
+
 @media (max-width: 1380px) {
   .merged-service-filter {
     grid-template-columns: repeat(3, minmax(170px, 1fr));

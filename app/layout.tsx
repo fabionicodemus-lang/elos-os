@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import { CurvesBarValues } from "@/components/curves-bar-values";
 import { GlobalSearchableSelect } from "@/components/global-searchable-select";
+import { ServiceInlineComposition } from "@/components/service-inline-composition";
 import { TakeoffImportGlobal } from "@/components/takeoff-import-global";
 import "./globals.css";
 import "./workspace.css";
@@ -71,6 +72,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${ibmPlexSans.variable} ${spaceGrotesk.variable}`}>
       <body>
         {children}
+        <ServiceInlineComposition />
         <CurvesBarValues />
         <GlobalSearchableSelect />
         <Suspense fallback={null}><TakeoffImportGlobal /></Suspense>
