@@ -37,6 +37,7 @@ import "./curves.css";
 import "./curves-bar-values.css";
 import "./creatable-combobox.css";
 import "./global-searchable-select.css";
+import "./global-search.css";
 import "./taxes.css";
 import "./proposals.css";
 import "./brokers.css";
