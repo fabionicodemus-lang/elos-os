@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { loginKoperAutomatically } from "./auth/koper-auto-login.js";
 import { env } from "./config/env.js";
+import { inspectKoperNavigation } from "./diagnostics/inspect-koper-navigation.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
 
 function sendJson(
@@ -78,6 +79,19 @@ async function handleRequest(
     }
 
     const result = await loginKoperAutomatically();
+    sendJson(response, result.authenticated ? 200 : 422, result);
+    return;
+  }
+
+  if (
+    method === "POST" &&
+    url.pathname === "/diagnostics/koper/navigation"
+  ) {
+    if (!requireAuthorization(request, response)) {
+      return;
+    }
+
+    const result = await inspectKoperNavigation();
     sendJson(response, result.authenticated ? 200 : 422, result);
     return;
   }
