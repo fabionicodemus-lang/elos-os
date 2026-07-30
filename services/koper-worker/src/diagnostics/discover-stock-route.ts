@@ -26,9 +26,14 @@ type TextOccurrence = {
 };
 
 type GraphQlOperation = {
+  endpoint: string;
   operationName: string | null;
   variableKeys: string[];
+  variables: unknown;
   status: number;
+  dataKeys: string[];
+  fieldPaths: string[];
+  errorCount: number;
 };
 
 export type StockRouteDiagnostic = {
@@ -301,33 +306,112 @@ async function openLikelyMenu(page: Page): Promise<boolean> {
   return true;
 }
 
-function parseGraphQlOperation(response: Response): GraphQlOperation[] {
+function redactSensitiveValues(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactSensitiveValues);
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [
+      key,
+      /password|senha|token|secret|authorization/i.test(key)
+        ? "[REDACTED]"
+        : redactSensitiveValues(item),
+    ]),
+  );
+}
+
+function collectFieldPaths(value: unknown, prefix = "", depth = 0): string[] {
+  if (depth > 5 || typeof value !== "object" || value === null) {
+    return [];
+  }
+
+  const object = Array.isArray(value) ? value[0] : value;
+
+  if (typeof object !== "object" || object === null) {
+    return [];
+  }
+
+  return Object.entries(object as Record<string, unknown>).flatMap(
+    ([key, item]) => {
+      const path = prefix ? `${prefix}.${key}` : key;
+      return [path, ...collectFieldPaths(item, path, depth + 1)];
+    },
+  );
+}
+
+async function parseGraphQlOperation(
+  response: Response,
+): Promise<GraphQlOperation[]> {
   const request = response.request();
   const postData = request.postData();
 
-  if (!postData) {
+  if (!postData || request.method() !== "POST") {
     return [];
   }
 
   try {
     const parsed: unknown = JSON.parse(postData);
-    const payloads = Array.isArray(parsed) ? parsed : [parsed];
+    const payloads = (Array.isArray(parsed) ? parsed : [parsed]).filter(
+      (payload): payload is Record<string, unknown> =>
+        Boolean(
+          payload &&
+            typeof payload === "object" &&
+            (typeof payload.operationName === "string" ||
+              typeof payload.query === "string"),
+        ),
+    );
 
-    return payloads
-      .filter((payload): payload is Record<string, unknown> =>
-        Boolean(payload && typeof payload === "object"),
-      )
-      .map((payload) => ({
+    if (payloads.length === 0) {
+      return [];
+    }
+
+    let responseBody: unknown = null;
+
+    try {
+      responseBody = await response.json();
+    } catch {
+      // O corpo pode já ter sido descartado ou não ser JSON.
+    }
+
+    const responseItems = Array.isArray(responseBody)
+      ? responseBody
+      : [responseBody];
+
+    return payloads.map((payload, index) => {
+      const responseItem = responseItems[index];
+      const item =
+        typeof responseItem === "object" && responseItem !== null
+          ? (responseItem as Record<string, unknown>)
+          : null;
+      const data = item?.data;
+      const errors = item?.errors;
+      const variables =
+        payload.variables &&
+        typeof payload.variables === "object" &&
+        !Array.isArray(payload.variables)
+          ? payload.variables
+          : null;
+
+      return {
+        endpoint: new URL(response.url()).origin + new URL(response.url()).pathname,
         operationName:
           typeof payload.operationName === "string" ? payload.operationName : null,
-        variableKeys:
-          payload.variables &&
-          typeof payload.variables === "object" &&
-          !Array.isArray(payload.variables)
-            ? Object.keys(payload.variables).slice(0, 50)
-            : [],
+        variableKeys: variables ? Object.keys(variables).slice(0, 50) : [],
+        variables: redactSensitiveValues(variables),
         status: response.status(),
-      }));
+        dataKeys:
+          typeof data === "object" && data !== null && !Array.isArray(data)
+            ? Object.keys(data).slice(0, 50)
+            : [],
+        fieldPaths: collectFieldPaths(data).slice(0, 200),
+        errorCount: Array.isArray(errors) ? errors.length : 0,
+      };
+    });
   } catch {
     return [];
   }
@@ -358,16 +442,16 @@ export async function discoverStockRoute(): Promise<StockRouteDiagnostic> {
       };
     }
 
-    const onResponse = (response: Response): void => {
-      try {
-        if (new URL(response.url()).hostname !== "graphql.koper.com.br") {
-          return;
-        }
-      } catch {
-        return;
-      }
+    const pendingResponses: Promise<void>[] = [];
 
-      graphql.push(...parseGraphQlOperation(response));
+    const onResponse = (response: Response): void => {
+      const task = parseGraphQlOperation(response)
+        .then((operations) => {
+          graphql.push(...operations);
+        })
+        .catch(() => undefined);
+
+      pendingResponses.push(task);
     };
 
     page.on("response", onResponse);
@@ -413,6 +497,7 @@ export async function discoverStockRoute(): Promise<StockRouteDiagnostic> {
           ? error.message
           : "Falha desconhecida ao descobrir a rota de solicitações.";
     } finally {
+      await Promise.allSettled(pendingResponses);
       page.off("response", onResponse);
     }
 
