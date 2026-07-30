@@ -37,8 +37,8 @@ export function encryptCertificatePassword(password: string) {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", secretKey(), iv);
   const encrypted = Buffer.concat([cipher.update(password, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return [iv, tag, encrypted].map((part) => part.toString("base64url")).join(".");
+  const authTag = cipher.getAuthTag();
+  return [iv, authTag, encrypted].map((part) => part.toString("base64url")).join(".");
 }
 
 export function decryptCertificatePassword(payload: string) {
@@ -91,7 +91,7 @@ function parseDocument(nsu: string, schema: string, xml: string): DistributedDoc
   };
 }
 
-function postSoap(url: string, body: string, pfx: Buffer, passphrase: string) {
+function postSoap(url: string, body: string, pfx: ArrayBuffer, passphrase: string) {
   return new Promise<string>((resolve, reject) => {
     const target = new URL(url);
     const req = request({
@@ -100,7 +100,7 @@ function postSoap(url: string, body: string, pfx: Buffer, passphrase: string) {
       port: target.port || 443,
       path: target.pathname,
       method: "POST",
-      pfx,
+      pfx: new Uint8Array(pfx) as never,
       passphrase,
       rejectUnauthorized: true,
       minVersion: "TLSv1.2",
@@ -112,10 +112,14 @@ function postSoap(url: string, body: string, pfx: Buffer, passphrase: string) {
         "User-Agent": "Elos-OS/1.0",
       },
     }, (response) => {
-      const chunks: Buffer[] = [];
-      response.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+      const chunks: Uint8Array[] = [];
+      response.on("data", (chunk) => chunks.push(typeof chunk === "string" ? new TextEncoder().encode(chunk) : new Uint8Array(chunk)));
       response.on("end", () => {
-        const text = Buffer.concat(chunks).toString("utf8");
+        const size = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+        const merged = new Uint8Array(size);
+        let offset = 0;
+        chunks.forEach((chunk) => { merged.set(chunk, offset); offset += chunk.byteLength; });
+        const text = new TextDecoder().decode(merged);
         if ((response.statusCode ?? 500) >= 400) reject(new Error(`SEFAZ respondeu HTTP ${response.statusCode}: ${text.slice(0, 500)}`));
         else resolve(text);
       });
@@ -138,7 +142,7 @@ export async function distributeDfe({
   stateCode: string;
   taxId: string;
   lastNsu: string;
-  pfx: Buffer;
+  pfx: ArrayBuffer;
   passphrase: string;
 }): Promise<DistributionResponse> {
   const cnpj = taxId.replace(/\D/g, "");
