@@ -96,11 +96,13 @@ export async function markPayablePaid(formData: FormData) {
   if (!payableResult.data || payableResult.data.status !== "open") {
     redirect(pageUrl("A conta não está disponível para pagamento."));
   }
+  if (projectId && payableResult.data.project_id !== projectId) {
+    redirect(pageUrl("A conta pertence a outro empreendimento. Selecione a obra correta antes de pagar."));
+  }
 
-  const resolvedProjectId = projectId ?? payableResult.data.project_id;
   const result = await supabase.rpc("pay_finance_payable", {
     p_company_id: companyId,
-    p_project_id: resolvedProjectId,
+    p_project_id: payableResult.data.project_id,
     p_payable_id: payableId,
     p_account_id: bankAccountId,
     p_paid_at: paidAt,
@@ -116,21 +118,39 @@ export async function markPayablePaid(formData: FormData) {
 }
 
 export async function cancelPayable(formData: FormData) {
-  const payableId = String(formData.get("payable_id") ?? "");
+  const payableId = String(formData.get("payable_id") ?? "").trim();
   if (!payableId) redirect(pageUrl("Conta inválida."));
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("payables.manage");
-  let query = supabase
+  const payableResult = await supabase
+    .from("payables")
+    .select("id,project_id,status,origin,source_system,source_id")
+    .eq("id", payableId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  if (!payableResult.data || payableResult.data.status !== "open") {
+    redirect(pageUrl("A conta não está disponível para cancelamento."));
+  }
+  if (projectId && payableResult.data.project_id !== projectId) {
+    redirect(pageUrl("A conta pertence a outro empreendimento. Selecione a obra correta antes de cancelar."));
+  }
+  if (String(payableResult.data.source_id ?? "").startsWith("nfe:")) {
+    redirect(pageUrl("Esta parcela foi gerada por uma NF-e aprovada e não pode ser cancelada isoladamente."));
+  }
+
+  const { data, error } = await supabase
     .from("payables")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
     .eq("id", payableId)
     .eq("company_id", companyId)
-    .eq("status", "open");
-
-  if (projectId) query = query.eq("project_id", projectId);
-  const { error } = await query;
+    .eq("project_id", payableResult.data.project_id)
+    .eq("status", "open")
+    .select("id")
+    .maybeSingle();
 
   if (error) redirect(pageUrl(error.message));
+  if (!data) redirect(pageUrl("A conta foi alterada por outro usuário. Atualize a tela e tente novamente."));
   revalidatePath(PATH);
   redirect(pageUrl("Conta cancelada.", "success"));
 }
