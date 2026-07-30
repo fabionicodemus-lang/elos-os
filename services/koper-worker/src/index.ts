@@ -169,8 +169,15 @@ server.listen(env.PORT, "0.0.0.0", () => {
 
   const startupDiagnostic = process.env.KOPER_STARTUP_DIAGNOSTIC;
 
-  if (startupDiagnostic === "menu-map") {
-    void inspectKoperMenuMap()
+  const diagnostic =
+    startupDiagnostic === "menu-map"
+      ? inspectKoperMenuMap
+      : startupDiagnostic === "stock-route"
+        ? discoverStockRoute
+        : null;
+
+  if (diagnostic) {
+    void diagnostic()
       .then((result) => {
         console.log("KOPER_STARTUP_DIAGNOSTIC_RESULT", JSON.stringify(result));
       })
