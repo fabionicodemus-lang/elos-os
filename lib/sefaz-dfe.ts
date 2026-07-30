@@ -38,7 +38,7 @@ export function encryptCertificatePassword(password: string) {
   // The project currently combines a newer Node runtime with legacy Node typings.
   // Keep the compatibility casts isolated to the native crypto boundary.
   const cipher = createCipheriv("aes-256-gcm", secretKey() as never, iv as never);
-  const encrypted = Buffer.concat([cipher.update(password, "utf8"), cipher.final()]);
+  const encrypted = Buffer.concat([cipher.update(password, "utf8"), cipher.final()] as never);
   const authTag = cipher.getAuthTag();
   return [iv, authTag, encrypted].map((part) => part.toString("base64url")).join(".");
 }
@@ -55,7 +55,7 @@ export function decryptCertificatePassword(payload: string) {
   return Buffer.concat([
     decipher.update(Buffer.from(encryptedText, "base64url") as never),
     decipher.final(),
-  ]).toString("utf8");
+  ] as never).toString("utf8");
 }
 
 function escapeXml(value: string) {
