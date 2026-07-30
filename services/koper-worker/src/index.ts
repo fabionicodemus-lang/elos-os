@@ -1,5 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  closeKoperLoginSession,
+  createKoperLoginSession,
+  getKoperLoginSessionStatus,
+} from "./auth/koper-login-sessions.js";
 import { env } from "./config/env.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
 
@@ -32,6 +37,18 @@ function isAuthorized(request: IncomingMessage): boolean {
   );
 }
 
+function requireAuthorization(
+  request: IncomingMessage,
+  response: ServerResponse,
+): boolean {
+  if (isAuthorized(request)) {
+    return true;
+  }
+
+  sendJson(response, 401, { ok: false, error: "UNAUTHORIZED" });
+  return false;
+}
+
 async function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -50,14 +67,70 @@ async function handleRequest(
   }
 
   if (method === "POST" && url.pathname === "/diagnostics/browserless") {
-    if (!isAuthorized(request)) {
-      sendJson(response, 401, { ok: false, error: "UNAUTHORIZED" });
+    if (!requireAuthorization(request, response)) {
       return;
     }
 
     const result = await testBrowserlessConnection();
     sendJson(response, 200, result);
     return;
+  }
+
+  if (method === "POST" && url.pathname === "/auth/koper/session") {
+    if (!requireAuthorization(request, response)) {
+      return;
+    }
+
+    const session = await createKoperLoginSession();
+    sendJson(response, 201, session);
+    return;
+  }
+
+  const sessionRoute = url.pathname.match(
+    /^\/auth\/koper\/session\/([0-9a-f-]+)$/i,
+  );
+
+  if (sessionRoute) {
+    if (!requireAuthorization(request, response)) {
+      return;
+    }
+
+    const sessionId = sessionRoute[1];
+
+    if (!sessionId) {
+      sendJson(response, 400, { ok: false, error: "INVALID_SESSION_ID" });
+      return;
+    }
+
+    if (method === "GET") {
+      const status = await getKoperLoginSessionStatus(sessionId);
+
+      if (!status) {
+        sendJson(response, 404, {
+          ok: false,
+          error: "SESSION_NOT_FOUND_OR_EXPIRED",
+        });
+        return;
+      }
+
+      sendJson(response, 200, status);
+      return;
+    }
+
+    if (method === "DELETE") {
+      const closed = await closeKoperLoginSession(sessionId);
+
+      if (!closed) {
+        sendJson(response, 404, {
+          ok: false,
+          error: "SESSION_NOT_FOUND_OR_EXPIRED",
+        });
+        return;
+      }
+
+      sendJson(response, 200, { ok: true, sessionId, closed: true });
+      return;
+    }
   }
 
   sendJson(response, 404, { ok: false, error: "NOT_FOUND" });
