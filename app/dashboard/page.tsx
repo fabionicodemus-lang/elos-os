@@ -78,10 +78,9 @@ type ScheduleMeasurement = {
   id: string; activity_id: string; measurement_date: string; progress_percent: number; current_finish: string | null; created_at: string;
 };
 type ScheduleWeight = { service_id: string; physical_weight_percent: number; distribution_method: "quantity" | "cost" | "duration" | "equal" };
-
 type PhysicalSnapshot = { planned: number; actual: number; delayed: number; forecast: string; baseline: string };
 
-type RecentRecord = { id: string; project_id: string; created_at: string };
+type RecentDashboardActivity = DashboardActivity & { sortKey: string };
 
 function relatedOne<T>(value: T | T[] | null): T | null { return Array.isArray(value) ? value[0] ?? null : value; }
 function localDateIso(date = new Date()) {
@@ -183,6 +182,7 @@ const proposalStatusLabels: Record<string, string> = { draft: "Rascunho", sent: 
 const orderStatusLabels: Record<string, string> = { draft: "Em elaboração", issued: "Emitido", confirmed: "Confirmado", partially_received: "Recebimento parcial", received: "Recebido", closed: "Encerrado", cancelled: "Cancelado" };
 const workOrderStatusLabels: Record<string, string> = { draft: "Em elaboração", released: "Liberada", in_progress: "Em execução", paused: "Pausada", pending_acceptance: "Aguardando aceite", finished: "Concluída", cancelled: "Cancelada" };
 const assistanceStatusLabels: Record<string, string> = { open: "Aberto", triage: "Em triagem", inspection_scheduled: "Vistoria agendada", awaiting_supplier: "Aguardando prestador", approved: "Aprovado", in_progress: "Em execução", awaiting_acceptance: "Aguardando aceite", resolved: "Resolvido", rejected: "Rejeitado", cancelled: "Cancelado" };
+const severityRank: Record<DashboardAlert["severity"], number> = { critical: 0, warning: 1, info: 2 };
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
   const params = await searchParams;
@@ -234,8 +234,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const nextSevenDays = addDays(today, 7);
   const horizonEnd = addMonths(`${today.slice(0, 7)}-01`, 6);
 
-  const suppliersPromise = can("suppliers.view") ? supabase.from("suppliers").select("id", { count: "exact", head: true }).eq("company_id", activeCompany.id) : Promise.resolve({ count: 0, data: null, error: null });
-  const clientsPromise = can("clients.view") ? supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", activeCompany.id) : Promise.resolve({ count: 0, data: null, error: null });
   let unitsPromise = can("projects.view") || can("sales.view") || can("commercial.proposals.view")
     ? supabase.from("units").select("id,project_id,code,status,list_price").eq("company_id", activeCompany.id).limit(5000)
     : null;
@@ -255,17 +253,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   let receivablesPromise = can("receivables.view") ? supabase.from("receivables").select("id,project_id,due_date,amount,adjusted_amount,status,description,created_at").eq("company_id", activeCompany.id).eq("status", "open").lte("due_date", horizonEnd).order("due_date").limit(5000) : null;
   if (receivablesPromise && projectId) receivablesPromise = receivablesPromise.eq("project_id", projectId);
 
-  let ordersPromise = can("procurement.orders.view") ? fetchAllRows<PurchaseOrderRow>(async (from, to) => {
+  const ordersPromise = can("procurement.orders.view") ? fetchAllRows<PurchaseOrderRow>(async (from, to) => {
     let query = supabase.from("procurement_purchase_orders").select("id,project_id,order_number,status,total_amount,received_amount,expected_delivery_date,created_at").eq("company_id", activeCompany.id).order("created_at", { ascending: false }).range(from, to);
     if (projectId) query = query.eq("project_id", projectId);
     const { data, error } = await query; return { data: (data ?? []) as PurchaseOrderRow[], error };
   }) : emptyResult<PurchaseOrderRow>();
-  let contractsPromise = can("execution.contracts.view") ? fetchAllRows<ContractRow>(async (from, to) => {
+  const contractsPromise = can("execution.contracts.view") ? fetchAllRows<ContractRow>(async (from, to) => {
     let query = supabase.from("execution_service_contracts").select("id,project_id,contract_number,title,status,current_value,measured_value,paid_value,created_at").eq("company_id", activeCompany.id).order("created_at", { ascending: false }).range(from, to);
     if (projectId) query = query.eq("project_id", projectId);
     const { data, error } = await query; return { data: (data ?? []) as ContractRow[], error };
   }) : emptyResult<ContractRow>();
-  let workOrdersPromise = can("execution.work_orders.view") ? fetchAllRows<WorkOrderRow>(async (from, to) => {
+  const workOrdersPromise = can("execution.work_orders.view") ? fetchAllRows<WorkOrderRow>(async (from, to) => {
     let query = supabase.from("execution_work_orders").select("id,project_id,work_order_number,title,status,planned_finish,created_at").eq("company_id", activeCompany.id).order("created_at", { ascending: false }).range(from, to);
     if (projectId) query = query.eq("project_id", projectId);
     const { data, error } = await query; return { data: (data ?? []) as WorkOrderRow[], error };
@@ -282,14 +280,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   let budgetsPromise = can("budgets.view") ? supabase.from("engineering_budgets").select("id,code,name,version,status,updated_at").eq("company_id", activeCompany.id).order("updated_at", { ascending: false }).limit(100) : null;
   if (budgetsPromise && projectId) budgetsPromise = budgetsPromise.eq("project_id", projectId);
-  let baselinesPromise = can("schedule.view") && projectId ? supabase.from("engineering_schedule_baselines").select("id,budget_id,code,name,version,status,updated_at").eq("company_id", activeCompany.id).eq("project_id", projectId).neq("status", "archived").order("updated_at", { ascending: false }).limit(100) : null;
+  const baselinesPromise = can("schedule.view") && projectId ? supabase.from("engineering_schedule_baselines").select("id,budget_id,code,name,version,status,updated_at").eq("company_id", activeCompany.id).eq("project_id", projectId).neq("status", "archived").order("updated_at", { ascending: false }).limit(100) : null;
 
   const [
-    supplierCountResult, clientCountResult, unitsResult, proposalSummaryResult, proposalsResult, salesSummaryResult, salesResult,
+    unitsResult, proposalSummaryResult, proposalsResult, salesSummaryResult, salesResult,
     payablesSummaryResult, payablesResult, receivablesSummaryResult, receivablesResult, ordersResult, contractsResult, workOrdersResult,
     assistanceSummaryResult, assistanceResult, warrantySummaryResult, maintenanceResult, taxesResult, budgetsResult, baselinesResult,
   ] = await Promise.all([
-    suppliersPromise, clientsPromise, unitsPromise ?? emptyResult<UnitRow>(), proposalSummaryPromise, proposalsPromise ?? emptyResult<ProposalRow>(), salesSummaryPromise, salesPromise ?? emptyResult<SaleRow>(),
+    unitsPromise ?? emptyResult<UnitRow>(), proposalSummaryPromise, proposalsPromise ?? emptyResult<ProposalRow>(), salesSummaryPromise, salesPromise ?? emptyResult<SaleRow>(),
     payablesSummaryPromise, payablesPromise ?? emptyResult<PayableRow>(), receivablesSummaryPromise, receivablesPromise ?? emptyResult<ReceivableRow>(), ordersPromise, contractsPromise, workOrdersPromise,
     assistanceSummaryPromise, assistancePromise ?? emptyResult<AssistanceRow>(), warrantySummaryPromise, maintenancePromise ?? emptyResult<MaintenanceRow>(), taxesPromise ?? emptyResult<TaxRow>(), budgetsPromise ?? emptyResult<Budget>(), baselinesPromise ?? emptyResult<Baseline>(),
   ]);
@@ -366,17 +364,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   if (delayedWorkOrders.length) alerts.push({ id: "work-orders-delayed", severity: "warning", title: "Ordens de serviço com prazo vencido", description: `${delayedWorkOrders.length} O.S. permanecem abertas após a conclusão planejada.`, href: "/execucao/ordens-servico" });
   if (Number(proposalSummary.expiring_count ?? expiringProposals.length) > 0) alerts.push({ id: "proposals-expiring", severity: "warning", title: "Propostas próximas do vencimento", description: `${proposalSummary.expiring_count ?? expiringProposals.length} negociação(ões) vencem nos próximos 7 dias.`, value: money(Number(proposalSummary.pipeline_amount ?? 0)), href: "/comercial/propostas" });
   if (overdueMaintenance.length) alerts.push({ id: "maintenance-overdue", severity: "warning", title: "Manutenções de garantia atrasadas", description: `${overdueMaintenance.length} manutenção(ões) obrigatória(s) aguardam execução.`, href: "/pos-obra/garantias" });
-  alerts.sort((a, b) => ({ critical: 0, warning: 1, info: 2 }[a.severity] - { critical: 0, warning: 1, info: 2 }[b.severity]);
+  alerts.sort((a, b) => severityRank[a.severity] - severityRank[b.severity]);
 
-  const projectMap = new Map(projects.map((project) => [project.id, project]));
-  const activities: DashboardActivity[] = [];
-  proposals.slice(0, 5).forEach((item) => activities.push({ id: `proposal-${item.id}`, icon: "◇", kind: "Proposta", title: item.number, description: `${proposalStatusLabels[item.status] ?? item.status} · ${money(item.proposed_amount)}`, date: dateTimeBR(item.created_at), href: openRecord(item.project_id, `/comercial/propostas/${item.id}`) }));
-  sales.slice(0, 5).forEach((item) => activities.push({ id: `sale-${item.id}`, icon: "$", kind: "Venda", title: item.number, description: `${item.status === "active" ? "Ativa" : "Cancelada"} · ${money(item.total_amount)}`, date: dateTimeBR(item.created_at), href: openRecord(item.project_id, `/comercial/vendas?q=${encodeURIComponent(item.number)}`) }));
-  orders.slice(0, 5).forEach((item) => activities.push({ id: `order-${item.id}`, icon: "🛒", kind: "Pedido de compra", title: item.order_number, description: `${orderStatusLabels[item.status] ?? item.status} · ${money(item.total_amount)}`, date: dateTimeBR(item.created_at), href: openRecord(item.project_id, `/suprimentos/pedidos-compras?order=${item.id}`) }));
-  workOrders.slice(0, 5).forEach((item) => activities.push({ id: `work-order-${item.id}`, icon: "✓", kind: "Ordem de serviço", title: item.work_order_number, description: `${workOrderStatusLabels[item.status] ?? item.status} · ${item.title}`, date: dateTimeBR(item.created_at), href: openRecord(item.project_id, `/execucao/ordens-servico?work_order=${item.id}`) }));
-  assistance.slice(0, 5).forEach((item) => activities.push({ id: `assistance-${item.id}`, icon: "⌁", kind: "Assistência técnica", title: item.number, description: `${assistanceStatusLabels[item.status] ?? item.status} · ${item.title}`, date: dateTimeBR(item.created_at), href: openRecord(item.project_id, `/pos-obra/assistencias?ticket=${item.id}`) }));
-  activities.sort((a, b) => b.date.localeCompare(a.date));
-  const recentActivities = activities.slice(0, 9);
+  const recentEntries: RecentDashboardActivity[] = [];
+  proposals.slice(0, 5).forEach((item) => recentEntries.push({ id: `proposal-${item.id}`, icon: "◇", kind: "Proposta", title: item.number, description: `${proposalStatusLabels[item.status] ?? item.status} · ${money(item.proposed_amount)}`, date: dateTimeBR(item.created_at), sortKey: item.created_at, href: openRecord(item.project_id, `/comercial/propostas/${item.id}`) }));
+  sales.slice(0, 5).forEach((item) => recentEntries.push({ id: `sale-${item.id}`, icon: "$", kind: "Venda", title: item.number, description: `${item.status === "active" ? "Ativa" : "Cancelada"} · ${money(item.total_amount)}`, date: dateTimeBR(item.created_at), sortKey: item.created_at, href: openRecord(item.project_id, `/comercial/vendas?q=${encodeURIComponent(item.number)}`) }));
+  orders.slice(0, 5).forEach((item) => recentEntries.push({ id: `order-${item.id}`, icon: "🛒", kind: "Pedido de compra", title: item.order_number, description: `${orderStatusLabels[item.status] ?? item.status} · ${money(item.total_amount)}`, date: dateTimeBR(item.created_at), sortKey: item.created_at, href: openRecord(item.project_id, `/suprimentos/pedidos-compras?order=${item.id}`) }));
+  workOrders.slice(0, 5).forEach((item) => recentEntries.push({ id: `work-order-${item.id}`, icon: "✓", kind: "Ordem de serviço", title: item.work_order_number, description: `${workOrderStatusLabels[item.status] ?? item.status} · ${item.title}`, date: dateTimeBR(item.created_at), sortKey: item.created_at, href: openRecord(item.project_id, `/execucao/ordens-servico?work_order=${item.id}`) }));
+  assistance.slice(0, 5).forEach((item) => recentEntries.push({ id: `assistance-${item.id}`, icon: "⌁", kind: "Assistência técnica", title: item.number, description: `${assistanceStatusLabels[item.status] ?? item.status} · ${item.title}`, date: dateTimeBR(item.created_at), sortKey: item.created_at, href: openRecord(item.project_id, `/pos-obra/assistencias?ticket=${item.id}`) }));
+  recentEntries.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+  const recentActivities: DashboardActivity[] = recentEntries.slice(0, 9).map(({ sortKey: _sortKey, ...item }) => item);
 
   const quickActions = [
     can("commercial.proposals.manage") ? { label: "Nova proposta", href: "/comercial/propostas", icon: "◇" } : null,
@@ -406,7 +403,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="executive-hero-copy">
         <div className="executive-hero-tags"><span>{projectStatusLabels[activeProject?.status ?? ""] ?? "Empresa"}</span><span>{activeRole?.name}</span></div>
         <h2>{activeProject?.name ?? activeCompany.name}</h2>
-        <p>{activeProject ? `Acompanhe a obra, o resultado comercial e os compromissos financeiros em um único painel.` : "Acompanhe os principais indicadores consolidados da empresa."}</p>
+        <p>{activeProject ? "Acompanhe a obra, o resultado comercial e os compromissos financeiros em um único painel." : "Acompanhe os principais indicadores consolidados da empresa."}</p>
         <div className="executive-hero-meta"><span>Início <strong>{dateBR(activeProject?.construction_start_date)}</strong></span><span>Entrega <strong>{dateBR(activeProject?.delivery_date)}</strong></span><span>Atualizado <strong>{lastUpdate}</strong></span></div>
       </div>
       <div className="executive-hero-status">
@@ -446,7 +443,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     </DashboardSection> : null}
 
     <div className="executive-dashboard-grid bottom">
-      <DashboardSection eyebrow="Movimentações" title="Atividades recentes" description="Últimos registros dos módulos disponíveis para o seu perfil." action={<button className="global-search-inline" type="button" data-global-search-trigger>Buscar no sistema</button>}><RecentActivity activities={recentActivities} /></DashboardSection>
+      <DashboardSection eyebrow="Movimentações" title="Atividades recentes" description="Últimos registros dos módulos disponíveis para o seu perfil." action={<span className="attention-count">{recentActivities.length}</span>}><RecentActivity activities={recentActivities} /></DashboardSection>
       <div className="executive-side-stack">
         {quickActions.length ? <DashboardSection eyebrow="Acesso rápido" title="Criar e registrar"><div className="quick-action-grid">{quickActions.map((item) => <Link key={item.label} href={item.href}><i>{item.icon}</i><span>{item.label}</span><b>→</b></Link>)}</div></DashboardSection> : null}
         <DashboardSection eyebrow="Ambiente ativo" title={projectContext} description={`Empresa ${activeCompany.name} · acesso como ${activeRole?.name}.`} className="environment-compact">
@@ -460,6 +457,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     </div>
 
     {(ordersResult.error || contractsResult.error || workOrdersResult.error || activitiesResult.error || measurementsResult.error) ? <div className="dashboard-data-note">Alguns indicadores não puderam ser carregados. Os demais módulos continuam disponíveis normalmente.</div> : null}
-    <span className="dashboard-context-note">Contexto atual: {projectContext}{projectId ? ` · ${projectMap.get(projectId)?.name ?? ""}` : ""}</span>
+    <span className="dashboard-context-note">Contexto atual: {projectContext}</span>
   </AppShell>;
 }
