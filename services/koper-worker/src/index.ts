@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { loginKoperAutomatically } from "./auth/koper-auto-login.js";
 import { env } from "./config/env.js";
+import { discoverStockRoute } from "./diagnostics/discover-stock-route.js";
 import { inspectKoperNavigation } from "./diagnostics/inspect-koper-navigation.js";
 import { inspectStockRequests } from "./diagnostics/inspect-stock-requests.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
@@ -107,6 +108,19 @@ async function handleRequest(
 
     const result = await inspectStockRequests();
     sendJson(response, result.authenticated && result.clicked ? 200 : 422, result);
+    return;
+  }
+
+  if (
+    method === "POST" &&
+    url.pathname === "/diagnostics/koper/stock-route"
+  ) {
+    if (!requireAuthorization(request, response)) {
+      return;
+    }
+
+    const result = await discoverStockRoute();
+    sendJson(response, result.authenticated ? 200 : 422, result);
     return;
   }
 
