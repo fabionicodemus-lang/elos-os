@@ -34,30 +34,14 @@ export async function saveSefazConnection(formData: FormData) {
   let encryptedPassword: string;
   try { encryptedPassword = encryptCertificatePassword(password); }
   catch (error) { redirect(url(error instanceof Error ? error.message : "Falha ao proteger a senha do certificado.", "error")); }
-  const bytes = Buffer.from(await certificate.arrayBuffer());
-  const hash = createHash("sha256").update(Array.from(bytes).join(",")).digest("hex");
+  const certificateBytes = await certificate.arrayBuffer();
+  const hash = createHash("sha256").update(new Uint8Array(certificateBytes).join(",")).digest("hex");
   const storagePath = `${companyId}/${entity.data!.id}/${environment}/${hash.slice(0, 16)}-${cleanFileName(certificate.name)}`;
-  const upload = await supabase.storage.from("sefaz-certificates").upload(storagePath, bytes, { contentType: "application/x-pkcs12", upsert: true });
+  const upload = await supabase.storage.from("sefaz-certificates").upload(storagePath, certificateBytes, { contentType: "application/x-pkcs12", upsert: true });
   if (upload.error) redirect(url(upload.error.message, "error"));
   const existing = await supabase.from("finance_sefaz_connections").select("id,certificate_storage_path").eq("company_id", companyId).eq("legal_entity_id", entity.data!.id).eq("environment", environment).maybeSingle();
-  const saved = await supabase.from("finance_sefaz_connections").upsert({
-    company_id: companyId,
-    legal_entity_id: entity.data!.id,
-    environment,
-    state_code: stateCode,
-    tax_id: taxId,
-    certificate_storage_path: storagePath,
-    certificate_file_name: cleanFileName(certificate.name),
-    certificate_password_encrypted: encryptedPassword,
-    status: "active",
-    updated_by: userId,
-    created_by: userId,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: "company_id,legal_entity_id,environment" }).select("id").single();
-  if (saved.error) {
-    await supabase.storage.from("sefaz-certificates").remove([storagePath]);
-    redirect(url(saved.error.message, "error"));
-  }
+  const saved = await supabase.from("finance_sefaz_connections").upsert({ company_id: companyId, legal_entity_id: entity.data!.id, environment, state_code: stateCode, tax_id: taxId, certificate_storage_path: storagePath, certificate_file_name: cleanFileName(certificate.name), certificate_password_encrypted: encryptedPassword, status: "active", updated_by: userId, created_by: userId, updated_at: new Date().toISOString() }, { onConflict: "company_id,legal_entity_id,environment" }).select("id").single();
+  if (saved.error) { await supabase.storage.from("sefaz-certificates").remove([storagePath]); redirect(url(saved.error.message, "error")); }
   if (existing.data?.certificate_storage_path && existing.data.certificate_storage_path !== storagePath) await supabase.storage.from("sefaz-certificates").remove([existing.data.certificate_storage_path]);
   revalidatePath(PATH);
   redirect(url("Certificado A1 configurado. A conexão já pode consultar os documentos destinados à SPE.", "success"));
@@ -77,7 +61,7 @@ export async function syncSefazDocuments(formData: FormData) {
   try {
     const certificate = await supabase.storage.from("sefaz-certificates").download(connection.certificate_storage_path);
     if (certificate.error || !certificate.data) throw new Error(certificate.error?.message ?? "Certificado não encontrado no armazenamento privado.");
-    const response = await distributeDfe({ environment, stateCode: connection.state_code, taxId: connection.tax_id, lastNsu: connection.last_nsu, pfx: Buffer.from(await certificate.data.arrayBuffer()), passphrase: decryptCertificatePassword(connection.certificate_password_encrypted) });
+    const response = await distributeDfe({ environment, stateCode: connection.state_code, taxId: connection.tax_id, lastNsu: connection.last_nsu, pfx: await certificate.data.arrayBuffer(), passphrase: decryptCertificatePassword(connection.certificate_password_encrypted) });
     let fullCount = 0;
     for (const document of response.documents) {
       let storagePath: string | null = null;
@@ -85,16 +69,10 @@ export async function syncSefazDocuments(formData: FormData) {
         fullCount += 1;
         const safeKey = document.accessKey || `nsu-${document.nsu}`;
         storagePath = `${companyId}/${connection.legal_entity_id}/${environment}/${safeKey}-${document.nsu}.xml`;
-        const upload = await supabase.storage.from("sefaz-dfe").upload(storagePath, Buffer.from(document.xml, "utf8"), { contentType: "application/xml", upsert: true });
+        const upload = await supabase.storage.from("sefaz-dfe").upload(storagePath, new TextEncoder().encode(document.xml), { contentType: "application/xml", upsert: true });
         if (upload.error) throw new Error(upload.error.message);
       }
-      const inserted = await supabase.from("finance_sefaz_documents").upsert({
-        company_id: companyId, legal_entity_id: connection.legal_entity_id, connection_id: connection.id, nsu: document.nsu,
-        schema_name: document.schema, access_key: document.accessKey, issuer_tax_id: document.issuerTaxId, issuer_name: document.issuerName,
-        issue_datetime: document.issueDateTime, total_amount: document.totalAmount, sefaz_document_status: document.documentStatus,
-        document_kind: document.isFullXml ? "full_xml" : document.schema.toLowerCase().includes("evento") ? "event" : "summary",
-        xml_storage_path: storagePath, raw_summary: { schema: document.schema, status: document.documentStatus }, updated_at: new Date().toISOString(),
-      }, { onConflict: "connection_id,nsu,schema_name", ignoreDuplicates: false });
+      const inserted = await supabase.from("finance_sefaz_documents").upsert({ company_id: companyId, legal_entity_id: connection.legal_entity_id, connection_id: connection.id, nsu: document.nsu, schema_name: document.schema, access_key: document.accessKey, issuer_tax_id: document.issuerTaxId, issuer_name: document.issuerName, issue_datetime: document.issueDateTime, total_amount: document.totalAmount, sefaz_document_status: document.documentStatus, document_kind: document.isFullXml ? "full_xml" : document.schema.toLowerCase().includes("evento") ? "event" : "summary", xml_storage_path: storagePath, raw_summary: { schema: document.schema, status: document.documentStatus }, updated_at: new Date().toISOString() }, { onConflict: "connection_id,nsu,schema_name", ignoreDuplicates: false });
       if (inserted.error && inserted.error.code !== "23505") throw new Error(inserted.error.message);
     }
     await supabase.from("finance_sefaz_connections").update({ last_nsu: response.lastNsu, max_nsu: response.maxNsu, last_sync_at: new Date().toISOString(), last_status_code: response.statusCode, last_status_message: response.statusMessage, status: "active", updated_by: userId, updated_at: new Date().toISOString() }).eq("id", connection.id);
