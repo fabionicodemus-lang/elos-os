@@ -35,6 +35,12 @@ type BackupSnapshot = {
   tables?: Record<string, unknown[]>;
 };
 
+type GeneratedExportFile = {
+  buffer: Buffer;
+  extension: "json" | "xlsx";
+  mimeType: string;
+};
+
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
@@ -76,7 +82,7 @@ function cellValue(value: unknown): string | number | boolean | Date | null {
   return JSON.stringify(value);
 }
 
-async function createExportFile(snapshot: BackupSnapshot, format: "json" | "xlsx") {
+async function createExportFile(snapshot: BackupSnapshot, format: "json" | "xlsx"): Promise<GeneratedExportFile> {
   if (format === "json") {
     return {
       buffer: Buffer.from(JSON.stringify(snapshot, null, 2), "utf8"),
@@ -112,7 +118,9 @@ async function createExportFile(snapshot: BackupSnapshot, format: "json" | "xlsx
 
   const usedNames = new Set<string>(["Manifesto"]);
   for (const [tableName, rawRows] of Object.entries(snapshot.tables ?? {})) {
-    const rows = Array.isArray(rawRows) ? rawRows.filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === "object" && !Array.isArray(row)) : [];
+    const rows = Array.isArray(rawRows)
+      ? rawRows.filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === "object" && !Array.isArray(row))
+      : [];
     const sheet = workbook.addWorksheet(worksheetName(tableName, usedNames));
 
     if (!rows.length) {
@@ -133,8 +141,11 @@ async function createExportFile(snapshot: BackupSnapshot, format: "json" | "xlsx
   }
 
   const workbookBuffer = await workbook.xlsx.writeBuffer();
+  const nodeBuffer = Buffer.isBuffer(workbookBuffer)
+    ? workbookBuffer
+    : Buffer.from(new Uint8Array(workbookBuffer));
   return {
-    buffer: Buffer.from(workbookBuffer),
+    buffer: nodeBuffer,
     extension: "xlsx",
     mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   };
@@ -157,6 +168,9 @@ export async function generateDataExport(formData: FormData) {
 
   if (scopeType === "project" && !projectId) {
     redirect(messageUrl("Selecione o empreendimento do pacote."));
+  }
+  if (!modules.length) {
+    redirect(messageUrl("Selecione pelo menos um módulo para a exportação."));
   }
   if (!Number.isFinite(retentionDays) || retentionDays < 1 || retentionDays > 365) {
     redirect(messageUrl("Escolha uma retenção entre 1 e 365 dias."));
