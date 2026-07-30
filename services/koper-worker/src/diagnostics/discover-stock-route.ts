@@ -47,6 +47,15 @@ type NetworkEntry = {
   postDataKeys: string[];
 };
 
+type ApiReadEntry = {
+  method: string;
+  status: number;
+  endpoint: string;
+  queryParams: Record<string, string>;
+  dataKeys: string[];
+  fieldPaths: string[];
+};
+
 export type StockRouteDiagnostic = {
   ok: true;
   authenticated: boolean;
@@ -62,6 +71,7 @@ export type StockRouteDiagnostic = {
   bodyTextPreview: string;
   graphql: GraphQlOperation[];
   network: NetworkEntry[];
+  apiReads: ApiReadEntry[];
   message: string | null;
   checkedAt: string;
 };
@@ -433,6 +443,7 @@ export async function discoverStockRoute(): Promise<StockRouteDiagnostic> {
   return withBrowserless(async ({ page }) => {
     const graphql: GraphQlOperation[] = [];
     const network: NetworkEntry[] = [];
+    const apiReads: ApiReadEntry[] = [];
     const login = await performKoperLogin(page);
 
     if (!login.authenticated) {
@@ -451,6 +462,7 @@ export async function discoverStockRoute(): Promise<StockRouteDiagnostic> {
         bodyTextPreview: login.message ?? "",
         graphql: [],
         network: [],
+        apiReads: [],
         message: login.message,
         checkedAt: new Date().toISOString(),
       };
@@ -515,6 +527,45 @@ export async function discoverStockRoute(): Promise<StockRouteDiagnostic> {
         .catch(() => undefined);
 
       pendingResponses.push(task);
+
+      try {
+        const parsedUrl = new URL(response.url());
+
+        if (
+          request.method() === "GET" &&
+          parsedUrl.hostname === "api.koper.com.br" &&
+          parsedUrl.pathname === "/stock/v1/request"
+        ) {
+          const apiTask = response
+            .json()
+            .then((body: unknown) => {
+              const queryParams = Object.fromEntries(
+                [...parsedUrl.searchParams.entries()].map(([key, value]) => [
+                  key,
+                  /accessToken|cb/i.test(key) ? "[REDACTED]" : value,
+                ]),
+              );
+              const object =
+                typeof body === "object" && body !== null
+                  ? (body as Record<string, unknown>)
+                  : null;
+
+              apiReads.push({
+                method: request.method(),
+                status: response.status(),
+                endpoint: parsedUrl.origin + parsedUrl.pathname,
+                queryParams,
+                dataKeys: object ? Object.keys(object).slice(0, 50) : [],
+                fieldPaths: collectFieldPaths(body).slice(0, 300),
+              });
+            })
+            .catch(() => undefined);
+
+          pendingResponses.push(apiTask);
+        }
+      } catch {
+        // Ignora respostas fora da API de estoque.
+      }
     };
 
     page.on("response", onResponse);
@@ -587,6 +638,7 @@ export async function discoverStockRoute(): Promise<StockRouteDiagnostic> {
       bodyTextPreview,
       graphql: graphql.slice(0, 120),
       network,
+      apiReads,
       message,
       checkedAt: new Date().toISOString(),
     };
