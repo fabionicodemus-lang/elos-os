@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { logout, selectWorkspace } from "@/app/dashboard/actions";
 import { BankAccountPaymentSelector } from "@/components/bank-account-payment-selector";
+import { GlobalSearch } from "@/components/global-search";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { ShellNavigation, type ShellNavigationGroup } from "@/components/shell-navigation";
 import { resolveActiveWorkspace } from "@/lib/workspace";
@@ -163,11 +164,11 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-org"><span className="elos-org-icon">▥</span><span className="elos-org-text"><strong>{company.name}</strong><span>{role.name}</span></span></div>
         <div className="elos-breadcrumb" aria-label="Caminho da página"><span>Elos OS</span><span>›</span><b>{groupLabel}</b><span>›</span><span>{title}</span></div>
         <ProjectSwitcher companyId={company.id} activeProjectId={activeProject?.id ?? null} projects={projects} action={selectWorkspace} />
-        <button className="elos-search-button" type="button" title="Buscar no Elos OS" aria-label="Buscar no Elos OS">⌕</button>
+        <GlobalSearch activeProjectId={activeProject?.id ?? null} activeProjectName={activeProject ? [activeProject.code, activeProject.name].filter(Boolean).join(" · ") : null} />
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.60.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.61.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
