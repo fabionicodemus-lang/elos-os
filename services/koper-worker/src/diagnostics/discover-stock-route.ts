@@ -231,6 +231,14 @@ async function clickVisibleStockOccurrence(page: Page): Promise<boolean> {
 }
 
 async function openLikelyMenu(page: Page): Promise<boolean> {
+  const suppliesButton = page.locator('[data-testid="button-Suprimentos"]');
+
+  if (await suppliesButton.first().isVisible().catch(() => false)) {
+    await suppliesButton.first().click({ force: true });
+    await page.waitForTimeout(1_500);
+    return true;
+  }
+
   const buttons = page.locator("button, [role='button']");
   const count = Math.min(await buttons.count(), 100);
   let best: { locator: Locator; score: number } | null = null;
