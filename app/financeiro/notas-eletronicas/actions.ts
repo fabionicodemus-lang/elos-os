@@ -171,6 +171,11 @@ export async function importElectronicInvoice(formData: FormData) {
     redirect(pageUrl(saved.error?.message ?? "Não foi possível importar a NF-e.", "error"));
   }
 
+  const sefazDocumentId = optional(formData, "sefaz_document_id");
+  if (sefazDocumentId) {
+    await supabase.from("finance_sefaz_documents").update({ processing_status: "imported", imported_invoice_id: String(saved.data), updated_at: new Date().toISOString() }).eq("company_id", companyId).eq("id", sefazDocumentId);
+  }
+
   let mappingWarnings = 0;
   for (const item of parsed.items) {
     const mapping = mappingByLine.get(item.lineNumber);
@@ -192,7 +197,9 @@ export async function importElectronicInvoice(formData: FormData) {
   revalidatePath(PATH);
   const message = mappingWarnings
     ? `XML importado. ${mappingWarnings} associação(ões) não puderam ser memorizadas; revise a migration 0046.`
-    : "XML importado. As associações fornecedor × produto × insumo foram memorizadas para as próximas notas.";
+    : sefazDocumentId
+      ? "NF-e importada diretamente da SEFAZ. Revise os itens, o pedido e as parcelas antes de aprovar."
+      : "XML importado. As associações fornecedor × produto × insumo foram memorizadas para as próximas notas.";
   redirect(pageUrl(message, "success", String(saved.data)));
 }
 
