@@ -97,7 +97,9 @@ async function readVisibleLoginMessage(page: Page): Promise<string | null> {
   return text.length > 0 ? text.slice(0, 300) : null;
 }
 
-async function performLogin(page: Page): Promise<KoperAutomaticLoginResult> {
+export async function performKoperLogin(
+  page: Page,
+): Promise<KoperAutomaticLoginResult> {
   await page.goto(env.KOPER_LOGIN_URL, {
     waitUntil: "domcontentloaded",
   });
@@ -152,5 +154,5 @@ async function performLogin(page: Page): Promise<KoperAutomaticLoginResult> {
 }
 
 export async function loginKoperAutomatically(): Promise<KoperAutomaticLoginResult> {
-  return withBrowserless(async ({ page }) => performLogin(page));
+  return withBrowserless(async ({ page }) => performKoperLogin(page));
 }
