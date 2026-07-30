@@ -70,17 +70,6 @@ async function clickSubmit(page: Page): Promise<void> {
   await submit.click();
 }
 
-function isKoperLoginUrl(currentUrl: string): boolean {
-  try {
-    const current = new URL(currentUrl);
-    const login = new URL(env.KOPER_LOGIN_URL);
-
-    return current.hostname === login.hostname;
-  } catch {
-    return true;
-  }
-}
-
 async function readVisibleLoginMessage(page: Page): Promise<string | null> {
   const message = await firstVisible([
     page.getByRole("alert"),
@@ -127,28 +116,33 @@ export async function performKoperLogin(
   await password.fill(env.KOPER_PASSWORD);
   await clickSubmit(page);
 
+  // O Koper pode manter a aplicação autenticada no mesmo domínio e na mesma URL.
+  // Por isso, a saída do formulário é detectada principalmente pelo desaparecimento
+  // do campo de senha, e não apenas por mudança de hostname ou caminho.
   await Promise.race([
-    page.waitForURL((url) => !isKoperLoginUrl(url.toString()), {
-      timeout: 30_000,
-    }),
+    password.waitFor({ state: "hidden", timeout: 30_000 }),
     page.waitForLoadState("domcontentloaded", { timeout: 30_000 }),
+    page.waitForTimeout(30_000),
   ]).catch(() => undefined);
 
-  await page.waitForTimeout(1_500);
+  await page.waitForTimeout(2_000);
 
   const finalUrl = page.url();
   const title = await page.title().catch(() => "");
   const passwordStillVisible = Boolean(
     await firstVisible(passwordCandidates(page)),
   );
-  const authenticated = !isKoperLoginUrl(finalUrl) && !passwordStillVisible;
+  const authenticated = !passwordStillVisible;
 
   return {
     ok: true,
     authenticated,
     finalUrl,
     title,
-    message: authenticated ? null : await readVisibleLoginMessage(page),
+    message: authenticated
+      ? null
+      : (await readVisibleLoginMessage(page)) ??
+        "O formulário de login continua visível após o envio.",
     checkedAt: new Date().toISOString(),
   };
 }
