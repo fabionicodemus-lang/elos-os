@@ -135,13 +135,14 @@ async function inspectGraphQlResponse(
 
 async function firstVisible(candidates: Locator[]): Promise<Locator | null> {
   for (const candidate of candidates) {
-    const locator = candidate.first();
+    const count = Math.min(await candidate.count(), 80);
 
-    if (
-      (await locator.count()) > 0 &&
-      (await locator.isVisible().catch(() => false))
-    ) {
-      return locator;
+    for (let index = 0; index < count; index += 1) {
+      const locator = candidate.nth(index);
+
+      if (await locator.isVisible().catch(() => false)) {
+        return locator;
+      }
     }
   }
 
@@ -150,28 +151,62 @@ async function firstVisible(candidates: Locator[]): Promise<Locator | null> {
 
 async function clickStockRequests(page: Page): Promise<string> {
   const textPattern = /solicita(?:ç|c)(?:ões|oes) de estoque/i;
-  const textLocator = page.getByText(textPattern, { exact: true }).first();
+  const textLocator = await firstVisible([
+    page.getByText(textPattern, { exact: true }),
+    page
+      .locator(
+        "h1, h2, h3, h4, h5, h6, [role='heading'], button, a, [role='button'], p, span, div",
+      )
+      .filter({ hasText: textPattern }),
+  ]);
 
-  await textLocator.waitFor({ state: "visible", timeout: 15_000 });
+  if (!textLocator) {
+    throw new Error("KOPER_STOCK_REQUESTS_VISIBLE_TEXT_NOT_FOUND");
+  }
+
   await textLocator.scrollIntoViewIfNeeded();
 
   const clickable = await firstVisible([
     page.getByRole("button", { name: textPattern }),
     page.getByRole("link", { name: textPattern }),
     textLocator.locator(
-      "xpath=ancestor-or-self::*[self::button or self::a or @role='button' or @tabindex][1]",
+      "xpath=ancestor-or-self::*[self::button or self::a or @role='button' or @onclick or @tabindex][1]",
     ),
   ]);
 
   if (clickable) {
     await clickable.click();
-    return "clickable-ancestor";
+    return "visible-clickable-ancestor";
   }
 
-  // Em dashboards React, o texto pode estar dentro de um card cujo clique é
-  // tratado por um ancestral sem semântica de botão. O evento ainda propaga.
-  await textLocator.click();
-  return "text-bubble";
+  const domClickMethod = await textLocator.evaluate((element) => {
+    let current: HTMLElement | null = element as HTMLElement;
+
+    for (let depth = 0; current && depth < 10; depth += 1) {
+      const tag = current.tagName.toLowerCase();
+      const role = current.getAttribute("role");
+      const style = window.getComputedStyle(current);
+      const looksClickable =
+        tag === "button" ||
+        tag === "a" ||
+        role === "button" ||
+        current.hasAttribute("tabindex") ||
+        current.hasAttribute("onclick") ||
+        style.cursor === "pointer";
+
+      if (looksClickable) {
+        current.click();
+        return `ancestor-${tag}`;
+      }
+
+      current = current.parentElement;
+    }
+
+    (element as HTMLElement).click();
+    return "text-element-bubble";
+  });
+
+  return domClickMethod;
 }
 
 export async function inspectStockRequests(): Promise<StockRequestsDiagnostic> {
