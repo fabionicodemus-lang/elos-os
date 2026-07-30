@@ -166,4 +166,19 @@ const server = createServer((request, response) => {
 
 server.listen(env.PORT, "0.0.0.0", () => {
   console.log(`koper-worker listening on port ${env.PORT}`);
+
+  const startupDiagnostic = process.env.KOPER_STARTUP_DIAGNOSTIC;
+
+  if (startupDiagnostic === "menu-map") {
+    void inspectKoperMenuMap()
+      .then((result) => {
+        console.log("KOPER_STARTUP_DIAGNOSTIC_RESULT", JSON.stringify(result));
+      })
+      .catch((error: unknown) => {
+        console.error("KOPER_STARTUP_DIAGNOSTIC_FAILED", {
+          message:
+            error instanceof Error ? error.message : "Erro desconhecido",
+        });
+      });
+  }
 });
