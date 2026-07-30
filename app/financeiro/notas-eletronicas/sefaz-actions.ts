@@ -35,7 +35,7 @@ export async function saveSefazConnection(formData: FormData) {
   try { encryptedPassword = encryptCertificatePassword(password); }
   catch (error) { redirect(url(error instanceof Error ? error.message : "Falha ao proteger a senha do certificado.", "error")); }
   const bytes = Buffer.from(await certificate.arrayBuffer());
-  const hash = createHash("sha256").update(bytes.toString("base64")).digest("hex");
+  const hash = createHash("sha256").update(Array.from(bytes).join(",")).digest("hex");
   const storagePath = `${companyId}/${entity.data!.id}/${environment}/${hash.slice(0, 16)}-${cleanFileName(certificate.name)}`;
   const upload = await supabase.storage.from("sefaz-certificates").upload(storagePath, bytes, { contentType: "application/x-pkcs12", upsert: true });
   if (upload.error) redirect(url(upload.error.message, "error"));
@@ -69,7 +69,7 @@ export async function syncSefazDocuments(formData: FormData) {
   const project = await supabase.from("projects").select("legal_entity_id").eq("company_id", companyId).eq("id", projectId).maybeSingle();
   if (!project.data?.legal_entity_id) redirect(url("O empreendimento não possui SPE vinculada.", "error"));
   const environment = text(formData, "environment") === "homologation" ? "homologation" : "production";
-  const connectionResult = await supabase.from("finance_sefaz_connections").select("*").eq("company_id", companyId).eq("legal_entity_id", project.data.legal_entity_id).eq("environment", environment).eq("status", "active").maybeSingle();
+  const connectionResult = await supabase.from("finance_sefaz_connections").select("*").eq("company_id", companyId).eq("legal_entity_id", project.data.legal_entity_id).eq("environment", environment).neq("status", "inactive").maybeSingle();
   if (!connectionResult.data) redirect(url("Configure o certificado A1 antes de sincronizar.", "error"));
   const connection = connectionResult.data;
   const log = await supabase.from("finance_sefaz_sync_logs").insert({ company_id: companyId, legal_entity_id: connection.legal_entity_id, connection_id: connection.id, start_nsu: connection.last_nsu, status: "running", created_by: userId }).select("id").single();
