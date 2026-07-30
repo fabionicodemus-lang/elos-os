@@ -22,6 +22,7 @@ type Role = {
   key: string;
   name: string;
   description: string | null;
+  status: "active" | "inactive";
 };
 
 export default async function AccessSettingsPage({
@@ -76,7 +77,7 @@ export default async function AccessSettingsPage({
       .order("created_at"),
     supabase
       .from("roles")
-      .select("id, key, name, description")
+      .select("id, key, name, description, status")
       .eq("company_id", companyId)
       .order("name"),
     supabase.rpc("has_company_permission", {
@@ -93,7 +94,7 @@ export default async function AccessSettingsPage({
     : { data: [] };
   const profiles = (profileData ?? []) as Profile[];
   const canManage = managePermission === true || privileged;
-  const assignableRoles = roles.filter((role) => role.key !== "owner");
+  const assignableRoles = roles.filter((role) => role.key !== "owner" && role.status === "active");
 
   return (
     <AppShell
@@ -108,7 +109,7 @@ export default async function AccessSettingsPage({
 
       <section className="access-summary">
         <article><span>Usuários ativos</span><strong>{members.filter((member) => member.status === "active").length}</strong></article>
-        <article><span>Papéis disponíveis</span><strong>{roles.length}</strong></article>
+        <article><span>Papéis disponíveis</span><strong>{assignableRoles.length}</strong></article>
         <article><span>Modelo de acesso</span><strong>Empresa + obra</strong></article>
       </section>
 
@@ -173,8 +174,8 @@ export default async function AccessSettingsPage({
 
       <section className="roles-panel">
         <div className="section-heading">
-          <div><span>Papéis padrão</span><h2>Estrutura inicial de permissões</h2></div>
-          <p>A personalização detalhada por módulo, tela e ação será construída sobre esta base.</p>
+          <div><span>Papéis cadastrados</span><h2>Estrutura atual de acessos</h2></div>
+          <p>A matriz detalhada de cada papel está disponível em Sistema → Permissões.</p>
         </div>
         <div className="role-grid">
           {roles.map((role) => (
