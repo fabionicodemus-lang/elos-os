@@ -188,43 +188,49 @@ function findRouteCandidate(occurrences: TextOccurrence[]): string | null {
 }
 
 async function clickVisibleStockOccurrence(page: Page): Promise<boolean> {
-  const locator = page.getByText(stockTextPattern, { exact: true });
-  const count = Math.min(await locator.count(), 40);
+  const candidates = [
+    page.getByText(/^Solicitações$/i, { exact: true }),
+    page.getByText(stockTextPattern, { exact: true }),
+  ];
 
-  for (let index = 0; index < count; index += 1) {
-    const item = locator.nth(index);
+  for (const locator of candidates) {
+    const count = Math.min(await locator.count(), 40);
 
-    if (!(await item.isVisible().catch(() => false))) {
-      continue;
-    }
+    for (let index = 0; index < count; index += 1) {
+      const item = locator.nth(index);
 
-    await item.scrollIntoViewIfNeeded().catch(() => undefined);
-    await item.evaluate((element) => {
-      let current: HTMLElement | null = element as HTMLElement;
-
-      for (let depth = 0; current && depth < 12; depth += 1) {
-        const style = window.getComputedStyle(current);
-        const tag = current.tagName.toLowerCase();
-        const clickable =
-          tag === "a" ||
-          tag === "button" ||
-          current.getAttribute("role") === "button" ||
-          current.hasAttribute("onclick") ||
-          current.hasAttribute("tabindex") ||
-          style.cursor === "pointer";
-
-        if (clickable) {
-          current.click();
-          return;
-        }
-
-        current = current.parentElement;
+      if (!(await item.isVisible().catch(() => false))) {
+        continue;
       }
 
-      (element as HTMLElement).click();
-    });
+      await item.scrollIntoViewIfNeeded().catch(() => undefined);
+      await item.evaluate((element) => {
+        let current: HTMLElement | null = element as HTMLElement;
 
-    return true;
+        for (let depth = 0; current && depth < 12; depth += 1) {
+          const style = window.getComputedStyle(current);
+          const tag = current.tagName.toLowerCase();
+          const clickable =
+            tag === "a" ||
+            tag === "button" ||
+            current.getAttribute("role") === "button" ||
+            current.hasAttribute("onclick") ||
+            current.hasAttribute("tabindex") ||
+            style.cursor === "pointer";
+
+          if (clickable) {
+            current.click();
+            return;
+          }
+
+          current = current.parentElement;
+        }
+
+        (element as HTMLElement).click();
+      });
+
+      return true;
+    }
   }
 
   return false;
