@@ -39,6 +39,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
   const activeProject = projects.find((project) => project.id === projectId) ?? projects[0] ?? null;
   const permissionsHref = privileged || can("admin.roles.view") || can("admin.roles.manage") ? "/configuracoes/permissoes" : undefined;
+  const dataBackupHref = privileged || can("admin.data.view") || can("admin.data.export") || can("admin.data.restore") || can("admin.data.manage") ? "/configuracoes/dados-backup" : undefined;
   const legalEntitiesHref = can("projects.view") ? "/empreendimentos/empresas" : undefined;
   const projectsHref = can("projects.view") ? "/empreendimentos" : undefined;
   const projectCharacteristicsHref = can("projects.view") ? "/empreendimentos/caracteristicas" : undefined;
@@ -87,7 +88,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Cadastros gerais", sectionLabel: "Cadastros gerais" },
       { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "suppliers", disabled: !can("suppliers.view") },
       { label: "Clientes", href: can("clients.view") ? "/cadastros/clientes" : undefined, active: activeItem === "clients", disabled: !can("clients.view") },
-      { label: "Dados & Backup", disabled: true },
+      { label: "Dados & Backup", href: dataBackupHref, active: activeItem === "data-backup", disabled: !dataBackupHref },
     ]},
     { key: "projects", label: "Empreendimentos", icon: "▦", active: activeGroup === "projects", items: [
       { label: "Empresas / SPEs", href: legalEntitiesHref, active: activeItem === "legal-entities", disabled: !legalEntitiesHref },
@@ -166,7 +167,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.59.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.60.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
