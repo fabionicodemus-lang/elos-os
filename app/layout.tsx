@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import { CurvesBarValues } from "@/components/curves-bar-values";
 import { GlobalSearchableSelect } from "@/components/global-searchable-select";
+import { SefazNfeLauncher } from "@/components/sefaz-nfe-launcher";
 import { ServiceInlineComposition } from "@/components/service-inline-composition";
 import { TakeoffImportGlobal } from "@/components/takeoff-import-global";
 import "./globals.css";
@@ -42,6 +43,7 @@ import "./dashboard.css";
 import "./taxes.css";
 import "./proposals.css";
 import "./brokers.css";
+import "./sefaz-nfe.css";
 import "./elos-theme.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -80,6 +82,7 @@ export default function RootLayout({
         <ServiceInlineComposition />
         <CurvesBarValues />
         <GlobalSearchableSelect />
+        <SefazNfeLauncher />
         <Suspense fallback={null}><TakeoffImportGlobal /></Suspense>
       </body>
     </html>
