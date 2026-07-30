@@ -36,7 +36,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       ? ((permissionResult.data ?? []) as { key: string }[]).map((item) => item.key)
       : ((permissionResult.data ?? []) as { permission_key: string }[]).map((item) => item.permission_key),
   );
-  const can = (permission: string) => permissions.has(permission);
+  const can = (permission: string) => privileged || permissions.has(permission);
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
   const activeProject = projects.find((project) => project.id === projectId) ?? projects[0] ?? null;
   const permissionsHref = privileged || can("admin.roles.view") || can("admin.roles.manage") ? "/configuracoes/permissoes" : undefined;
@@ -168,7 +168,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.63.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.63.1 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
