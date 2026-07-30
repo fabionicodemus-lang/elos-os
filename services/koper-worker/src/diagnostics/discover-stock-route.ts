@@ -36,6 +36,17 @@ type GraphQlOperation = {
   errorCount: number;
 };
 
+type NetworkEntry = {
+  method: string;
+  status: number;
+  resourceType: string;
+  endpoint: string;
+  queryKeys: string[];
+  contentType: string | null;
+  postDataKind: string | null;
+  postDataKeys: string[];
+};
+
 export type StockRouteDiagnostic = {
   ok: true;
   authenticated: boolean;
@@ -50,6 +61,7 @@ export type StockRouteDiagnostic = {
   tableHeaders: string[];
   bodyTextPreview: string;
   graphql: GraphQlOperation[];
+  network: NetworkEntry[];
   message: string | null;
   checkedAt: string;
 };
@@ -420,6 +432,7 @@ async function parseGraphQlOperation(
 export async function discoverStockRoute(): Promise<StockRouteDiagnostic> {
   return withBrowserless(async ({ page }) => {
     const graphql: GraphQlOperation[] = [];
+    const network: NetworkEntry[] = [];
     const login = await performKoperLogin(page);
 
     if (!login.authenticated) {
@@ -437,6 +450,7 @@ export async function discoverStockRoute(): Promise<StockRouteDiagnostic> {
         tableHeaders: [],
         bodyTextPreview: login.message ?? "",
         graphql: [],
+        network: [],
         message: login.message,
         checkedAt: new Date().toISOString(),
       };
@@ -445,6 +459,55 @@ export async function discoverStockRoute(): Promise<StockRouteDiagnostic> {
     const pendingResponses: Promise<void>[] = [];
 
     const onResponse = (response: Response): void => {
+      const request = response.request();
+      const resourceType = request.resourceType();
+
+      if (
+        network.length < 200 &&
+        (resourceType === "xhr" || resourceType === "fetch")
+      ) {
+        try {
+          const parsedUrl = new URL(response.url());
+          const postData = request.postData();
+          let postDataKind: string | null = null;
+          let postDataKeys: string[] = [];
+
+          if (postData) {
+            try {
+              const parsedPostData: unknown = JSON.parse(postData);
+              postDataKind = Array.isArray(parsedPostData)
+                ? "json-array"
+                : typeof parsedPostData === "object" && parsedPostData !== null
+                  ? "json-object"
+                  : typeof parsedPostData;
+
+              if (
+                typeof parsedPostData === "object" &&
+                parsedPostData !== null &&
+                !Array.isArray(parsedPostData)
+              ) {
+                postDataKeys = Object.keys(parsedPostData).slice(0, 50);
+              }
+            } catch {
+              postDataKind = "non-json";
+            }
+          }
+
+          network.push({
+            method: request.method(),
+            status: response.status(),
+            resourceType,
+            endpoint: parsedUrl.origin + parsedUrl.pathname,
+            queryKeys: [...new Set(parsedUrl.searchParams.keys())].slice(0, 50),
+            contentType: request.headers()["content-type"] ?? null,
+            postDataKind,
+            postDataKeys,
+          });
+        } catch {
+          // Ignora URLs inválidas no mapa de transporte.
+        }
+      }
+
       const task = parseGraphQlOperation(response)
         .then((operations) => {
           graphql.push(...operations);
@@ -523,6 +586,7 @@ export async function discoverStockRoute(): Promise<StockRouteDiagnostic> {
       ),
       bodyTextPreview,
       graphql: graphql.slice(0, 120),
+      network,
       message,
       checkedAt: new Date().toISOString(),
     };
