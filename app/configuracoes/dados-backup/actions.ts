@@ -200,7 +200,7 @@ export async function generateDataExport(formData: FormData) {
 
     const snapshot = snapshotData as BackupSnapshot;
     const generated = await createExportFile(snapshot, format);
-    const checksum = createHash("sha256").update(generated.buffer).digest("hex");
+    const checksum = createHash("sha256").update(generated.buffer.toString("base64"), "base64").digest("hex");
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const scopeLabel = scopeType === "project" ? "empreendimento" : "empresa";
     const fileName = `elos-os-${safeSlug(company.slug || company.name)}-${scopeLabel}-${timestamp}.${generated.extension}`;
