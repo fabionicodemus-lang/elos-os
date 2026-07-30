@@ -132,3 +132,15 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/apply-supabase-0055.sh
+      - name: Instalar PostgreSQL para migration 0056
+        if: "${{ github.event_name == 'pull_request' && github.event.pull_request.title == '[RUN] Supabase 0056' }}"
+        run: sudo timeout 60s apt-get update && sudo timeout 60s apt-get install -y postgresql-client
+      - name: Aplicar e validar migration 0056
+        if: "${{ github.event_name == 'pull_request' && github.event.pull_request.title == '[RUN] Supabase 0056' }}"
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: "10"
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/apply-supabase-0056.sh

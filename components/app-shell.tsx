@@ -18,19 +18,27 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   activeItem?: string; eyebrow: string; title: string; description?: string; actions?: ReactNode; children: ReactNode;
 }) {
   const { supabase, userId, email, company, companyId, projectId, role } = await resolveActiveWorkspace();
+  const privileged = role.key === "owner" || role.key === "admin";
+  const permissionQuery = privileged
+    ? supabase.from("permissions").select("key")
+    : role.id
+      ? supabase.from("role_permissions").select("permission_key").eq("role_id", role.id).eq("allowed", true)
+      : Promise.resolve({ data: [], error: null });
   const [projectsResult, profileResult, permissionResult] = await Promise.all([
     supabase.from("projects").select("id, name, code").eq("company_id", companyId).neq("status", "archived").order("name"),
     supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
-    role.id ? supabase.from("role_permissions").select("permission_key").eq("role_id", role.id).eq("allowed", true) : Promise.resolve({ data: [], error: null }),
+    permissionQuery,
   ]);
   const projects = (projectsResult.data ?? []) as Project[];
-  const permissions = new Set(((permissionResult.data ?? []) as { permission_key: string }[]).map((item) => item.permission_key));
-  if (role.key === "owner" || role.key === "admin") {
-    ["admin.users.view","admin.users.manage","projects.view","projects.manage","suppliers.view","suppliers.manage","clients.view","clients.manage","payables.view","payables.manage","sales.view","sales.manage","receivables.view","receivables.manage","indices.view","indices.manage","cashflow.view","reports.view","budgets.view","budgets.manage","services.view","services.manage","inputs.view","inputs.manage","prices.view","prices.manage","compositions.view","compositions.manage","takeoffs.view","takeoffs.manage","schedule.view","schedule.manage","execution.schedule.view","execution.schedule.manage","execution.material_requests.view","execution.material_requests.manage","execution.material_requests.approve","execution.daily_logs.view","execution.daily_logs.manage","execution.daily_logs.submit","execution.daily_logs.approve","execution.daily_logs.reopen","execution.daily_logs.settings","execution.quality.view","execution.quality.fill","execution.quality.complete","execution.quality.nonconformity","execution.quality.reinspect","execution.quality.cancel","execution.quality.exception","execution.quality.templates","execution.quality.settings","execution.quality.indicators","execution.contracts.view","execution.contracts.manage","execution.contracts.approve","execution.contracts.amend","execution.contracts.cancel","execution.measurements.view","execution.measurements.manage","execution.measurements.submit","execution.measurements.approve","execution.measurements.finance","execution.measurements.cancel","execution.work_orders.view","execution.work_orders.manage","execution.work_orders.release","execution.work_orders.progress","execution.work_orders.accept","execution.work_orders.cancel","procurement.quotations.view","procurement.quotations.manage","procurement.quotations.approve","procurement.quotations.cancel","procurement.orders.view","procurement.orders.manage","procurement.orders.issue","procurement.orders.confirm","procurement.orders.cancel","procurement.receipts.view","procurement.receipts.manage","procurement.receipts.submit","procurement.receipts.approve","procurement.receipts.discrepancies","procurement.receipts.cancel","procurement.inventory.view","procurement.inventory.manage","procurement.inventory.issue","procurement.inventory.transfer","procurement.inventory.adjust","procurement.inventory.count","finance.invoices.view","finance.invoices.manage","finance.invoices.approve","finance.invoices.cancel","finance.manual_invoices.view","finance.manual_invoices.manage","finance.manual_invoices.approve","finance.manual_invoices.cancel","finance.bank_accounts.view","finance.bank_accounts.manage","finance.bank_accounts.transfer","finance.bank_accounts.reconcile","finance.taxes.view","finance.taxes.manage","commercial.proposals.view","commercial.proposals.manage","commercial.proposals.approve","commercial.proposals.convert","commercial.brokers.view","commercial.brokers.manage","commercial.brokers.approve","commercial.brokers.finance","postwork.assistance.view","postwork.assistance.manage","postwork.assistance.inspect","postwork.assistance.execute","postwork.assistance.close","postwork.inspections.view","postwork.inspections.manage","postwork.inspections.fill","postwork.inspections.correct","postwork.inspections.deliver","postwork.warranties.view","postwork.warranties.manage","postwork.warranties.analyze","postwork.warranties.maintenance","supply_plan.view","supply_plan.manage","execution.view","quality.view","commercial.view","documents.view"].forEach((permission) => permissions.add(permission));
-  }
+  const permissions = new Set(
+    privileged
+      ? ((permissionResult.data ?? []) as { key: string }[]).map((item) => item.key)
+      : ((permissionResult.data ?? []) as { permission_key: string }[]).map((item) => item.permission_key),
+  );
   const can = (permission: string) => permissions.has(permission);
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
   const activeProject = projects.find((project) => project.id === projectId) ?? projects[0] ?? null;
+  const permissionsHref = privileged || can("admin.roles.view") || can("admin.roles.manage") ? "/configuracoes/permissoes" : undefined;
   const legalEntitiesHref = can("projects.view") ? "/empreendimentos/empresas" : undefined;
   const projectsHref = can("projects.view") ? "/empreendimentos" : undefined;
   const projectCharacteristicsHref = can("projects.view") ? "/empreendimentos/caracteristicas" : undefined;
@@ -75,7 +83,8 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const groups: ShellNavigationGroup[] = [
     { key: "system", label: "Sistema", icon: "⚙", active: activeGroup === "system", items: [
       { label: "Usuários", href: can("admin.users.view") ? "/configuracoes/acessos" : undefined, active: activeItem === "users", disabled: !can("admin.users.view") },
-      { label: "Permissões", disabled: true }, { label: "Cadastros gerais", sectionLabel: "Cadastros gerais" },
+      { label: "Permissões", href: permissionsHref, active: activeItem === "permissions", disabled: !permissionsHref },
+      { label: "Cadastros gerais", sectionLabel: "Cadastros gerais" },
       { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "suppliers", disabled: !can("suppliers.view") },
       { label: "Clientes", href: can("clients.view") ? "/cadastros/clientes" : undefined, active: activeItem === "clients", disabled: !can("clients.view") },
       { label: "Dados & Backup", disabled: true },
@@ -157,7 +166,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.58.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.59.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
