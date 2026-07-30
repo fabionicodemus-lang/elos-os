@@ -35,7 +35,9 @@ function secretKey() {
 
 export function encryptCertificatePassword(password: string) {
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", secretKey(), iv);
+  // The project currently combines a newer Node runtime with legacy Node typings.
+  // Keep the compatibility casts isolated to the native crypto boundary.
+  const cipher = createCipheriv("aes-256-gcm", secretKey() as never, iv as never);
   const encrypted = Buffer.concat([cipher.update(password, "utf8"), cipher.final()]);
   const authTag = cipher.getAuthTag();
   return [iv, authTag, encrypted].map((part) => part.toString("base64url")).join(".");
@@ -44,9 +46,16 @@ export function encryptCertificatePassword(password: string) {
 export function decryptCertificatePassword(payload: string) {
   const [ivText, tagText, encryptedText] = payload.split(".");
   if (!ivText || !tagText || !encryptedText) throw new Error("Senha do certificado armazenada em formato inválido.");
-  const decipher = createDecipheriv("aes-256-gcm", secretKey(), Buffer.from(ivText, "base64url"));
-  decipher.setAuthTag(Buffer.from(tagText, "base64url"));
-  return Buffer.concat([decipher.update(Buffer.from(encryptedText, "base64url")), decipher.final()]).toString("utf8");
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    secretKey() as never,
+    Buffer.from(ivText, "base64url") as never,
+  );
+  decipher.setAuthTag(Buffer.from(tagText, "base64url") as never);
+  return Buffer.concat([
+    decipher.update(Buffer.from(encryptedText, "base64url") as never),
+    decipher.final(),
+  ]).toString("utf8");
 }
 
 function escapeXml(value: string) {
@@ -161,7 +170,7 @@ export async function distributeDfe({
     const nsuValue = attribute(match[1], "NSU") ?? "";
     const schema = attribute(match[1], "schema") ?? "desconhecido";
     try {
-      const xml = gunzipSync(Buffer.from(match[2].replace(/\s/g, ""), "base64")).toString("utf8");
+      const xml = gunzipSync(Buffer.from(match[2].replace(/\s/g, ""), "base64") as never).toString("utf8");
       documents.push(parseDocument(nsuValue, schema, xml));
     } catch (error) {
       throw new Error(`Não foi possível descompactar o NSU ${nsuValue}: ${error instanceof Error ? error.message : "erro desconhecido"}`);
