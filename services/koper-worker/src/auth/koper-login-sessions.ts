@@ -14,6 +14,10 @@ type ActiveKoperLoginSession = {
   cleanupTimer: NodeJS.Timeout;
 };
 
+type BrowserlessCdpSession = {
+  send(method: string, params?: Record<string, unknown>): Promise<unknown>;
+};
+
 export type KoperLoginSessionCreated = {
   ok: true;
   sessionId: string;
@@ -75,8 +79,10 @@ export async function createKoperLoginSession(): Promise<KoperLoginSessionCreate
     });
     await page.bringToFront();
 
-    const cdpSession = await context.newCDPSession(page);
-    const result = (await cdpSession.send("Browserless.liveURL", {
+    const playwrightCdpSession = await context.newCDPSession(page);
+    const browserlessCdpSession =
+      playwrightCdpSession as unknown as BrowserlessCdpSession;
+    const result = (await browserlessCdpSession.send("Browserless.liveURL", {
       timeout: env.KOPER_LOGIN_SESSION_TIMEOUT_MS,
       interactable: true,
       type: "jpeg",
