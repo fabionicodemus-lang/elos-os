@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { loginKoperAutomatically } from "./auth/koper-auto-login.js";
 import { env } from "./config/env.js";
 import { discoverStockRoute } from "./diagnostics/discover-stock-route.js";
+import { inspectKoperMenuMap } from "./diagnostics/inspect-koper-menu-map.js";
 import { inspectKoperNavigation } from "./diagnostics/inspect-koper-navigation.js";
 import { inspectStockRequests } from "./diagnostics/inspect-stock-requests.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
@@ -94,6 +95,19 @@ async function handleRequest(
     }
 
     const result = await inspectKoperNavigation();
+    sendJson(response, result.authenticated ? 200 : 422, result);
+    return;
+  }
+
+  if (
+    method === "POST" &&
+    url.pathname === "/diagnostics/koper/menu-map"
+  ) {
+    if (!requireAuthorization(request, response)) {
+      return;
+    }
+
+    const result = await inspectKoperMenuMap();
     sendJson(response, result.authenticated ? 200 : 422, result);
     return;
   }
