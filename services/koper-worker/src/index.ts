@@ -1,10 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import {
-  closeKoperLoginSession,
-  createKoperLoginSession,
-  getKoperLoginSessionStatus,
-} from "./auth/koper-login-sessions.js";
+import { loginKoperAutomatically } from "./auth/koper-auto-login.js";
 import { env } from "./config/env.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
 
@@ -76,61 +72,14 @@ async function handleRequest(
     return;
   }
 
-  if (method === "POST" && url.pathname === "/auth/koper/session") {
+  if (method === "POST" && url.pathname === "/auth/koper/login") {
     if (!requireAuthorization(request, response)) {
       return;
     }
 
-    const session = await createKoperLoginSession();
-    sendJson(response, 201, session);
+    const result = await loginKoperAutomatically();
+    sendJson(response, result.authenticated ? 200 : 422, result);
     return;
-  }
-
-  const sessionRoute = url.pathname.match(
-    /^\/auth\/koper\/session\/([0-9a-f-]+)$/i,
-  );
-
-  if (sessionRoute) {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
-    const sessionId = sessionRoute[1];
-
-    if (!sessionId) {
-      sendJson(response, 400, { ok: false, error: "INVALID_SESSION_ID" });
-      return;
-    }
-
-    if (method === "GET") {
-      const status = await getKoperLoginSessionStatus(sessionId);
-
-      if (!status) {
-        sendJson(response, 404, {
-          ok: false,
-          error: "SESSION_NOT_FOUND_OR_EXPIRED",
-        });
-        return;
-      }
-
-      sendJson(response, 200, status);
-      return;
-    }
-
-    if (method === "DELETE") {
-      const closed = await closeKoperLoginSession(sessionId);
-
-      if (!closed) {
-        sendJson(response, 404, {
-          ok: false,
-          error: "SESSION_NOT_FOUND_OR_EXPIRED",
-        });
-        return;
-      }
-
-      sendJson(response, 200, { ok: true, sessionId, closed: true });
-      return;
-    }
   }
 
   sendJson(response, 404, { ok: false, error: "NOT_FOUND" });
