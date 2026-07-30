@@ -8,12 +8,8 @@ const envSchema = z.object({
   BROWSERLESS_WS_URL: z.string().url(),
   BROWSERLESS_TOKEN: z.string().min(1),
   KOPER_LOGIN_URL: z.string().url(),
-  KOPER_LOGIN_SESSION_TIMEOUT_MS: z.coerce
-    .number()
-    .int()
-    .min(60_000)
-    .max(900_000)
-    .default(300_000),
+  KOPER_USERNAME: z.string().min(1),
+  KOPER_PASSWORD: z.string().min(1),
 });
 
 const parsed = envSchema.safeParse(process.env);
