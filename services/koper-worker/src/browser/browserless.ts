@@ -18,27 +18,38 @@ function buildBrowserlessEndpoint(): string {
   return endpoint.toString();
 }
 
-export async function withBrowserless<T>(
-  task: (session: BrowserlessSession) => Promise<T>,
-): Promise<T> {
+export async function connectBrowserless(): Promise<BrowserlessSession> {
   const browser = await chromium.connectOverCDP(buildBrowserlessEndpoint(), {
     timeout: 30_000,
   });
 
-  try {
-    const context = browser.contexts()[0];
+  const context = browser.contexts()[0];
 
-    if (!context) {
-      throw new Error("O Browserless não retornou um contexto padrão.");
-    }
-
-    context.setDefaultTimeout(20_000);
-    context.setDefaultNavigationTimeout(45_000);
-
-    const page = context.pages()[0] ?? (await context.newPage());
-
-    return await task({ browser, context, page });
-  } finally {
+  if (!context) {
     await browser.close().catch(() => undefined);
+    throw new Error("O Browserless não retornou um contexto padrão.");
+  }
+
+  context.setDefaultTimeout(20_000);
+  context.setDefaultNavigationTimeout(45_000);
+
+  const page = context.pages()[0] ?? (await context.newPage());
+
+  return {
+    browser,
+    context,
+    page,
+  };
+}
+
+export async function withBrowserless<T>(
+  task: (session: BrowserlessSession) => Promise<T>,
+): Promise<T> {
+  const session = await connectBrowserless();
+
+  try {
+    return await task(session);
+  } finally {
+    await session.browser.close().catch(() => undefined);
   }
 }
