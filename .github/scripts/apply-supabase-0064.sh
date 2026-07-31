@@ -5,7 +5,7 @@ set -euo pipefail
 
 psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260731_0064_00_tax_type_project_scope_prep.sql
 psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260731_0064_manual_invoice_direct_posting_and_retained_taxes.sql
-psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260731_0064_02_manual_invoice_retention_runtime_fix.sql
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260731_0064_z_manual_invoice_retention_runtime_fix.sql
 
 psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
 do $$
@@ -52,10 +52,16 @@ begin
   if not exists(select 1 from pg_trigger where tgname='payables_protect_manual_invoice_source' and not tgisinternal) then
     raise exception 'Proteção dos títulos gerados pela Nota Manual não criada';
   end if;
+  if exists(
+    select 1 from public.finance_tax_types
+    where project_id is null and retention_key in('irrf','pis','cofins','csll') and due_rule<>'manual'
+  ) then
+    raise exception 'Retenções federais globais receberam prazo presumido sem configuração explícita';
+  end if;
 end $$;
 SQL
 
 if [[ -n "${GH_TOKEN:-}" && -n "${PR_NUMBER:-}" ]]; then
   gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
-    -f body='✅ Migration 0064 aplicada e validada. Notas Manuais passam a ser lançadas sem aprovação, retenções geram obrigações tributárias por regra da obra e edição/exclusão ficam bloqueadas após pagamento ou vínculo com recebimento.' >/dev/null
+    -f body='✅ Migration 0064 aplicada e validada. Notas Manuais passam a ser lançadas sem aprovação, retenções geram obrigações tributárias por regra explícita da obra e edição/exclusão ficam bloqueadas após pagamento ou vínculo com recebimento.' >/dev/null
 fi
