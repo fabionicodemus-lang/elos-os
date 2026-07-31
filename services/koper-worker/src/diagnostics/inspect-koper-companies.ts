@@ -285,6 +285,11 @@ function sanitizeRequest(rawUrl: string, method: string, resourceType: string): 
   };
 }
 
+const allowedFlowCompanyIds = new Set([
+  "6d3b4724-5880-11ee-827d-1219c832db49",
+  "1c527099-2e63-465f-b97a-772e36a93d8c",
+]);
+
 async function readStorageKeys(
   page: Page,
 ): Promise<{ local: string[]; session: string[] }> {
@@ -329,11 +334,18 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       const method = request.method();
 
       try {
-        const hostname = new URL(request.url()).hostname;
-        const isKoper = hostname === "koper.com.br" || hostname.endsWith(".koper.com.br");
+        const parsedUrl = new URL(request.url());
+        const hostname = parsedUrl.hostname;
+        const isKoper =
+          hostname === "koper.com.br" || hostname.endsWith(".koper.com.br");
         const isSafeRead = ["GET", "HEAD", "OPTIONS"].includes(method);
+        const isAllowedFlowSwitch =
+          method === "POST" &&
+          hostname === "api.koper.com.br" &&
+          parsedUrl.pathname === "/login/change_company" &&
+          allowedFlowCompanyIds.has(parsedUrl.searchParams.get("changeCompany") ?? "");
 
-        if (isKoper && !isSafeRead) {
+        if (isKoper && !isSafeRead && !isAllowedFlowSwitch) {
           blockedWrites.push(
             sanitizeRequest(request.url(), method, request.resourceType()),
           );
