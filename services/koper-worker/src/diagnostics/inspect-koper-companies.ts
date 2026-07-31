@@ -311,6 +311,15 @@ type QuotationRead = NetworkSummary & {
   budgets: QuotationSample[];
 };
 
+type QuotationRowTarget = {
+  tag: string;
+  className: string;
+  href: string | null;
+  ngClick: string | null;
+  uiSref: string | null;
+  role: string | null;
+};
+
 type QuotationDetailRead = NetworkSummary & {
   statusCode: number;
   dataKeys: string[];
@@ -342,6 +351,7 @@ export type KoperFlowContextDiagnostic = {
   quotationFilterControls: FilterControl[];
   quotationDetailReads: QuotationDetailRead[];
   quotationDetailUrl: string | null;
+  quotationRowTargets: QuotationRowTarget[];
   finalUrl: string;
   network: NetworkSummary[];
   blockedWrites: NetworkSummary[];
@@ -547,6 +557,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         quotationFilterControls: [],
         quotationDetailReads: [],
         quotationDetailUrl: null,
+        quotationRowTargets: [],
         finalUrl: login.finalUrl,
         network: [],
         blockedWrites: [],
@@ -571,6 +582,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     const switchAttempts: SwitchAttemptShape[] = [];
     let quotationDetailMode = false;
     let quotationDetailUrl: string | null = null;
+    let quotationRowTargets: QuotationRowTarget[] = [];
     const pendingStockResponses: Promise<void>[] = [];
     let stockListMode: "active" | "active-page-2" | "finalized" = "active";
 
@@ -1044,6 +1056,38 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               await allPeriodResponse.catch(() => undefined);
               await page.waitForTimeout(1_000);
 
+              quotationRowTargets = await page.evaluate(() => {
+                const exact = [...document.querySelectorAll<HTMLElement>("body *")]
+                  .filter((element) => (element.innerText || "").trim() === "3268")
+                  .slice(0, 5);
+                const targets: Array<{
+                  tag: string;
+                  className: string;
+                  href: string | null;
+                  ngClick: string | null;
+                  uiSref: string | null;
+                  role: string | null;
+                }> = [];
+
+                for (const element of exact) {
+                  let current: HTMLElement | null = element;
+
+                  for (let depth = 0; current && depth < 6; depth += 1) {
+                    targets.push({
+                      tag: current.tagName.toLowerCase(),
+                      className: current.className.toString().slice(0, 160),
+                      href: current.getAttribute("href"),
+                      ngClick: current.getAttribute("ng-click"),
+                      uiSref: current.getAttribute("ui-sref"),
+                      role: current.getAttribute("role"),
+                    });
+                    current = current.parentElement;
+                  }
+                }
+
+                return targets.slice(0, 30);
+              });
+
               const pageTwoResponse = page.waitForResponse(
                 (response) => {
                   try {
@@ -1127,6 +1171,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       quotationFilterControls,
       quotationDetailReads,
       quotationDetailUrl,
+      quotationRowTargets,
       finalUrl: page.url(),
       network,
       blockedWrites,
