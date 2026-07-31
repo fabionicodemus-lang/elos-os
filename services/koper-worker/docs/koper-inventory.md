@@ -119,3 +119,31 @@ Mapeamento de identidade confirmado:
 - cada registro migrado também deve carregar o `enterpriseId` do Flow para isolamento multiempresa.
 
 A paginação foi validada ponta a ponta pela rolagem infinita da interface: `limit=25`, `offset=0` e depois `offset=25`, com 25 registros distintos em cada resposta e `itemsAmount=73`. O extrator deve incrementar o offset em 25 até acumular `itemsAmount` ou receber página menor que o limite.
+
+
+## Orçamentos finalizados — estrutura do filtro de período
+
+Rota visual confirmada: `/compras/orcamentos/finalizados`.
+
+A inspeção sanitizada do DOM distinguiu dois componentes que antes eram confundidos:
+
+| Função | Estrutura observada | Texto atual |
+|---|---|---|
+| Fornecedor | `div.dropdown.custom-select > a.dropdown-toggle` | `Todos` |
+| Período | `div.dropdown > div.input-default.dropdown-toggle` | `01/07/2026 - 31/07/2026` |
+| Pesquisa | `input.form-control[type=search]` | vazio |
+
+Consequência para o extrator: o filtro de período é um dropdown customizado e não deve ser tratado como `<select>`. A opção `Todos` vista no topo sem abrir o calendário pertence ao filtro de fornecedor.
+
+Consulta histórica observada antes da alteração do período:
+
+- endpoint: `GET /purchase/v1/budget`;
+- `budgetId=all`;
+- `initialDate=2026-07-01 00:00:00`;
+- `finalDate=2026-07-31 23:59:59`;
+- `limit=25`, `offset=0`;
+- `orderFlag=desc`, `orderby=budgetId`;
+- `typeDate=budgetDate`;
+- resposta: 404 no período, sem `itemsAmount`.
+
+Ainda pendente: abrir o dropdown de período, inventariar suas opções/estrutura e confirmar a query produzida pela opção `Todos`, inclusive paginação e total histórico.
