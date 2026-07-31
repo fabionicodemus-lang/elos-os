@@ -206,3 +206,15 @@ Estrutura de resposta confirmada:
 - `buildMonitoringId` pode ser nulo.
 
 Paginação visual confirmada: a rolagem infinita incrementa `offset` em 25. As duas primeiras páginas retornaram 25 IDs distintos cada. O extrator deve continuar em `offset += 25` até acumular `budgetAmount` ou receber página menor que `limit`.
+
+
+### Alvo visual do detalhe da cotação
+
+Estrutura confirmada para o código 3268 na primeira página:
+
+- célula: `td.ng-binding`;
+- linha: `tr.ng-scope`;
+- sem link ou atributo declarativo de navegação;
+- abertura provavelmente controlada por listener JavaScript da linha.
+
+Para o próximo diagnóstico, o detalhe deve ser aberto clicando no `tr` pai enquanto a primeira página ainda está visível, antes da rolagem que carrega `offset=25`.
