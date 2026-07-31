@@ -296,3 +296,32 @@ Nenhuma troca de empresa foi executada; o diagnóstico permaneceu somente leitur
 **Próximo bloqueio:** confirmar o mecanismo e os efeitos da seleção do Flow.
 
 **Próxima alteração pequena sugerida:** diagnóstico dedicado que abre o seletor pelo caminho confirmado, localiza o cartão `data-testid="multiCompaniesModal"` contendo exatamente **FLOW APTOS - BOSSA**, clica somente na ação “Acessar esta empresa”, captura navegações e requisições de leitura, e confirma ao final que a empresa ativa passou a **Flow Aptos - Bossa**. Não usar índice do cartão.
+
+
+---
+
+## 2026-07-31 — Requisição de troca para o Flow identificada e bloqueada
+
+**Diagnóstico executado:** `POST /diagnostics/koper/flow-context`, Caminho A, deployment `b0f4bbc6-4864-4f34-a72e-6e6c95e7faa2` em `SUCCESS`.
+
+**Hipótese:** clicar em “Acessar esta empresa” no cartão exato do Flow muda o contexto usando somente requisições de leitura.
+
+**Resultado:** descartada. Após corrigir o seletor do cartão no commit `699cc3c`, o diagnóstico encontrou e clicou no cartão correto (`flowCardFound=true`, `flowSelected=true`). A aplicação tentou disparar:
+
+- `POST https://api.koper.com.br/login/change_company`
+- query keys: `accessToken`, `changeCompany`
+- resource type: `xhr`
+
+A rota de segurança abortou a requisição antes do envio. `blockedWrites` registrou a tentativa; `activeCompanyAfter` permaneceu **Bossa Empreendimentos**. Nenhuma troca ou alteração ocorreu no Koper.
+
+**Commits:** `64aa020` (diagnóstico protegido), `edaab35` (endpoint/startup), `699cc3c` (seletor robusto do cartão).
+
+**Bloqueio:** a Seção 3.1 da constituição proíbe `POST` REST ao Koper; apenas POST GraphQL inequivocamente de leitura era permitido. Embora `/login/change_company` aparente trocar apenas o contexto de sessão, a execução exige decisão explícita do Fábio e alteração prévia da constituição.
+
+**Alternativas:**
+
+1. Autorizar especificamente `POST /login/change_company` somente com o `enterpriseId` previamente validado de Flow/Alma, mantendo todos os demais POST REST bloqueados.
+2. Manter a proibição e usar credenciais/sessões separadas que já iniciem em cada empresa, se o Koper oferecer esse recurso.
+3. Fazer a seleção manual em uma sessão persistida e o worker apenas ler a empresa já ativa; mais frágil para sincronização automática.
+
+**Recomendação técnica:** alternativa 1, com allowlist estrita do endpoint, validação de `enterpriseId`, confirmação posterior por `GET /administrative/v1/enterprise` e nenhuma captura/log do valor de `accessToken`.
