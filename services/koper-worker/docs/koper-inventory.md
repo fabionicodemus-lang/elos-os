@@ -16,17 +16,17 @@
 | operação | N/A (REST simples, sem `operationName`) |
 | variáveis — listagem (query params confirmados) | `group=request`, `limit=25`, `offset=0`, `open=yes`, `orderFlag=desc`, `orderby=requestDate`, `typeDate=requestDate`, além de `accessToken` e `cb` (cache-buster, tratar como sensível por segurança) |
 | variáveis — detalhe (query params confirmados) | `requestId={numero}` (obrigatório, ex. `8649`), `group=request`, `appVersion`, `visited-page` (caminho da tela atual), além de `accessToken` e `cb` |
-| paginação | offset-based (`limit`/`offset`) na listagem; **não confirmado ainda** se `itemsAmount` reflete o total geral ou só da página, nem o comportamento ao avançar `offset` além da primeira página |
+| paginação | **Confirmada ponta a ponta.** Rolagem infinita na interface; `limit=25`, primeira página `offset=0`, segunda página `offset=25`, ambas com 25 registros e `itemsAmount=73` no conjunto ativo. Avançar o offset em passos de 25 até acumular `itemsAmount` ou a página retornar menos que o limite. |
 | campos principais — listagem (confirmados na resposta) | `itemsAmount`; por item em `requests[]`: `requestId`, `requestAuxId`, `stockPlaceId`, `stockPlaceName`, `productAmount`, `requestDate`, `deadline`, `status`, `userName`, `userId`, `isUrgent`, `userAbbreviation`, `notApprovedAmount`, `isDraft`, `deadlinePeriod` |
 | campos principais — detalhe (confirmados na resposta) | `itemsAmount`, `stockPlaceName`, `requestDate`, `userName`, `userId`, `deadline`, `showDeadline`, `stockPlaceId`, `techAssistId`, `buildMonitoringId`, `isDraft`, `requestId`, `status`, `requestAuxId`, `notApprovedAmount`, `commentRequest`, `filename`, `fileId`, e **itens** em `products[]`: `productId`, `productName`, `productFullName`, `mainProductId`, `genericProdSeq`, `prodReference`, `productAmount`, `prodFinished`, `prodCanceled`, `prodCancelRequest`, `approvedTransf`, `approvedPurchase`, `productRequestId`, `approvedAmount`, `approvedDate`, `approvedUserName`, `historyId`, `historyMessage`, `unitMeasureId`, `symbol`, `inputId`, `inputUnit`, `specialMeasure`, `comments`, `totalComments`, `enabledToCancel`, `measures`, e serviços em `products[].services[]`: `itemMonitInputId`, `monitInputPchId`, `inputAmount` |
 | campos visíveis na tela (não necessariamente 1:1 com a API) | Solicitação (nº, ex. `#10531`), Local De Consumo, Quantidade, Solicitado Em, Entregar Até, Status |
-| identificador | **Quase confirmado, falta comparar valores.** O endpoint de detalhe é endereçado por `requestId` como query param (valor `8649` = mesmo número da rota e do texto exibido `#8649`) — forte candidato a `koper_id`. A resposta do detalhe também expõe `requestAuxId` como campo **separado**; ainda não capturamos os *valores* de `requestId` e `requestAuxId` lado a lado no mesmo registro para provar se são iguais. Próximo diagnóstico deve capturar esses dois valores especificamente antes de decidir em definitivo (Seção 8.2 da constituição: nunca usar nome/descrição como chave, e não gravar staging sem confirmar o ID imutável). |
+| identificador | **Confirmado para leitura e futura staging:** `requestId` é o número público usado na rota visual e no endpoint de detalhe, variando por solicitação. `requestAuxId` apresentou valor `2` em toda a amostra do Flow e não identifica o registro. Usar `requestId` como `koper_id`, sempre junto do `enterpriseId` de origem no isolamento multiempresa. |
 | relacionamentos | `stockPlaceId` → local de estoque/obra (nome em `stockPlaceName`; amostra observada inclui "Escritório Central" e "Soul Residence" — indica que `stockPlaceId` pode misturar centros administrativos e empreendimentos, não só obras); `userId` → usuário solicitante (nome em `userName`, abreviação em `userAbbreviation`); `products[].productId` → produto/material; `techAssistId`, `buildMonitoringId` → possíveis vínculos com assistência técnica e monitoramento de obra, ainda não investigados |
-| volume encontrado | Não medido ainda — só a primeira página (`limit=25`) da listagem e um registro de detalhe (`#8649`) foram observados. Amostra visível na tela incluía registros de datas entre 2023 e 2026. |
+| volume encontrado | Flow: **902 solicitações**, sendo 73 com `open=yes` e 829 com `open=no`. Páginas 1 e 2 do conjunto ativo confirmadas (25 registros cada); histórico observado até pelo menos 27/09/2024. |
 | endpoint relacionado observado | `GET https://api.koper.com.br/stock/v1/stock_place` (`accessToken`, `cb`) — provável listagem de locais de estoque para filtro; não investigado a fundo ainda |
 | tabela staging | Não criada. |
 | tabela final Elos OS | Não definida. |
-| status | **descoberto** (listagem e detalhe confirmados; paginação completa e valor exato do identificador imutável ainda em aberto — ver Marco Técnico, Seção 16, itens 4, 8) |
+| status | **descoberta fechada para revisão:** listagem, detalhe, filtros ativo/finalizado, volumes, identificador e paginação confirmados. Nenhuma staging ou gravação no Elos OS iniciada. |
 
 ---
 
@@ -85,7 +85,7 @@ A entidade `stock_request` foi confirmada dentro do contexto `Flow Aptos - Bossa
 
 | conjunto | filtro | total | página observada | status observados |
 |---|---:|---:|---:|---|
-| não finalizadas | `open=yes` | 73 | `limit=25&offset=0` | Aberto; Aprovado totalmente; Aprovado parcialmente |
+| não finalizadas | `open=yes` | 73 | `limit=25&offset=0` e `offset=25` | Aberto; Aprovado totalmente; Aprovado parcialmente; Rascunho (`isDraft=true`) |
 | finalizadas/canceladas | `open=no` | 829 | `limit=25&offset=0` | Finalizado; Cancelado |
 
 Total conhecido: **902 solicitações** no contexto `Flow Aptos - Bossa`.
@@ -98,4 +98,4 @@ Mapeamento de identidade confirmado:
 - `stockPlaceId=169`: local `Flow Aptos`;
 - cada registro migrado também deve carregar o `enterpriseId` do Flow para isolamento multiempresa.
 
-A paginação usa `limit` e `offset`; tamanho observado de página: 25. Ainda falta executar explicitamente `offset=25` antes de considerar o algoritmo de paginação validado ponta a ponta.
+A paginação foi validada ponta a ponta pela rolagem infinita da interface: `limit=25`, `offset=0` e depois `offset=25`, com 25 registros distintos em cada resposta e `itemsAmount=73`. O extrator deve incrementar o offset em 25 até acumular `itemsAmount` ou receber página menor que o limite.
