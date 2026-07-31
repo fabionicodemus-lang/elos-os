@@ -484,6 +484,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       .first();
     const flowCardFound = await flowCard.isVisible().catch(() => false);
     let flowSelected = false;
+    let activeCompanyAfter: string | null = null;
     let message: string | null = null;
 
     if (flowCardFound) {
@@ -498,7 +499,17 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           page.waitForLoadState("domcontentloaded", { timeout: 15_000 }),
           page.waitForTimeout(15_000),
         ]).catch(() => undefined);
-        await page.waitForTimeout(4_000);
+
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          await page.waitForTimeout(2_000);
+          activeCompanyAfter = await readActiveCompanyLabel(page).catch(
+            () => null,
+          );
+
+          if (/flow/i.test(activeCompanyAfter ?? "")) {
+            break;
+          }
+        }
       } else {
         message = "KOPER_FLOW_ACCESS_ACTION_NOT_FOUND";
       }
@@ -509,7 +520,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     page.off("request", onRequest);
     await page.unroute("**/*").catch(() => undefined);
 
-    const activeCompanyAfter = await readActiveCompanyLabel(page).catch(() => null);
+    activeCompanyAfter ??= await readActiveCompanyLabel(page).catch(() => null);
     const storageKeysAfter = await readStorageKeys(page).catch(() => emptyStorage);
 
     return {
