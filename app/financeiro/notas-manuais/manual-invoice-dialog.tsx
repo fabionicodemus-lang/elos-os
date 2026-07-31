@@ -10,6 +10,7 @@ import {
   type FinancialInstallmentDraft,
 } from "@/lib/financial-installments";
 import { saveManualInvoice } from "./actions";
+import type { ManualRetentionRuleOption } from "./manual-retention-rule-dialog";
 
 export type ManualSupplierOption = { id: string; legal_name: string; trade_name: string | null; tax_id: string | null };
 export type ManualServiceOption = { id: string; code: string; description: string; unit: string };
@@ -26,6 +27,15 @@ export type ManualMeasurementItemOption = {
   id: string; measurement_id: string; contract_item_id: string; service_code: string; service_name: string; location_name: string | null;
   unit_snapshot: string; current_quantity: number; unit_price: number; current_amount: number;
 };
+export type ManualReceiptOption = {
+  id: string;
+  supplier_id: string;
+  receipt_number: string;
+  receipt_date: string;
+  invoice_number: string | null;
+  invoice_amount: number | null;
+  status: string;
+};
 
 export type ManualInvoiceItemDraft = {
   id: string; service_id: string; contract_item_id: string; measurement_item_id: string; description: string;
@@ -33,8 +43,8 @@ export type ManualInvoiceItemDraft = {
 };
 export type ManualInvoiceInstallmentDraft = FinancialInstallmentDraft;
 export type ManualInvoiceInitial = {
-  id: string; supplier_id: string; contract_id: string | null; measurement_id: string | null; document_type: string;
-  document_number: string; series: string | null; issue_date: string; competence_date: string | null; notes: string | null;
+  id: string; supplier_id: string; contract_id: string | null; measurement_id: string | null; material_receipt_id: string | null;
+  document_type: string; document_number: string; series: string | null; issue_date: string; competence_date: string | null; notes: string | null;
   inss_amount: number; iss_amount: number; irrf_amount: number; pis_amount: number; cofins_amount: number; csll_amount: number; other_retention_amount: number;
   items: ManualInvoiceItemDraft[]; installments: ManualInvoiceInstallmentDraft[];
 };
@@ -46,6 +56,8 @@ type Props = {
   measurements: ManualMeasurementOption[];
   contractItems: ManualContractItemOption[];
   measurementItems: ManualMeasurementItemOption[];
+  receipts: ManualReceiptOption[];
+  taxRules: ManualRetentionRuleOption[];
   initial?: ManualInvoiceInitial | null;
   label?: string;
   autoOpen?: boolean;
@@ -53,6 +65,16 @@ type Props = {
 
 type RetentionKey = "inss" | "iss" | "irrf" | "pis" | "cofins" | "csll" | "other";
 type Retentions = Record<RetentionKey, number>;
+
+const retentionFields: [RetentionKey, string][] = [
+  ["inss", "INSS"],
+  ["iss", "ISS"],
+  ["irrf", "IRRF"],
+  ["pis", "PIS"],
+  ["cofins", "COFINS"],
+  ["csll", "CSLL"],
+  ["other", "Outro imposto retido"],
+];
 
 const typeLabels: Record<string, string> = {
   service_invoice: "Nota de serviço",
@@ -69,6 +91,7 @@ function today() { return localTodayIso(); }
 function uid(prefix: string) { return `${prefix}-${crypto.randomUUID()}`; }
 function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0)); }
 function number(value: number, digits = 4) { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(Number(value || 0)); }
+function dateBR(value: string) { const [year, month, day] = value.slice(0, 10).split("-"); return `${day}/${month}/${year}`; }
 function supplierName(supplier: ManualSupplierOption) { return supplier.trade_name || supplier.legal_name; }
 
 function blankItem(): ManualInvoiceItemDraft {
@@ -84,12 +107,18 @@ function initialRetentions(initial?: ManualInvoiceInitial | null): Retentions {
     other: Number(initial?.other_retention_amount ?? 0),
   };
 }
+function ruleText(rule: ManualRetentionRuleOption | undefined) {
+  if (!rule || rule.due_rule === "manual") return "Regra não configurada";
+  if (rule.due_rule === "days_after_event") return `${rule.code} · ${rule.due_days_after_event} dia(s) após a data-base`;
+  return `${rule.code} · dia ${rule.due_day} · +${rule.due_month_offset} mês(es)`;
+}
 
-export function ManualInvoiceDialog({ suppliers, services, contracts, measurements, contractItems, measurementItems, initial, label, autoOpen }: Props) {
+export function ManualInvoiceDialog({ suppliers, services, contracts, measurements, contractItems, measurementItems, receipts, taxRules, initial, label, autoOpen }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [supplierId, setSupplierId] = useState(initial?.supplier_id ?? "");
   const [contractId, setContractId] = useState(initial?.contract_id ?? "");
   const [measurementId, setMeasurementId] = useState(initial?.measurement_id ?? "");
+  const [receiptId, setReceiptId] = useState(initial?.material_receipt_id ?? "");
   const [items, setItems] = useState<ManualInvoiceItemDraft[]>(initial?.items?.length ? initial.items : [blankItem()]);
   const [installments, setInstallments] = useState<ManualInvoiceInstallmentDraft[]>(initial?.installments?.length ? initial.installments : blankInstallments());
   const [retentions, setRetentions] = useState<Retentions>(() => initialRetentions(initial));
@@ -100,12 +129,15 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
   const selectedMeasurementItems = useMemo(() => measurementItems.filter((item) => item.measurement_id === measurementId), [measurementId, measurementItems]);
   const selectedMeasurements = useMemo(() => measurements.filter((measurement) => !supplierId || measurement.supplier_id === supplierId), [measurements, supplierId]);
   const selectedContracts = useMemo(() => contracts.filter((contract) => !supplierId || contract.supplier_id === supplierId), [contracts, supplierId]);
+  const selectedReceipts = useMemo(() => receipts.filter((receipt) => (!supplierId || receipt.supplier_id === supplierId) || receipt.id === receiptId), [receiptId, receipts, supplierId]);
+  const ruleMap = useMemo(() => new Map(taxRules.map((rule) => [rule.retention_key, rule])), [taxRules]);
 
   const gross = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
   const itemDiscount = items.reduce((sum, item) => sum + Number(item.discount_amount || 0), 0);
   const totalRetentions = Object.values(retentions).reduce((sum, amount) => sum + Number(amount || 0), 0);
   const net = Math.max(0, gross - itemDiscount - totalRetentions);
   const installmentSummary = financialInstallmentSummary(net, installments);
+  const missingRules = retentionFields.filter(([key]) => Number(retentions[key] || 0) > 0 && (!ruleMap.get(key) || ruleMap.get(key)?.due_rule === "manual"));
 
   function updateItem(index: number, patch: Partial<ManualInvoiceItemDraft>) {
     setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
@@ -118,6 +150,8 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
       setContractId(""); setMeasurementId("");
       setItems((current) => current.map((item) => ({ ...item, contract_item_id: "", measurement_item_id: "" })));
     }
+    const receipt = receipts.find((row) => row.id === receiptId);
+    if (receipt && receipt.supplier_id !== nextSupplierId) setReceiptId("");
   }
 
   function chooseContract(nextContractId: string) {
@@ -126,6 +160,12 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
     const contract = contracts.find((row) => row.id === nextContractId);
     if (contract) setSupplierId(contract.supplier_id);
     setItems((current) => current.map((item) => ({ ...item, contract_item_id: "", measurement_item_id: "" })));
+  }
+
+  function chooseReceipt(nextReceiptId: string) {
+    setReceiptId(nextReceiptId);
+    const receipt = receipts.find((row) => row.id === nextReceiptId);
+    if (receipt) setSupplierId(receipt.supplier_id);
   }
 
   function chooseMeasurement(nextMeasurementId: string) {
@@ -145,7 +185,7 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
         };
       }));
     }
-    setRetentions({ inss: 0, iss: 0, irrf: 0, pis: 0, cofins: 0, csll: 0, other: Number(measurement.total_deductions || 0) });
+    setRetentions({ inss: 0, iss: 0, irrf: 0, pis: 0, cofins: 0, csll: 0, other: 0 });
     setInstallments(buildFinancialInstallments({ total: Number(measurement.net_amount || 0), count: 1, firstDueDate: suggestedFirstDueDate(), paymentMethod: "Boleto" }));
   }
 
@@ -170,7 +210,7 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
     });
   }
 
-  const canSave = installmentSummary.valid && net > 0 && Boolean(supplierId);
+  const canSave = installmentSummary.valid && net > 0 && Boolean(supplierId) && missingRules.length === 0;
 
   return <>
     <button className="elos-button manual-invoice-open" type="button" onClick={() => dialogRef.current?.showModal()}>{label ?? "+ Nova nota manual"}</button>
@@ -179,7 +219,7 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
         <input type="hidden" name="invoice_id" value={initial?.id ?? ""} />
         <input type="hidden" name="items_json" value={JSON.stringify(items.map(({ id: _id, ...item }) => item))} />
         <div className="manual-dialog-head">
-          <div><span>Financeiro · Documentos</span><h2>{initial ? `Editar ${initial.document_number}` : "Nova nota manual"}</h2><p>Classifique os serviços, retenções e parcelas antes de enviar para aprovação.</p></div>
+          <div><span>Financeiro · Documentos</span><h2>{initial ? `Editar ${initial.document_number}` : "Nova nota manual"}</h2><p>Ao salvar, a nota e todos os lançamentos financeiros serão criados imediatamente.</p></div>
           <button type="button" aria-label="Fechar" onClick={() => dialogRef.current?.close()}>×</button>
         </div>
         <div className="manual-dialog-body">
@@ -194,6 +234,7 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
               <label className="wide">Fornecedor<select name="supplier_id" value={supplierId} onChange={(event) => chooseSupplier(event.target.value)} required><option value="">Selecione o fornecedor</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplierName(supplier)}{supplier.tax_id ? ` · ${supplier.tax_id}` : ""}</option>)}</select></label>
               <label>Contrato<select name="contract_id" value={contractId} onChange={(event) => chooseContract(event.target.value)}><option value="">Sem vínculo contratual</option>{selectedContracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.contract_number} · {contract.title}</option>)}</select></label>
               <label>Medição aprovada<select name="measurement_id" value={measurementId} onChange={(event) => chooseMeasurement(event.target.value)}><option value="">Sem vínculo com medição</option>{selectedMeasurements.map((measurement) => <option key={measurement.id} value={measurement.id}>{measurement.measurement_number} · {money(measurement.net_amount)}</option>)}</select></label>
+              <label className="wide">Recebimento de material<select name="material_receipt_id" value={receiptId} onChange={(event) => chooseReceipt(event.target.value)}><option value="">Sem vínculo com recebimento</option>{selectedReceipts.map((receipt) => <option key={receipt.id} value={receipt.id}>{receipt.receipt_number} · {dateBR(receipt.receipt_date)}{receipt.invoice_number ? ` · NF ${receipt.invoice_number}` : ""}{receipt.invoice_amount ? ` · ${money(receipt.invoice_amount)}` : ""}</option>)}</select><small>Depois de salvar com este vínculo, a nota não poderá ser editada nem excluída.</small></label>
               <label className="wide">Observações<textarea name="notes" rows={3} defaultValue={initial?.notes ?? ""} placeholder="Contrato, medição, referência fiscal ou observação" /></label>
             </div>
           </section>
@@ -225,32 +266,28 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
 
           <section className="manual-values-grid">
             <article className="manual-form-section">
-              <div className="manual-section-title"><div><span>Tributos e deduções</span><h3>Retenções</h3></div><strong>{money(totalRetentions)}</strong></div>
+              <div className="manual-section-title"><div><span>Tributos</span><h3>Impostos retidos</h3></div><strong>{money(totalRetentions)}</strong></div>
               <div className="manual-retention-grid">
-                {([['inss','INSS'],['iss','ISS'],['irrf','IRRF'],['pis','PIS'],['cofins','COFINS'],['csll','CSLL'],['other','Outras retenções / descontos']] as [RetentionKey,string][]).map(([key, text]) => <label key={key}>{text}<input name={`retention_${key}`} type="number" min="0" step="0.01" value={retentions[key]} onChange={(event) => setRetentions((current) => ({ ...current, [key]: Number(event.target.value) }))} /></label>)}
+                {retentionFields.map(([key, text]) => {
+                  const rule = ruleMap.get(key);
+                  const missing = Number(retentions[key] || 0) > 0 && (!rule || rule.due_rule === "manual");
+                  return <label key={key} className={missing ? "manual-retention-missing" : ""}>{text}<input name={`retention_${key}`} type="number" min="0" step="0.01" value={retentions[key]} onChange={(event) => setRetentions((current) => ({ ...current, [key]: Number(event.target.value) }))} /><small>{ruleText(rule)}</small></label>;
+                })}
               </div>
+              {missingRules.length ? <p className="manual-alert">Configure a regra de {missingRules.map(([, text]) => text).join(", ")} antes de salvar a nota.</p> : null}
             </article>
             <article className="manual-total-card">
               <span>Resumo do documento</span>
-              <dl><div><dt>Valor bruto</dt><dd>{money(gross)}</dd></div><div><dt>Descontos nos itens</dt><dd>- {money(itemDiscount)}</dd></div><div><dt>Retenções</dt><dd>- {money(totalRetentions)}</dd></div><div className="net"><dt>Valor líquido</dt><dd>{money(net)}</dd></div></dl>
+              <dl><div><dt>Valor bruto</dt><dd>{money(gross)}</dd></div><div><dt>Descontos nos itens</dt><dd>- {money(itemDiscount)}</dd></div><div><dt>Impostos retidos</dt><dd>- {money(totalRetentions)}</dd></div><div className="net"><dt>Valor líquido do fornecedor</dt><dd>{money(net)}</dd></div></dl>
             </article>
           </section>
 
-          <FinancialInstallmentEditor
-            total={net}
-            installments={installments}
-            onChange={setInstallments}
-            inputName="installments_json"
-            eyebrow="Contas a pagar"
-            title="Programação das parcelas"
-            lockCount={Boolean(measurementId)}
-          />
-          {measurementId ? <p className="manual-alert">A medição vinculada mantém uma única parcela. A data e o valor continuam editáveis, mas o valor precisa fechar com o líquido aprovado.</p> : null}
+          <FinancialInstallmentEditor total={net} installments={installments} onChange={setInstallments} inputName="installments_json" eyebrow="Contas a pagar" title="Parcelas do fornecedor" lockCount={Boolean(measurementId)} />
+          {measurementId ? <p className="manual-alert">A medição vinculada mantém uma única parcela. A data e o valor continuam editáveis, mas o valor deve fechar com o líquido.</p> : null}
         </div>
         <div className="manual-dialog-foot">
           <button type="button" onClick={() => dialogRef.current?.close()}>Cancelar</button>
-          <button type="submit" name="submit_mode" value="draft" disabled={!canSave}>Salvar rascunho</button>
-          <button className="primary" type="submit" name="submit_mode" value="submit" disabled={!canSave}>Salvar e enviar para aprovação</button>
+          <button className="primary" type="submit" disabled={!canSave}>{initial ? "Salvar alterações e sincronizar" : "Salvar nota e gerar lançamentos"}</button>
         </div>
       </form>
     </dialog>
