@@ -214,7 +214,7 @@ function findRouteCandidate(occurrences: TextOccurrence[]): string | null {
   return null;
 }
 
-async function clickVisibleStockOccurrence(page: Page): Promise<boolean> {
+export async function clickVisibleStockOccurrence(page: Page): Promise<boolean> {
   const candidates = [
     page.getByText(/^Solicitações$/i, { exact: true }),
     page.getByText(stockTextPattern, { exact: true }),
@@ -263,7 +263,7 @@ async function clickVisibleStockOccurrence(page: Page): Promise<boolean> {
   return false;
 }
 
-async function openLikelyMenu(page: Page): Promise<boolean> {
+export async function openLikelyMenu(page: Page): Promise<boolean> {
   const suppliesButton = page.locator('[data-testid="button-Suprimentos"]');
 
   if (await suppliesButton.first().isVisible().catch(() => false)) {
@@ -347,7 +347,7 @@ function redactSensitiveValues(value: unknown): unknown {
   );
 }
 
-function collectFieldPaths(value: unknown, prefix = "", depth = 0): string[] {
+export function collectFieldPaths(value: unknown, prefix = "", depth = 0): string[] {
   if (depth > 5 || typeof value !== "object" || value === null) {
     return [];
   }
