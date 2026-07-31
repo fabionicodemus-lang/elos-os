@@ -270,3 +270,29 @@ Nenhuma troca de empresa foi executada; o diagnóstico permaneceu somente leitur
 **Próximo bloqueio:** mecanismo de troca da empresa ativa ainda não descoberto.
 
 **Próxima alteração pequena sugerida:** criar um diagnóstico exclusivamente de leitura que abra o seletor de empresa, clique em **Flow Aptos - Bossa** como navegação de contexto autorizada e capture, sem acionar outras ações, as requisições de rede, alterações de URL e nomes de chaves de storage provocadas pela troca. Antes de implementá-lo, confirmar pelo DOM o seletor e o item exato, usando nome completo e validando também o `enterpriseId`; nunca usar posição no menu.
+
+
+---
+
+## 2026-07-31 — Caminho visual do seletor multiempresa confirmado
+
+**Diagnóstico executado:** `POST /diagnostics/koper/companies`, Caminho A, em três hipóteses pequenas. A variável de inicialização foi desativada após cada leitura.
+
+1. Commit `66e165e`: clicar no controle da empresa ativa e procurar opções semânticas. Resultado: somente o botão “Bossa Empreendimentos”; hipótese descartada.
+2. Commit `9451b2c`: ampliar a coleta para `div`/`span`. Resultado: o primeiro clique abre uma etapa intermediária com “Você está acessando informações da empresa: Bossa Empreendimentos” e a ação **Acessar outra empresa**; hipótese revisada com avanço.
+3. Commit `4523068`: clicar em **Acessar outra empresa** e coletar o modal final sem selecionar empresa. Resultado: hipótese confirmada.
+
+**Estrutura DOM confirmada:**
+
+- modal de fundo: `data-testid="backdrop"`;
+- cartões: `data-testid="multiCompaniesModal"`;
+- cartão **FLOW APTOS - BOSSA** com ação “Acessar esta empresa”;
+- cartão **ALMA SEAHOUSES - BOSSA** com ação “Acessar esta empresa”.
+
+**Segurança:** nenhuma empresa foi selecionada nesta rodada; não houve alteração de dados do Koper.
+
+**Deployment final do diagnóstico:** `5c661a32-609d-4711-b6c7-f7d2d8ac8593`, `SUCCESS`.
+
+**Próximo bloqueio:** confirmar o mecanismo e os efeitos da seleção do Flow.
+
+**Próxima alteração pequena sugerida:** diagnóstico dedicado que abre o seletor pelo caminho confirmado, localiza o cartão `data-testid="multiCompaniesModal"` contendo exatamente **FLOW APTOS - BOSSA**, clica somente na ação “Acessar esta empresa”, captura navegações e requisições de leitura, e confirma ao final que a empresa ativa passou a **Flow Aptos - Bossa**. Não usar índice do cartão.
