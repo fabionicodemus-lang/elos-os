@@ -1075,6 +1075,19 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               await pageTwoResponse.catch(() => undefined);
               await page.waitForTimeout(1_000);
 
+              await page.evaluate(() => {
+                window.scrollTo(0, 0);
+
+                for (const element of document.querySelectorAll<HTMLElement>("body *")) {
+                  if (element.scrollHeight > element.clientHeight + 100) {
+                    element.scrollTop = 0;
+                    element.dispatchEvent(new Event("scroll"));
+                  }
+                }
+              });
+              await page.mouse.wheel(0, -100_000);
+              await page.waitForTimeout(500);
+
               const budgetCode = page.getByText(/^3268$/, { exact: true }).first();
 
               if (await budgetCode.isVisible().catch(() => false)) {
