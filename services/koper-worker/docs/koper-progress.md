@@ -670,3 +670,17 @@ Este é o **quinto ciclo** consecutivo na mesma família de bloqueio (abrir o de
 **Hipótese confirmada.** O HAR manual é ordens de magnitude mais eficiente que o crawl visual para mapear rotas: uma navegada de ~10 min do Fábio substituiu dezenas de ciclos de deploy. **Registrado em `CLAUDE.md`, Seção 18, como método preferido para descoberta de rotas de telas novas.**
 
 **Próximo passo sugerido:** com as rotas conhecidas, capturar os corpos que faltam por diagnóstico direcionado (agora que o endpoint é conhecido, um GET autenticado pela interface resolve) — priorizar `budget?budgetId` (detalhe da cotação), `purchase`, `purchase_order`, `service_order` e as entradas de estoque. Ou pedir ao Fábio um segundo HAR abrindo uma cotação, um pedido e um recebimento, um de cada, para pegar os corpos numa tacada.
+
+---
+
+## 2026-07-31 — Detalhe do pedido/compra 13667 confirmado
+
+Deployment Railway `f537a98c-041f-47ef-b4ba-ea4c043b46e6` (SUCCESS), resultado em 2026-07-31T22:06:50Z.
+
+O modo direcionado `KOPER_PURCHASE_DETAIL_ONLY=true` abriu somente a rota conhecida pelo HAR, `https://web.koper.com.br/suprimentos/compras/13667`, após login e troca autorizada para `Flow Aptos - Bossa`. A interface disparou `GET /supply/v2/purchases/details/13667`, status 200.
+
+O corpo confirmou a ligação operacional do pedido de serviço: `purchaseId=13667`, `costCenterId=168`, `supplierId=38`, `receiptId=12828`, `receiptNumber=16931`, `purchaseDate=2026-07-30`, `purchaseValue=31415`, `totalPurchase=31415`, `totalProducts=0`, `totalServices=31415`, serviço `17` com quantidade `51,5` e valor unitário `610`, ordem de serviço `11516` finalizada e conta a pagar `billId=15902` / `billToPayId=14525`, vencimento em 19/08/2026, valor `29844,25`. Não há XML/nota fiscal ligada neste registro (`xmlInvoiceId`, `invoiceNumber` nulos).
+
+O navegador também revelou a rota de leitura do próximo elo: `GET /_next/data/{build}/financeiro/contas-a-pagar/15902.json?billToPayId=14525`. Nove POSTs GraphQL auxiliares foram bloqueados; nenhuma escrita operacional foi executada. As variáveis temporárias foram esvaziadas após a coleta.
+
+**Próximo passo:** capturar somente a estrutura sanitizada desse JSON de conta a pagar durante o mesmo diagnóstico direcionado e, com os campos confirmados, mapear o detalhe financeiro sem depender de navegação visual.
