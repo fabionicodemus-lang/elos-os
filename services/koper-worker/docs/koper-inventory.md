@@ -79,3 +79,23 @@ Ainda **não iniciado**: cotação, participantes/preços, pedido de compra, rec
 ## Confirmação multiempresa — Flow (2026-07-31)
 
 A entidade `stock_request` foi confirmada dentro do contexto `Flow Aptos - Bossa`. Após a troca controlada de empresa, a interface chegou a `/suprimentos/solicitacoes/` e executou `GET https://api.koper.com.br/stock/v1/request` com as mesmas chaves de paginação, filtro e ordenação observadas no contexto Bossa. Portanto, a descoberta do contrato de listagem pode ser reutilizada, mas toda extração e staging deve guardar o `enterpriseId` de origem e executar uma empresa por vez. Volume e amostra de IDs do Flow ainda precisam ser medidos.
+
+
+## Solicitações do Flow — contrato de listagem fechado em 2026-07-31
+
+| conjunto | filtro | total | página observada | status observados |
+|---|---:|---:|---:|---|
+| não finalizadas | `open=yes` | 73 | `limit=25&offset=0` | Aberto; Aprovado totalmente; Aprovado parcialmente |
+| finalizadas/canceladas | `open=no` | 829 | `limit=25&offset=0` | Finalizado; Cancelado |
+
+Total conhecido: **902 solicitações** no contexto `Flow Aptos - Bossa`.
+
+A rota de finalizadas é `/suprimentos/solicitacoes/finalizadas`, mas o endpoint permanece `GET /stock/v1/request`. O seletor entre os conjuntos é o parâmetro `open`.
+
+Mapeamento de identidade confirmado:
+- `requestId`: identificador/número público da solicitação e candidato a `koper_id`;
+- `requestAuxId`: valor 2 em toda a amostra; não identifica a solicitação;
+- `stockPlaceId=169`: local `Flow Aptos`;
+- cada registro migrado também deve carregar o `enterpriseId` do Flow para isolamento multiempresa.
+
+A paginação usa `limit` e `offset`; tamanho observado de página: 25. Ainda falta executar explicitamente `offset=25` antes de considerar o algoritmo de paginação validado ponta a ponta.
