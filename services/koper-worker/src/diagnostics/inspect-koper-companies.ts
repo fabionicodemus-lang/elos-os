@@ -874,18 +874,27 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           quotationFinalizedClicked = true;
           await page.waitForTimeout(8_000);
 
-          const dateSelects = page.locator("select");
-          const selectCount = Math.min(await dateSelects.count(), 20);
+          const currentPeriod = page
+            .getByText(/^(Mês atual|Últimos 7 dias|Últimos 30 dias)$/i, { exact: true })
+            .last();
 
-          for (let index = 0; index < selectCount; index += 1) {
-            const select = dateSelects.nth(index);
-            const labels = await select.locator("option").allTextContents();
+          if (await currentPeriod.isVisible().catch(() => false)) {
+            await currentPeriod.click();
+            await page.waitForTimeout(500);
 
-            if (labels.some((label) => /últimos 30 dias/i.test(label))) {
-              await select.selectOption({ label: "Todos" });
-              await page.waitForTimeout(8_000);
-              break;
+            const allOptions = page.getByText(/^Todos$/i, { exact: true });
+            const optionCount = Math.min(await allOptions.count(), 20);
+
+            for (let index = optionCount - 1; index >= 0; index -= 1) {
+              const option = allOptions.nth(index);
+
+              if (await option.isVisible().catch(() => false)) {
+                await option.click();
+                await page.waitForTimeout(8_000);
+                break;
+              }
             }
+          }
           }
         }
       }
