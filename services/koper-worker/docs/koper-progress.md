@@ -636,3 +636,14 @@ A primeira tentativa buscou o texto `3268` depois da rolagem para `offset=25`; o
 Nenhum detalhe foi aberto e nenhum endpoint adicional foi capturado. Conforme o limite de tentativas, o ciclo foi encerrado. `KOPER_STARTUP_DIAGNOSTIC` e `KOPER_QUOTATION_ONLY` foram esvaziados.
 
 **Próximo passo fundamentado:** localizar o `td` com texto exato `3268` e clicar diretamente no `tr` pai antes de executar a paginação visual.
+
+
+## 2026-07-31 — Quinta tentativa no detalhe 3268 e leitura de processo
+
+Commit `25ca0b6`, deployment `505347e2` (SUCCESS), resultado lido em 2026-07-31T20:22:02Z.
+
+**Hipótese:** o detalhe abre quando o `tr.ng-scope` pai da célula `td.ng-binding` com texto `3268` é clicado enquanto a primeira página ainda está visível, antes da rolagem para `offset=25`. **Resultado: descartada.** O elemento existe no DOM (a inspeção estrutural o encontra de novo), mas `getByText(/^3268$/).locator("xpath=ancestor::tr[1]")` não o resolveu como visível — o clique não ocorreu, o fallback pós-rolagem também não encontrou o código, `quotationDetailReads=[]` e `quotationDetailUrl=null`. A troca para o Flow, a seleção de "Todos" (`budgetAmount=440`) e a paginação (`offset=0` e `offset=25`, 25 registros distintos cada) funcionaram normalmente — o bloqueio é exclusivamente o clique na linha virtualizada.
+
+Este é o **quinto ciclo** consecutivo na mesma família de bloqueio (abrir o detalhe por clique). Variáveis `KOPER_STARTUP_DIAGNOSTIC` e `KOPER_QUOTATION_ONLY` esvaziadas imediatamente após a leitura. Nenhuma escrita operacional.
+
+**Decisão de processo:** em vez de uma sexta hipótese de clique, o Fábio pediu uma leitura do processo. Ela está em `docs/koper-metodo-otimizacao.md` — com a recomendação principal de resolver esta classe de bloqueio por **sessão de gravação assistida (LiveURL)**: o Fábio clica, o worker grava os endpoints. O detalhe da 3268 é o primeiro candidato.
