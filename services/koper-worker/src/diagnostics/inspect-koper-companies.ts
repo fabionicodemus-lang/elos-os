@@ -833,7 +833,14 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
 
     if (/flow/i.test(activeCompanyAfter ?? "")) {
       network.splice(0);
-      const purchasesButton = page.locator('[data-testid="button-Compras"]').first();
+
+      if (quotationOnly) {
+        await page.goto("https://app.koper.com.br/compras/orcamentos/finalizados", {
+          waitUntil: "domcontentloaded",
+          timeout: 15_000,
+        }).catch(() => undefined);
+      } else {
+        const purchasesButton = page.locator('[data-testid="button-Compras"]').first();
       const purchasesImage = page.locator('img[src*="purchase-"]').first();
       const purchases =
         await purchasesButton.isVisible().catch(() => false)
@@ -875,6 +882,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
             break;
           }
         }
+      }
       }
 
       quotationListReached = /\/compras\/orcamentos/i.test(page.url());
