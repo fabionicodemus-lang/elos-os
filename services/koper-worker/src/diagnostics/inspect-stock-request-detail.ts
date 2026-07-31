@@ -102,8 +102,9 @@ export async function inspectStockRequestDetail(): Promise<StockRequestDetailDia
         if (
           response.request().method() === "GET" &&
           parsedUrl.hostname === "api.koper.com.br" &&
-          parsedUrl.pathname.startsWith("/stock/v1/request") &&
-          parsedUrl.pathname !== "/stock/v1/request"
+          (parsedUrl.pathname === "/stock/v1/product_request" ||
+            (parsedUrl.pathname.startsWith("/stock/v1/request") &&
+              parsedUrl.pathname !== "/stock/v1/request"))
         ) {
           const task = response
             .json()
