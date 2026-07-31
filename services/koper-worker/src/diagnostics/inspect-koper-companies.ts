@@ -311,6 +311,12 @@ type QuotationRead = NetworkSummary & {
   budgets: QuotationSample[];
 };
 
+type QuotationDetailRead = NetworkSummary & {
+  statusCode: number;
+  dataKeys: string[];
+  fieldPaths: string[];
+};
+
 type SwitchAttemptShape = {
   queryValueKind: "uuid" | "flag" | "other" | "missing";
   bodyKind: "json" | "form" | "text" | "empty";
@@ -334,6 +340,8 @@ export type KoperFlowContextDiagnostic = {
   stockRequestReads: StockRequestRead[];
   quotationReads: QuotationRead[];
   quotationFilterControls: FilterControl[];
+  quotationDetailReads: QuotationDetailRead[];
+  quotationDetailUrl: string | null;
   finalUrl: string;
   network: NetworkSummary[];
   blockedWrites: NetworkSummary[];
@@ -537,6 +545,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         stockRequestReads: [],
         quotationReads: [],
         quotationFilterControls: [],
+        quotationDetailReads: [],
+        quotationDetailUrl: null,
         finalUrl: login.finalUrl,
         network: [],
         blockedWrites: [],
@@ -557,7 +567,10 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     const blockedWrites: NetworkSummary[] = [];
     const stockRequestReads: StockRequestRead[] = [];
     const quotationReads: QuotationRead[] = [];
+    const quotationDetailReads: QuotationDetailRead[] = [];
     const switchAttempts: SwitchAttemptShape[] = [];
+    let quotationDetailMode = false;
+    let quotationDetailUrl: string | null = null;
     const pendingStockResponses: Promise<void>[] = [];
     let stockListMode: "active" | "active-page-2" | "finalized" = "active";
 
@@ -696,6 +709,32 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
                     };
                   })
                 : [],
+            });
+          }).catch(() => undefined);
+
+          pendingStockResponses.push(task);
+        } else if (
+          quotationDetailMode
+          && request.method() === "GET"
+          && parsedUrl.hostname === "api.koper.com.br"
+          && parsedUrl.pathname.startsWith("/purchase/")
+        ) {
+          const summary = sanitizeRequest(
+            response.url(),
+            request.method(),
+            request.resourceType(),
+          );
+          const task = response.json().then((body: unknown) => {
+            const object =
+              typeof body === "object" && body !== null
+                ? (body as Record<string, unknown>)
+                : null;
+
+            quotationDetailReads.push({
+              ...summary,
+              statusCode: response.status(),
+              dataKeys: object ? Object.keys(object).slice(0, 50) : [],
+              fieldPaths: collectFieldPaths(body).slice(0, 200),
             });
           }).catch(() => undefined);
 
@@ -1035,6 +1074,15 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               await page.mouse.wheel(0, 100_000);
               await pageTwoResponse.catch(() => undefined);
               await page.waitForTimeout(1_000);
+
+              const budgetCode = page.getByText(/^3268$/, { exact: true }).first();
+
+              if (await budgetCode.isVisible().catch(() => false)) {
+                quotationDetailMode = true;
+                await budgetCode.click();
+                await page.waitForTimeout(5_000);
+                quotationDetailUrl = page.url();
+              }
             }
           }
         }
@@ -1064,6 +1112,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       stockRequestReads,
       quotationReads,
       quotationFilterControls,
+      quotationDetailReads,
+      quotationDetailUrl,
       finalUrl: page.url(),
       network,
       blockedWrites,
