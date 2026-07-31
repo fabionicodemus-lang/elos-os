@@ -812,7 +812,6 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           if (/flow/i.test(activeCompanyAfter ?? "")) {
             break;
           }
-        }
       } else {
         message = "KOPER_FLOW_ACCESS_ACTION_NOT_FOUND";
       }
