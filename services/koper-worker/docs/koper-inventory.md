@@ -60,6 +60,26 @@
 
 ---
 
+
+## `quotation` — Orçamentos/cotações de compra
+
+| Campo | Conteúdo |
+|---|---|
+| módulo do Koper | Compras |
+| rota visual ativa | `/compras/orcamentos` — título “Orçamentos Recebidos”; visualizações por produtos, fornecedores e conjunto de orçamento |
+| rota visual finalizada | `/compras/orcamentos/finalizados` — título “Orçamentos” |
+| endpoint de listagem | `GET https://api.koper.com.br/purchase/v1/budget` — REST |
+| endpoints relacionados | `GET /purchase/v1/budget_negotiation`; `GET /purchase/v1/supplier` |
+| query finalizada observada | chaves `budgetId`, `initialDate`, `finalDate`, `limit`, `offset`, `orderFlag`, `orderby`, `typeDate`; valores ainda não capturados |
+| campos visíveis na listagem | Código, Fornecedor, Data Orçamento, Data Resposta, Qtd. Produtos, Valor Total |
+| detalhe visual observado | orçamento 3268; informações gerais; etapas Produtos, Frete e Pagamento; código do fornecedor, datas, validade, itens, quantidades, preços, descontos, prazo e total |
+| identificador | em aberto: `budgetId` aparece na query, mas ainda falta confirmar seu valor e separar conjunto, resposta e fornecedor |
+| paginação | indício de rolagem infinita e query `limit/offset`; segunda página ainda não validada |
+| volume | não medido |
+| tabela staging | não criada |
+| status | **rota e endpoints descobertos; contrato do JSON ainda em aberto** |
+
+
 ## Todas as demais entidades do fluxo prioritário
 
 Ainda **não iniciado**: cotação, participantes/preços, pedido de compra, recebimento, nota fiscal, conta a pagar, pagamento — e toda a Fase 2 (cadastros-base: empresas, empreendimentos, obras, centros de custo, etapas, fornecedores, clientes, unidades imobiliárias, usuários).
