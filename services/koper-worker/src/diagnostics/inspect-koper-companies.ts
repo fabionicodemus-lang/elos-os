@@ -418,6 +418,7 @@ type PurchaseDetailRead = NetworkSummary & {
 
 type BillDetailRead = NetworkSummary & {
   statusCode: number;
+  queryParams: Record<string, string>;
   dataKeys: string[];
   fieldPaths: string[];
 };
@@ -451,6 +452,7 @@ export type KoperFlowContextDiagnostic = {
   purchaseDetailReads: PurchaseDetailRead[];
   purchaseDetailUrl: string | null;
   billDetailReads: BillDetailRead[];
+  billDetailUrl: string | null;
   finalUrl: string;
   network: NetworkSummary[];
   blockedWrites: NetworkSummary[];
@@ -789,6 +791,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         purchaseDetailReads: [],
         purchaseDetailUrl: null,
         billDetailReads: [],
+        billDetailUrl: null,
         finalUrl: login.finalUrl,
         network: [],
         blockedWrites: [],
@@ -806,6 +809,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       process.env.KOPER_QUOTATION_DETAIL_ONLY === "true";
     const purchaseDetailOnly =
       process.env.KOPER_PURCHASE_DETAIL_ONLY === "true";
+    const billDetailOnly =
+      process.env.KOPER_BILL_DETAIL_ONLY === "true";
 
     const activeCompanyBefore = await readActiveCompanyLabel(page).catch(() => null);
     const storageKeysBefore = await readStorageKeys(page).catch(() => emptyStorage);
@@ -819,8 +824,10 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     const switchAttempts: SwitchAttemptShape[] = [];
     let quotationDetailMode = false;
     let purchaseDetailMode = false;
+    let billDetailMode = false;
     let quotationDetailUrl: string | null = null;
     let purchaseDetailUrl: string | null = null;
+    let billDetailUrl: string | null = null;
     let quotationRowTargets: QuotationRowTarget[] = [];
     const pendingStockResponses: Promise<void>[] = [];
     let stockListMode: "active" | "active-page-2" | "finalized" = "active";
@@ -979,6 +986,51 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
 
           pendingStockResponses.push(task);
         } else if (
+          billDetailMode
+          && request.method() === "GET"
+          && parsedUrl.hostname === "api.koper.com.br"
+          && (
+            parsedUrl.pathname.startsWith("/financial/v1/")
+            || parsedUrl.pathname.startsWith("/financial/v2/")
+          )
+        ) {
+          const summary = sanitizeRequest(
+            response.url(),
+            request.method(),
+            request.resourceType(),
+          );
+          const task = response.json().then((body: unknown) => {
+            const object =
+              typeof body === "object" && body !== null
+                ? (body as Record<string, unknown>)
+                : null;
+            const allowed = [
+              "billId",
+              "billToPayId",
+              "allBills",
+              "receiptId",
+              "invoiceId",
+              "limit",
+              "offset",
+              "orderFlag",
+              "orderby",
+              "typeDate",
+            ];
+
+            billDetailReads.push({
+              ...summary,
+              statusCode: response.status(),
+              queryParams: Object.fromEntries(allowed.flatMap((key) => {
+                const value = parsedUrl.searchParams.get(key);
+                return value === null ? [] : [[key, value]];
+              })),
+              dataKeys: object ? Object.keys(object).slice(0, 80) : [],
+              fieldPaths: collectFieldPaths(body).slice(0, 400),
+            });
+          }).catch(() => undefined);
+
+          pendingStockResponses.push(task);
+        } else if (
           purchaseDetailMode
           && request.method() === "GET"
           && parsedUrl.hostname === "web.koper.com.br"
@@ -998,6 +1050,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
             billDetailReads.push({
               ...summary,
               statusCode: response.status(),
+              queryParams: {},
               dataKeys: object ? Object.keys(object).slice(0, 80) : [],
               fieldPaths: collectFieldPaths(body).slice(0, 400),
             });
@@ -1116,7 +1169,12 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     let finalizedControlFound = false;
     let finalizedClicked = false;
 
-    if (!quotationOnly && !purchaseDetailOnly && /flow/i.test(activeCompanyAfter ?? "")) {
+    if (
+      !quotationOnly
+      && !purchaseDetailOnly
+      && !billDetailOnly
+      && /flow/i.test(activeCompanyAfter ?? "")
+    ) {
       const supplies = page.locator('[data-testid="button-Suprimentos"]').first();
 
       if (await supplies.isVisible().catch(() => false)) {
@@ -1241,7 +1299,25 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       purchaseDetailUrl = page.url();
     }
 
-    if (!purchaseDetailOnly && /flow/i.test(activeCompanyAfter ?? "")) {
+    if (billDetailOnly && /flow/i.test(activeCompanyAfter ?? "")) {
+      network.splice(0);
+      billDetailMode = true;
+      await page.goto(
+        "https://web.koper.com.br/financeiro/contas-a-pagar/15902?billToPayId=14525",
+        {
+          waitUntil: "domcontentloaded",
+          timeout: 15_000,
+        },
+      ).catch(() => undefined);
+      await page.waitForTimeout(7_000);
+      billDetailUrl = page.url();
+    }
+
+    if (
+      !purchaseDetailOnly
+      && !billDetailOnly
+      && /flow/i.test(activeCompanyAfter ?? "")
+    ) {
       network.splice(0);
 
       if (quotationOnly) {
@@ -1517,6 +1593,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       purchaseDetailReads,
       purchaseDetailUrl,
       billDetailReads,
+      billDetailUrl,
       finalUrl: page.url(),
       network,
       blockedWrites,
