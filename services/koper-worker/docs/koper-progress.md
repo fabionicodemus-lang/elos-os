@@ -543,3 +543,24 @@ Trabalho pausado após três tentativas no mesmo bloqueio, conforme a Seção 5.
 3. Testar em dry-run uma cópia do GET autenticado removendo `initialDate`/`finalDate`, hipótese indicada pela opção “Todos”, sem persistência.
 
 **Recomendação:** alternativa 1, porque descobre o controle real sem depender de resolução de tela nem repetir os problemas de autenticação do GET separado.
+
+
+## 2026-07-31 — Diagnóstico estrutural do filtro histórico de Orçamentos
+
+Commit `1a1c5a2`.
+
+**Hipótese:** o filtro de período da tela `/compras/orcamentos/finalizados` é um componente customizado, e a inspeção sanitizada do DOM revelaria um seletor fundamentado. **Resultado:** confirmada.
+
+No contexto `Flow Aptos - Bossa`, a área superior da tela contém:
+
+- filtro de fornecedor: `div.dropdown.custom-select` e `a.dropdown-toggle`, ambos com o texto `Todos`;
+- filtro de período: `div.dropdown` contendo `div.input-default.dropdown-toggle`, com o texto `01/07/2026 - 31/07/2026`;
+- pesquisa: `input.form-control[type=search]`.
+
+Isso comprova que o texto `Todos` identificado nas tentativas anteriores pertence ao fornecedor, não ao período. O filtro de data não é um `<select>` nativo; por isso, seleção nativa e clique textual em `Mês atual`/`Todos` não produziram nova leitura.
+
+As únicas leituras observadas continuaram sendo `GET /purchase/v1/budget`: uma consulta de 25–31/07/2026 e a listagem finalizada de 01–31/07/2026, esta com `budgetId=all`, `limit=25`, `offset=0`, `orderFlag=desc`, `orderby=budgetId` e `typeDate=budgetDate`. Ambas responderam 404 por ausência de registros nos períodos consultados.
+
+O diagnóstico foi executado no Railway com sucesso e `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado imediatamente após a coleta. Nenhuma escrita operacional foi executada.
+
+**Próximo passo seguro:** clicar especificamente em `div.input-default.dropdown-toggle` associado ao rótulo de data, inspecionar as opções abertas e somente então selecionar `Todos`, capturando a requisição normal produzida pela interface.
