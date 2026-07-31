@@ -57,6 +57,14 @@ function required(name) {
   return value;
 }
 
+function configuredProjectCode() {
+  return (process.env.HOMOLOGATION_PROJECT_CODE || 'HOM-001').trim().toUpperCase();
+}
+
+function configuredRecordPrefix() {
+  return (process.env.HOMOLOGATION_RECORD_PREFIX || '[HOMOLOGAÇÃO]').trim().toUpperCase();
+}
+
 async function postIssueComment(body) {
   const token = process.env.GITHUB_TOKEN?.trim();
   const repo = process.env.GITHUB_REPOSITORY?.trim() || 'fabionicodemus-lang/elos-os';
@@ -87,18 +95,72 @@ async function login(page, baseUrl) {
   ]);
 }
 
-async function assertHomologationContext(page) {
-  const body = (await page.locator('body').innerText()).toUpperCase();
-  const safeMarker = (process.env.HOMOLOGATION_MARKER || 'HORIZONTE TESTES').toUpperCase();
-  const blocked = ['FLOW · FLOW APTOS', 'ALMA', 'BOSSA EMPREENDIMENTOS'];
-  if (!body.includes(safeMarker)) {
-    throw new Error(`Contexto seguro não confirmado. Marcador ausente: ${safeMarker}`);
+async function selectedProjectText(page) {
+  const select = page.locator('#elos-project-select');
+  if ((await select.count()) === 0) return '';
+  return String(await select.locator('option:checked').textContent() || '').trim();
+}
+
+async function selectHomologationProject(page, baseUrl) {
+  const projectCode = configuredProjectCode();
+  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' });
+
+  const select = page.locator('#elos-project-select');
+  if ((await select.count()) === 0) {
+    throw new Error('Seletor de empreendimento não encontrado após o login.');
   }
-  for (const value of blocked) {
-    if (body.includes(value) && !body.includes(safeMarker)) {
-      throw new Error(`Execução bloqueada por contexto real detectado: ${value}`);
+
+  let targetValue = '';
+  let targetLabel = '';
+  const optionCount = await select.locator('option').count();
+  for (let index = 0; index < optionCount; index += 1) {
+    const option = select.locator('option').nth(index);
+    const label = String(await option.textContent() || '').trim();
+    if (label.toUpperCase().includes(projectCode)) {
+      targetValue = String(await option.getAttribute('value') || '');
+      targetLabel = label;
+      break;
     }
   }
+
+  if (!targetValue) {
+    throw new Error(`Empreendimento seguro ${projectCode} não localizado para o usuário de homologação.`);
+  }
+
+  if ((await select.inputValue()) !== targetValue) {
+    await select.selectOption(targetValue);
+    await page.waitForTimeout(400);
+    await page.waitForLoadState('networkidle');
+  }
+
+  const activeLabel = await selectedProjectText(page);
+  if (!activeLabel.toUpperCase().includes(projectCode)) {
+    throw new Error(`Falha ao ativar o empreendimento seguro. Ativo: ${activeLabel || 'não identificado'}`);
+  }
+
+  return targetLabel;
+}
+
+async function assertHomologationContext(page) {
+  const body = String(await page.locator('body').innerText() || '').toUpperCase();
+  const projectCode = configuredProjectCode();
+  const recordPrefix = configuredRecordPrefix();
+  const companyMarker = (process.env.HOMOLOGATION_COMPANY_MARKER || 'BOSSA EMPREENDIMENTOS').trim().toUpperCase();
+  const activeProject = (await selectedProjectText(page)).toUpperCase();
+
+  if (companyMarker && !body.includes(companyMarker)) {
+    throw new Error(`Empresa autorizada não confirmada. Marcador ausente: ${companyMarker}`);
+  }
+
+  if (activeProject) {
+    if (!activeProject.includes(projectCode) || !activeProject.includes(recordPrefix)) {
+      throw new Error(`Execução bloqueada fora da obra de homologação. Empreendimento ativo: ${activeProject}`);
+    }
+  } else if (!body.includes(projectCode) || !body.includes(recordPrefix)) {
+    throw new Error(`Contexto seguro não confirmado na tela. Exigidos: ${projectCode} e ${recordPrefix}`);
+  }
+
+  return activeProject || `${projectCode} · ${recordPrefix}`;
 }
 
 export async function runHomologation({ phase = 'smoke' } = {}) {
@@ -114,10 +176,11 @@ export async function runHomologation({ phase = 'smoke' } = {}) {
   });
   const page = await context.newPage();
   const results = [];
+  let homologationProject = '';
 
   try {
     await login(page, baseUrl);
-    await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' });
+    homologationProject = await selectHomologationProject(page, baseUrl);
     await assertHomologationContext(page);
 
     for (const route of ROUTES) {
@@ -128,6 +191,7 @@ export async function runHomologation({ phase = 'smoke' } = {}) {
         result.title = await page.title();
         if (!response || response.status() >= 400) throw new Error(`HTTP ${response?.status() ?? 'sem resposta'}`);
         if (page.url().includes('/login')) throw new Error('Sessão redirecionada para login');
+        await assertHomologationContext(page);
         const body = await page.locator('body').innerText();
         if (/Application error|Internal Server Error|Unhandled Runtime Error/i.test(body)) {
           throw new Error('Erro de aplicação visível na página');
@@ -157,6 +221,10 @@ export async function runHomologation({ phase = 'smoke' } = {}) {
     phase,
     startedAt: runId,
     baseUrl,
+    companyMarker: process.env.HOMOLOGATION_COMPANY_MARKER || 'Bossa Empreendimentos',
+    project: homologationProject,
+    projectCode: configuredProjectCode(),
+    recordPrefix: configuredRecordPrefix(),
     total: results.length,
     passed: results.filter((item) => item.status === 'passed').length,
     failed: results.filter((item) => item.status === 'failed').length,
@@ -169,6 +237,9 @@ export async function runHomologation({ phase = 'smoke' } = {}) {
     `## Execução automática · ${phase}`,
     '',
     `- Run: \`${runId}\``,
+    `- Empresa: **${report.companyMarker}**`,
+    `- Obra segura: **${report.project || report.projectCode}**`,
+    `- Prefixo obrigatório: \`${report.recordPrefix}\``,
     `- Telas verificadas: **${report.total}**`,
     `- Aprovadas: **${report.passed}**`,
     `- Falhas: **${report.failed}**`,
