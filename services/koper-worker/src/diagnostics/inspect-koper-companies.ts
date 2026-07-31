@@ -909,15 +909,17 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               }];
             })).then((items) => items.slice(0, 80));
 
-          const currentPeriod = page
-            .getByText(/^(Mês atual|Últimos 7 dias|Últimos 30 dias)$/i, { exact: true })
+          const periodToggle = page
+            .locator("div.input-default.dropdown-toggle")
+            .filter({ hasText: /\d{2}\/\d{2}\/\d{4}\s*-\s*\d{2}\/\d{2}\/\d{4}/ })
             .last();
 
-          if (await currentPeriod.isVisible().catch(() => false)) {
-            await currentPeriod.click();
+          if (await periodToggle.isVisible().catch(() => false)) {
+            await periodToggle.click();
             await page.waitForTimeout(500);
 
-            const allOptions = page.getByText(/^Todos$/i, { exact: true });
+            const periodDropdown = periodToggle.locator("xpath=..");
+            const allOptions = periodDropdown.getByText(/^Todos$/i, { exact: true });
             const optionCount = Math.min(await allOptions.count(), 20);
 
             for (let index = optionCount - 1; index >= 0; index -= 1) {
