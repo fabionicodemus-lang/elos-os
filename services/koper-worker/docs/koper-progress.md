@@ -584,3 +584,16 @@ Por segurança e em cumprimento ao limite de tentativas da constituição, o cic
 **Bloqueio atual:** identificar o nó/evento efetivamente acionável da opção `Todos` após o popover de período estar aberto.
 
 **Próximo caminho recomendado:** em um diagnóstico separado, capturar somente a árvore sanitizada e as caixas visuais dos elementos que surgem após abrir o controle de data, sem tentar selecionar opção. Com essa evidência, construir um seletor exato em novo ciclo.
+
+
+## 2026-07-31 — Evidência visual do menu de período e encerramento da sessão
+
+Commit `d8404ac`.
+
+O print manual confirmou que o dropdown datado abre um menu vertical imediatamente abaixo do controle, nesta ordem: `Todos`, `Hoje`, `Semana atual`, `Mês atual`, `Últimos 7 dias`, `Últimos 30 dias` e `Período específico`.
+
+Com base nessa evidência, o diagnóstico passou a clicar na primeira opção por coordenada relativa ao botão do período: 30 px à direita do início e 18 px abaixo da borda inferior. O deploy do código ficou saudável.
+
+Duas execuções do diagnóstico foram encerradas pelo Browserless durante a espera posterior ao clique, com `Target page, context or browser has been closed`, antes da emissão do JSON final. Portanto, ainda não há confirmação da query produzida por `Todos`. O ciclo foi interrompido e `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado.
+
+**Próximo passo:** reduzir o tempo total do diagnóstico de orçamentos, removendo esperas e etapas anteriores que não são necessárias nesta rodada, e só então repetir o clique relativo.
