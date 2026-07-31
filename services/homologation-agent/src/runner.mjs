@@ -65,11 +65,16 @@ function configuredRecordPrefix() {
   return (process.env.HOMOLOGATION_RECORD_PREFIX || '[HOMOLOGAÇÃO]').trim().toUpperCase();
 }
 
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function postIssueComment(body) {
   const token = process.env.GITHUB_TOKEN?.trim();
   const repo = process.env.GITHUB_REPOSITORY?.trim() || 'fabionicodemus-lang/elos-os';
   const issue = process.env.HOMOLOGATION_ISSUE?.trim() || '165';
   if (!token) return;
+
   const response = await fetch(`https://api.github.com/repos/${repo}/issues/${issue}/comments`, {
     method: 'POST',
     headers: {
@@ -80,19 +85,42 @@ async function postIssueComment(body) {
     },
     body: JSON.stringify({ body })
   });
+
   if (!response.ok) throw new Error(`GitHub ${response.status}: ${await response.text()}`);
 }
 
+async function visibleLoginError(page) {
+  const error = page.locator('.auth-message.error').first();
+  if ((await error.count()) === 0 || !(await error.isVisible().catch(() => false))) return '';
+  return String(await error.textContent() || '').trim();
+}
+
 async function login(page, baseUrl) {
-  await page.goto(`${baseUrl}/login`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/login`, { waitUntil: 'networkidle', timeout: 30_000 });
   await page.getByLabel('E-mail').fill(required('ELOS_TEST_EMAIL'));
   await page.getByLabel('Senha').fill(required('ELOS_TEST_PASSWORD'));
-  await Promise.all([
-    page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 30_000 }),
-    page.getByRole('button', { name: 'Entrar no Elos OS' }).click().catch(async () => {
-      await page.getByRole('button', { name: 'Entrar' }).click();
-    })
-  ]);
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(400);
+    const currentUrl = new URL(page.url());
+    if (!currentUrl.pathname.startsWith('/login')) {
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
+      return;
+    }
+
+    const loginError = await visibleLoginError(page);
+    if (loginError) {
+      throw new Error(`Login recusado pelo Elos OS: ${loginError}`);
+    }
+  }
+
+  const currentUrl = page.url();
+  const body = String(await page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+  throw new Error(
+    `Login não concluiu em 30 segundos. URL atual: ${currentUrl}. Tela: ${body.slice(0, 350) || 'sem conteúdo'}`
+  );
 }
 
 async function selectedProjectText(page) {
@@ -103,11 +131,12 @@ async function selectedProjectText(page) {
 
 async function selectHomologationProject(page, baseUrl) {
   const projectCode = configuredProjectCode();
-  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle', timeout: 30_000 });
 
   const select = page.locator('#elos-project-select');
   if ((await select.count()) === 0) {
-    throw new Error('Seletor de empreendimento não encontrado após o login.');
+    const body = String(await page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+    throw new Error(`Seletor de empreendimento não encontrado após o login. Tela: ${body.slice(0, 350)}`);
   }
 
   let targetValue = '';
@@ -124,13 +153,19 @@ async function selectHomologationProject(page, baseUrl) {
   }
 
   if (!targetValue) {
-    throw new Error(`Empreendimento seguro ${projectCode} não localizado para o usuário de homologação.`);
+    const options = [];
+    for (let index = 0; index < optionCount; index += 1) {
+      options.push(String(await select.locator('option').nth(index).textContent() || '').trim());
+    }
+    throw new Error(
+      `Empreendimento seguro ${projectCode} não localizado. Disponíveis: ${options.filter(Boolean).join(' | ') || 'nenhum'}`
+    );
   }
 
   if ((await select.inputValue()) !== targetValue) {
     await select.selectOption(targetValue);
-    await page.waitForTimeout(400);
-    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(700);
+    await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
   }
 
   const activeLabel = await selectedProjectText(page);
@@ -177,6 +212,7 @@ export async function runHomologation({ phase = 'smoke' } = {}) {
   const page = await context.newPage();
   const results = [];
   let homologationProject = '';
+  let startupError = '';
 
   try {
     await login(page, baseUrl);
@@ -202,7 +238,7 @@ export async function runHomologation({ phase = 'smoke' } = {}) {
         result.screenshot = screenshot;
       } catch (error) {
         result.status = 'failed';
-        result.error = error instanceof Error ? error.message : String(error);
+        result.error = errorMessage(error);
         const filename = `FAIL_${route.replaceAll('/', '_').replace(/^_/, '') || 'dashboard'}.png`;
         const screenshot = path.join(outputDir, filename);
         await page.screenshot({ path: screenshot, fullPage: true }).catch(() => {});
@@ -211,6 +247,9 @@ export async function runHomologation({ phase = 'smoke' } = {}) {
       result.durationMs = Date.now() - started;
       results.push(result);
     }
+  } catch (error) {
+    startupError = errorMessage(error);
+    await page.screenshot({ path: path.join(outputDir, 'FAIL_STARTUP.png'), fullPage: true }).catch(() => {});
   } finally {
     await context.close();
     await browser.close();
@@ -225,9 +264,10 @@ export async function runHomologation({ phase = 'smoke' } = {}) {
     project: homologationProject,
     projectCode: configuredProjectCode(),
     recordPrefix: configuredRecordPrefix(),
+    startupError: startupError || null,
     total: results.length,
     passed: results.filter((item) => item.status === 'passed').length,
-    failed: results.filter((item) => item.status === 'failed').length,
+    failed: results.filter((item) => item.status === 'failed').length + (startupError ? 1 : 0),
     results
   };
   await fs.writeFile(path.join(outputDir, 'report.json'), JSON.stringify(report, null, 2));
@@ -244,9 +284,13 @@ export async function runHomologation({ phase = 'smoke' } = {}) {
     `- Aprovadas: **${report.passed}**`,
     `- Falhas: **${report.failed}**`,
     '',
-    failures.length ? '### Falhas' : '✅ Nenhuma falha de abertura detectada.',
-    ...failures.map((item) => `- \`${item.route}\`: ${item.error}`)
-  ].join('\n');
+    startupError ? `### Falha de inicialização\n- ${startupError}` : '',
+    !startupError && failures.length ? '### Falhas' : '',
+    ...failures.map((item) => `- \`${item.route}\`: ${item.error}`),
+    !startupError && failures.length === 0 ? '✅ Nenhuma falha de abertura detectada.' : ''
+  ].filter(Boolean).join('\n');
   await postIssueComment(summary).catch(() => {});
+
+  if (startupError) throw new Error(startupError);
   return report;
 }
