@@ -385,3 +385,40 @@ A rota de segurança abortou a requisição antes do envio. `blockedWrites` regi
 **Aprendizado:** a rota visual e o contrato REST da listagem de `stock_request` são reutilizáveis entre os contextos Bossa e Flow. O contexto da empresa precisa fazer parte explícita de cada execução e de cada registro migrado, para evitar mistura de dados entre Bossa, Flow e Alma.
 
 **Próxima alteração pequena sugerida:** ampliar somente a captura segura da resposta da listagem no contexto Flow para registrar `itemsAmount`, quantidade de registros retornados e os primeiros identificadores `requestId`/`requestAuxId`, sem capturar nomes de usuários ou o payload completo. Isso permitirá medir volume e confirmar a amostra real do Flow antes de criar a staging.
+
+
+---
+
+## 2026-07-31 — Volume, paginação e filtro de finalizadas no Flow
+
+Diagnóstico `flow-context` ampliado pelos commits `c65e79bc`, `1d996ffc`, `385a76fd` e `2ffd2ae7`. Execução final no Railway: deploy `1b42a825-e8b8-4654-a4b2-dc8b190a7635` (SUCCESS).
+
+**Resultado da listagem não finalizada:**
+- endpoint: `GET https://api.koper.com.br/stock/v1/request`;
+- `open=yes`;
+- `itemsAmount=73`;
+- `limit=25`, `offset=0`;
+- primeira página com 25 registros;
+- status observados: `Aberto`, `Aprovado totalmente` e `Aprovado parcialmente`;
+- logo, “aprovado” não significa “finalizado”.
+
+**Resultado de “Ver finalizados”:**
+- rota: `/suprimentos/solicitacoes/finalizadas`;
+- mesmo endpoint REST;
+- única mudança funcional observada na query: `open=no`;
+- `itemsAmount=829`;
+- `limit=25`, `offset=0`;
+- primeira página com 25 registros;
+- status observados: `Finalizado` e `Cancelado`.
+
+**Volume total conhecido no Flow:** 902 solicitações (73 com `open=yes` + 829 com `open=no`).
+
+**Campos seguros confirmados:** `requestId`, `requestAuxId`, `stockPlaceId`, `stockPlaceName`, `productAmount`, `requestDate`, `deadline`, `status`, `isUrgent`, `isDraft`.
+
+**Identificadores observados:** `requestId` é o número público da solicitação (ex.: 10563). `requestAuxId` apresentou valor 2 em toda a amostra e não deve ser usado como chave da solicitação. O local do Flow apresentou `stockPlaceId=169` e `stockPlaceName=Flow Aptos`.
+
+**Paginação:** o contrato usa `limit` e `offset`; a primeira página prova `limit=25` e `offset=0`. Pelos totais, a extração completa precisará avançar o offset em passos de 25 até atingir `itemsAmount`. A leitura de uma segunda página ainda não foi executada neste ciclo.
+
+Nenhum `accessToken`, `userName` ou `userId` foi registrado. Nenhuma criação, edição, aprovação ou exclusão foi realizada. `KOPER_STARTUP_DIAGNOSTIC` foi novamente esvaziado após a coleta.
+
+**Próximo passo sugerido:** validar uma segunda página somente por GET (`offset=25`) e então implementar o cliente REST de produção para extrair todas as páginas para uma staging idempotente, ainda sem promover dados ao modelo final.
