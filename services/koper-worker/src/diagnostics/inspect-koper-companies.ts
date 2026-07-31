@@ -351,6 +351,12 @@ type QuotationDetailSample = {
   totalProducts: number | null;
   totalValue: number | null;
   costShipping: number | null;
+  typeShipping: string | null;
+  showDeadline: boolean | null;
+  paymentTotalDiscount: number | null;
+  paymentMethodId: string | number | null;
+  paymentConditions: string | number | null;
+  paymentWay: string | number | null;
   products: QuotationDetailProduct[];
 };
 
@@ -446,6 +452,28 @@ function collectSafeQuotationDetail(body: unknown): QuotationDetailSample | null
     totalProducts: safeNumber(value.totalProducts),
     totalValue: safeNumber(value.totalValue),
     costShipping: safeNumber(value.costShipping),
+    typeShipping: safeText(value.typeShipping),
+    showDeadline: safeBoolean(value.showDeadline),
+    paymentTotalDiscount: safeNumber(
+      typeof value.payments === "object" && value.payments !== null
+        ? (value.payments as Record<string, unknown>).totalDiscount
+        : null,
+    ),
+    paymentMethodId: safeIdentifier(
+      typeof value.payments === "object" && value.payments !== null
+        ? (value.payments as Record<string, unknown>).paymentMethodId
+        : null,
+    ),
+    paymentConditions: safeIdentifier(
+      typeof value.payments === "object" && value.payments !== null
+        ? (value.payments as Record<string, unknown>).conditions
+        : null,
+    ),
+    paymentWay: safeIdentifier(
+      typeof value.payments === "object" && value.payments !== null
+        ? (value.payments as Record<string, unknown>).way
+        : null,
+    ),
     products: products.slice(0, 50).map((item: unknown) => {
       const product = typeof item === "object" && item !== null
         ? item as Record<string, unknown>
