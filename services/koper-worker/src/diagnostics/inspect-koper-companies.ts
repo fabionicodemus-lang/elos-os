@@ -372,7 +372,9 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
 
     const flowCard = page
       .locator('[data-testid="multiCompaniesModal"]')
-      .filter({ hasText: /^\s*FLOW APTOS - BOSSA\s+Acessar esta empresa\s*$/i })
+      .filter({
+        has: page.getByText(/^FLOW APTOS - BOSSA$/i, { exact: true }),
+      })
       .first();
     const flowCardFound = await flowCard.isVisible().catch(() => false);
     let flowSelected = false;
