@@ -296,6 +296,8 @@ export type KoperFlowContextDiagnostic = {
   flowCardFound: boolean;
   flowSelected: boolean;
   stockListReached: boolean;
+  finalizedControlFound: boolean;
+  finalizedClicked: boolean;
   stockRequestReads: StockRequestRead[];
   finalUrl: string;
   network: NetworkSummary[];
@@ -485,6 +487,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         flowCardFound: false,
         flowSelected: false,
         stockListReached: false,
+        finalizedControlFound: false,
+        finalizedClicked: false,
         stockRequestReads: [],
         finalUrl: login.finalUrl,
         network: [],
@@ -650,6 +654,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     }
 
     let stockListReached = false;
+    let finalizedControlFound = false;
+    let finalizedClicked = false;
 
     if (/flow/i.test(activeCompanyAfter ?? "")) {
       const supplies = page.locator('[data-testid="button-Suprimentos"]').first();
@@ -678,13 +684,42 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
 
       if (stockListReached) {
         const finalized = page
-          .getByText(/^Ver finalizadas$/i, { exact: true })
+          .locator("button, a, [role='button'], input[type='button'], input[type='submit']")
+          .filter({ hasText: /ver finalizadas/i })
           .last();
+        const finalizedInput = page
+          .locator("input")
+          .filter({ has: page.locator("[value*='FINALIZADAS' i]") })
+          .last();
+        const control =
+          await finalized.isVisible().catch(() => false)
+            ? finalized
+            : finalizedInput;
 
-        if (await finalized.isVisible().catch(() => false)) {
+        finalizedControlFound = await control.isVisible().catch(() => false);
+
+        if (finalizedControlFound) {
           stockListMode = "finalized";
-          await finalized.click();
-          await page.waitForTimeout(8_000);
+          const finalizedResponse = page.waitForResponse(
+            (response) => {
+              try {
+                const url = new URL(response.url());
+                return (
+                  response.request().method() === "GET" &&
+                  url.hostname === "api.koper.com.br" &&
+                  url.pathname === "/stock/v1/request"
+                );
+              } catch {
+                return false;
+              }
+            },
+            { timeout: 15_000 },
+          );
+
+          await control.click();
+          finalizedClicked = true;
+          await finalizedResponse.catch(() => undefined);
+          await page.waitForTimeout(2_000);
         }
       }
     }
@@ -705,6 +740,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       flowCardFound,
       flowSelected,
       stockListReached,
+      finalizedControlFound,
+      finalizedClicked,
       stockRequestReads,
       finalUrl: page.url(),
       network,
