@@ -249,3 +249,175 @@ export async function inspectKoperCompanies(): Promise<KoperCompaniesDiagnostic>
     };
   });
 }
+
+
+type NetworkSummary = {
+  method: string;
+  resourceType: string;
+  endpoint: string;
+  queryKeys: string[];
+};
+
+export type KoperFlowContextDiagnostic = {
+  ok: true;
+  authenticated: boolean;
+  activeCompanyBefore: string | null;
+  activeCompanyAfter: string | null;
+  flowCardFound: boolean;
+  flowSelected: boolean;
+  finalUrl: string;
+  network: NetworkSummary[];
+  blockedWrites: NetworkSummary[];
+  storageKeysBefore: { local: string[]; session: string[] };
+  storageKeysAfter: { local: string[]; session: string[] };
+  message: string | null;
+  checkedAt: string;
+};
+
+function sanitizeRequest(rawUrl: string, method: string, resourceType: string): NetworkSummary {
+  const parsed = new URL(rawUrl);
+
+  return {
+    method,
+    resourceType,
+    endpoint: parsed.origin + parsed.pathname,
+    queryKeys: [...new Set(parsed.searchParams.keys())].slice(0, 30),
+  };
+}
+
+async function readStorageKeys(
+  page: Page,
+): Promise<{ local: string[]; session: string[] }> {
+  return page.evaluate(() => ({
+    local: Object.keys(localStorage).sort(),
+    session: Object.keys(sessionStorage).sort(),
+  }));
+}
+
+export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnostic> {
+  return withBrowserless(async ({ page }) => {
+    const login = await performKoperLogin(page);
+    const emptyStorage = { local: [], session: [] };
+
+    if (!login.authenticated) {
+      return {
+        ok: true,
+        authenticated: false,
+        activeCompanyBefore: null,
+        activeCompanyAfter: null,
+        flowCardFound: false,
+        flowSelected: false,
+        finalUrl: login.finalUrl,
+        network: [],
+        blockedWrites: [],
+        storageKeysBefore: emptyStorage,
+        storageKeysAfter: emptyStorage,
+        message: login.message,
+        checkedAt: new Date().toISOString(),
+      };
+    }
+
+    await page.waitForTimeout(3_000);
+
+    const activeCompanyBefore = await readActiveCompanyLabel(page).catch(() => null);
+    const storageKeysBefore = await readStorageKeys(page).catch(() => emptyStorage);
+    const network: NetworkSummary[] = [];
+    const blockedWrites: NetworkSummary[] = [];
+
+    await page.route("**/*", async (route) => {
+      const request = route.request();
+      const method = request.method();
+
+      try {
+        const hostname = new URL(request.url()).hostname;
+        const isKoper = hostname === "koper.com.br" || hostname.endsWith(".koper.com.br");
+        const isSafeRead = ["GET", "HEAD", "OPTIONS"].includes(method);
+
+        if (isKoper && !isSafeRead) {
+          blockedWrites.push(
+            sanitizeRequest(request.url(), method, request.resourceType()),
+          );
+          await route.abort("blockedbyclient");
+          return;
+        }
+      } catch {
+        // URLs inválidas seguem o fluxo normal do navegador.
+      }
+
+      await route.continue();
+    });
+
+    const onRequest = (request: { url(): string; method(): string; resourceType(): string }): void => {
+      try {
+        const hostname = new URL(request.url()).hostname;
+
+        if (
+          network.length < 150 &&
+          (hostname === "koper.com.br" || hostname.endsWith(".koper.com.br"))
+        ) {
+          network.push(
+            sanitizeRequest(request.url(), request.method(), request.resourceType()),
+          );
+        }
+      } catch {
+        // Ignora URLs que não possam ser sanitizadas.
+      }
+    };
+
+    page.on("request", onRequest);
+
+    if (activeCompanyBefore) {
+      await openCompanySelectorAndCollectOptions(page, activeCompanyBefore);
+    }
+
+    const flowCard = page
+      .locator('[data-testid="multiCompaniesModal"]')
+      .filter({ hasText: /^\s*FLOW APTOS - BOSSA\s+Acessar esta empresa\s*$/i })
+      .first();
+    const flowCardFound = await flowCard.isVisible().catch(() => false);
+    let flowSelected = false;
+    let message: string | null = null;
+
+    if (flowCardFound) {
+      const action = flowCard
+        .getByText(/^Acessar esta empresa$/i, { exact: true })
+        .last();
+
+      if (await action.isVisible().catch(() => false)) {
+        await action.click();
+        flowSelected = true;
+        await Promise.race([
+          page.waitForLoadState("domcontentloaded", { timeout: 15_000 }),
+          page.waitForTimeout(15_000),
+        ]).catch(() => undefined);
+        await page.waitForTimeout(4_000);
+      } else {
+        message = "KOPER_FLOW_ACCESS_ACTION_NOT_FOUND";
+      }
+    } else {
+      message = "KOPER_FLOW_COMPANY_CARD_NOT_FOUND";
+    }
+
+    page.off("request", onRequest);
+    await page.unroute("**/*").catch(() => undefined);
+
+    const activeCompanyAfter = await readActiveCompanyLabel(page).catch(() => null);
+    const storageKeysAfter = await readStorageKeys(page).catch(() => emptyStorage);
+
+    return {
+      ok: true,
+      authenticated: true,
+      activeCompanyBefore,
+      activeCompanyAfter,
+      flowCardFound,
+      flowSelected,
+      finalUrl: page.url(),
+      network,
+      blockedWrites,
+      storageKeysBefore,
+      storageKeysAfter,
+      message,
+      checkedAt: new Date().toISOString(),
+    };
+  });
+}
