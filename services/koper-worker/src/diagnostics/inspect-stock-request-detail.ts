@@ -16,6 +16,14 @@ type DetailApiRead = {
   fieldPaths: string[];
 };
 
+type NetworkEntry = {
+  method: string;
+  status: number;
+  resourceType: string;
+  endpoint: string;
+  queryKeys: string[];
+};
+
 export type StockRequestDetailDiagnostic = {
   ok: true;
   authenticated: boolean;
@@ -25,6 +33,7 @@ export type StockRequestDetailDiagnostic = {
   finalUrl: string;
   title: string;
   detailReads: DetailApiRead[];
+  network: NetworkEntry[];
   message: string | null;
   checkedAt: string;
 };
@@ -49,6 +58,7 @@ export async function inspectStockRequestDetail(): Promise<StockRequestDetailDia
         finalUrl: login.finalUrl,
         title: login.title,
         detailReads: [],
+        network: [],
         message: login.message,
         checkedAt: new Date().toISOString(),
       };
@@ -60,9 +70,32 @@ export async function inspectStockRequestDetail(): Promise<StockRequestDetailDia
     await page.waitForTimeout(3_000);
 
     const detailReads: DetailApiRead[] = [];
+    const network: NetworkEntry[] = [];
     const pendingResponses: Promise<void>[] = [];
 
     const onResponse = (response: Response): void => {
+      const request = response.request();
+      const resourceType = request.resourceType();
+
+      if (
+        network.length < 200 &&
+        (resourceType === "xhr" || resourceType === "fetch")
+      ) {
+        try {
+          const parsedUrl = new URL(response.url());
+
+          network.push({
+            method: request.method(),
+            status: response.status(),
+            resourceType,
+            endpoint: parsedUrl.origin + parsedUrl.pathname,
+            queryKeys: [...new Set(parsedUrl.searchParams.keys())].slice(0, 50),
+          });
+        } catch {
+          // Ignora URLs inválidas no mapa de transporte.
+        }
+      }
+
       try {
         const parsedUrl = new URL(response.url());
 
@@ -142,6 +175,7 @@ export async function inspectStockRequestDetail(): Promise<StockRequestDetailDia
       finalUrl: page.url(),
       title: await page.title().catch(() => ""),
       detailReads,
+      network,
       message,
       checkedAt: new Date().toISOString(),
     };
