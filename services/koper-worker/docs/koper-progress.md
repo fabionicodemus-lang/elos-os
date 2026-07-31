@@ -684,3 +684,21 @@ O corpo confirmou a ligação operacional do pedido de serviço: `purchaseId=136
 O navegador também revelou a rota de leitura do próximo elo: `GET /_next/data/{build}/financeiro/contas-a-pagar/15902.json?billToPayId=14525`. Nove POSTs GraphQL auxiliares foram bloqueados; nenhuma escrita operacional foi executada. As variáveis temporárias foram esvaziadas após a coleta.
 
 **Próximo passo:** capturar somente a estrutura sanitizada desse JSON de conta a pagar durante o mesmo diagnóstico direcionado e, com os campos confirmados, mapear o detalhe financeiro sem depender de navegação visual.
+
+---
+
+## 2026-07-31 — Conta a pagar 15902 mapeada diretamente
+
+Deployments Railway `67476478-44f9-400a-a254-cfcc7584238c` e `de103dbc-3079-477d-abc8-0b4364cbea8f` (SUCCESS). O diagnóstico abriu diretamente `https://web.koper.com.br/financeiro/contas-a-pagar/15902?billToPayId=14525` no contexto `Flow Aptos - Bossa`.
+
+Endpoints confirmados:
+
+- `GET /financial/v1/bills_to_pay?billId=15902` — detalhe financeiro;
+- `GET /financial/v2/bills-to-pay/15902/events` — histórico de eventos;
+- auxiliares de leitura: `item_chart_account`, `account`, `supplier`, `stock_place` e `tags`.
+
+Valores operacionais sanitizados confirmados: `billId=15902`, `billToPayId=14525`, `supplierId=38`, `costCenterId=168`, `chartAccountId=9`, `itemChartAccountId=58`, valor `29844,25`, vencimento em 19/08/2026, status `Pendente`, `isPaid=false`, sem conta bancária, pagamento, comprovante ou boleto vinculados. O endpoint de eventos retornou um registro criado em 31/07/2026. Nomes, CPF/CNPJ, comentários, textos livres e corpo do evento não foram registrados.
+
+O vínculo pedido `13667` → conta a pagar `15902/14525` está fechado. Nenhuma origem de nota fiscal ou recebimento veio em `origins[]` neste título; a ligação foi obtida pelo corpo do pedido. Nove POSTs GraphQL auxiliares permaneceram bloqueados. Nenhuma escrita operacional foi executada. As variáveis temporárias foram esvaziadas após a leitura.
+
+**Próximo passo:** voltar ao fluxo de suprimentos e mapear uma compra de materiais que contenha `purchaseOrders[]` e `products[]`, pois o exemplo 13667 é uma contratação de serviço. Priorizar no HAR as rotas `purchase_order`, `stock/entry`, `pending_entry` e `product_entry` para fechar pedido de materiais → entrada → nota fiscal.
