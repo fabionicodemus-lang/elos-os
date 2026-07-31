@@ -873,6 +873,20 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           await finalized.click();
           quotationFinalizedClicked = true;
           await page.waitForTimeout(8_000);
+
+          const dateSelects = page.locator("select");
+          const selectCount = Math.min(await dateSelects.count(), 20);
+
+          for (let index = 0; index < selectCount; index += 1) {
+            const select = dateSelects.nth(index);
+            const labels = await select.locator("option").allTextContents();
+
+            if (labels.some((label) => /últimos 30 dias/i.test(label))) {
+              await select.selectOption({ label: "Todos" });
+              await page.waitForTimeout(8_000);
+              break;
+            }
+          }
         }
       }
     }
