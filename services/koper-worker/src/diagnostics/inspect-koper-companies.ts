@@ -129,7 +129,16 @@ async function openCompanySelectorAndCollectOptions(
   }
 
   await control.click();
-  await page.waitForTimeout(1_500);
+  await page.waitForTimeout(1_000);
+
+  const changeCompany = page
+    .getByText(/^Acessar outra empresa$/i, { exact: true })
+    .last();
+
+  if (await changeCompany.isVisible().catch(() => false)) {
+    await changeCompany.click();
+    await page.waitForTimeout(1_000);
+  }
 
   return page
     .locator("body *")
