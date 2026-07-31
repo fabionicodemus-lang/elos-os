@@ -528,6 +528,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     }
 
     await page.waitForTimeout(3_000);
+    const quotationOnly = process.env.KOPER_QUOTATION_ONLY === "true";
 
     const activeCompanyBefore = await readActiveCompanyLabel(page).catch(() => null);
     const storageKeysBefore = await readStorageKeys(page).catch(() => emptyStorage);
@@ -716,7 +717,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     let finalizedControlFound = false;
     let finalizedClicked = false;
 
-    if (/flow/i.test(activeCompanyAfter ?? "")) {
+    if (!quotationOnly && /flow/i.test(activeCompanyAfter ?? "")) {
       const supplies = page.locator('[data-testid="button-Suprimentos"]').first();
 
       if (await supplies.isVisible().catch(() => false)) {
@@ -730,8 +731,10 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           const item = requests.nth(index);
 
           if (await item.isVisible().catch(() => false)) {
-            await item.click();
-            await page.waitForTimeout(8_000);
+            await Promise.all([
+              page.waitForURL(/\/compras\/orcamentos/i, { timeout: 10_000 }).catch(() => undefined),
+              item.click(),
+            ]);
             break;
           }
         }
@@ -883,9 +886,11 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           .last();
 
         if (await finalized.isVisible().catch(() => false)) {
-          await finalized.click();
+          await Promise.all([
+            page.waitForURL(/\/compras\/orcamentos\/finalizados/i, { timeout: 10_000 }).catch(() => undefined),
+            finalized.click(),
+          ]);
           quotationFinalizedClicked = true;
-          await page.waitForTimeout(8_000);
 
           quotationFilterControls = await page
             .locator("button, input, select, [role='button'], [role='combobox'], [class*='select' i], [class*='dropdown' i]")
@@ -921,11 +926,28 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
             const toggleBox = await periodToggle.boundingBox();
 
             if (toggleBox) {
+              const allPeriodResponse = page.waitForResponse(
+                (response) => {
+                  try {
+                    const url = new URL(response.url());
+                    return (
+                      response.request().method() === "GET"
+                      && url.hostname === "api.koper.com.br"
+                      && url.pathname === "/purchase/v1/budget"
+                    );
+                  } catch {
+                    return false;
+                  }
+                },
+                { timeout: 15_000 },
+              );
+
               await page.mouse.click(
                 toggleBox.x + Math.min(30, toggleBox.width / 2),
                 toggleBox.y + toggleBox.height + 18,
               );
-              await page.waitForTimeout(8_000);
+              await allPeriodResponse.catch(() => undefined);
+              await page.waitForTimeout(1_000);
             }
           }
         }
