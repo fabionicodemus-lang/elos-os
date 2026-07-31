@@ -243,3 +243,30 @@ Isso não invalida a descoberta de rota/navegação/endpoints já feita (a estru
 **Próximo bloqueio:** nenhum técnico ainda — é o próximo passo de descoberta.
 
 **Próxima alteração pequena sugerida (em andamento neste mesmo ciclo):** instrumentar o diagnóstico para capturar, logo após o login e antes de navegar para Suprimentos: (1) o texto da empresa ativa exibido no seletor superior direito, e (2) o corpo das respostas de `administrative/v1/enterprise` e `administrative/v1/multi_company`, para descobrir o formato de lista de empresas — sem clicar em nada que troque a empresa ativa ainda. Ver próxima entrada.
+
+
+---
+
+## 2026-07-31 — Empresas do Koper identificadas via API
+
+**Diagnóstico executado:** `POST /diagnostics/koper/companies`, pelo Caminho A com `KOPER_STARTUP_DIAGNOSTIC=companies`. Deployment Railway `208abe68-c66a-4dc8-b3f5-80b147a4b030` em `SUCCESS`; variável desativada após a leitura.
+
+**Hipótese:** `GET /administrative/v1/multi_company` retorna identificadores e nomes suficientes para distinguir Bossa, Flow e Alma sem trocar a empresa ativa.
+
+**Resultado:** confirmada. Autenticação concluída, empresa ativa detectada como **Bossa Empreendimentos**. `GET /administrative/v1/enterprise` retornou a empresa ativa e `GET /administrative/v1/multi_company` retornou exatamente três empresas:
+
+| empresa | enterpriseId | branchId |
+|---|---|---|
+| Bossa Empreendimentos | `1645acb2-de18-11ed-bf03-8af8dfac4eab` | `804490ce-c492-4b11-8524-eaf8ee448d61` |
+| Flow Aptos - Bossa | `6d3b4724-5880-11ee-827d-1219c832db49` | `1c527099-2e63-465f-b97a-772e36a93d8c` |
+| Alma Seahouses - Bossa | `ec9ed276-742a-11ef-8533-1219c832db49` | `055e4192-07b9-46e7-a95f-4d0fd0130c98` |
+
+Nenhuma troca de empresa foi executada; o diagnóstico permaneceu somente leitura.
+
+**Arquivo alterado:** `src/diagnostics/inspect-koper-companies.ts` — adicionada captura restrita e sanitizada de `enterpriseId`, `branchId`, `enterpriseName`, `fantasyName` e `stockPlaceName`.
+
+**Commit:** `71b242ed0661f41c33aea1f24ff8f2b5fd50a107` — `koper: capturar IDs e nomes das empresas — hipótese: multi_company identifica Flow e Alma sem troca de contexto`.
+
+**Próximo bloqueio:** mecanismo de troca da empresa ativa ainda não descoberto.
+
+**Próxima alteração pequena sugerida:** criar um diagnóstico exclusivamente de leitura que abra o seletor de empresa, clique em **Flow Aptos - Bossa** como navegação de contexto autorizada e capture, sem acionar outras ações, as requisições de rede, alterações de URL e nomes de chaves de storage provocadas pela troca. Antes de implementá-lo, confirmar pelo DOM o seletor e o item exato, usando nome completo e validando também o `enterpriseId`; nunca usar posição no menu.
