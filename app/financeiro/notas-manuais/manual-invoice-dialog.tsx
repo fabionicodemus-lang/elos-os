@@ -1,6 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FinancialInstallmentEditor } from "@/components/financial-installment-editor";
+import {
+  buildFinancialInstallments,
+  financialInstallmentSummary,
+  localTodayIso,
+  suggestedFirstDueDate,
+  type FinancialInstallmentDraft,
+} from "@/lib/financial-installments";
 import { saveManualInvoice } from "./actions";
 
 export type ManualSupplierOption = { id: string; legal_name: string; trade_name: string | null; tax_id: string | null };
@@ -23,7 +31,7 @@ export type ManualInvoiceItemDraft = {
   id: string; service_id: string; contract_item_id: string; measurement_item_id: string; description: string;
   unit: string; quantity: number; unit_price: number; discount_amount: number; notes: string;
 };
-export type ManualInvoiceInstallmentDraft = { id: string; label: string; due_date: string; amount: number; payment_method: string };
+export type ManualInvoiceInstallmentDraft = FinancialInstallmentDraft;
 export type ManualInvoiceInitial = {
   id: string; supplier_id: string; contract_id: string | null; measurement_id: string | null; document_type: string;
   document_number: string; series: string | null; issue_date: string; competence_date: string | null; notes: string | null;
@@ -57,7 +65,7 @@ const typeLabels: Record<string, string> = {
   other: "Outro documento",
 };
 
-function today() { return new Date().toISOString().slice(0, 10); }
+function today() { return localTodayIso(); }
 function uid(prefix: string) { return `${prefix}-${crypto.randomUUID()}`; }
 function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0)); }
 function number(value: number, digits = 4) { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(Number(value || 0)); }
@@ -66,8 +74,8 @@ function supplierName(supplier: ManualSupplierOption) { return supplier.trade_na
 function blankItem(): ManualInvoiceItemDraft {
   return { id: uid("item"), service_id: "", contract_item_id: "", measurement_item_id: "", description: "", unit: "un", quantity: 1, unit_price: 0, discount_amount: 0, notes: "" };
 }
-function blankInstallment(): ManualInvoiceInstallmentDraft {
-  return { id: uid("parcela"), label: "1", due_date: today(), amount: 0, payment_method: "Boleto" };
+function blankInstallments(): ManualInvoiceInstallmentDraft[] {
+  return buildFinancialInstallments({ total: 0, count: 1, firstDueDate: suggestedFirstDueDate(), paymentMethod: "Boleto" });
 }
 function initialRetentions(initial?: ManualInvoiceInitial | null): Retentions {
   return {
@@ -83,7 +91,7 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
   const [contractId, setContractId] = useState(initial?.contract_id ?? "");
   const [measurementId, setMeasurementId] = useState(initial?.measurement_id ?? "");
   const [items, setItems] = useState<ManualInvoiceItemDraft[]>(initial?.items?.length ? initial.items : [blankItem()]);
-  const [installments, setInstallments] = useState<ManualInvoiceInstallmentDraft[]>(initial?.installments?.length ? initial.installments : [blankInstallment()]);
+  const [installments, setInstallments] = useState<ManualInvoiceInstallmentDraft[]>(initial?.installments?.length ? initial.installments : blankInstallments());
   const [retentions, setRetentions] = useState<Retentions>(() => initialRetentions(initial));
 
   useEffect(() => { if (autoOpen) dialogRef.current?.showModal(); }, [autoOpen]);
@@ -97,8 +105,7 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
   const itemDiscount = items.reduce((sum, item) => sum + Number(item.discount_amount || 0), 0);
   const totalRetentions = Object.values(retentions).reduce((sum, amount) => sum + Number(amount || 0), 0);
   const net = Math.max(0, gross - itemDiscount - totalRetentions);
-  const paymentTotal = installments.reduce((sum, installment) => sum + Number(installment.amount || 0), 0);
-  const difference = paymentTotal - net;
+  const installmentSummary = financialInstallmentSummary(net, installments);
 
   function updateItem(index: number, patch: Partial<ManualInvoiceItemDraft>) {
     setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
@@ -139,7 +146,7 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
       }));
     }
     setRetentions({ inss: 0, iss: 0, irrf: 0, pis: 0, cofins: 0, csll: 0, other: Number(measurement.total_deductions || 0) });
-    setInstallments([{ id: uid("parcela"), label: "1", due_date: today(), amount: Number(measurement.net_amount || 0), payment_method: "Boleto" }]);
+    setInstallments(buildFinancialInstallments({ total: Number(measurement.net_amount || 0), count: 1, firstDueDate: suggestedFirstDueDate(), paymentMethod: "Boleto" }));
   }
 
   function chooseContractItem(index: number, contractItemId: string) {
@@ -163,25 +170,7 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
     });
   }
 
-  function distributeNet() {
-    if (!installments.length) return;
-    const cents = Math.round(net * 100);
-    const base = Math.floor(cents / installments.length);
-    let remainder = cents - base * installments.length;
-    setInstallments((current) => current.map((installment) => {
-      const amount = (base + (remainder-- > 0 ? 1 : 0)) / 100;
-      return { ...installment, amount };
-    }));
-  }
-
-  function addInstallment() {
-    setInstallments((current) => {
-      const last = current.at(-1);
-      const nextDate = last?.due_date ? new Date(`${last.due_date}T12:00:00Z`) : new Date();
-      nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
-      return [...current, { id: uid("parcela"), label: String(current.length + 1), due_date: nextDate.toISOString().slice(0, 10), amount: 0, payment_method: last?.payment_method ?? "Boleto" }];
-    });
-  }
+  const canSave = installmentSummary.valid && net > 0 && Boolean(supplierId);
 
   return <>
     <button className="elos-button manual-invoice-open" type="button" onClick={() => dialogRef.current?.showModal()}>{label ?? "+ Nova nota manual"}</button>
@@ -189,7 +178,6 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
       <form action={saveManualInvoice}>
         <input type="hidden" name="invoice_id" value={initial?.id ?? ""} />
         <input type="hidden" name="items_json" value={JSON.stringify(items.map(({ id: _id, ...item }) => item))} />
-        <input type="hidden" name="installments_json" value={JSON.stringify(installments.map(({ id: _id, ...installment }) => installment))} />
         <div className="manual-dialog-head">
           <div><span>Financeiro · Documentos</span><h2>{initial ? `Editar ${initial.document_number}` : "Nova nota manual"}</h2><p>Classifique os serviços, retenções e parcelas antes de enviar para aprovação.</p></div>
           <button type="button" aria-label="Fechar" onClick={() => dialogRef.current?.close()}>×</button>
@@ -248,25 +236,21 @@ export function ManualInvoiceDialog({ suppliers, services, contracts, measuremen
             </article>
           </section>
 
-          <section className="manual-form-section">
-            <div className="manual-section-title"><div><span>Contas a pagar</span><h3>Programação das parcelas</h3></div><div className="manual-title-actions"><button type="button" onClick={distributeNet}>Distribuir líquido</button><button type="button" onClick={addInstallment} disabled={Boolean(measurementId)}>+ Parcela</button></div></div>
-            <div className="manual-installment-list">
-              {installments.map((installment, index) => <div key={installment.id}>
-                <label>Parcela<input value={installment.label} onChange={(event) => setInstallments((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, label: event.target.value } : row))} /></label>
-                <label>Vencimento<input type="date" value={installment.due_date} onChange={(event) => setInstallments((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, due_date: event.target.value } : row))} required /></label>
-                <label>Valor<input type="number" min="0.01" step="0.01" value={installment.amount} onChange={(event) => setInstallments((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, amount: Number(event.target.value) } : row))} required /></label>
-                <label>Forma<select value={installment.payment_method} onChange={(event) => setInstallments((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, payment_method: event.target.value } : row))}><option>Boleto</option><option>PIX</option><option>Transferência</option><option>Débito automático</option><option>Dinheiro</option><option>Outro</option></select></label>
-                <button type="button" disabled={installments.length === 1 || Boolean(measurementId)} onClick={() => setInstallments((current) => current.filter((_, rowIndex) => rowIndex !== index))}>Remover</button>
-              </div>)}
-            </div>
-            <div className={`manual-payment-balance ${Math.abs(difference) <= 0.02 ? "ok" : "warning"}`}><span>Parcelas: <strong>{money(paymentTotal)}</strong></span><span>Líquido: <strong>{money(net)}</strong></span><span>Diferença: <strong>{money(difference)}</strong></span></div>
-            {measurementId ? <p className="manual-alert">A medição vinculada gera uma única parcela pelo valor líquido aprovado.</p> : null}
-          </section>
+          <FinancialInstallmentEditor
+            total={net}
+            installments={installments}
+            onChange={setInstallments}
+            inputName="installments_json"
+            eyebrow="Contas a pagar"
+            title="Programação das parcelas"
+            lockCount={Boolean(measurementId)}
+          />
+          {measurementId ? <p className="manual-alert">A medição vinculada mantém uma única parcela. A data e o valor continuam editáveis, mas o valor precisa fechar com o líquido aprovado.</p> : null}
         </div>
         <div className="manual-dialog-foot">
           <button type="button" onClick={() => dialogRef.current?.close()}>Cancelar</button>
-          <button type="submit" name="submit_mode" value="draft">Salvar rascunho</button>
-          <button className="primary" type="submit" name="submit_mode" value="submit" disabled={Math.abs(difference) > 0.02 || net <= 0 || !supplierId}>Salvar e enviar para aprovação</button>
+          <button type="submit" name="submit_mode" value="draft" disabled={!canSave}>Salvar rascunho</button>
+          <button className="primary" type="submit" name="submit_mode" value="submit" disabled={!canSave}>Salvar e enviar para aprovação</button>
         </div>
       </form>
     </dialog>
