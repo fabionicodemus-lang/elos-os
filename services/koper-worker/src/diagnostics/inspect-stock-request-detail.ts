@@ -111,8 +111,13 @@ export async function inspectStockRequestDetail(): Promise<StockRequestDetailDia
     let message: string | null = null;
 
     try {
-      const rowLocator = page.getByText(requestNumberPattern).first();
-      const hasRow = await rowLocator.isVisible().catch(() => false);
+      const tableRow = page.locator("table tbody tr").first();
+      const hasTableRow = await tableRow.isVisible().catch(() => false);
+      const rowLocator = hasTableRow
+        ? tableRow
+        : page.getByText(requestNumberPattern).first();
+      const hasRow =
+        hasTableRow || (await rowLocator.isVisible().catch(() => false));
 
       if (hasRow) {
         clickedRowText = normalizeText(await rowLocator.innerText().catch(() => ""));
