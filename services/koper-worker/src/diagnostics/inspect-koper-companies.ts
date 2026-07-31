@@ -525,6 +525,33 @@ type MaterialFlowRead = NetworkSummary & {
       }>;
     }>;
   } | null;
+  invoice: {
+    invoiceId: string | number | null;
+    invoiceNumber: string | number | null;
+    stockPlaceId: string | number | null;
+    costCenterId: string | number | null;
+    buildMonitoringId: string | number | null;
+    emitDate: string | null;
+    situation: string | null;
+    isDraft: boolean | null;
+    totalValue: number | null;
+    totalNF: number | null;
+    supplierId: string | number | null;
+    products: Array<{
+      productId: string | number | null;
+      mainProductId: string | number | null;
+      amount: number | null;
+      unitValue: number | null;
+      totalValue: number | null;
+    }>;
+    bills: Array<{
+      billId: string | number | null;
+      billToPayId: string | number | null;
+      billValue: number | null;
+      dueDate: string | null;
+      isPaid: boolean | null;
+    }>;
+  } | null;
 };
 
 type SwitchAttemptShape = {
@@ -889,6 +916,62 @@ function collectSafeMaterialEntry(body: unknown): MaterialFlowRead["entry"] {
             invoiceNumber: safeIdentifier(invoice.invoiceNumber),
           };
         }),
+      };
+    }),
+  };
+}
+
+function collectSafeMaterialInvoice(body: unknown): MaterialFlowRead["invoice"] {
+  const value = typeof body === "object" && body !== null
+    ? body as Record<string, unknown>
+    : null;
+  if (!value || value.invoiceId === undefined) return null;
+  const total = typeof value.total === "object" && value.total !== null
+    ? value.total as Record<string, unknown>
+    : null;
+  const supplier = typeof value.supplier === "object" && value.supplier !== null
+    ? value.supplier as Record<string, unknown>
+    : null;
+  const bill = typeof value.bill === "object" && value.bill !== null
+    ? value.bill as Record<string, unknown>
+    : null;
+  const products = Array.isArray(value.products) ? value.products : [];
+  const duplicates = Array.isArray(bill?.duplicates) ? bill.duplicates : [];
+
+  return {
+    invoiceId: safeIdentifier(value.invoiceId),
+    invoiceNumber: safeIdentifier(value.invoiceNumber),
+    stockPlaceId: safeIdentifier(value.stockPlaceId),
+    costCenterId: safeIdentifier(value.costCenterId),
+    buildMonitoringId: safeIdentifier(value.buildMonitoringId),
+    emitDate: safeText(value.emitDate),
+    situation: safeText(value.situation),
+    isDraft: safeBoolean(value.isDraft),
+    totalValue: safeNumber(total?.totalValue),
+    totalNF: safeNumber(total?.totalNF),
+    supplierId: safeIdentifier(supplier?.supplierId),
+    products: products.slice(0, 100).map((item: unknown) => {
+      const product = typeof item === "object" && item !== null
+        ? item as Record<string, unknown>
+        : {};
+      return {
+        productId: safeIdentifier(product.productId),
+        mainProductId: safeIdentifier(product.mainProductId),
+        amount: safeNumber(product.amount),
+        unitValue: safeNumber(product.unitValue),
+        totalValue: safeNumber(product.totalValue),
+      };
+    }),
+    bills: duplicates.slice(0, 100).map((item: unknown) => {
+      const duplicate = typeof item === "object" && item !== null
+        ? item as Record<string, unknown>
+        : {};
+      return {
+        billId: safeIdentifier(duplicate.billId),
+        billToPayId: safeIdentifier(duplicate.billToPayId),
+        billValue: safeNumber(duplicate.billValue),
+        dueDate: safeText(duplicate.dueDate),
+        isPaid: safeBoolean(duplicate.isPaid),
       };
     }),
   };
@@ -1274,6 +1357,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
             || parsedUrl.pathname === "/stock/v1/product_entry"
             || parsedUrl.pathname === "/stock/v1/entry"
             || parsedUrl.pathname === "/stock/v1/pending_entry"
+            || parsedUrl.pathname === "/financial/v1/xml_invoice"
           )
         ) {
           const summary = sanitizeRequest(
@@ -1316,6 +1400,10 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               entry:
                 parsedUrl.pathname === "/stock/v1/product_entry"
                   ? collectSafeMaterialEntry(body)
+                  : null,
+              invoice:
+                parsedUrl.pathname === "/financial/v1/xml_invoice"
+                  ? collectSafeMaterialInvoice(body)
                   : null,
             });
           }).catch(() => undefined);
@@ -1676,6 +1764,16 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
 
       await page.goto(
         "https://app.koper.com.br/suprimentos/entradas/view/13373",
+        {
+          waitUntil: "domcontentloaded",
+          timeout: 15_000,
+        },
+      ).catch(() => undefined);
+      await page.waitForTimeout(5_000);
+      materialFlowUrls.push(page.url());
+
+      await page.goto(
+        "https://app.koper.com.br/financeiro/notas_fiscais/view/d4360ae6-85f9-11f1-9cb1-86c46e718d59",
         {
           waitUntil: "domcontentloaded",
           timeout: 15_000,
