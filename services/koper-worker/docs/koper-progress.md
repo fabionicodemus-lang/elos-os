@@ -647,3 +647,26 @@ Commit `25ca0b6`, deployment `505347e2` (SUCCESS), resultado lido em 2026-07-31T
 Este é o **quinto ciclo** consecutivo na mesma família de bloqueio (abrir o detalhe por clique). Variáveis `KOPER_STARTUP_DIAGNOSTIC` e `KOPER_QUOTATION_ONLY` esvaziadas imediatamente após a leitura. Nenhuma escrita operacional.
 
 **Decisão de processo:** em vez de uma sexta hipótese de clique, o Fábio pediu uma leitura do processo. Ela está em `docs/koper-metodo-otimizacao.md` — com a recomendação principal de resolver esta classe de bloqueio por **sessão de gravação assistida (LiveURL)**: o Fábio clica, o worker grava os endpoints. O detalhe da 3268 é o primeiro candidato.
+
+---
+
+## 2026-07-31 — HAR manual do Fábio: mapa da API do fluxo prioritário inteiro
+
+**Método:** em vez de continuar o crawl visual do detalhe da cotação 3268 (5 ciclos sem sucesso por causa da tabela Angular virtualizada), o Fábio capturou manualmente um HAR navegando o fluxo prioritário completo no contexto `Flow Aptos - Bossa`, com o DevTools → Network filtrado em Fetch/XHR. Arquivo de 40MB entregue zipado neste chat.
+
+**Processamento (somente leitura, sanitizado):** o HAR bruto **não foi versionado** (contém `accessToken` e dados pessoais/valores). Um script local extraiu apenas método, caminho, chaves de query (nunca valores) e a **estrutura de campos** das respostas (nunca valores), conforme Seção 3.2/3.3. Resultado consolidado no novo `docs/koper-api-map.md`.
+
+**Resultado — 29 operações REST mapeadas** cobrindo todas as fases do fluxo prioritário:
+- **Cadastros-base:** `enterprise`, `multi_company`, `user`, `tags`, `stock_place`, `sector`, `purchase/supplier`, `financial/supplier`, `item_chart_account`, `account`.
+- **Suprimentos:** `stock/request`, `product_request`, `entry`, `pending_entry`, `product_entry`, `temp_entry`, `prod_req_comment`.
+- **Compras:** `purchase/budget` (cotação), `budget_negotiation`, `purchase`, `purchase_order`, `service_order`, `supply/v2/purchases/details/{id}`.
+- **Financeiro:** `bills_to_pay` (+ `/events`), `account`, `item_chart_account`, `receipt`, `xml_invoice`.
+- **Troca de empresa:** `POST /login/change_company`.
+
+**Corpos de resposta capturados (8, estrutura no api-map):** `enterprise`, `multi_company`, `user`, `tags`, `stock_place`, `purchase/supplier`, `financial/account`, `financial/bills_to_pay`, `financial/xml_invoice`. Os demais vieram vazios (o Chrome descartou 183 de 195 corpos ao salvar) — endpoint e params confirmados, corpo pendente.
+
+**Bloqueio da cotação 3268 RESOLVIDO:** o detalhe do orçamento é `GET /purchase/v1/budget?budgetId={id}&group=request` — não depende de clicar na linha virtualizada. O crawl visual fica obsoleto. O commit `25ca0b6` (clique no `tr` pai) não é mais necessário para descobrir o endpoint; pode ser mantido só como fallback ou removido. O corpo do detalhe ainda não foi capturado (resposta vazia neste HAR); capturar em diagnóstico direcionado por `budgetId` ou em novo HAR abrindo uma cotação.
+
+**Hipótese confirmada.** O HAR manual é ordens de magnitude mais eficiente que o crawl visual para mapear rotas: uma navegada de ~10 min do Fábio substituiu dezenas de ciclos de deploy. **Registrado em `CLAUDE.md`, Seção 18, como método preferido para descoberta de rotas de telas novas.**
+
+**Próximo passo sugerido:** com as rotas conhecidas, capturar os corpos que faltam por diagnóstico direcionado (agora que o endpoint é conhecido, um GET autenticado pela interface resolve) — priorizar `budget?budgetId` (detalhe da cotação), `purchase`, `purchase_order`, `service_order` e as entradas de estoque. Ou pedir ao Fábio um segundo HAR abrindo uma cotação, um pedido e um recebimento, um de cada, para pegar os corpos numa tacada.

@@ -73,11 +73,12 @@
 | query finalizada observada | chaves `budgetId`, `initialDate`, `finalDate`, `limit`, `offset`, `orderFlag`, `orderby`, `typeDate`; valores ainda não capturados |
 | campos visíveis na listagem | Código, Fornecedor, Data Orçamento, Data Resposta, Qtd. Produtos, Valor Total |
 | detalhe visual observado | orçamento 3268; informações gerais; etapas Produtos, Frete e Pagamento; código do fornecedor, datas, validade, itens, quantidades, preços, descontos, prazo e total |
-| identificador | em aberto: `budgetId` aparece na query, mas ainda falta confirmar seu valor e separar conjunto, resposta e fornecedor |
-| paginação | indício de rolagem infinita e query `limit/offset`; segunda página ainda não validada |
-| volume | não medido |
+| endpoint de detalhe | `GET https://api.koper.com.br/purchase/v1/budget?budgetId={id}&group=request` — **confirmado via HAR 2026-07-31.** Não depende de clicar na linha virtualizada; basta listar (`budgetId=all`) e chamar por `budgetId`. Corpo do detalhe ainda não capturado. |
+| identificador | `budgetId` (usado tanto na listagem `budgetId=all` quanto no detalhe `budgetId={id}`) |
+| paginação | listagem: `limit=25`/`offset` em passos de 25, `budgetAmount=440` no Flow (confirmado antes) |
+| volume | 440 orçamentos históricos no Flow |
 | tabela staging | não criada |
-| status | **rota e endpoints descobertos; contrato do JSON ainda em aberto.** O período padrão vazio responde 404; três tentativas de selecionar `Todos` não dispararam nova leitura. Próximo passo recomendado: diagnóstico estrutural do DOM do filtro. |
+| status | **rota, endpoints (listagem + detalhe) e paginação confirmados via HAR.** Bloqueio do crawl visual da 3268 resolvido — ver `docs/koper-api-map.md`. Falta capturar o corpo do detalhe. |
 
 
 ## Todas as demais entidades do fluxo prioritário
@@ -86,13 +87,13 @@ Ainda **não iniciado**: cotação, participantes/preços, pedido de compra, rec
 
 | entidade | status |
 |---|---|
-| cadastros-base (Fase 2) | não iniciado |
-| quotation (cotação) | não iniciado |
-| purchase_order (pedido de compra) | não iniciado |
-| receipt (recebimento) | não iniciado |
-| invoice (nota fiscal) | não iniciado |
-| accounts_payable (conta a pagar) | não iniciado |
-| payment (pagamento) | não iniciado |
+| cadastros-base (Fase 2) | **rotas mapeadas via HAR** (`enterprise`, `multi_company`, `user`, `supplier`, `stock_place`, `sector`, `item_chart_account`, `account`, `tags`) — ver `docs/koper-api-map.md`; corpos de vários já capturados |
+| quotation (cotação) | **rota listagem + detalhe confirmadas** (`purchase/v1/budget`) — falta corpo do detalhe |
+| purchase_order (pedido de compra) | **rota mapeada** (`purchase/v1/purchase_order`, `purchase`, `service_order`, `supply/v2/purchases/details/{id}`) — falta corpo |
+| receipt (recebimento/entrada) | **rota mapeada** (`stock/v1/entry`, `pending_entry`, `product_entry`, `temp_entry`) — falta corpo |
+| invoice (nota fiscal) | **rota + corpo capturados** (`financial/v1/xml_invoice?invoiceId=` — inclui XML, produtos, impostos, fornecedor, duplicatas) — ver api-map |
+| accounts_payable (conta a pagar) | **rota + corpo capturados** (`financial/v1/bills_to_pay` + `/events`) — ver api-map |
+| payment (pagamento) | dados de pagamento aparecem embutidos em `bills_to_pay.bills[]` (`paymentDate`, `paymentValue`, `paymentType`, `isPaid`) e em `xml_invoice.bill.duplicates[]`; entidade própria não confirmada |
 | comercial / contas a receber (Fase 5) | não iniciado — **lembrete:** antes de desenhar qualquer estrutura de recebíveis/CUB, rodar grep por `CUB`, `receb`, `correc`, `INCC`, `IPCA` no repositório (Seção 11 da constituição); já existem migrations `supabase/migrations/20260723_0007_koper_receivable_details.sql` e `20260723_0007_koper_receivables_audit.sql` que precisam ser revisadas antes de duplicar trabalho. |
 
 
