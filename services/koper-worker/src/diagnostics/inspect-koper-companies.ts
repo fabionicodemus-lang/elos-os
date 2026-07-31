@@ -280,6 +280,16 @@ type StockRequestRead = NetworkSummary & {
   requests: StockRequestSample[];
 };
 
+type FilterControl = {
+  tag: string;
+  text: string;
+  className: string;
+  role: string | null;
+  type: string | null;
+  ariaLabel: string | null;
+  testId: string | null;
+};
+
 type QuotationRead = NetworkSummary & {
   statusCode: number;
   queryParams: Record<string, string>;
@@ -310,6 +320,7 @@ export type KoperFlowContextDiagnostic = {
   quotationFinalizedClicked: boolean;
   stockRequestReads: StockRequestRead[];
   quotationReads: QuotationRead[];
+  quotationFilterControls: FilterControl[];
   finalUrl: string;
   network: NetworkSummary[];
   blockedWrites: NetworkSummary[];
@@ -504,6 +515,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         quotationFinalizedClicked: false,
         stockRequestReads: [],
         quotationReads: [],
+        quotationFilterControls: [],
         finalUrl: login.finalUrl,
         network: [],
         blockedWrites: [],
@@ -816,6 +828,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
 
     let quotationListReached = false;
     let quotationFinalizedClicked = false;
+    let quotationFilterControls: FilterControl[] = [];
 
     if (/flow/i.test(activeCompanyAfter ?? "")) {
       network.splice(0);
@@ -874,6 +887,28 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           quotationFinalizedClicked = true;
           await page.waitForTimeout(8_000);
 
+          quotationFilterControls = await page
+            .locator("button, input, select, [role='button'], [role='combobox'], [class*='select' i], [class*='dropdown' i]")
+            .evaluateAll((elements) => elements.flatMap((element) => {
+              const node = element as HTMLElement;
+              const rect = node.getBoundingClientRect();
+              const style = window.getComputedStyle(node);
+
+              if (rect.y < 70 || rect.y > 260 || rect.width === 0 || rect.height === 0 || style.display === "none") {
+                return [];
+              }
+
+              return [{
+                tag: node.tagName.toLowerCase(),
+                text: (node.innerText || "").replace(/\s+/g, " ").trim().slice(0, 80),
+                className: node.className.toString().slice(0, 160),
+                role: node.getAttribute("role"),
+                type: node.getAttribute("type"),
+                ariaLabel: node.getAttribute("aria-label"),
+                testId: node.getAttribute("data-testid"),
+              }];
+            })).then((items) => items.slice(0, 80));
+
           const currentPeriod = page
             .getByText(/^(Mês atual|Últimos 7 dias|Últimos 30 dias)$/i, { exact: true })
             .last();
@@ -921,6 +956,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       quotationFinalizedClicked,
       stockRequestReads,
       quotationReads,
+      quotationFilterControls,
       finalUrl: page.url(),
       network,
       blockedWrites,
