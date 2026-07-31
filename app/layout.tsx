@@ -44,6 +44,7 @@ import "./taxes.css";
 import "./proposals.css";
 import "./brokers.css";
 import "./sefaz-nfe.css";
+import "./financial-installments.css";
 import "./elos-theme.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
