@@ -421,6 +421,45 @@ type BillDetailRead = NetworkSummary & {
   queryParams: Record<string, string>;
   dataKeys: string[];
   fieldPaths: string[];
+  bill: {
+    id: string | number | null;
+    billId: string | number | null;
+    billToPayId: string | number | null;
+    supplierId: string | number | null;
+    costCenterId: string | number | null;
+    chartAccountId: string | number | null;
+    itemChartAccountId: string | number | null;
+    accountId: string | number | null;
+    paymentId: string | number | null;
+    billValue: number | null;
+    paymentValue: number | null;
+    discountValue: number | null;
+    interestValue: number | null;
+    lateFeeValue: number | null;
+    otherAccruals: number | null;
+    dueDate: string | null;
+    paidAt: string | null;
+    status: string | null;
+    paymentType: string | null;
+    isPaid: boolean | null;
+    billReceiptNumber: string | number | null;
+    proofPayFileId: string | number | null;
+    bankSlipFileId: string | number | null;
+    origins: Array<{
+      invoiceId: string | number | null;
+      invoiceNumber: string | number | null;
+      receiptId: string | number | null;
+      receiptNumber: string | number | null;
+      serviceOrderId: string | number | null;
+      buildMonitoringId: string | number | null;
+    }>;
+  } | null;
+  events: Array<{
+    billToPayEventId: string | number | null;
+    billIdFk: string | number | null;
+    userIdFk: string | number | null;
+    registerDate: string | null;
+  }>;
 };
 
 type SwitchAttemptShape = {
@@ -619,6 +658,75 @@ function collectSafePurchaseDetail(body: unknown): PurchaseDetailSample | null {
       };
     }),
   };
+}
+
+function collectSafeBillDetail(body: unknown): BillDetailRead["bill"] {
+  const value = typeof body === "object" && body !== null
+    ? body as Record<string, unknown>
+    : null;
+  if (!value || value.bill_id === undefined) return null;
+  const costCenter = typeof value.cost_center === "object" && value.cost_center !== null
+    ? value.cost_center as Record<string, unknown>
+    : null;
+  const origins = Array.isArray(value.origins) ? value.origins : [];
+
+  return {
+    id: safeIdentifier(value.id),
+    billId: safeIdentifier(value.bill_id),
+    billToPayId: safeIdentifier(value.bill_to_pay_id),
+    supplierId: safeIdentifier(value.supplier_id),
+    costCenterId: safeIdentifier(costCenter?.id),
+    chartAccountId: safeIdentifier(value.chart_account_id),
+    itemChartAccountId: safeIdentifier(value.item_chart_account_id),
+    accountId: safeIdentifier(value.account_id),
+    paymentId: safeIdentifier(value.payment_id),
+    billValue: safeNumber(value.bill_value),
+    paymentValue: safeNumber(value.payment_value),
+    discountValue: safeNumber(value.discount_value),
+    interestValue: safeNumber(value.interest_value),
+    lateFeeValue: safeNumber(value.late_fee_value),
+    otherAccruals: safeNumber(value.other_accruals),
+    dueDate: safeText(value.due_date),
+    paidAt: safeText(value.paid_at),
+    status: safeText(value.status),
+    paymentType: safeText(value.payment_type),
+    isPaid: safeBoolean(value.is_paid),
+    billReceiptNumber: safeIdentifier(value.bill_receipt_number),
+    proofPayFileId: safeIdentifier(value.proofpay_file_id),
+    bankSlipFileId: safeIdentifier(value.bank_slip_file_id),
+    origins: origins.slice(0, 50).map((item: unknown) => {
+      const origin = typeof item === "object" && item !== null
+        ? item as Record<string, unknown>
+        : {};
+      return {
+        invoiceId: safeIdentifier(origin.invoice_id),
+        invoiceNumber: safeIdentifier(origin.invoice_number),
+        receiptId: safeIdentifier(origin.receipt_id),
+        receiptNumber: safeIdentifier(origin.receipt_number),
+        serviceOrderId: safeIdentifier(origin.service_order_id),
+        buildMonitoringId: safeIdentifier(origin.build_monitoring_id),
+      };
+    }),
+  };
+}
+
+function collectSafeBillEvents(body: unknown): BillDetailRead["events"] {
+  const value = typeof body === "object" && body !== null
+    ? body as Record<string, unknown>
+    : null;
+  const events = Array.isArray(value?.events) ? value.events : [];
+
+  return events.slice(0, 100).map((item: unknown) => {
+    const event = typeof item === "object" && item !== null
+      ? item as Record<string, unknown>
+      : {};
+    return {
+      billToPayEventId: safeIdentifier(event.billToPayEventId),
+      billIdFk: safeIdentifier(event.billIdFk),
+      userIdFk: safeIdentifier(event.userIdFk),
+      registerDate: safeText(event.registerDate),
+    };
+  });
 }
 
 function collectSafeStockRequests(body: unknown): {
@@ -1026,6 +1134,14 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               })),
               dataKeys: object ? Object.keys(object).slice(0, 80) : [],
               fieldPaths: collectFieldPaths(body).slice(0, 400),
+              bill:
+                parsedUrl.pathname === "/financial/v1/bills_to_pay"
+                  ? collectSafeBillDetail(body)
+                  : null,
+              events:
+                parsedUrl.pathname.endsWith("/events")
+                  ? collectSafeBillEvents(body)
+                  : [],
             });
           }).catch(() => undefined);
 
@@ -1053,6 +1169,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               queryParams: {},
               dataKeys: object ? Object.keys(object).slice(0, 80) : [],
               fieldPaths: collectFieldPaths(body).slice(0, 400),
+              bill: null,
+              events: [],
             });
           }).catch(() => undefined);
 
