@@ -537,6 +537,7 @@ type MaterialFlowRead = NetworkSummary & {
     totalValue: number | null;
     totalNF: number | null;
     supplierId: string | number | null;
+    purchaseOrderIds: Array<string | number>;
     products: Array<{
       productId: string | number | null;
       mainProductId: string | number | null;
@@ -946,6 +947,7 @@ function collectSafeMaterialInvoice(body: unknown): MaterialFlowRead["invoice"] 
     : null;
   const products = Array.isArray(value.products) ? value.products : [];
   const duplicates = Array.isArray(bill?.duplicates) ? bill.duplicates : [];
+  const purchaseOrders = Array.isArray(value.purchaseOrders) ? value.purchaseOrders : [];
 
   return {
     invoiceId: safeIdentifier(value.invoiceId),
@@ -959,6 +961,13 @@ function collectSafeMaterialInvoice(body: unknown): MaterialFlowRead["invoice"] 
     totalValue: safeNumber(total?.totalValue),
     totalNF: safeNumber(total?.totalNF),
     supplierId: safeIdentifier(supplier?.supplierId),
+    purchaseOrderIds: purchaseOrders.flatMap((item: unknown) => {
+      const order = typeof item === "object" && item !== null
+        ? item as Record<string, unknown>
+        : {};
+      const id = safeIdentifier(order.purchaseOrderId);
+      return id === null ? [] : [id];
+    }).slice(0, 100),
     products: products.slice(0, 100).map((item: unknown) => {
       const product = typeof item === "object" && item !== null
         ? item as Record<string, unknown>
