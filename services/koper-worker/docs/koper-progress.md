@@ -597,3 +597,26 @@ Com base nessa evidência, o diagnóstico passou a clicar na primeira opção po
 Duas execuções do diagnóstico foram encerradas pelo Browserless durante a espera posterior ao clique, com `Target page, context or browser has been closed`, antes da emissão do JSON final. Portanto, ainda não há confirmação da query produzida por `Todos`. O ciclo foi interrompido e `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado.
 
 **Próximo passo:** reduzir o tempo total do diagnóstico de orçamentos, removendo esperas e etapas anteriores que não são necessárias nesta rodada, e só então repetir o clique relativo.
+
+
+## 2026-07-31 — “Todos” e paginação de Orçamentos confirmados
+
+Commits `a407c52`, `201b239`, `20347e2`, `d2a5c01` e `cc37615`.
+
+Foi criado o modo temporário `KOPER_QUOTATION_ONLY=true`, que preserva login e troca autorizada para `Flow Aptos - Bossa`, mas pula o inventário já concluído de Solicitações. A rota confirmada `/compras/orcamentos/finalizados` passou a ser aberta diretamente por GET, evitando a tela intermediária dependente de GraphQL POST bloqueado.
+
+A seleção visual de `Todos`, pela primeira opção imediatamente abaixo do controle datado, foi confirmada por uma nova leitura com status 200:
+
+- endpoint: `GET /purchase/v1/budget`;
+- `budgetId=all`;
+- `limit=25`;
+- `offset=0`;
+- `orderFlag=desc`;
+- `orderby=budgetId`;
+- sem `initialDate`, `finalDate` ou `typeDate`.
+
+A resposta usa `budgetAmount`, não `itemsAmount`, e informou **440 registros históricos**. A primeira página retornou 25 registros.
+
+A rolagem infinita foi validada em seguida. Ela disparou a mesma consulta com `offset=25`, retornando mais 25 registros distintos. Página 1: IDs 3268 a 3037 na amostra ordenada; página 2: IDs 3006 a 2709. Não houve repetição entre as páginas.
+
+O diagnóstico registrou somente `budgetId`, `supplierId`, `buildMonitoringId`, datas, quantidade de produtos e valor total. Nomes de fornecedores foram excluídos da amostra. `KOPER_STARTUP_DIAGNOSTIC` e `KOPER_QUOTATION_ONLY` foram esvaziados após a leitura. Nenhuma escrita operacional foi executada.
