@@ -12,7 +12,7 @@ function authorized(req) {
 }
 
 app.get('/health', (_req, res) => {
-  res.json({ ok: true, service: 'elos-homologation-agent', version: '0.1.0' });
+  res.json({ ok: true, service: 'elos-homologation-agent', version: '0.2.0' });
 });
 
 app.post('/run', async (req, res) => {
@@ -28,4 +28,17 @@ app.post('/run', async (req, res) => {
 const port = Number(process.env.PORT || 8080);
 app.listen(port, '0.0.0.0', () => {
   console.log(`Elos homologation agent listening on ${port}`);
+
+  const autoPhase = process.env.AUTO_RUN_PHASE?.trim();
+  if (autoPhase) {
+    setTimeout(async () => {
+      try {
+        console.log(`[autorun] iniciando fase ${autoPhase}`);
+        const report = await runHomologation({ phase: autoPhase });
+        console.log(`[autorun] concluído: ${report.passed}/${report.total} aprovadas; ${report.failed} falhas`);
+      } catch (error) {
+        console.error('[autorun] falhou:', error instanceof Error ? error.stack || error.message : String(error));
+      }
+    }, 3000);
+  }
 });
