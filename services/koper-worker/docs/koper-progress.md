@@ -325,3 +325,37 @@ A rota de segurança abortou a requisição antes do envio. `blockedWrites` regi
 3. Fazer a seleção manual em uma sessão persistida e o worker apenas ler a empresa já ativa; mais frágil para sincronização automática.
 
 **Recomendação técnica:** alternativa 1, com allowlist estrita do endpoint, validação de `enterpriseId`, confirmação posterior por `GET /administrative/v1/enterprise` e nenhuma captura/log do valor de `accessToken`.
+
+
+---
+
+## 2026-07-31 — Troca para Flow Aptos confirmada
+
+**Diagnóstico executado:** `POST /diagnostics/koper/flow-context`, Caminho A. Deployment final `a2cdd16b-db00-4ec0-bf58-a27f1f444a35` em `SUCCESS`.
+
+**Autorização:** Fábio autorizou explicitamente a exceção restrita para `POST /login/change_company`. A constituição foi atualizada antes do código no commit `afebc39` e alinhada ao corpo real no commit `3095f2e`.
+
+**Mecanismo confirmado:**
+
+- endpoint: `POST https://api.koper.com.br/login/change_company`;
+- corpo JSON com chaves `accessToken`, `toEnterpriseId`, `changeCompany`;
+- `toEnterpriseId` contém o `enterpriseId` do Flow;
+- o valor de `accessToken` nunca é registrado;
+- allowlist valida endpoint, método, conjunto exato de chaves e destino Flow.
+
+**Resultado final:**
+
+- `activeCompanyBefore: "Bossa Empreendimentos"`;
+- `activeCompanyAfter: "Flow Aptos - Bossa"`;
+- `flowCardFound: true`;
+- `flowSelected: true`;
+- `blockedWrites`: somente POSTs GraphQL do carregamento do dashboard, bloqueados por ainda não terem sido classificados; nenhum outro POST REST foi permitido;
+- `GET /administrative/v1/enterprise` ocorreu após a recarga e a interface confirmou Flow.
+
+**Hipótese confirmada.** A troca multiempresa pode ser automatizada com allowlist estrita e confirmação posterior.
+
+**Commits de código:** `5b542e9`, `a5a1108`, `a61b57e`, `84ea83c`, `6d80216`.
+
+**Próximo bloqueio:** os diagnósticos de Solicitações atualmente fazem login e navegam diretamente na empresa padrão. É necessário executar a seleção do Flow dentro da mesma sessão antes de abrir Suprimentos.
+
+**Próxima alteração pequena sugerida:** extrair a seleção segura do Flow para helper reutilizável e criar um diagnóstico composto que confirme `Flow Aptos - Bossa` antes de abrir Suprimentos → Solicitações. Reutilizar os endpoints REST já descobertos, sem gravar dados.
