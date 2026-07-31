@@ -1,0 +1,40 @@
+name: Homologation Agent
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "services/homologation-agent/**"
+      - ".github/workflows/homologation-agent.yml"
+  push:
+    branches: [main]
+    paths:
+      - "services/homologation-agent/**"
+      - ".github/workflows/homologation-agent.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/homologation-agent
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Check JavaScript
+        run: |
+          node --check src/index.mjs
+          node --check src/runner.mjs
+          node --check src/cli.mjs
+      - name: Build Docker image
+        run: docker build -t elos-homologation-agent:test .
