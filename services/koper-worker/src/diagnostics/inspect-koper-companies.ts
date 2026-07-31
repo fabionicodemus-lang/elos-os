@@ -491,6 +491,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         stockListReached: false,
         finalizedControlFound: false,
         finalizedClicked: false,
+        quotationListReached: false,
+        quotationFinalizedClicked: false,
         stockRequestReads: [],
         finalUrl: login.finalUrl,
         network: [],
