@@ -467,6 +467,64 @@ type MaterialFlowRead = NetworkSummary & {
   queryParams: Record<string, string>;
   dataKeys: string[];
   fieldPaths: string[];
+  order: {
+    orderId: string | number | null;
+    supplierId: string | number | null;
+    costCenterId: string | number | null;
+    buildMonitoringId: string | number | null;
+    orderDate: string | null;
+    deliveryDate: string | null;
+    status: string | null;
+    isDraft: boolean | null;
+    costShipping: number | null;
+    negotiatedDiscount: number | null;
+    totalDiscount: number | null;
+    products: Array<{
+      productId: string | number | null;
+      mainProductId: string | number | null;
+      orderProductId: string | number | null;
+      inputId: string | number | null;
+      amount: number | null;
+      amountReceived: number | null;
+      price: number | null;
+      finalPrice: number | null;
+      discount: number | null;
+      unitMeasureId: string | number | null;
+      prodFinished: boolean | null;
+      prodCanceled: boolean | null;
+      requests: Array<{
+        requestId: string | number | null;
+        productRequestId: string | number | null;
+        requestAmount: number | null;
+        deliveryPlaceId: string | number | null;
+      }>;
+    }>;
+  } | null;
+  entry: {
+    stockMovementId: string | number | null;
+    itemsAmount: number | null;
+    entryType: string | null;
+    placeEntryId: string | number | null;
+    movementDate: string | null;
+    packingListId: string | number | null;
+    totalProductValue: number | null;
+    averageProductValue: number | null;
+    products: Array<{
+      productId: string | number | null;
+      mainProductId: string | number | null;
+      productMovementId: string | number | null;
+      stockMovementId: string | number | null;
+      productAmount: number | null;
+      unitMeasureId: string | number | null;
+      productValue: number | null;
+      averageProductValue: number | null;
+      totalProductValue: number | null;
+      invoices: Array<{
+        invoiceId: string | number | null;
+        invoiceNumber: string | number | null;
+      }>;
+    }>;
+  } | null;
 };
 
 type SwitchAttemptShape = {
@@ -736,6 +794,104 @@ function collectSafeBillEvents(body: unknown): BillDetailRead["events"] {
       registerDate: safeText(event.registerDate),
     };
   });
+}
+
+function collectSafeMaterialOrder(body: unknown): MaterialFlowRead["order"] {
+  const value = typeof body === "object" && body !== null
+    ? body as Record<string, unknown>
+    : null;
+  if (!value || value.orderId === undefined) return null;
+  const products = Array.isArray(value.products) ? value.products : [];
+
+  return {
+    orderId: safeIdentifier(value.orderId),
+    supplierId: safeIdentifier(value.supplierId),
+    costCenterId: safeIdentifier(value.costCenterId),
+    buildMonitoringId: safeIdentifier(value.buildMonitoringId),
+    orderDate: safeText(value.orderDate),
+    deliveryDate: safeText(value.deliveryDate),
+    status: safeText(value.status),
+    isDraft: safeBoolean(value.isDraft),
+    costShipping: safeNumber(value.costShipping),
+    negotiatedDiscount: safeNumber(value.negotiatedDiscount),
+    totalDiscount: safeNumber(value.totalDiscount),
+    products: products.slice(0, 100).map((item: unknown) => {
+      const product = typeof item === "object" && item !== null
+        ? item as Record<string, unknown>
+        : {};
+      const requests = Array.isArray(product.requests) ? product.requests : [];
+      return {
+        productId: safeIdentifier(product.productId),
+        mainProductId: safeIdentifier(product.mainProductId),
+        orderProductId: safeIdentifier(product.orderProductId),
+        inputId: safeIdentifier(product.inputId),
+        amount: safeNumber(product.amount),
+        amountReceived: safeNumber(product.amountReceived),
+        price: safeNumber(product.price),
+        finalPrice: safeNumber(product.finalPrice),
+        discount: safeNumber(product.discount),
+        unitMeasureId: safeIdentifier(product.unitMeasureId),
+        prodFinished: safeBoolean(product.prodFinished),
+        prodCanceled: safeBoolean(product.prodCanceled),
+        requests: requests.slice(0, 100).map((requestItem: unknown) => {
+          const request = typeof requestItem === "object" && requestItem !== null
+            ? requestItem as Record<string, unknown>
+            : {};
+          return {
+            requestId: safeIdentifier(request.requestId),
+            productRequestId: safeIdentifier(request.productRequestId),
+            requestAmount: safeNumber(request.requestAmount),
+            deliveryPlaceId: safeIdentifier(request.deliveryPlaceId),
+          };
+        }),
+      };
+    }),
+  };
+}
+
+function collectSafeMaterialEntry(body: unknown): MaterialFlowRead["entry"] {
+  const value = typeof body === "object" && body !== null
+    ? body as Record<string, unknown>
+    : null;
+  if (!value || value.stockMovementId === undefined) return null;
+  const products = Array.isArray(value.products) ? value.products : [];
+
+  return {
+    stockMovementId: safeIdentifier(value.stockMovementId),
+    itemsAmount: safeNumber(value.itemsAmount),
+    entryType: safeText(value.entryType),
+    placeEntryId: safeIdentifier(value.placeEntryId),
+    movementDate: safeText(value.movementDate),
+    packingListId: safeIdentifier(value.packingListId),
+    totalProductValue: safeNumber(value.totalProductValue),
+    averageProductValue: safeNumber(value.averageProductValue),
+    products: products.slice(0, 100).map((item: unknown) => {
+      const product = typeof item === "object" && item !== null
+        ? item as Record<string, unknown>
+        : {};
+      const invoices = Array.isArray(product.invoices) ? product.invoices : [];
+      return {
+        productId: safeIdentifier(product.productId),
+        mainProductId: safeIdentifier(product.mainProductId),
+        productMovementId: safeIdentifier(product.productMovementId),
+        stockMovementId: safeIdentifier(product.stockMovementId),
+        productAmount: safeNumber(product.productAmount),
+        unitMeasureId: safeIdentifier(product.unitMeasureId),
+        productValue: safeNumber(product.productValue),
+        averageProductValue: safeNumber(product.averageProductValue),
+        totalProductValue: safeNumber(product.totalProductValue),
+        invoices: invoices.slice(0, 50).map((invoiceItem: unknown) => {
+          const invoice = typeof invoiceItem === "object" && invoiceItem !== null
+            ? invoiceItem as Record<string, unknown>
+            : {};
+          return {
+            invoiceId: safeIdentifier(invoice.invoiceId),
+            invoiceNumber: safeIdentifier(invoice.invoiceNumber),
+          };
+        }),
+      };
+    }),
+  };
 }
 
 function collectSafeStockRequests(body: unknown): {
@@ -1153,6 +1309,14 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               })),
               dataKeys: object ? Object.keys(object).slice(0, 100) : [],
               fieldPaths: collectFieldPaths(body).slice(0, 500),
+              order:
+                parsedUrl.pathname === "/purchase/v1/purchase_order"
+                  ? collectSafeMaterialOrder(body)
+                  : null,
+              entry:
+                parsedUrl.pathname === "/stock/v1/product_entry"
+                  ? collectSafeMaterialEntry(body)
+                  : null,
             });
           }).catch(() => undefined);
 
