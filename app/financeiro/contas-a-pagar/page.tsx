@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
-import { cancelPayable, createPayable, markPayablePaid } from "./actions";
+import { cancelPayable, markPayablePaid } from "./actions";
+import { PayableCreateForm } from "./payable-create-form";
 import { resolveDateRange } from "@/lib/date-range";
 import { requireCompanyPermission } from "@/lib/workspace";
 
@@ -184,19 +185,7 @@ export default async function PayablesPage({
             {canManage && projectId ? (
               <details className="registry-create">
                 <summary>+ Nova conta a pagar</summary>
-                <form action={createPayable}>
-                  <div className="registry-form-grid">
-                    <label className="registry-wide">Fornecedor<select name="supplier_id" required defaultValue=""><option value="" disabled>Selecione</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.trade_name || supplier.legal_name} {supplier.tax_id ? `· ${supplier.tax_id}` : ""}</option>)}</select></label>
-                    <label>Documento<input name="document" /></label>
-                    <label>Parcela<input name="installment_label" placeholder="1 / 3" /></label>
-                    <label>Vencimento<input name="due_date" type="date" required /></label>
-                    <label>Valor<input name="amount" inputMode="decimal" placeholder="0,00" required /></label>
-                    <label>Classe fiscal<input name="fiscal_class" /></label>
-                    <label>Forma de pagamento<input name="payment_method" /></label>
-                    <label className="registry-wide">Observações<textarea name="notes" rows={3} /></label>
-                  </div>
-                  <button className="auth-primary" type="submit">Salvar conta</button>
-                </form>
+                <PayableCreateForm suppliers={suppliers} />
               </details>
             ) : null}
           </section>
