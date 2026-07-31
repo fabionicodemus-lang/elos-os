@@ -693,7 +693,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         secondPageUrl.searchParams.set("offset", "25");
         stockListMode = "active-page-2";
 
-        await page
+        const secondPage = await page
           .evaluate(async (rawUrl) => {
             const response = await fetch(rawUrl, { credentials: "include" });
 
@@ -701,10 +701,26 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               throw new Error(`KOPER_STOCK_PAGE_2_HTTP_${response.status}`);
             }
 
-            await response.json();
+            return {
+              statusCode: response.status,
+              body: await response.json() as unknown,
+            };
           }, secondPageUrl.toString())
-          .catch(() => undefined);
-        await page.waitForTimeout(2_000);
+          .catch(() => null);
+        await Promise.allSettled(pendingStockResponses);
+
+        if (
+          secondPage &&
+          !stockRequestReads.some((read) => read.listMode === "active-page-2")
+        ) {
+          stockRequestReads.push({
+            ...sanitizeRequest(secondPageUrl.toString(), "GET", "fetch"),
+            listMode: "active-page-2",
+            statusCode: secondPage.statusCode,
+            queryParams: safeStockQueryParams(secondPageUrl),
+            ...collectSafeStockRequests(secondPage.body),
+          });
+        }
       }
 
       if (stockListReached) {
