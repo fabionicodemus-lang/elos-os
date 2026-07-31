@@ -702,3 +702,26 @@ Valores operacionais sanitizados confirmados: `billId=15902`, `billToPayId=14525
 O vínculo pedido `13667` → conta a pagar `15902/14525` está fechado. Nenhuma origem de nota fiscal ou recebimento veio em `origins[]` neste título; a ligação foi obtida pelo corpo do pedido. Nove POSTs GraphQL auxiliares permaneceram bloqueados. Nenhuma escrita operacional foi executada. As variáveis temporárias foram esvaziadas após a leitura.
 
 **Próximo passo:** voltar ao fluxo de suprimentos e mapear uma compra de materiais que contenha `purchaseOrders[]` e `products[]`, pois o exemplo 13667 é uma contratação de serviço. Priorizar no HAR as rotas `purchase_order`, `stock/entry`, `pending_entry` e `product_entry` para fechar pedido de materiais → entrada → nota fiscal.
+
+---
+
+## 2026-07-31 — Fluxo de materiais fechado até a conta a pagar
+
+Deployment Railway `33e2e4fb-b8f2-4217-a7c0-e605e200c43c` (SUCCESS). A partir dos identificadores descobertos no HAR, o diagnóstico direcionado e somente leitura confirmou o encadeamento completo de uma compra programada de materiais.
+
+Endpoints confirmados:
+
+- `GET /purchase/v1/purchase_order?orderId=10455` — ordem de compra;
+- `GET /stock/v1/product_entry?entryId=13373&pending=false` — entrada de estoque;
+- `GET /financial/v1/xml_invoice?invoiceId=d4360ae6-85f9-11f1-9cb1-86c46e718d59` — nota fiscal;
+- ao abrir a nota, `GET /purchase/v1/purchase_order?invoiceId={invoiceId}&page=invoice` — vínculo reverso com a ordem.
+
+A ordem `10455`, finalizada, contém o produto `14826`, `orderProductId=12186`, `inputId=14810`, quantidade pedida e recebida `10`, preço final unitário `225,81`, e está ligada à solicitação `10556` / item `10254`. A entrada `13373`, do tipo `Compra programada`, registra quantidade `10`, movimento `15307`, valor total `2258,20` e liga explicitamente a nota fiscal `49222`.
+
+A nota fiscal confirmou `purchaseOrderIds=[10455]`, o mesmo fornecedor `9607`, produto `14826`, quantidade `10`, valor unitário `225,82`, valor dos produtos `2258,20` e total da nota `2478,37`. Ela gerou a conta a pagar `billId=15791` / `billToPayId=14475`, valor `2478,37`, vencimento em 18/08/2026 e ainda não paga.
+
+Assim, o fluxo material está fechado por identificadores estáveis: solicitação `10556` → ordem `10455` → entrada `13373` → nota `49222` → conta a pagar `15791/14475`. Diferenças centesimais entre o preço da ordem (`225,81`) e o valor unitário fiscal (`225,82`) foram preservadas como dados de origem, sem normalização destrutiva.
+
+POSTs GraphQL auxiliares permaneceram bloqueados e nenhuma escrita operacional foi executada. Todos os modos diagnósticos foram desativados após a coleta.
+
+**Próximo passo:** substituir os IDs fixos dos diagnósticos por um extrator de produção parametrizado, com paginação, persistência idempotente e checkpoints por empresa, começando por solicitações, ordens, entradas, notas e contas a pagar.
