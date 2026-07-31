@@ -258,6 +258,28 @@ type NetworkSummary = {
   queryKeys: string[];
 };
 
+type StockRequestSample = {
+  requestId: string | number | null;
+  requestAuxId: string | number | null;
+  stockPlaceId: string | number | null;
+  stockPlaceName: string | null;
+  productAmount: number | null;
+  requestDate: string | null;
+  deadline: string | null;
+  status: string | null;
+  isUrgent: boolean | null;
+  isDraft: boolean | null;
+};
+
+type StockRequestRead = NetworkSummary & {
+  listMode: "active" | "finalized";
+  statusCode: number;
+  queryParams: Record<string, string>;
+  itemsAmount: number | null;
+  returnedRecords: number;
+  requests: StockRequestSample[];
+};
+
 type SwitchAttemptShape = {
   queryValueKind: "uuid" | "flag" | "other" | "missing";
   bodyKind: "json" | "form" | "text" | "empty";
@@ -274,7 +296,7 @@ export type KoperFlowContextDiagnostic = {
   flowCardFound: boolean;
   flowSelected: boolean;
   stockListReached: boolean;
-  stockRequestReads: NetworkSummary[];
+  stockRequestReads: StockRequestRead[];
   finalUrl: string;
   network: NetworkSummary[];
   blockedWrites: NetworkSummary[];
@@ -297,6 +319,70 @@ function sanitizeRequest(rawUrl: string, method: string, resourceType: string): 
 }
 
 const flowEnterpriseId = "6d3b4724-5880-11ee-827d-1219c832db49";
+
+function safeNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function safeBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
+function collectSafeStockRequests(body: unknown): {
+  itemsAmount: number | null;
+  returnedRecords: number;
+  requests: StockRequestSample[];
+} {
+  const object =
+    typeof body === "object" && body !== null
+      ? (body as Record<string, unknown>)
+      : null;
+  const requests = Array.isArray(object?.requests) ? object.requests : [];
+
+  return {
+    itemsAmount: safeNumber(object?.itemsAmount),
+    returnedRecords: requests.length,
+    requests: requests.slice(0, 25).flatMap((item) => {
+      if (typeof item !== "object" || item === null || Array.isArray(item)) {
+        return [];
+      }
+
+      const record = item as Record<string, unknown>;
+
+      return [{
+        requestId: idValue(record.requestId),
+        requestAuxId: idValue(record.requestAuxId),
+        stockPlaceId: idValue(record.stockPlaceId),
+        stockPlaceName: stringValue(record.stockPlaceName),
+        productAmount: safeNumber(record.productAmount),
+        requestDate: stringValue(record.requestDate),
+        deadline: stringValue(record.deadline),
+        status: stringValue(record.status),
+        isUrgent: safeBoolean(record.isUrgent),
+        isDraft: safeBoolean(record.isDraft),
+      }];
+    }),
+  };
+}
+
+function safeStockQueryParams(parsedUrl: URL): Record<string, string> {
+  const allowed = [
+    "group",
+    "limit",
+    "offset",
+    "open",
+    "orderFlag",
+    "orderby",
+    "typeDate",
+  ];
+
+  return Object.fromEntries(
+    allowed.flatMap((key) => {
+      const value = parsedUrl.searchParams.get(key);
+      return value === null ? [] : [[key, value]];
+    }),
+  );
+}
 
 function isAllowedFlowSwitchBody(postData: string | null): boolean {
   if (!postData) {
@@ -417,8 +503,10 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     const storageKeysBefore = await readStorageKeys(page).catch(() => emptyStorage);
     const network: NetworkSummary[] = [];
     const blockedWrites: NetworkSummary[] = [];
-    const stockRequestReads: NetworkSummary[] = [];
+    const stockRequestReads: StockRequestRead[] = [];
     const switchAttempts: SwitchAttemptShape[] = [];
+    const pendingStockResponses: Promise<void>[] = [];
+    let stockListMode: "active" | "finalized" = "active";
 
     await page.route("**/*", async (route) => {
       const request = route.request();
@@ -485,13 +573,28 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           parsedUrl.hostname === "api.koper.com.br" &&
           parsedUrl.pathname === "/stock/v1/request"
         ) {
-          stockRequestReads.push(
-            sanitizeRequest(
-              response.url(),
-              request.method(),
-              request.resourceType(),
-            ),
+          const listMode = stockListMode;
+          const summary = sanitizeRequest(
+            response.url(),
+            request.method(),
+            request.resourceType(),
           );
+          const task = response
+            .json()
+            .then((body: unknown) => {
+              const safeBody = collectSafeStockRequests(body);
+
+              stockRequestReads.push({
+                ...summary,
+                listMode,
+                statusCode: response.status(),
+                queryParams: safeStockQueryParams(parsedUrl),
+                ...safeBody,
+              });
+            })
+            .catch(() => undefined);
+
+          pendingStockResponses.push(task);
         }
       } catch {
         // Ignora respostas que não possam ser sanitizadas.
@@ -572,8 +675,21 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       stockListReached =
         page.url().includes("/suprimentos/solicitacoes") ||
         stockRequestReads.length > 0;
+
+      if (stockListReached) {
+        const finalized = page
+          .getByText(/^Ver finalizadas$/i, { exact: true })
+          .last();
+
+        if (await finalized.isVisible().catch(() => false)) {
+          stockListMode = "finalized";
+          await finalized.click();
+          await page.waitForTimeout(8_000);
+        }
+      }
     }
 
+    await Promise.allSettled(pendingStockResponses);
     page.off("request", onRequest);
     page.off("response", onResponse);
     await page.unroute("**/*").catch(() => undefined);
