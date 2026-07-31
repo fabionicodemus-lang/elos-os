@@ -893,12 +893,19 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           .filter({ hasText: /ver finalizad[oa]s/i })
           .last();
 
-        if (await finalized.isVisible().catch(() => false)) {
-          await Promise.all([
-            page.waitForURL(/\/compras\/orcamentos\/finalizados/i, { timeout: 10_000 }).catch(() => undefined),
-            finalized.click(),
-          ]);
-          quotationFinalizedClicked = true;
+        const alreadyFinalized = /\/compras\/orcamentos\/finalizados/i.test(page.url());
+        const finalizedVisible = await finalized.isVisible().catch(() => false);
+
+        if (alreadyFinalized || finalizedVisible) {
+          if (!alreadyFinalized) {
+            await Promise.all([
+              page.waitForURL(/\/compras\/orcamentos\/finalizados/i, { timeout: 10_000 }).catch(() => undefined),
+              finalized.click(),
+            ]);
+            quotationFinalizedClicked = true;
+          } else {
+            await page.waitForTimeout(3_000);
+          }
 
           quotationFilterControls = await page
             .locator("button, input, select, [role='button'], [role='combobox'], [class*='select' i], [class*='dropdown' i]")
