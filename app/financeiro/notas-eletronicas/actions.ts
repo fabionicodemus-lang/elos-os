@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { financialInstallmentSummary, type FinancialInstallmentDraft } from "@/lib/financial-installments";
 import { normalizeMatchText, normalizeTaxId, parseNfeXml, type ParsedNfe } from "@/lib/nfe-xml";
 import { requireCompanyPermission } from "@/lib/workspace";
 
@@ -10,6 +11,7 @@ const PATH = "/financeiro/notas-eletronicas";
 
 type RawInstallment = {
   number?: unknown;
+  label?: unknown;
   due_date?: unknown;
   dueDate?: unknown;
   amount?: unknown;
@@ -38,6 +40,15 @@ function supplierProductKey(item: ParsedNfe["items"][number]) {
   if (ean) return `ean:${ean}`;
   return `desc:${normalizeMatchText(item.description)}`;
 }
+function normalizeInstallments(rows: RawInstallment[]): FinancialInstallmentDraft[] {
+  return rows.map((installment, index) => ({
+    id: `server-${index + 1}`,
+    label: String(installment.label ?? installment.number ?? `${index + 1} / ${rows.length}`),
+    due_date: String(installment.due_date ?? installment.dueDate ?? ""),
+    amount: Number(installment.amount ?? 0),
+    payment_method: String(installment.payment_method ?? installment.paymentMethod ?? "Não informado"),
+  }));
+}
 
 export async function importElectronicInvoice(formData: FormData) {
   const xmlFile = formData.get("xml_file");
@@ -48,6 +59,19 @@ export async function importElectronicInvoice(formData: FormData) {
   let parsed: ParsedNfe;
   try { parsed = parseNfeXml(await xmlFile.text()); }
   catch (error) { redirect(pageUrl(error instanceof Error ? error.message : "Não foi possível interpretar o XML.", "error")); }
+
+  const clientInstallments = parseArray(formData, "installments_json") as RawInstallment[];
+  if (!clientInstallments.length) {
+    redirect(pageUrl("Gere ao menos uma parcela antes de importar a NF-e.", "error"));
+  }
+  const normalizedInstallments = normalizeInstallments(clientInstallments);
+  const installmentSummary = financialInstallmentSummary(parsed.totals.invoice, normalizedInstallments);
+  if (!installmentSummary.valid) {
+    redirect(pageUrl(
+      `As parcelas precisam possuir datas e valores válidos e somar exatamente o total da NF-e. Diferença atual: R$ ${installmentSummary.difference.toFixed(2).replace(".", ",")}.`,
+      "error",
+    ));
+  }
 
   const { supabase, companyId, projectId, userId } = await requireCompanyPermission("finance.invoices.manage");
   if (!projectId) redirect(pageUrl("Selecione uma obra antes de importar a nota.", "error"));
@@ -113,13 +137,11 @@ export async function importElectronicInvoice(formData: FormData) {
     };
   });
 
-  const clientInstallments = parseArray(formData, "installments_json") as RawInstallment[];
-  const installmentSource: RawInstallment[] = clientInstallments.length ? clientInstallments : parsed.installments;
-  const installments = installmentSource.map((installment, index) => ({
-    number: String(installment.number ?? index + 1),
-    due_date: String(installment.due_date ?? installment.dueDate ?? parsed.issueDate),
-    amount: Number(installment.amount ?? 0),
-    payment_method: String(installment.payment_method ?? installment.paymentMethod ?? "Não informado"),
+  const installments = normalizedInstallments.map((installment) => ({
+    number: installment.label,
+    due_date: installment.due_date,
+    amount: installment.amount,
+    payment_method: installment.payment_method,
   }));
 
   const payload = {

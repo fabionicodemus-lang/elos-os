@@ -3,7 +3,8 @@ import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { resolveDateRange } from "@/lib/date-range";
 import { requireCompanyPermission } from "@/lib/workspace";
-import { cancelReceivable, createReceivableSeries, markReceivablePaid } from "./actions";
+import { cancelReceivable, markReceivablePaid } from "./actions";
+import { ReceivableCreateForm } from "./receivable-create-form";
 
 type Client = { id: string; name: string; tax_id: string | null };
 type Unit = { id: string; code: string };
@@ -205,6 +206,13 @@ export default async function PaymentPlansPage({
   const totalPages = Math.max(1, Math.ceil((listResult.count ?? 0) / PAGE_SIZE));
   const project = projectResult.data;
   const paginationQuery = `q=${encodeURIComponent(queryText)}&status=${status}&category=${category}&sale=${saleId}&period=${dateRange.preset}&from=${dateFrom}&to=${dateTo}`;
+  const receivableSales = sales.map((sale) => ({
+    id: sale.id,
+    number: sale.number,
+    total_amount: sale.total_amount,
+    client_name: relatedOne(sale.clients)?.name ?? "Cliente",
+    unit_code: relatedOne(sale.units)?.code ?? "Unidade",
+  }));
 
   return (
     <AppShell
@@ -282,45 +290,13 @@ export default async function PaymentPlansPage({
 
             {canManage && projectId ? (
               <details className="registry-create" open={Boolean(selectedSale && summary.total_count === 0)}>
-                <summary>+ Adicionar parcela ou série</summary>
-                <form action={createReceivableSeries}>
-                  <div className="registry-form-grid receivable-plan-grid">
-                    <label className="registry-wide">Venda
-                      <select name="sale_id" required defaultValue={saleId}>
-                        <option value="" disabled>Selecione a venda</option>
-                        {sales.map((sale) => {
-                          const client = relatedOne(sale.clients);
-                          const unit = relatedOne(sale.units);
-                          return <option key={sale.id} value={sale.id}>{unit?.code} · {client?.name} · {money(sale.total_amount)}</option>;
-                        })}
-                      </select>
-                    </label>
-                    <label>Tipo
-                      <select name="category" defaultValue="monthly" required>
-                        {Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                      </select>
-                    </label>
-                    <label>Descrição<input name="description" placeholder="Ex.: Mensais até as chaves" /></label>
-                    <label>Primeiro vencimento<input name="first_due_date" type="date" required /></label>
-                    <label>Valor base de cada parcela<input name="amount" inputMode="decimal" placeholder="0,00" required /></label>
-                    <label>Quantidade<input name="quantity" type="number" min={1} max={240} defaultValue={1} required /></label>
-                    <label>Periodicidade
-                      <select name="frequency" defaultValue="monthly">
-                        <option value="once">Única</option><option value="monthly">Mensal</option><option value="bimonthly">Bimestral</option><option value="quarterly">Trimestral</option><option value="semiannual">Semestral</option><option value="annual">Anual</option>
-                      </select>
-                    </label>
-                    <label>Índice de correção
-                      <select name="correction_index_id" defaultValue={defaultCorrectionIndexId}>
-                        <option value="">Sem correção</option>
-                        {correctionIndices.map((index) => <option key={index.id} value={index.id}>{index.code} · {index.unit_label}</option>)}
-                      </select>
-                    </label>
-                    <label>Regra<input value="Mês da venda = 0; reajuste a partir do mês 4" readOnly /></label>
-                    <label>Juros ao mês (%)<input name="interest_rate_monthly" inputMode="decimal" placeholder="0,00" /></label>
-                    <label className="registry-wide">Observações<textarea name="notes" rows={3} /></label>
-                  </div>
-                  <button className="auth-primary" type="submit">Adicionar ao plano</button>
-                </form>
+                <summary>+ Adicionar parcelas</summary>
+                <ReceivableCreateForm
+                  sales={receivableSales}
+                  indices={correctionIndices.map((index) => ({ id: index.id, code: index.code, unit_label: index.unit_label }))}
+                  defaultIndexId={defaultCorrectionIndexId}
+                  selectedSaleId={saleId}
+                />
               </details>
             ) : null}
           </section>

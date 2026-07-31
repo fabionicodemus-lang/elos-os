@@ -2,6 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { FinancialInstallmentEditor } from "@/components/financial-installment-editor";
+import {
+  buildFinancialInstallments,
+  financialInstallmentSummary,
+  normalizeFinancialInstallments,
+  suggestedFirstDueDate,
+  type FinancialInstallmentDraft,
+} from "@/lib/financial-installments";
 import { normalizeMatchText, normalizeTaxId, parseNfeXml, type ParsedNfe } from "@/lib/nfe-xml";
 import { importElectronicInvoice } from "./actions";
 
@@ -31,7 +39,7 @@ type RememberedMapping = {
   description_normalized: string;
   input_id: string;
 };
-type Installment = { number: string; due_date: string; amount: number; payment_method: string };
+type Installment = FinancialInstallmentDraft;
 
 function money(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0));
@@ -186,7 +194,7 @@ export function InvoiceImportDialog({ suppliers, inputs, orders, orderItems, rec
   const selectedOrderItems = useMemo(() => orderItems.filter((item) => item.order_id === orderId), [orderItems, orderId]);
   const selectedReceiptItems = useMemo(() => receiptItems.filter((item) => item.receipt_id === receiptId), [receiptItems, receiptId]);
   const legalEntityMatches = parsed && legalEntity?.cnpj ? normalizeTaxId(parsed.recipient.taxId) === normalizeTaxId(legalEntity.cnpj) : false;
-  const installmentTotal = installments.reduce((sum, installment) => sum + Number(installment.amount || 0), 0);
+  const installmentSummary = financialInstallmentSummary(parsed?.totals.invoice ?? 0, installments);
 
   function reset() {
     setParsed(null); setFileName(""); setParseError(""); setMappings([]); setInstallments([]); setOrderId(""); setReceiptId("");
@@ -201,8 +209,16 @@ export function InvoiceImportDialog({ suppliers, inputs, orders, orderItems, rec
       const supplier = suppliers.find((row) => normalizeTaxId(row.tax_id) === normalizeTaxId(result.issuer.taxId));
       const remembered = supplier ? await loadRememberedMappings(supplier.id) : [];
       const baseMappings = blankMappings(result, inputs, supplier?.id ?? "", remembered);
-      setParsed(result); setFileName(file.name); setMappings(baseMappings);
-      setInstallments(result.installments.map((installment) => ({ number: installment.number, due_date: installment.dueDate, amount: installment.amount, payment_method: installment.paymentMethod })));
+      const sourceInstallments = result.installments.map((installment) => ({
+        number: installment.number,
+        due_date: installment.dueDate,
+        amount: installment.amount,
+        payment_method: installment.paymentMethod,
+      }));
+      const paymentPlan = sourceInstallments.length
+        ? normalizeFinancialInstallments(sourceInstallments, result.totals.invoice, suggestedFirstDueDate(), "Não informado")
+        : buildFinancialInstallments({ total: result.totals.invoice, count: 1, firstDueDate: suggestedFirstDueDate(), paymentMethod: "Não informado" });
+      setParsed(result); setFileName(file.name); setMappings(baseMappings); setInstallments(paymentPlan);
       const matchingOrders = supplier ? orders.filter((order) => order.supplier_id === supplier.id) : [];
       const likelyOrder = matchingOrders.find((order) => Math.abs(Number(order.total_amount) - result.totals.invoice) <= 0.05) ?? (matchingOrders.length === 1 ? matchingOrders[0] : null);
       if (likelyOrder) chooseOrder(likelyOrder.id, result, baseMappings);
@@ -250,7 +266,6 @@ export function InvoiceImportDialog({ suppliers, inputs, orders, orderItems, rec
     <dialog ref={dialogRef} className="xml-import-dialog" onClose={reset}>
       <form action={importElectronicInvoice} encType="multipart/form-data">
         <input type="hidden" name="items_json" value={JSON.stringify(mappings)} />
-        <input type="hidden" name="installments_json" value={JSON.stringify(installments)} />
         <div className="xml-dialog-head"><div><span>Financeiro · NF-e</span><h2>Importar nota eletrônica</h2><p>O XML será conferido com a SPE, fornecedor, pedido, recebimento e cadastro de insumos.</p></div><button type="button" onClick={() => dialogRef.current?.close()}>×</button></div>
         <div className="xml-dialog-body">
           <label className={`xml-dropzone ${parsed ? "loaded" : ""}`} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (fileRef.current && file) { const transfer = new DataTransfer(); transfer.items.add(file); fileRef.current.files = transfer.files; void parseFile(file); } }}>
@@ -290,14 +305,18 @@ export function InvoiceImportDialog({ suppliers, inputs, orders, orderItems, rec
               </div>
             </section>
 
-            <section className="xml-payment-panel"><div className="xml-section-title"><div><span>Financeiro</span><h3>Parcelas a gerar no Contas a Pagar</h3></div><strong className={Math.abs(installmentTotal - parsed.totals.invoice) <= 0.02 ? "positive" : "negative"}>{money(installmentTotal)}</strong></div>
-              <div className="xml-installments">{installments.map((installment, index) => <div key={index}><label>Parcela<input value={installment.number} onChange={(event) => setInstallments((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, number: event.target.value } : row))} /></label><label>Vencimento<input type="date" value={installment.due_date} onChange={(event) => setInstallments((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, due_date: event.target.value } : row))} required /></label><label>Valor<input type="number" min="0" step="0.01" value={installment.amount} onChange={(event) => setInstallments((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, amount: Number(event.target.value) } : row))} required /></label><label>Forma<input value={installment.payment_method} onChange={(event) => setInstallments((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, payment_method: event.target.value } : row))} /></label><button type="button" disabled={installments.length === 1} onClick={() => setInstallments((current) => current.filter((_, rowIndex) => rowIndex !== index))}>Remover</button></div>)}</div>
-              <button className="xml-add-installment" type="button" onClick={() => setInstallments((current) => [...current, { number: String(current.length + 1), due_date: current.at(-1)?.due_date ?? parsed.issueDate, amount: 0, payment_method: current.at(-1)?.payment_method ?? "Não informado" }])}>+ Adicionar parcela</button>
-              {Math.abs(installmentTotal - parsed.totals.invoice) > 0.02 ? <p className="xml-payment-warning">A soma das parcelas difere da NF-e em {money(installmentTotal - parsed.totals.invoice)}. A importação será bloqueada para aprovação até a correção.</p> : null}
-            </section>
+            <FinancialInstallmentEditor
+              total={parsed.totals.invoice}
+              installments={installments}
+              onChange={setInstallments}
+              inputName="installments_json"
+              eyebrow="Contas a pagar"
+              title="Parcelas da NF-e"
+              defaultPaymentMethod="Não informado"
+            />
           </> : null}
         </div>
-        <div className="xml-dialog-foot"><button type="button" onClick={() => dialogRef.current?.close()}>Cancelar</button><button className="primary" type="submit" disabled={!parsed}>Importar e revisar NF-e</button></div>
+        <div className="xml-dialog-foot"><button type="button" onClick={() => dialogRef.current?.close()}>Cancelar</button><button className="primary" type="submit" disabled={!parsed || !installmentSummary.valid}>Importar e revisar NF-e</button></div>
       </form>
     </dialog>
   </>;

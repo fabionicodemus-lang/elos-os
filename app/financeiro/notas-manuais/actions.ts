@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { financialInstallmentSummary, type FinancialInstallmentDraft } from "@/lib/financial-installments";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const PATH = "/financeiro/notas-manuais";
@@ -28,6 +29,26 @@ function parseRetentions(formData: FormData) {
   return Object.fromEntries(keys.map((key) => [key, Number(value(formData, `retention_${key}`) || 0)]));
 }
 
+function manualInvoiceNet(items: Array<Record<string, unknown>>, retentions: Record<string, number>) {
+  const itemNet = items.reduce((sum, item) => {
+    const quantity = Number(item.quantity ?? 0);
+    const unitPrice = Number(item.unit_price ?? 0);
+    const discount = Number(item.discount_amount ?? 0);
+    return sum + quantity * unitPrice - discount;
+  }, 0);
+  return itemNet - Object.values(retentions).reduce((sum, amount) => sum + Number(amount || 0), 0);
+}
+
+function installmentDrafts(rows: Array<Record<string, unknown>>): FinancialInstallmentDraft[] {
+  return rows.map((row, index) => ({
+    id: `server-${index + 1}`,
+    label: String(row.label ?? row.number ?? index + 1),
+    due_date: String(row.due_date ?? ""),
+    amount: Number(row.amount ?? 0),
+    payment_method: String(row.payment_method ?? "Boleto"),
+  }));
+}
+
 function pageUrl(message: string, type: "success" | "error", invoiceId?: string) {
   const params = new URLSearchParams({ [type]: message });
   if (invoiceId) params.set("invoice", invoiceId);
@@ -49,8 +70,18 @@ export async function saveManualInvoice(formData: FormData) {
 
   const items = parseArray(formData, "items_json");
   const installments = parseArray(formData, "installments_json");
-  const submit = value(formData, "submit_mode") === "submit";
+  const retentions = parseRetentions(formData);
+  const net = manualInvoiceNet(items, retentions);
+  const installmentSummary = financialInstallmentSummary(net, installmentDrafts(installments));
+  if (!installmentSummary.valid) {
+    redirect(pageUrl(
+      `As parcelas precisam possuir datas e valores válidos e somar exatamente o líquido do documento. Diferença atual: R$ ${installmentSummary.difference.toFixed(2).replace(".", ",")}.`,
+      "error",
+      optional(formData, "invoice_id") ?? undefined,
+    ));
+  }
 
+  const submit = value(formData, "submit_mode") === "submit";
   const result = await supabase.rpc("save_finance_manual_invoice", {
     p_company_id: companyId,
     p_project_id: projectId,
@@ -64,7 +95,7 @@ export async function saveManualInvoice(formData: FormData) {
     p_issue_date: value(formData, "issue_date"),
     p_competence_date: optional(formData, "competence_date"),
     p_notes: optional(formData, "notes"),
-    p_retentions: parseRetentions(formData),
+    p_retentions: retentions,
     p_items: items,
     p_installments: installments,
     p_submit: submit,
