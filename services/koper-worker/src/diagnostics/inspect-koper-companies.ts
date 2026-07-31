@@ -694,18 +694,19 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         stockListMode = "active-page-2";
 
         const secondPage = await page
-          .evaluate(async (rawUrl) => {
-            const response = await fetch(rawUrl, { credentials: "include" });
-
-            if (!response.ok) {
-              throw new Error(`KOPER_STOCK_PAGE_2_HTTP_${response.status}`);
-            }
-
-            return {
-              statusCode: response.status,
-              body: await response.json() as unknown,
-            };
-          }, secondPageUrl.toString())
+          .context()
+          .request.get(secondPageUrl.toString(), {
+            failOnStatusCode: false,
+            timeout: 15_000,
+          })
+          .then(async (response) =>
+            response.ok()
+              ? {
+                  statusCode: response.status(),
+                  body: await response.json() as unknown,
+                }
+              : null,
+          )
           .catch(() => null);
         await Promise.allSettled(pendingStockResponses);
 
