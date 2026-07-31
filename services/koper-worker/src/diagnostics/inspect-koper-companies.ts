@@ -610,7 +610,16 @@ function sanitizeRequest(rawUrl: string, method: string, resourceType: string): 
 const flowEnterpriseId = "6d3b4724-5880-11ee-827d-1219c832db49";
 
 function safeNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value.replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
 }
 
 function safeIdentifier(value: unknown): string | number | null {
@@ -968,7 +977,7 @@ function collectSafeMaterialInvoice(body: unknown): MaterialFlowRead["invoice"] 
         : {};
       return {
         billId: safeIdentifier(duplicate.billId),
-        billToPayId: safeIdentifier(duplicate.billToPayId),
+        billToPayId: safeIdentifier(duplicate.billToPayId ?? bill?.billToPayId),
         billValue: safeNumber(duplicate.billValue),
         dueDate: safeText(duplicate.dueDate),
         isPaid: safeBoolean(duplicate.isPaid),
