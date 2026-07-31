@@ -77,7 +77,7 @@
 | paginação | indício de rolagem infinita e query `limit/offset`; segunda página ainda não validada |
 | volume | não medido |
 | tabela staging | não criada |
-| status | **rota e endpoints descobertos; contrato do JSON ainda em aberto** |
+| status | **rota e endpoints descobertos; contrato do JSON ainda em aberto.** O período padrão vazio responde 404; três tentativas de selecionar `Todos` não dispararam nova leitura. Próximo passo recomendado: diagnóstico estrutural do DOM do filtro. |
 
 
 ## Todas as demais entidades do fluxo prioritário
