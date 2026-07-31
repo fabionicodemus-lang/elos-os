@@ -55,8 +55,8 @@
 | escopo confirmado via `GET /administrative/v1/multi_company` | **Bossa Empreendimentos** — `enterpriseId=1645acb2-de18-11ed-bf03-8af8dfac4eab`, `branchId=804490ce-c492-4b11-8524-eaf8ee448d61`; **Flow Aptos - Bossa** — `enterpriseId=6d3b4724-5880-11ee-827d-1219c832db49`, `branchId=1c527099-2e63-465f-b97a-772e36a93d8c`; **Alma Seahouses - Bossa** — `enterpriseId=ec9ed276-742a-11ef-8533-1219c832db49`, `branchId=055e4192-07b9-46e7-a95f-4d0fd0130c98` |
 | endpoints confirmados | `GET https://api.koper.com.br/administrative/v1/enterprise` retorna a empresa ativa e seus dados; `GET https://api.koper.com.br/administrative/v1/multi_company` retorna a lista das três empresas autorizadas |
 | identificador | `enterpriseId` confirmado como ID de empresa exposto por ambos os endpoints; `branchId` também deve ser preservado como identificador de filial/contexto. Nunca usar posição no menu ou nome como chave. |
-| mecanismo visual de troca | clicar no botão com a empresa ativa → clicar em **Acessar outra empresa** → modal `data-testid="backdrop"` com um cartão `data-testid="multiCompaniesModal"` por empresa → ação **Acessar esta empresa** dentro do cartão. Flow e Alma confirmados no DOM; o efeito de clicar na ação final ainda não foi executado/capturado. |
-| status | **lista, nomes, `enterpriseId`, `branchId`, endpoints e caminho visual até o modal descobertos; requisição/efeito da seleção final ainda não descoberto** |
+| mecanismo de troca confirmado até o bloqueio de segurança | caminho visual: empresa ativa → **Acessar outra empresa** → cartão `data-testid="multiCompaniesModal"` → **Acessar esta empresa**. A ação final tenta `POST https://api.koper.com.br/login/change_company` com query keys `accessToken` e `changeCompany`. O diagnóstico bloqueou a requisição; valor de `accessToken` nunca foi registrado. |
+| status | **lista, IDs, caminho visual e endpoint de troca descobertos; execução do POST aguarda autorização explícita e alteração da constituição** |
 
 ---
 
