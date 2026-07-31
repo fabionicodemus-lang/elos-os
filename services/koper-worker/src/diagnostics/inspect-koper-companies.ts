@@ -290,12 +290,25 @@ type FilterControl = {
   testId: string | null;
 };
 
+type QuotationSample = {
+  budgetId: string | number | null;
+  supplierId: string | number | null;
+  buildMonitoringId: string | number | null;
+  budgetDate: string | null;
+  responseDate: string | null;
+  productAmount: number | null;
+  totalValue: number | null;
+};
+
 type QuotationRead = NetworkSummary & {
   statusCode: number;
   queryParams: Record<string, string>;
   dataKeys: string[];
   fieldPaths: string[];
   itemsAmount: number | null;
+  budgetAmount: number | null;
+  returnedRecords: number;
+  budgets: QuotationSample[];
 };
 
 type SwitchAttemptShape = {
@@ -346,6 +359,14 @@ const flowEnterpriseId = "6d3b4724-5880-11ee-827d-1219c832db49";
 
 function safeNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function safeIdentifier(value: unknown): string | number | null {
+  return typeof value === "string" || typeof value === "number" ? value : null;
+}
+
+function safeText(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
 }
 
 function safeBoolean(value: unknown): boolean | null {
@@ -655,6 +676,26 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               dataKeys: object ? Object.keys(object).slice(0, 50) : [],
               fieldPaths: collectFieldPaths(body).slice(0, 200),
               itemsAmount: safeNumber(object?.itemsAmount),
+              budgetAmount: safeNumber(object?.budgetAmount),
+              returnedRecords: Array.isArray(object?.budgets) ? object.budgets.length : 0,
+              budgets: Array.isArray(object?.budgets)
+                ? object.budgets.slice(0, 25).map((item: unknown) => {
+                    const budget =
+                      typeof item === "object" && item !== null
+                        ? (item as Record<string, unknown>)
+                        : {};
+
+                    return {
+                      budgetId: safeIdentifier(budget.budgetId),
+                      supplierId: safeIdentifier(budget.supplierId),
+                      buildMonitoringId: safeIdentifier(budget.buildMonitoringId),
+                      budgetDate: safeText(budget.budgetDate),
+                      responseDate: safeText(budget.responseDate),
+                      productAmount: safeNumber(budget.productAmount),
+                      totalValue: safeNumber(budget.totalValue),
+                    };
+                  })
+                : [],
             });
           }).catch(() => undefined);
 
