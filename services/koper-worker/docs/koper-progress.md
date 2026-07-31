@@ -519,3 +519,27 @@ A segunda página trouxe IDs diferentes da primeira (início observado: `6998`, 
 **Hipótese confirmada.** O transporte da listagem é REST. O corpo ainda não foi lido; volume, campos, identificadores e paginação visual permanecem abertos.
 
 Nenhuma criação, aprovação, negociação, escolha de fornecedor ou ordem de compra foi executada. POSTs GraphQL não classificados permaneceram bloqueados. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado após a leitura.
+
+
+---
+
+## 2026-07-31 — Pausa obrigatória: carregar histórico completo de Orçamentos
+
+**Hipótese:** selecionar visualmente o período `Todos` na listagem finalizada faria `GET /purchase/v1/budget` retornar o corpo histórico.
+
+**Tentativa 1 — commit `1a76ea32`:** leitura segura do JSON. O Koper consultou o período padrão de julho de 2026 e respondeu 404 porque não há orçamentos nesse intervalo. Contrato confirmado: `budgetId=all`, `limit=25`, `offset=0`, `orderFlag=desc`, `orderby=budgetId`, `typeDate=budgetDate`.
+
+**Tentativa 2 — commit `742b56c6`:** tentativa de selecionar `Todos` por um elemento `<select>` nativo. Nenhuma nova requisição foi disparada; o filtro não é um select HTML nativo.
+
+**Tentativa 3 — commits `a014f635`/`fb4191f3`:** tentativa de abrir o dropdown Angular pelo texto do período atual e clicar em `Todos`. O build intermediário falhou por uma chave excedente e foi corrigido; na execução válida, nenhuma nova requisição foi disparada. O componente não expõe esses textos como elementos clicáveis no DOM acessível.
+
+**Execução final:** deployment `4c690bbe-6892-4fe9-a842-98f1106c080a` (SUCCESS). Resultado: rota e endpoints confirmados, mas `quotationReads` contém somente as duas respostas 404 do período vazio; corpo, volume e campos continuam abertos.
+
+Trabalho pausado após três tentativas no mesmo bloqueio, conforme a Seção 5. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado. Nenhuma escrita operacional foi executada.
+
+**Alternativas:**
+1. Diagnosticar o DOM do filtro, registrando somente tags, classes, atributos e textos curtos dos controles próximos a “DATA ORÇAMENTO”, para construir um seletor fundamentado.
+2. Reproduzir a seleção manual do Fábio por coordenadas visuais relativas ao rótulo e capturar o XHR normal do Koper.
+3. Testar em dry-run uma cópia do GET autenticado removendo `initialDate`/`finalDate`, hipótese indicada pela opção “Todos”, sem persistência.
+
+**Recomendação:** alternativa 1, porque descobre o controle real sem depender de resolução de tela nem repetir os problemas de autenticação do GET separado.
