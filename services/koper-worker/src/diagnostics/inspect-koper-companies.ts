@@ -685,10 +685,10 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       if (stockListReached) {
         const finalized = page
           .locator("button, a, [role='button'], input[type='button'], input[type='submit']")
-          .filter({ hasText: /ver finalizadas/i })
+          .filter({ hasText: /ver finalizad[oa]s/i })
           .last();
         const finalizedInput = page
-          .locator("input[value*='FINALIZADAS' i]")
+          .locator("input[value*='FINALIZAD' i]")
           .last();
         const control =
           await finalized.isVisible().catch(() => false)
