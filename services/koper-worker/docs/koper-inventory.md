@@ -52,11 +52,11 @@
 | Campo | Conteúdo |
 |---|---|
 | comportamento | seletor de empresa ativa no canto superior direito da interface; a empresa selecionada define o escopo de todos os dados carregados nas telas e (presumivelmente) nas chamadas de API |
-| escopo conhecido até agora | **Bossa Empreendimentos** (custos administrativos, escritório central, e pós-obra do Soul Residence — contém as obras ESCRITÓRIO CENTRAL e SOUL RESIDENCE); **empresa do Flow** (dados operacionais/financeiros/engenharia/suprimentos do Flow Aptos — nome e ID exatos ainda não capturados); **empresa do Alma** (idem, para Alma Seahouses — nome e ID exatos ainda não capturados) |
-| endpoints candidatos (já observados em capturas de rede anteriores, ainda não confirmados como a fonte da lista de empresas) | `GET https://api.koper.com.br/administrative/v1/enterprise` e `GET https://api.koper.com.br/administrative/v1/multi_company` — ambos vistos no diagnóstico `discover-stock-route` de 2026-07-30 (`accessToken`, `cb`, `page`), nunca inspecionados a fundo |
-| identificador | não descoberto — priorizar ID original do Koper e/ou CNPJ; nunca usar posição no menu ou nome como chave |
+| escopo confirmado via `GET /administrative/v1/multi_company` | **Bossa Empreendimentos** — `enterpriseId=1645acb2-de18-11ed-bf03-8af8dfac4eab`, `branchId=804490ce-c492-4b11-8524-eaf8ee448d61`; **Flow Aptos - Bossa** — `enterpriseId=6d3b4724-5880-11ee-827d-1219c832db49`, `branchId=1c527099-2e63-465f-b97a-772e36a93d8c`; **Alma Seahouses - Bossa** — `enterpriseId=ec9ed276-742a-11ef-8533-1219c832db49`, `branchId=055e4192-07b9-46e7-a95f-4d0fd0130c98` |
+| endpoints confirmados | `GET https://api.koper.com.br/administrative/v1/enterprise` retorna a empresa ativa e seus dados; `GET https://api.koper.com.br/administrative/v1/multi_company` retorna a lista das três empresas autorizadas |
+| identificador | `enterpriseId` confirmado como ID de empresa exposto por ambos os endpoints; `branchId` também deve ser preservado como identificador de filial/contexto. Nunca usar posição no menu ou nome como chave. |
 | mecanismo de troca de empresa | não descoberto (variável GraphQL, header, cookie, `localStorage`/`sessionStorage`?) |
-| status | **seleção visual confirmada; nomes completos, IDs e API ainda não descobertos** |
+| status | **lista, nomes, `enterpriseId`, `branchId` e endpoints descobertos; mecanismo de troca ainda não descoberto** |
 
 ---
 
