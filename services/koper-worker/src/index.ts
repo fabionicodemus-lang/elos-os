@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { loginKoperAutomatically } from "./auth/koper-auto-login.js";
 import { env } from "./config/env.js";
 import { discoverStockRoute } from "./diagnostics/discover-stock-route.js";
+import { inspectKoperCompanies } from "./diagnostics/inspect-koper-companies.js";
 import { inspectKoperMenuMap } from "./diagnostics/inspect-koper-menu-map.js";
 import { inspectKoperNavigation } from "./diagnostics/inspect-koper-navigation.js";
 import { inspectStockRequestDetail } from "./diagnostics/inspect-stock-request-detail.js";
@@ -152,6 +153,19 @@ async function handleRequest(
     return;
   }
 
+  if (
+    method === "POST" &&
+    url.pathname === "/diagnostics/koper/companies"
+  ) {
+    if (!requireAuthorization(request, response)) {
+      return;
+    }
+
+    const result = await inspectKoperCompanies();
+    sendJson(response, result.authenticated ? 200 : 422, result);
+    return;
+  }
+
   sendJson(response, 404, { ok: false, error: "NOT_FOUND" });
 }
 
@@ -190,7 +204,9 @@ server.listen(env.PORT, "0.0.0.0", () => {
         ? discoverStockRoute
         : startupDiagnostic === "stock-request-detail"
           ? inspectStockRequestDetail
-          : null;
+          : startupDiagnostic === "companies"
+            ? inspectKoperCompanies
+            : null;
 
   if (diagnostic) {
     void diagnostic()
