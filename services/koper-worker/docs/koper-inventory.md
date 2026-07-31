@@ -74,3 +74,8 @@ Ainda **não iniciado**: cotação, participantes/preços, pedido de compra, rec
 | accounts_payable (conta a pagar) | não iniciado |
 | payment (pagamento) | não iniciado |
 | comercial / contas a receber (Fase 5) | não iniciado — **lembrete:** antes de desenhar qualquer estrutura de recebíveis/CUB, rodar grep por `CUB`, `receb`, `correc`, `INCC`, `IPCA` no repositório (Seção 11 da constituição); já existem migrations `supabase/migrations/20260723_0007_koper_receivable_details.sql` e `20260723_0007_koper_receivables_audit.sql` que precisam ser revisadas antes de duplicar trabalho. |
+
+
+## Confirmação multiempresa — Flow (2026-07-31)
+
+A entidade `stock_request` foi confirmada dentro do contexto `Flow Aptos - Bossa`. Após a troca controlada de empresa, a interface chegou a `/suprimentos/solicitacoes/` e executou `GET https://api.koper.com.br/stock/v1/request` com as mesmas chaves de paginação, filtro e ordenação observadas no contexto Bossa. Portanto, a descoberta do contrato de listagem pode ser reutilizada, mas toda extração e staging deve guardar o `enterpriseId` de origem e executar uma empresa por vez. Volume e amostra de IDs do Flow ainda precisam ser medidos.
