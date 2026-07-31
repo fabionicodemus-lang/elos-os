@@ -359,3 +359,29 @@ A rota de segurança abortou a requisição antes do envio. `blockedWrites` regi
 **Próximo bloqueio:** os diagnósticos de Solicitações atualmente fazem login e navegam diretamente na empresa padrão. É necessário executar a seleção do Flow dentro da mesma sessão antes de abrir Suprimentos.
 
 **Próxima alteração pequena sugerida:** extrair a seleção segura do Flow para helper reutilizável e criar um diagnóstico composto que confirme `Flow Aptos - Bossa` antes de abrir Suprimentos → Solicitações. Reutilizar os endpoints REST já descobertos, sem gravar dados.
+
+
+---
+
+## 2026-07-31 — Contexto Flow confirmado até Solicitações de estoque
+
+**Hipótese:** após trocar com segurança da empresa `Bossa Empreendimentos` para `Flow Aptos - Bossa`, a navegação `Suprimentos → Solicitações` continuaria usando a rota e o endpoint REST já descobertos na empresa administrativa.
+
+**Ação:** diagnóstico `flow-context` executado no Railway pelo deploy `c2ef2761-183f-4050-bcf2-d4e8066d846c`, sobre o commit `4dff2a6`. A única escrita REST permitida foi `POST /login/change_company`, com corpo validado por allowlist e destino limitado ao enterpriseId do Flow. Todas as demais escritas foram bloqueadas.
+
+**Resultado:** hipótese confirmada.
+
+- Empresa antes da troca: `Bossa Empreendimentos`.
+- Empresa depois da troca: `Flow Aptos - Bossa`.
+- Card do Flow localizado e selecionado.
+- Rota final: `https://app.koper.com.br/suprimentos/solicitacoes/`.
+- Listagem alcançada: `true`.
+- Leitura observada: `GET https://api.koper.com.br/stock/v1/request`.
+- Chaves de query observadas: `accessToken`, `cb`, `group`, `limit`, `offset`, `open`, `orderFlag`, `orderby`, `typeDate`.
+- Nove POSTs GraphQL de leitura do dashboard foram bloqueados pela política conservadora; isso não impediu a troca de empresa nem a leitura REST da listagem.
+- Nenhuma alteração de dado operacional foi realizada no Koper.
+- `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado após a leitura do resultado, sem novo deploy.
+
+**Aprendizado:** a rota visual e o contrato REST da listagem de `stock_request` são reutilizáveis entre os contextos Bossa e Flow. O contexto da empresa precisa fazer parte explícita de cada execução e de cada registro migrado, para evitar mistura de dados entre Bossa, Flow e Alma.
+
+**Próxima alteração pequena sugerida:** ampliar somente a captura segura da resposta da listagem no contexto Flow para registrar `itemsAmount`, quantidade de registros retornados e os primeiros identificadores `requestId`/`requestAuxId`, sem capturar nomes de usuários ou o payload completo. Isso permitirá medir volume e confirmar a amostra real do Flow antes de criar a staging.
