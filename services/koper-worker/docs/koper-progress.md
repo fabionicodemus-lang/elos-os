@@ -215,3 +215,31 @@ Diagnóstico novo: `src/diagnostics/inspect-stock-request-detail.ts`, exposto em
 **Próximo bloqueio:** nenhum técnico crítico. Para fechar o item 8 com certeza, o próximo diagnóstico deveria capturar e comparar os **valores** de `requestId` e `requestAuxId` no mesmo registro (não só os nomes dos campos) — hoje `collectFieldPaths` só lista caminhos, não valores, para não vazar dado potencialmente sensível sem controle. Também ficou pendente confirmar a paginação real da listagem (item 4) e iniciar a extração para `src/koper/` (item 9).
 
 **Próxima alteração pequena sugerida:** ajustar a captura para incluir o valor de `requestId` e `requestAuxId` (só esses dois campos, não o payload inteiro) no resultado do diagnóstico de detalhe, para decidir em definitivo qual usar como `koper_id`.
+
+---
+
+## 2026-07-31 — Mapeamento manual: módulo Engenharia e seletor de empresa
+
+**Diagnóstico executado:** nenhum diagnóstico automatizado. Mapeamento manual feito pelo Fábio navegando o Koper diretamente e relatando por escrito (prints + descrição textual estruturada).
+
+**Resultado — achado crítico:** cada empreendimento da Bossa é uma **empresa separada dentro do Koper**, selecionada por um seletor no canto superior direito da interface, não uma "obra" dentro de uma única empresa Bossa. Estrutura confirmada visualmente:
+
+1. **Bossa Empreendimentos** — custos administrativos, escritório central, e pós-obra do Soul Residence. Obras visíveis nesta empresa: ESCRITÓRIO CENTRAL e SOUL RESIDENCE.
+2. **Empresa do Flow** — dados operacionais, financeiros, de engenharia e de suprimentos do Flow Aptos. Nome e ID exatos ainda não capturados.
+3. **Empresa do Alma** — idem, para Alma Seahouses. Nome e ID exatos ainda não capturados.
+
+Rota do módulo Engenharia → Obras confirmada: `https://app.koper.com.br/engenharia/obras` (ícone "Engenharia" na barra vertical esquerda → "Obras" no submenu). Menu lateral do módulo mapeado (Obras, Orçamentos de obra, Planejamento de obra, Acompanhamento de obra, Diário de obra, Ordens de produção, Contratos e medições, Cadastros) — não explorado além do título. Detalhes completos em `docs/koper-inventory.md`, entidades `engineering_work` e "Empresas do Koper".
+
+**Implicação para o conector:** todo o trabalho de descoberta feito até aqui (login, listagem e detalhe de Solicitações de estoque) foi validado **apenas dentro da empresa "Bossa Empreendimentos"**, que segundo este mapeamento é a empresa administrativa — **não** a empresa que contém as Solicitações de estoque reais do Flow, que é o dado que efetivamente precisamos importar primeiro (Seção 1 da constituição: Flow Aptos é um dos empreendimentos prioritários). O `koper-worker` não pode assumir a empresa ativa após login como escopo único — precisa descobrir e percorrer todas as empresas autorizadas.
+
+Isso não invalida a descoberta de rota/navegação/endpoints já feita (a estrutura de URLs e a forma de navegar até Suprimentos → Solicitações deve ser a mesma em qualquer empresa) — mas invalida a suposição implícita de que os dados que vimos (`#8649`, `#10531` etc.) pertencem ao Flow. Eles pertencem à empresa Bossa Empreendimentos (provavelmente relacionados ao Escritório Central ou pós-obra do Soul).
+
+**Pista já em mãos:** o diagnóstico `discover-stock-route` de 2026-07-30 já capturou, sem que soubéssemos o significado na hora, duas chamadas que muito provavelmente são a fonte da lista de empresas: `GET https://api.koper.com.br/administrative/v1/enterprise` e `GET https://api.koper.com.br/administrative/v1/multi_company` (ambas com `accessToken`, `cb`, `page`). Não sabemos ainda o formato da resposta.
+
+**Hipótese confirmada/descartada:** N/A — mapeamento manual, não um ciclo de diagnóstico com hipótese testável por código.
+
+**Arquivos alterados nesta entrada:** `docs/koper-inventory.md` (duas entidades novas: `engineering_work` e "Empresas do Koper"), `docs/koper-progress.md` (esta entrada), `CLAUDE.md` (Seção 18, aprendizado sobre estrutura multi-empresa).
+
+**Próximo bloqueio:** nenhum técnico ainda — é o próximo passo de descoberta.
+
+**Próxima alteração pequena sugerida (em andamento neste mesmo ciclo):** instrumentar o diagnóstico para capturar, logo após o login e antes de navegar para Suprimentos: (1) o texto da empresa ativa exibido no seletor superior direito, e (2) o corpo das respostas de `administrative/v1/enterprise` e `administrative/v1/multi_company`, para descobrir o formato de lista de empresas — sem clicar em nada que troque a empresa ativa ainda. Ver próxima entrada.

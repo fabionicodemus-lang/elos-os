@@ -30,6 +30,36 @@
 
 ---
 
+## `engineering_work` — Obras (módulo Engenharia)
+
+> Mapeado manualmente pelo Fábio via prints em 2026-07-31, não por diagnóstico automatizado. Ver `docs/koper-progress.md`, ciclo "Mapeamento manual — módulo Engenharia e seletor de empresa".
+
+| Campo | Conteúdo |
+|---|---|
+| módulo do Koper | Engenharia |
+| rota visual | `https://app.koper.com.br/engenharia/obras` (caminho: ícone "Engenharia" na barra vertical esquerda → "Obras" no submenu) |
+| endpoint | não descoberto |
+| empresa observada | Bossa Empreendimentos |
+| obras observadas | ESCRITÓRIO CENTRAL (Itapema-SC, Edifício Comercial, sem data de conclusão); SOUL RESIDENCE (Itapema-SC, Edifício Residencial, conclusão 28/10/2023) |
+| campos visíveis na tela | nome da obra, localização, tipo, data de conclusão; card com botão "VER MAIS DETALHES"; controles: "ORDENAR POR" (padrão "Nome da obra A-Z"), "Pesquisar em obras", "+ OBRA", "VER FINALIZADAS", contador "Número de registros" |
+| menu lateral do módulo (não explorado ainda) | Obras, Orçamentos de obra, Planejamento de obra, Acompanhamento de obra, Diário de obra, Ordens de produção, Contratos e medições (com submenu), Cadastros (com submenu) |
+| status | **rota visual confirmada; API ainda não descoberta** |
+
+## Entidade transversal — Empresas do Koper (escopo multi-empresa)
+
+> **Achado crítico, mapeado manualmente em 2026-07-31.** Cada empreendimento da Bossa é tratado no Koper como uma **empresa separada**, não como uma obra dentro de uma única empresa. Isso afeta todo o desenho do conector — ver `CLAUDE.md`, Seção 18, e `docs/koper-progress.md` para a implicação completa.
+
+| Campo | Conteúdo |
+|---|---|
+| comportamento | seletor de empresa ativa no canto superior direito da interface; a empresa selecionada define o escopo de todos os dados carregados nas telas e (presumivelmente) nas chamadas de API |
+| escopo conhecido até agora | **Bossa Empreendimentos** (custos administrativos, escritório central, e pós-obra do Soul Residence — contém as obras ESCRITÓRIO CENTRAL e SOUL RESIDENCE); **empresa do Flow** (dados operacionais/financeiros/engenharia/suprimentos do Flow Aptos — nome e ID exatos ainda não capturados); **empresa do Alma** (idem, para Alma Seahouses — nome e ID exatos ainda não capturados) |
+| endpoints candidatos (já observados em capturas de rede anteriores, ainda não confirmados como a fonte da lista de empresas) | `GET https://api.koper.com.br/administrative/v1/enterprise` e `GET https://api.koper.com.br/administrative/v1/multi_company` — ambos vistos no diagnóstico `discover-stock-route` de 2026-07-30 (`accessToken`, `cb`, `page`), nunca inspecionados a fundo |
+| identificador | não descoberto — priorizar ID original do Koper e/ou CNPJ; nunca usar posição no menu ou nome como chave |
+| mecanismo de troca de empresa | não descoberto (variável GraphQL, header, cookie, `localStorage`/`sessionStorage`?) |
+| status | **seleção visual confirmada; nomes completos, IDs e API ainda não descobertos** |
+
+---
+
 ## Todas as demais entidades do fluxo prioritário
 
 Ainda **não iniciado**: cotação, participantes/preços, pedido de compra, recebimento, nota fiscal, conta a pagar, pagamento — e toda a Fase 2 (cadastros-base: empresas, empreendimentos, obras, centros de custo, etapas, fornecedores, clientes, unidades imobiliárias, usuários).
