@@ -173,3 +173,36 @@ Abertura manual do dropdown de `Data orçamento` confirmou a ordem visual:
 7. `Período específico`.
 
 A primeira opção começa imediatamente abaixo do controle que exibe o intervalo. A estratégia de clique relativo foi implementada, mas a sessão Browserless encerrou antes do resultado; a alteração dos parâmetros da API continua pendente de confirmação.
+
+
+## Orçamentos finalizados do Flow — contrato de listagem confirmado
+
+Empresa: `Flow Aptos - Bossa`.
+
+Endpoint:
+
+`GET https://api.koper.com.br/purchase/v1/budget`
+
+Consulta para o filtro `Todos`:
+
+| Parâmetro | Valor |
+|---|---|
+| `budgetId` | `all` |
+| `limit` | `25` |
+| `offset` | `0`, depois `25` |
+| `orderFlag` | `desc` |
+| `orderby` | `budgetId` |
+| `initialDate` | ausente |
+| `finalDate` | ausente |
+| `typeDate` | ausente |
+
+Estrutura de resposta confirmada:
+
+- `budgetAmount`: total histórico, **440**;
+- `budgets`: página de registros;
+- 25 registros por página;
+- campos observados: `budgetId`, `supplierId`, `buildMonitoringId`, `budgetDate`, `responseDate`, `productAmount`, `totalValue`;
+- `responseDate` e `totalValue` podem ser nulos;
+- `buildMonitoringId` pode ser nulo.
+
+Paginação visual confirmada: a rolagem infinita incrementa `offset` em 25. As duas primeiras páginas retornaram 25 IDs distintos cada. O extrator deve continuar em `offset += 25` até acumular `budgetAmount` ou receber página menor que `limit`.
