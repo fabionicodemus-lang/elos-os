@@ -273,6 +273,8 @@ export type KoperFlowContextDiagnostic = {
   activeCompanyAfter: string | null;
   flowCardFound: boolean;
   flowSelected: boolean;
+  stockListReached: boolean;
+  stockRequestReads: NetworkSummary[];
   finalUrl: string;
   network: NetworkSummary[];
   blockedWrites: NetworkSummary[];
@@ -396,6 +398,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         activeCompanyAfter: null,
         flowCardFound: false,
         flowSelected: false,
+        stockListReached: false,
+        stockRequestReads: [],
         finalUrl: login.finalUrl,
         network: [],
         blockedWrites: [],
@@ -413,6 +417,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     const storageKeysBefore = await readStorageKeys(page).catch(() => emptyStorage);
     const network: NetworkSummary[] = [];
     const blockedWrites: NetworkSummary[] = [];
+    const stockRequestReads: NetworkSummary[] = [];
     const switchAttempts: SwitchAttemptShape[] = [];
 
     await page.route("**/*", async (route) => {
@@ -470,7 +475,31 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       }
     };
 
+    const onResponse = (response: Response): void => {
+      try {
+        const request = response.request();
+        const parsedUrl = new URL(response.url());
+
+        if (
+          request.method() === "GET" &&
+          parsedUrl.hostname === "api.koper.com.br" &&
+          parsedUrl.pathname === "/stock/v1/request"
+        ) {
+          stockRequestReads.push(
+            sanitizeRequest(
+              response.url(),
+              request.method(),
+              request.resourceType(),
+            ),
+          );
+        }
+      } catch {
+        // Ignora respostas que não possam ser sanitizadas.
+      }
+    };
+
     page.on("request", onRequest);
+    page.on("response", onResponse);
 
     if (activeCompanyBefore) {
       await openCompanySelectorAndCollectOptions(page, activeCompanyBefore);
@@ -517,7 +546,36 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       message = "KOPER_FLOW_COMPANY_CARD_NOT_FOUND";
     }
 
+    let stockListReached = false;
+
+    if (/flow/i.test(activeCompanyAfter ?? "")) {
+      const supplies = page.locator('[data-testid="button-Suprimentos"]').first();
+
+      if (await supplies.isVisible().catch(() => false)) {
+        await supplies.click({ force: true });
+        await page.waitForTimeout(1_500);
+
+        const requests = page.getByText(/^Solicitações$/i, { exact: true });
+        const count = Math.min(await requests.count(), 30);
+
+        for (let index = 0; index < count; index += 1) {
+          const item = requests.nth(index);
+
+          if (await item.isVisible().catch(() => false)) {
+            await item.click();
+            await page.waitForTimeout(8_000);
+            break;
+          }
+        }
+      }
+
+      stockListReached =
+        page.url().includes("/suprimentos/solicitacoes") ||
+        stockRequestReads.length > 0;
+    }
+
     page.off("request", onRequest);
+    page.off("response", onResponse);
     await page.unroute("**/*").catch(() => undefined);
 
     activeCompanyAfter ??= await readActiveCompanyLabel(page).catch(() => null);
@@ -530,6 +588,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       activeCompanyAfter,
       flowCardFound,
       flowSelected,
+      stockListReached,
+      stockRequestReads,
       finalUrl: page.url(),
       network,
       blockedWrites,
