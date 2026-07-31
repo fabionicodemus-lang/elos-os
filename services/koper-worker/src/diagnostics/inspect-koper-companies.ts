@@ -298,6 +298,8 @@ export type KoperFlowContextDiagnostic = {
   stockListReached: boolean;
   finalizedControlFound: boolean;
   finalizedClicked: boolean;
+  quotationListReached: boolean;
+  quotationFinalizedClicked: boolean;
   stockRequestReads: StockRequestRead[];
   finalUrl: string;
   network: NetworkSummary[];
@@ -768,6 +770,46 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       }
     }
 
+    let quotationListReached = false;
+    let quotationFinalizedClicked = false;
+
+    if (/flow/i.test(activeCompanyAfter ?? "")) {
+      const purchases = page.locator('[data-testid="button-Compras"]').first();
+
+      if (await purchases.isVisible().catch(() => false)) {
+        await purchases.click({ force: true });
+        await page.waitForTimeout(1_500);
+
+        const budgets = page.getByText(/^Orçamentos$/i, { exact: true });
+        const count = Math.min(await budgets.count(), 30);
+
+        for (let index = 0; index < count; index += 1) {
+          const item = budgets.nth(index);
+
+          if (await item.isVisible().catch(() => false)) {
+            await item.click();
+            await page.waitForTimeout(8_000);
+            break;
+          }
+        }
+      }
+
+      quotationListReached = /\/compras\/orcamentos/i.test(page.url());
+
+      if (quotationListReached) {
+        const finalized = page
+          .locator("button, a, [role='button'], input[type='button']")
+          .filter({ hasText: /ver finalizad[oa]s/i })
+          .last();
+
+        if (await finalized.isVisible().catch(() => false)) {
+          await finalized.click();
+          quotationFinalizedClicked = true;
+          await page.waitForTimeout(8_000);
+        }
+      }
+    }
+
     await Promise.allSettled(pendingStockResponses);
     page.off("request", onRequest);
     page.off("response", onResponse);
@@ -786,6 +828,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       stockListReached,
       finalizedControlFound,
       finalizedClicked,
+      quotationListReached,
+      quotationFinalizedClicked,
       stockRequestReads,
       finalUrl: page.url(),
       network,
