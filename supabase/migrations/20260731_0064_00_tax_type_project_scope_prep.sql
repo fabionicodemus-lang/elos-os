@@ -9,7 +9,8 @@ alter table public.finance_tax_types
 
 -- O cadastro original exigia código único na empresa inteira. As regras de retenção
 -- podem variar por obra, especialmente tributos municipais, portanto o código passa
--- a ser único dentro do escopo global ou do empreendimento.
+-- a ser único dentro do escopo global ou do empreendimento. Mantém-se a mesma
+-- sensibilidade do cadastro legado para não criar conflito novo durante a migration.
 alter table public.finance_tax_types
   drop constraint if exists finance_tax_types_company_id_code_key;
 
@@ -18,7 +19,7 @@ create unique index finance_tax_types_project_code_unique_idx
   on public.finance_tax_types(
     company_id,
     coalesce(project_id,'00000000-0000-0000-0000-000000000000'::uuid),
-    lower(code)
+    code
   );
 
 -- Identifica cadastros conhecidos antes da criação do índice de uma regra ativa por
