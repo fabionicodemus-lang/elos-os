@@ -493,3 +493,29 @@ A segunda página trouxe IDs diferentes da primeira (início observado: `6998`, 
 **Segurança:** nenhum `accessToken`, `userName` ou `userId` foi registrado; nenhuma criação, edição, aprovação, cancelamento ou exclusão foi executada. POSTs GraphQL não classificados permaneceram bloqueados. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado após a leitura.
 
 **Marco:** a descoberta de Solicitações de estoque está fechada para revisão no PR #152. Não iniciar cotações nem gravação no Elos OS antes da revisão do Fábio.
+
+
+---
+
+## 2026-07-31 — Primeira descoberta automatizada de Orçamentos do Flow
+
+**Hipótese:** no contexto `Flow Aptos - Bossa`, navegar por `Compras → Orçamentos → Ver finalizados` revelaria a rota e o transporte reais da listagem histórica sem executar escrita operacional.
+
+**Iteração 1 — commit `d1ba4ade`:** o seletor presumido `button-Compras` não existia no DOM; `quotationListReached=false`. O build inicialmente falhou por dois campos obrigatórios ausentes no retorno sem autenticação e foi corrigido no commit `5bbbbb23`.
+
+**Iteração 2 — commit `3ee270ec`:** o módulo Compras foi localizado pelo asset visual `purchase` já carregado pela interface.
+
+**Execução final:** diagnóstico `flow-context`, deployment Railway `437ff62c-dd1d-45df-a44f-34404516635a` (SUCCESS), resultado em 2026-07-31T18:14:46Z.
+
+**Resultado:**
+- `quotationListReached=true`;
+- `quotationFinalizedClicked=true`;
+- rota final: `https://app.koper.com.br/compras/orcamentos/finalizados`;
+- listagem: `GET https://api.koper.com.br/purchase/v1/budget`;
+- endpoint relacionado: `GET /purchase/v1/budget_negotiation`;
+- fornecedores/filtro: `GET /purchase/v1/supplier`;
+- query finalizada expõe as chaves `budgetId`, `initialDate`, `finalDate`, `limit`, `offset`, `orderFlag`, `orderby` e `typeDate`, além dos parâmetros sensíveis sanitizados.
+
+**Hipótese confirmada.** O transporte da listagem é REST. O corpo ainda não foi lido; volume, campos, identificadores e paginação visual permanecem abertos.
+
+Nenhuma criação, aprovação, negociação, escolha de fornecedor ou ordem de compra foi executada. POSTs GraphQL não classificados permaneceram bloqueados. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado após a leitura.
