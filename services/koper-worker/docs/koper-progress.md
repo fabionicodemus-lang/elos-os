@@ -446,3 +446,50 @@ Conforme a Seção 5 da constituição, o trabalho foi pausado após três tenta
 3. Considerar suficiente o contrato `limit/offset/itemsAmount` já observado e implementar o cliente de produção com um teste inicial de duas páginas em modo dry-run.
 
 **Recomendação:** opção 2, por reproduzir exatamente o comportamento autorizado da interface e evitar diferenças de autenticação/CORS.
+
+
+---
+
+## 2026-07-31 — Paginação visual das solicitações do Flow confirmada
+
+**Hipótese:** a listagem não possui paginação numérica; ao alcançar o fim da tabela, a rolagem infinita da própria interface dispara o próximo GET com `offset=25`.
+
+**Iteração visual — commits `c8399085` e `18f5faf8`.** A primeira tentativa procurou um paginador numérico visível, que não existe. Em seguida, o diagnóstico passou a rolar a janela e os elementos roláveis até o final, reproduzindo o comportamento normal da interface.
+
+**Execução final:** diagnóstico `flow-context`, deployment Railway `09e50ddf-0ec2-4eff-8e08-af03d0b49eda` (SUCCESS), resultado lido em 2026-07-31T17:02:31Z.
+
+**Resultado seguro:**
+
+```json
+{
+  "activePage1": {
+    "open": "yes",
+    "limit": 25,
+    "offset": 0,
+    "itemsAmount": 73,
+    "returnedRecords": 25
+  },
+  "activePage2": {
+    "open": "yes",
+    "limit": 25,
+    "offset": 25,
+    "itemsAmount": 73,
+    "returnedRecords": 25
+  },
+  "finalizedPage1": {
+    "open": "no",
+    "limit": 25,
+    "offset": 0,
+    "itemsAmount": 829,
+    "returnedRecords": 25
+  }
+}
+```
+
+A segunda página trouxe IDs diferentes da primeira (início observado: `6998`, `6271`, `6073`, `5512`) e confirmou também o estado `Rascunho` com `isDraft=true`. A amostra da página 2 alcança pelo menos 27/09/2024, comprovando histórico anterior ao intervalo visível no print inicial.
+
+**Hipótese confirmada.** O contrato é paginação por rolagem infinita, com `limit=25` e incremento de `offset` em 25. Uma extração completa deve acumular páginas até atingir `itemsAmount` ou receber uma página menor que o limite.
+
+**Segurança:** nenhum `accessToken`, `userName` ou `userId` foi registrado; nenhuma criação, edição, aprovação, cancelamento ou exclusão foi executada. POSTs GraphQL não classificados permaneceram bloqueados. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado após a leitura.
+
+**Marco:** a descoberta de Solicitações de estoque está fechada para revisão no PR #152. Não iniciar cotações nem gravação no Elos OS antes da revisão do Fábio.
