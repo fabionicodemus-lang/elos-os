@@ -1088,6 +1088,19 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
                 return targets.slice(0, 30);
               });
 
+              const budgetRowOnFirstPage = page
+                .getByText(/^3268$/, { exact: true })
+                .first()
+                .locator("xpath=ancestor::tr[1]");
+
+              if (await budgetRowOnFirstPage.isVisible().catch(() => false)) {
+                quotationDetailMode = true;
+                await budgetRowOnFirstPage.click();
+                await page.waitForTimeout(5_000);
+                quotationDetailUrl = page.url();
+              }
+
+              if (!quotationDetailMode) {
               const pageTwoResponse = page.waitForResponse(
                 (response) => {
                   try {
@@ -1139,6 +1152,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
                 await budgetCode.click();
                 await page.waitForTimeout(5_000);
                 quotationDetailUrl = page.url();
+              }
               }
             }
           }
