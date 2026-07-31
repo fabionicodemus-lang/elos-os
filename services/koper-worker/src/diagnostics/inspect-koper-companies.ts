@@ -511,7 +511,6 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     const switchAttempts: SwitchAttemptShape[] = [];
     const pendingStockResponses: Promise<void>[] = [];
     let stockListMode: "active" | "active-page-2" | "finalized" = "active";
-    let activeRequestUrl: string | null = null;
 
     await page.route("**/*", async (route) => {
       const request = route.request();
@@ -579,10 +578,6 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           parsedUrl.pathname === "/stock/v1/request"
         ) {
           const listMode = stockListMode;
-
-          if (listMode === "active") {
-            activeRequestUrl = response.url();
-          }
 
           const summary = sanitizeRequest(
             response.url(),
@@ -688,39 +683,34 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         page.url().includes("/suprimentos/solicitacoes") ||
         stockRequestReads.length > 0;
 
-      if (stockListReached && activeRequestUrl) {
-        const secondPageUrl = new URL(activeRequestUrl);
-        secondPageUrl.searchParams.set("offset", "25");
-        stockListMode = "active-page-2";
+      if (stockListReached) {
+        const activePage = page.locator("ul.pagination li.active").first();
+        const nextPage = activePage
+          .locator("xpath=following-sibling::li[1]/a")
+          .first();
 
-        const secondPage = await page
-          .context()
-          .request.get(secondPageUrl.toString(), {
-            failOnStatusCode: false,
-            timeout: 15_000,
-          })
-          .then(async (response) =>
-            response.ok()
-              ? {
-                  statusCode: response.status(),
-                  body: await response.json() as unknown,
-                }
-              : null,
-          )
-          .catch(() => null);
-        await Promise.allSettled(pendingStockResponses);
+        if (await nextPage.isVisible().catch(() => false)) {
+          stockListMode = "active-page-2";
+          const pageTwoResponse = page.waitForResponse(
+            (response) => {
+              try {
+                const url = new URL(response.url());
+                return (
+                  response.request().method() === "GET" &&
+                  url.hostname === "api.koper.com.br" &&
+                  url.pathname === "/stock/v1/request" &&
+                  url.searchParams.get("offset") === "25"
+                );
+              } catch {
+                return false;
+              }
+            },
+            { timeout: 15_000 },
+          );
 
-        if (
-          secondPage &&
-          !stockRequestReads.some((read) => read.listMode === "active-page-2")
-        ) {
-          stockRequestReads.push({
-            ...sanitizeRequest(secondPageUrl.toString(), "GET", "fetch"),
-            listMode: "active-page-2",
-            statusCode: secondPage.statusCode,
-            queryParams: safeStockQueryParams(secondPageUrl),
-            ...collectSafeStockRequests(secondPage.body),
-          });
+          await nextPage.click();
+          await pageTwoResponse.catch(() => undefined);
+          await page.waitForTimeout(2_000);
         }
       }
 
