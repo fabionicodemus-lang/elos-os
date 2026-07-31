@@ -322,7 +322,7 @@ function isAllowedFlowSwitchBody(postData: string | null): boolean {
       typeof body.accessToken === "string" &&
       body.accessToken.length > 0 &&
       body.toEnterpriseId === flowEnterpriseId &&
-      (body.changeCompany === true || body.changeCompany === "true")
+      Object.hasOwn(body, "changeCompany")
     );
   } catch {
     return false;
