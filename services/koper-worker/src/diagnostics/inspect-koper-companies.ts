@@ -367,10 +367,53 @@ type QuotationDetailRead = NetworkSummary & {
   budget: QuotationDetailSample | null;
 };
 
+type PurchaseDetailBill = {
+  billId: string | number | null;
+  billToPayId: string | number | null;
+  billValue: number | null;
+  dueDate: string | null;
+  joinBillId: string | number | null;
+};
+
+type PurchaseDetailService = {
+  serviceId: string | number | null;
+  serviceValue: number | null;
+  serviceAmount: number | null;
+};
+
+type PurchaseDetailServiceOrder = {
+  serviceOrderId: string | number | null;
+  serviceOrderDate: string | null;
+  serviceOrderStatus: string | null;
+};
+
+type PurchaseDetailSample = {
+  purchaseId: string | number | null;
+  costCenterId: string | number | null;
+  supplierId: string | number | null;
+  receiptId: string | number | null;
+  xmlInvoiceId: string | number | null;
+  invoiceNumber: string | number | null;
+  receiptNumber: string | number | null;
+  purchaseDate: string | null;
+  othersValue: number | null;
+  purchaseDiscount: number | null;
+  purchaseValue: number | null;
+  totalProducts: number | null;
+  totalPurchase: number | null;
+  totalServices: number | null;
+  purchaseOrderCount: number;
+  productCount: number;
+  bills: PurchaseDetailBill[];
+  services: PurchaseDetailService[];
+  serviceOrders: PurchaseDetailServiceOrder[];
+};
+
 type PurchaseDetailRead = NetworkSummary & {
   statusCode: number;
   dataKeys: string[];
   fieldPaths: string[];
+  purchase: PurchaseDetailSample | null;
 };
 
 type SwitchAttemptShape = {
@@ -502,6 +545,68 @@ function collectSafeQuotationDetail(body: unknown): QuotationDetailSample | null
         conversionFactor: safeNumber(product.conversionFactor),
         prodCanceled: safeBoolean(product.prodCanceled),
         open: safeBoolean(product.open),
+      };
+    }),
+  };
+}
+
+function collectSafePurchaseDetail(body: unknown): PurchaseDetailSample | null {
+  const value = typeof body === "object" && body !== null
+    ? body as Record<string, unknown>
+    : null;
+  if (!value || value.purchaseId === undefined) return null;
+
+  const bills = Array.isArray(value.bills) ? value.bills : [];
+  const services = Array.isArray(value.services) ? value.services : [];
+  const serviceOrders = Array.isArray(value.serviceOrders) ? value.serviceOrders : [];
+
+  return {
+    purchaseId: safeIdentifier(value.purchaseId),
+    costCenterId: safeIdentifier(value.costCenterId),
+    supplierId: safeIdentifier(value.supplierId),
+    receiptId: safeIdentifier(value.receiptId),
+    xmlInvoiceId: safeIdentifier(value.xmlInvoiceId),
+    invoiceNumber: safeIdentifier(value.invoiceNumber),
+    receiptNumber: safeIdentifier(value.receiptNumber),
+    purchaseDate: safeText(value.purchaseDate),
+    othersValue: safeNumber(value.othersValue),
+    purchaseDiscount: safeNumber(value.purchaseDiscount),
+    purchaseValue: safeNumber(value.purchaseValue),
+    totalProducts: safeNumber(value.totalProducts),
+    totalPurchase: safeNumber(value.totalPurchase),
+    totalServices: safeNumber(value.totalServices),
+    purchaseOrderCount: Array.isArray(value.purchaseOrders) ? value.purchaseOrders.length : 0,
+    productCount: Array.isArray(value.products) ? value.products.length : 0,
+    bills: bills.slice(0, 50).map((item: unknown) => {
+      const bill = typeof item === "object" && item !== null
+        ? item as Record<string, unknown>
+        : {};
+      return {
+        billId: safeIdentifier(bill.billId),
+        billToPayId: safeIdentifier(bill.billToPayId),
+        billValue: safeNumber(bill.billValue),
+        dueDate: safeText(bill.dueDate),
+        joinBillId: safeIdentifier(bill.joinBillId),
+      };
+    }),
+    services: services.slice(0, 50).map((item: unknown) => {
+      const service = typeof item === "object" && item !== null
+        ? item as Record<string, unknown>
+        : {};
+      return {
+        serviceId: safeIdentifier(service.serviceId),
+        serviceValue: safeNumber(service.serviceValue),
+        serviceAmount: safeNumber(service.serviceAmount),
+      };
+    }),
+    serviceOrders: serviceOrders.slice(0, 50).map((item: unknown) => {
+      const serviceOrder = typeof item === "object" && item !== null
+        ? item as Record<string, unknown>
+        : {};
+      return {
+        serviceOrderId: safeIdentifier(serviceOrder.serviceOrderId),
+        serviceOrderDate: safeText(serviceOrder.serviceOrderDate),
+        serviceOrderStatus: safeText(serviceOrder.serviceOrderStatus),
       };
     }),
   };
@@ -886,6 +991,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               statusCode: response.status(),
               dataKeys: object ? Object.keys(object).slice(0, 80) : [],
               fieldPaths: collectFieldPaths(body).slice(0, 300),
+              purchase: collectSafePurchaseDetail(body),
             });
           }).catch(() => undefined);
 
