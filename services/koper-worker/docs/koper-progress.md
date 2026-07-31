@@ -564,3 +564,23 @@ As únicas leituras observadas continuaram sendo `GET /purchase/v1/budget`: uma 
 O diagnóstico foi executado no Railway com sucesso e `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado imediatamente após a coleta. Nenhuma escrita operacional foi executada.
 
 **Próximo passo seguro:** clicar especificamente em `div.input-default.dropdown-toggle` associado ao rótulo de data, inspecionar as opções abertas e somente então selecionar `Todos`, capturando a requisição normal produzida pela interface.
+
+
+## 2026-07-31 — Tentativas de selecionar “Todos” no período de Orçamentos
+
+Commits `11c0022` e `f4a4d60`.
+
+Objetivo autorizado: abrir o dropdown de período da rota `/compras/orcamentos/finalizados` e selecionar `Todos`, preservando o Koper como origem somente leitura.
+
+Foram testadas duas estratégias fundamentadas pela inspeção anterior:
+
+1. localizar `div.input-default.dropdown-toggle` pelo texto no formato de intervalo de datas e buscar `Todos` dentro do mesmo dropdown;
+2. após abrir o controle datado, buscar globalmente o `Todos` visível abaixo e horizontalmente alinhado ao botão, descartando o `Todos` do fornecedor.
+
+A primeira execução foi interrompida por encerramento transitório da página remota pelo Browserless. A repetição e a estratégia visual chegaram normalmente à tela finalizada, porém não produziram uma nova leitura: permaneceram somente as consultas de julho de 2026 com resposta 404. Isso indica que o item do menu de período é renderizado por mecanismo que não foi alcançado pelos seletores atuais, possivelmente calendário/popover com eventos Angular associados a outro nó.
+
+Por segurança e em cumprimento ao limite de tentativas da constituição, o ciclo foi interrompido sem novas tentativas. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado. Nenhuma escrita operacional, mudança de filtro equivocada ou captura de segredo foi executada.
+
+**Bloqueio atual:** identificar o nó/evento efetivamente acionável da opção `Todos` após o popover de período estar aberto.
+
+**Próximo caminho recomendado:** em um diagnóstico separado, capturar somente a árvore sanitizada e as caixas visuais dos elementos que surgem após abrir o controle de data, sem tentar selecionar opção. Com essa evidência, construir um seletor exato em novo ciclo.
