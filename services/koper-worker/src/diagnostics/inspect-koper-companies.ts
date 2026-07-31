@@ -731,10 +731,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           const item = requests.nth(index);
 
           if (await item.isVisible().catch(() => false)) {
-            await Promise.all([
-              page.waitForURL(/\/compras\/orcamentos/i, { timeout: 10_000 }).catch(() => undefined),
-              item.click(),
-            ]);
+            await item.click();
+            await page.waitForTimeout(8_000);
             break;
           }
         }
@@ -870,8 +868,10 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           const item = budgets.nth(index);
 
           if (await item.isVisible().catch(() => false)) {
-            await item.click();
-            await page.waitForTimeout(8_000);
+            await Promise.all([
+              page.waitForURL(/\/compras\/orcamentos/i, { timeout: 10_000 }).catch(() => undefined),
+              item.click(),
+            ]);
             break;
           }
         }
