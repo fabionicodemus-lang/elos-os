@@ -294,10 +294,40 @@ function sanitizeRequest(rawUrl: string, method: string, resourceType: string): 
   };
 }
 
-const allowedFlowCompanyIds = new Set([
-  "6d3b4724-5880-11ee-827d-1219c832db49",
-  "1c527099-2e63-465f-b97a-772e36a93d8c",
-]);
+const flowEnterpriseId = "6d3b4724-5880-11ee-827d-1219c832db49";
+
+function isAllowedFlowSwitchBody(postData: string | null): boolean {
+  if (!postData) {
+    return false;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(postData);
+
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return false;
+    }
+
+    const body = parsed as Record<string, unknown>;
+    const allowedKeys = new Set([
+      "accessToken",
+      "toEnterpriseId",
+      "changeCompany",
+    ]);
+    const keys = Object.keys(body);
+
+    return (
+      keys.length === 3 &&
+      keys.every((key) => allowedKeys.has(key)) &&
+      typeof body.accessToken === "string" &&
+      body.accessToken.length > 0 &&
+      body.toEnterpriseId === flowEnterpriseId &&
+      (body.changeCompany === true || body.changeCompany === "true")
+    );
+  } catch {
+    return false;
+  }
+}
 
 function inspectSwitchAttempt(
   rawUrl: string,
@@ -407,10 +437,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         }
 
         const isAllowedFlowSwitch =
-          isCompanySwitch &&
-          allowedFlowCompanyIds.has(
-            parsedUrl.searchParams.get("changeCompany") ?? "",
-          );
+          isCompanySwitch && isAllowedFlowSwitchBody(request.postData());
 
         if (isKoper && !isSafeRead && !isAllowedFlowSwitch) {
           blockedWrites.push(
