@@ -571,6 +571,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
 
     await page.waitForTimeout(3_000);
     const quotationOnly = process.env.KOPER_QUOTATION_ONLY === "true";
+    const quotationDetailOnly =
+      process.env.KOPER_QUOTATION_DETAIL_ONLY === "true";
 
     const activeCompanyBefore = await readActiveCompanyLabel(page).catch(() => null);
     const storageKeysBefore = await readStorageKeys(page).catch(() => emptyStorage);
@@ -690,6 +692,19 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
                 ? (body as Record<string, unknown>)
                 : null;
             const allowed = ["budgetId", "initialDate", "finalDate", "limit", "offset", "orderFlag", "orderby", "typeDate"];
+
+            if (
+              quotationDetailMode
+              && parsedUrl.searchParams.get("budgetId") !== "all"
+            ) {
+              quotationDetailReads.push({
+                ...summary,
+                statusCode: response.status(),
+                dataKeys: object ? Object.keys(object).slice(0, 50) : [],
+                fieldPaths: collectFieldPaths(body).slice(0, 200),
+              });
+              return;
+            }
 
             quotationReads.push({
               ...summary,
@@ -927,10 +942,21 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       network.splice(0);
 
       if (quotationOnly) {
-        await page.goto("https://app.koper.com.br/compras/orcamentos/finalizados", {
-          waitUntil: "domcontentloaded",
-          timeout: 15_000,
-        }).catch(() => undefined);
+        if (quotationDetailOnly) {
+          quotationDetailMode = true;
+          await page.goto("https://app.koper.com.br/compras/orcamentos/view/3268", {
+            waitUntil: "domcontentloaded",
+            timeout: 15_000,
+          }).catch(() => undefined);
+          await page.waitForTimeout(5_000);
+          quotationDetailUrl = page.url();
+        } else {
+          await page.goto("https://app.koper.com.br/compras/orcamentos/finalizados", {
+            waitUntil: "domcontentloaded",
+            timeout: 15_000,
+          }).catch(() => undefined);
+        }
+        }
       } else {
         const purchasesButton = page.locator('[data-testid="button-Compras"]').first();
       const purchasesImage = page.locator('img[src*="purchase-"]').first();
