@@ -120,6 +120,64 @@ begin
 end;
 $$;
 
+create or replace function public.remove_manual_invoice_generated_finance(p_invoice_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare v_invoice public.finance_manual_invoices%rowtype;
+begin
+  select * into v_invoice from public.finance_manual_invoices where id=p_invoice_id for update;
+  if v_invoice.id is null then raise exception 'Nota manual não encontrada.'; end if;
+  if not public.has_company_permission(v_invoice.company_id,'finance.manual_invoices.manage')
+     and not public.has_company_permission(v_invoice.company_id,'finance.manual_invoices.cancel') then
+    raise exception 'Sem permissão para alterar ou excluir esta nota manual.';
+  end if;
+  if v_invoice.material_receipt_id is not null then
+    raise exception 'A nota possui recebimento de material vinculado e não pode ser alterada ou excluída.';
+  end if;
+
+  if exists(
+    select 1 from public.payables p
+    where p.company_id=v_invoice.company_id and p.source_system='elos_os'
+      and p.source_id like 'manual_invoice:'||v_invoice.id::text||':%'
+      and (p.status='paid' or p.paid_at is not null)
+  ) or exists(
+    select 1 from public.finance_tax_obligations o
+    left join public.payables p on p.id=o.payable_id
+    where o.manual_invoice_id=v_invoice.id
+      and (o.status='paid' or p.status='paid' or p.paid_at is not null)
+  ) then
+    raise exception 'A nota possui pagamento vinculado e não pode ser alterada ou excluída.';
+  end if;
+
+  if v_invoice.measurement_id is not null then
+    update public.execution_contract_measurements set
+      status='approved',invoice_number=null,invoice_date=null,invoice_gross_amount=null,
+      payable_id=null,sent_to_finance_at=null,updated_at=now()
+    where id=v_invoice.measurement_id and status='invoiced';
+  end if;
+
+  delete from public.payables p
+  using public.finance_tax_obligations o
+  where o.manual_invoice_id=v_invoice.id and p.id=o.payable_id and p.status<>'paid';
+  delete from public.finance_tax_obligations where manual_invoice_id=v_invoice.id;
+
+  delete from public.payables
+  where company_id=v_invoice.company_id and source_system='elos_os'
+    and source_id like 'manual_invoice:'||v_invoice.id::text||':%'
+    and status<>'paid';
+  update public.finance_manual_invoice_installments set payable_id=null,updated_at=now()
+  where invoice_id=v_invoice.id;
+
+  update public.finance_manual_invoices set
+    status='draft',approved_by=null,approved_at=null,approval_notes=null,
+    posted_by=null,posted_at=null,updated_at=now(),updated_by=auth.uid()
+  where id=v_invoice.id;
+end;
+$$;
+
 create or replace function public.protect_manual_invoice_generated_payable()
 returns trigger
 language plpgsql
