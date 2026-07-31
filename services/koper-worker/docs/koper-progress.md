@@ -422,3 +422,27 @@ Diagnóstico `flow-context` ampliado pelos commits `c65e79bc`, `1d996ffc`, `385a
 Nenhum `accessToken`, `userName` ou `userId` foi registrado. Nenhuma criação, edição, aprovação ou exclusão foi realizada. `KOPER_STARTUP_DIAGNOSTIC` foi novamente esvaziado após a coleta.
 
 **Próximo passo sugerido:** validar uma segunda página somente por GET (`offset=25`) e então implementar o cliente REST de produção para extrair todas as páginas para uma staging idempotente, ainda sem promover dados ao modelo final.
+
+
+---
+
+## 2026-07-31 — Pausa obrigatória: validação da segunda página
+
+**Hipótese:** reutilizar a URL autenticada de `GET /stock/v1/request` e trocar somente `offset=0` por `offset=25` retornaria a segunda página com 25 registros.
+
+**Iteração 1 — commit `37dac6a2`:** o GET com `offset=25` apareceu no mapa de rede como `resourceType=fetch`, mas o coletor de respostas não conseguiu registrar o corpo.
+
+**Iteração 2 — commit `99457ea1`:** tentativa de retornar o JSON pelo `fetch` executado na página. A requisição apareceu na rede, porém o corpo não voltou ao diagnóstico, compatível com bloqueio de CORS no JavaScript da página.
+
+**Iteração 3 — commit `89e357e6`:** tentativa com `browserContext.request.get`, evitando CORS. O cliente não retornou um corpo válido para o diagnóstico, provavelmente porque o contexto HTTP separado não herdou toda a autenticação necessária apesar de a URL conter o token.
+
+**Resultado:** a semântica de paginação permanece fortemente indicada por `limit=25`, `offset=0` e `itemsAmount`, e o GET com `offset=25` foi efetivamente emitido uma vez, mas a segunda página ainda não foi validada pelo conteúdo. Hipótese **não fechada**.
+
+Conforme a Seção 5 da constituição, o trabalho foi pausado após três tentativas consecutivas no mesmo bloqueio. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado. Nenhuma escrita operacional foi realizada.
+
+**Alternativas para decisão do Fábio:**
+1. Instrumentar o erro de forma sanitizada (apenas estágio, status HTTP e classe do erro) antes de uma nova tentativa.
+2. Acionar a paginação visual da tabela e capturar o XHR normal gerado pelo próprio Koper.
+3. Considerar suficiente o contrato `limit/offset/itemsAmount` já observado e implementar o cliente de produção com um teste inicial de duas páginas em modo dry-run.
+
+**Recomendação:** opção 2, por reproduzir exatamente o comportamento autorizado da interface e evitar diferenças de autenticação/CORS.
