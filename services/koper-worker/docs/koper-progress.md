@@ -620,3 +620,19 @@ A resposta usa `budgetAmount`, não `itemsAmount`, e informou **440 registros hi
 A rolagem infinita foi validada em seguida. Ela disparou a mesma consulta com `offset=25`, retornando mais 25 registros distintos. Página 1: IDs 3268 a 3037 na amostra ordenada; página 2: IDs 3006 a 2709. Não houve repetição entre as páginas.
 
 O diagnóstico registrou somente `budgetId`, `supplierId`, `buildMonitoringId`, datas, quantidade de produtos e valor total. Nomes de fornecedores foram excluídos da amostra. `KOPER_STARTUP_DIAGNOSTIC` e `KOPER_QUOTATION_ONLY` foram esvaziados após a leitura. Nenhuma escrita operacional foi executada.
+
+
+## 2026-07-31 — Início do detalhe da cotação 3268
+
+Após concluir listagem e paginação, iniciou-se a descoberta somente leitura do detalhe da cotação 3268.
+
+A primeira tentativa buscou o texto `3268` depois da rolagem para `offset=25`; o elemento já não estava visível. A segunda voltou os contêineres ao topo, mas a tabela virtualizada não tornou o código acionável novamente. A terceira ação foi somente estrutural e confirmou:
+
+- código em `td.ng-binding`;
+- pai imediato `tr.ng-scope`;
+- ausência de `href`, `ng-click`, `ui-sref` e `role`;
+- o comportamento de abertura é provavelmente um listener Angular/JavaScript ligado à linha.
+
+Nenhum detalhe foi aberto e nenhum endpoint adicional foi capturado. Conforme o limite de tentativas, o ciclo foi encerrado. `KOPER_STARTUP_DIAGNOSTIC` e `KOPER_QUOTATION_ONLY` foram esvaziados.
+
+**Próximo passo fundamentado:** localizar o `td` com texto exato `3268` e clicar diretamente no `tr` pai antes de executar a paginação visual.
