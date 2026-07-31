@@ -22,9 +22,11 @@ function safeName(name: string) {
 
 export async function saveWorkOrder(formData: FormData) {
   const workOrderId = optional(formData, "work_order_id");
+  const financialMode = text(formData, "financial_mode") || "none";
   const { supabase, companyId, projectId } = await requireCompanyPermission("execution.work_orders.manage");
   if (!projectId) redirect(resultUrl("Selecione uma obra antes de criar a ordem de serviço.", "error"));
-  const { data, error } = await supabase.rpc("save_execution_work_order", {
+
+  const baseParams = {
     p_company_id: companyId,
     p_project_id: projectId,
     p_work_order_id: workOrderId,
@@ -41,10 +43,20 @@ export async function saveWorkOrder(formData: FormData) {
     p_notes: optional(formData, "notes"),
     p_items: jsonArray(formData, "items_json"),
     p_prerequisites: jsonArray(formData, "prerequisites_json"),
-  });
-  if (error || !data) redirect(resultUrl(error?.message ?? "Não foi possível salvar a ordem de serviço.", "error", workOrderId ?? undefined));
+  };
+
+  const result = workOrderId || financialMode === "preserve"
+    ? await supabase.rpc("save_execution_work_order", baseParams)
+    : await supabase.rpc("save_execution_work_order_with_financial_plan", {
+        ...baseParams,
+        p_financial_mode: financialMode,
+        p_installments: jsonArray(formData, "installments_json"),
+      });
+
+  if (result.error || !result.data) redirect(resultUrl(result.error?.message ?? "Não foi possível salvar a ordem de serviço.", "error", workOrderId ?? undefined));
   revalidatePath(PATH);
-  redirect(resultUrl(workOrderId ? "Ordem de serviço atualizada." : "Ordem de serviço criada em elaboração.", "success", String(data)));
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  redirect(resultUrl(workOrderId ? "Ordem de serviço atualizada." : "Ordem de serviço criada em elaboração.", "success", String(result.data)));
 }
 
 export async function releaseWorkOrder(formData: FormData) {
@@ -96,7 +108,7 @@ export async function acceptWorkOrder(formData: FormData) {
   const workOrderId = text(formData, "work_order_id");
   const { supabase, companyId, projectId } = await requireCompanyPermission("execution.work_orders.accept");
   if (!projectId) redirect(resultUrl("Selecione uma obra.", "error"));
-  const { error } = await supabase.rpc("accept_execution_work_order", {
+  const { error } = await supabase.rpc("accept_execution_work_order_with_financial", {
     p_company_id: companyId,
     p_project_id: projectId,
     p_work_order_id: workOrderId,
@@ -108,7 +120,10 @@ export async function acceptWorkOrder(formData: FormData) {
   });
   if (error) redirect(resultUrl(error.message, "error", workOrderId));
   revalidatePath(PATH);
-  redirect(resultUrl(text(formData, "result") === "rejected" ? "Aceite devolvido para correção." : "Ordem de serviço aceita e encerrada.", "success", workOrderId));
+  revalidatePath("/financeiro/contas-a-pagar");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/dashboard");
+  redirect(resultUrl(text(formData, "result") === "rejected" ? "Aceite devolvido para correção." : "Ordem de serviço aceita e encerrada. As parcelas configuradas foram processadas conforme o modo financeiro.", "success", workOrderId));
 }
 
 export async function uploadWorkOrderDocuments(formData: FormData) {
