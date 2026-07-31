@@ -258,6 +258,14 @@ type NetworkSummary = {
   queryKeys: string[];
 };
 
+type SwitchAttemptShape = {
+  queryValueKind: "uuid" | "flag" | "other" | "missing";
+  bodyKind: "json" | "form" | "text" | "empty";
+  bodyKeys: string[];
+  matchesFlowEnterpriseId: boolean;
+  matchesFlowBranchId: boolean;
+};
+
 export type KoperFlowContextDiagnostic = {
   ok: true;
   authenticated: boolean;
@@ -268,6 +276,7 @@ export type KoperFlowContextDiagnostic = {
   finalUrl: string;
   network: NetworkSummary[];
   blockedWrites: NetworkSummary[];
+  switchAttempts: SwitchAttemptShape[];
   storageKeysBefore: { local: string[]; session: string[] };
   storageKeysAfter: { local: string[]; session: string[] };
   message: string | null;
@@ -289,6 +298,51 @@ const allowedFlowCompanyIds = new Set([
   "6d3b4724-5880-11ee-827d-1219c832db49",
   "1c527099-2e63-465f-b97a-772e36a93d8c",
 ]);
+
+function inspectSwitchAttempt(
+  rawUrl: string,
+  postData: string | null,
+): SwitchAttemptShape {
+  const queryValue = new URL(rawUrl).searchParams.get("changeCompany");
+  let bodyKind: SwitchAttemptShape["bodyKind"] = postData ? "text" : "empty";
+  let bodyKeys: string[] = [];
+
+  if (postData) {
+    try {
+      const parsed: unknown = JSON.parse(postData);
+      bodyKind = "json";
+      bodyKeys =
+        typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+          ? Object.keys(parsed).slice(0, 30)
+          : [];
+    } catch {
+      const form = new URLSearchParams(postData);
+      const keys = [...new Set(form.keys())];
+
+      if (keys.length > 0 && keys.some((key) => postData.includes("="))) {
+        bodyKind = "form";
+        bodyKeys = keys.slice(0, 30);
+      }
+    }
+  }
+
+  return {
+    queryValueKind:
+      queryValue === null
+        ? "missing"
+        : /^[0-9a-f-]{36}$/i.test(queryValue)
+          ? "uuid"
+          : /^(true|false|0|1)$/i.test(queryValue)
+            ? "flag"
+            : "other",
+    bodyKind,
+    bodyKeys,
+    matchesFlowEnterpriseId:
+      Boolean(postData?.includes("6d3b4724-5880-11ee-827d-1219c832db49")),
+    matchesFlowBranchId:
+      Boolean(postData?.includes("1c527099-2e63-465f-b97a-772e36a93d8c")),
+  };
+}
 
 async function readStorageKeys(
   page: Page,
@@ -315,6 +369,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         finalUrl: login.finalUrl,
         network: [],
         blockedWrites: [],
+        switchAttempts: [],
         storageKeysBefore: emptyStorage,
         storageKeysAfter: emptyStorage,
         message: login.message,
@@ -328,6 +383,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     const storageKeysBefore = await readStorageKeys(page).catch(() => emptyStorage);
     const network: NetworkSummary[] = [];
     const blockedWrites: NetworkSummary[] = [];
+    const switchAttempts: SwitchAttemptShape[] = [];
 
     await page.route("**/*", async (route) => {
       const request = route.request();
@@ -339,11 +395,22 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         const isKoper =
           hostname === "koper.com.br" || hostname.endsWith(".koper.com.br");
         const isSafeRead = ["GET", "HEAD", "OPTIONS"].includes(method);
-        const isAllowedFlowSwitch =
+        const isCompanySwitch =
           method === "POST" &&
           hostname === "api.koper.com.br" &&
-          parsedUrl.pathname === "/login/change_company" &&
-          allowedFlowCompanyIds.has(parsedUrl.searchParams.get("changeCompany") ?? "");
+          parsedUrl.pathname === "/login/change_company";
+
+        if (isCompanySwitch) {
+          switchAttempts.push(
+            inspectSwitchAttempt(request.url(), request.postData()),
+          );
+        }
+
+        const isAllowedFlowSwitch =
+          isCompanySwitch &&
+          allowedFlowCompanyIds.has(
+            parsedUrl.searchParams.get("changeCompany") ?? "",
+          );
 
         if (isKoper && !isSafeRead && !isAllowedFlowSwitch) {
           blockedWrites.push(
@@ -428,6 +495,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       finalUrl: page.url(),
       network,
       blockedWrites,
+      switchAttempts,
       storageKeysBefore,
       storageKeysAfter,
       message,
