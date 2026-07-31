@@ -725,3 +725,17 @@ Assim, o fluxo material está fechado por identificadores estáveis: solicitaç�
 POSTs GraphQL auxiliares permaneceram bloqueados e nenhuma escrita operacional foi executada. Todos os modos diagnósticos foram desativados após a coleta.
 
 **Próximo passo:** substituir os IDs fixos dos diagnósticos por um extrator de produção parametrizado, com paginação, persistência idempotente e checkpoints por empresa, começando por solicitações, ordens, entradas, notas e contas a pagar.
+
+---
+
+## 2026-07-31 — Núcleo de idempotência iniciado
+
+**Hipótese:** normalizar o JSON recursivamente antes do SHA-256 evita alterações falsas quando o Koper devolve as mesmas chaves em outra ordem ou inclui metadados efêmeros.
+
+Foi criado `src/koper/payload-hash.ts`, já fora da camada de diagnósticos. A normalização ordena alfabeticamente as chaves em todos os níveis e remove `_responseAt` e `_traceId`, inclusive quando aninhados. `hashKoperPayload` gera o SHA-256 do JSON normalizado.
+
+Três testes em `src/koper/payload-hash.test.ts` confirmaram: (1) objetos equivalentes com chaves em ordens diferentes geram o mesmo hash; (2) campos voláteis são removidos em qualquer profundidade; (3) mudança real de status gera outro hash. `typecheck`, `build` e `node --test` passaram sem falhas.
+
+Commits `a63729a` e `e547b4a`; deployments Railway `85e5f97f-5913-4ac9-b8a8-a2e9eb1cefda` e `df79a57e-3323-4b0e-aa5f-12d555973844`, ambos SUCCESS. **Hipótese confirmada.** Nenhuma chamada ao Koper e nenhuma gravação no Elos OS foram feitas neste ciclo.
+
+**Próximo passo:** criar o tipo canônico de registro de staging com `tenant_id`, `entity`, `koper_id`, payload normalizado, hash e metadados obrigatórios; ainda sem conectar ao Supabase até verificar tabela, RLS e policy.
