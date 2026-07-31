@@ -143,3 +143,75 @@ Também observado no mapa de rede (não confirmado como relevante ainda): `GET h
 **Próximo bloqueio:** nenhum técnico. Falta decidir com o Fábio se o PR #152 (ainda com descrição da etapa de fundação) deve ser atualizado para refletir todo o trabalho de descoberta já feito, ou se um PR novo deve ser aberto quando a entidade `stock_request` fechar (Seção 6 da constituição).
 
 **Próxima alteração pequena sugerida:** com a listagem confirmada, o próximo ciclo de descoberta deveria mirar o **endpoint de detalhe** de uma solicitação individual — hipótese: `GET https://api.koper.com.br/stock/v1/request/{requestId}` (ou similar), disparado ao clicar numa linha da tabela (`#10531`, etc.). Isso fecha o item 7 do Marco Técnico e ajuda a confirmar qual campo (`requestId` vs. `requestAuxId`) é o identificador imutável real (item 8).
+
+---
+
+## 2026-07-31 — Detalhe da solicitação de estoque descoberto
+
+Diagnóstico novo: `src/diagnostics/inspect-stock-request-detail.ts`, exposto em `POST /diagnostics/koper/stock-request-detail` e como `KOPER_STARTUP_DIAGNOSTIC=stock-request-detail`. Reaproveita `openLikelyMenu` e `clickVisibleStockOccurrence` de `discover-stock-route.ts` (exportadas nesta rodada com uma alteração mínima).
+
+**Iteração 1 — commit `c52d1f9`/`4c77d28`.** **Hipótese:** clicar numa linha da tabela de solicitações dispara `GET /stock/v1/request/{requestId}`. **Ação:** diagnóstico que localiza a linha por texto `/^#\d+/` e clica. **Resultado:** `rowClicked: false`, `message: "KOPER_STOCK_REQUEST_ROW_NOT_FOUND"` — o seletor por texto não achou o elemento (provavelmente porque o número vem misturado com outro texto no mesmo nó, ex. `#8649 por GA`). **Descartada** a busca por texto isolado.
+
+**Iteração 2 — commit `f772ea6`.** **Hipótese revisada:** clicar diretamente na primeira `<tr>` real da tabela (`table tbody tr`) é mais robusto que procurar por texto. **Resultado:** confirmada — `rowClicked: true`, `finalUrl: https://app.koper.com.br/suprimentos/solicitacoes/8649` (clicou na linha `#8649`). A rota de detalhe usa o número da solicitação diretamente no caminho. Mas `detailReads: []` — o filtro de rede ainda procurava `/stock/v1/request/{id}`, que não existe.
+
+**Iteração 3 — commit `6fbd86f`.** **Hipótese:** preciso ver todo o tráfego xhr/fetch da tela de detalhe antes de adivinhar o endpoint, do mesmo jeito que funcionou para a listagem. **Ação:** adicionado campo `network[]` sem filtro. **Resultado:** revelou `GET https://api.koper.com.br/stock/v1/product_request` com `requestId=8649` como query param — endpoint totalmente diferente do que eu presumia (não é `/stock/v1/request/{id}`, é `/stock/v1/product_request?requestId=...`).
+
+**Iteração 4 — commit `8ea9599`.** **Hipótese:** ajustando o filtro para `/stock/v1/product_request`, capturo o corpo da resposta. **Resultado:** confirmada.
+
+### Execução final: `POST /diagnostics/koper/stock-request-detail` — Caminho A
+
+`KOPER_STARTUP_DIAGNOSTIC=stock-request-detail`, deploy `39bbfb0b`, log lido em `2026-07-31T14:11:19Z`, variável removida do Railway logo em seguida.
+
+**Resultado (query params sensíveis mascarados na origem):**
+
+```json
+{
+  "authenticated": true,
+  "listReached": true,
+  "rowClicked": true,
+  "clickedRowText": "#8649 por GA Escritório Central 3 itens 27/11/2025 15:23:03 04/12/2025 Aprovado",
+  "finalUrl": "https://app.koper.com.br/suprimentos/solicitacoes/8649",
+  "detailReads": [
+    {
+      "method": "GET",
+      "status": 200,
+      "endpoint": "https://api.koper.com.br/stock/v1/product_request",
+      "queryParams": {
+        "accessToken": "[REDACTED]",
+        "appVersion": "5.9.0.5",
+        "cb": "[REDACTED]",
+        "group": "request",
+        "requestId": "8649",
+        "visited-page": "/suprimentos/solicitacoes/8649"
+      },
+      "dataKeys": [
+        "itemsAmount", "stockPlaceName", "requestDate", "userName", "userId",
+        "deadline", "showDeadline", "stockPlaceId", "techAssistId",
+        "buildMonitoringId", "isDraft", "requestId", "status", "requestAuxId",
+        "notApprovedAmount", "commentRequest", "products", "filename", "fileId"
+      ],
+      "fieldPaths": [
+        "products.productId", "products.productName", "products.productFullName",
+        "products.mainProductId", "products.genericProdSeq", "products.prodReference",
+        "products.productAmount", "products.prodFinished", "products.prodCanceled",
+        "products.prodCancelRequest", "products.approvedTransf", "products.approvedPurchase",
+        "products.productRequestId", "products.approvedAmount", "products.approvedDate",
+        "products.approvedUserName", "products.historyId", "products.historyMessage",
+        "products.unitMeasureId", "products.symbol", "products.inputId",
+        "products.inputUnit", "products.specialMeasure", "products.comments",
+        "products.totalComments", "products.enabledToCancel", "products.measures",
+        "products.services", "products.services.itemMonitInputId",
+        "products.services.monitInputPchId", "products.services.inputAmount"
+      ]
+    }
+  ]
+}
+```
+
+**Hipótese confirmada.** Endpoint de detalhe: `GET https://api.koper.com.br/stock/v1/product_request?requestId={numero}&group=request&...`. O `requestId` usado na URL (`8649`) é o mesmo número exibido como `#8649` na listagem — forte evidência de que `requestId` é o identificador usado para endereçar o registro. A resposta também traz `requestAuxId` como campo **separado** de `requestId`; não temos ainda os *valores* de cada um lado a lado para provar se são iguais ou diferentes (só os nomes dos campos foram capturados, não os valores completos do corpo). **Ver `docs/koper-inventory.md` para a tabela atualizada.**
+
+**Itens do Marco Técnico fechados por este ciclo:** 7 (operação de detalhe confirmada). Item 8 (identificador imutável) avança bastante — `requestId` é o campo usado para buscar o detalhe — mas fica **parcialmente aberto** até confirmarmos por valor que `requestId` (não `requestAuxId`) é de fato o campo a usar como `koper_id` na staging.
+
+**Próximo bloqueio:** nenhum técnico crítico. Para fechar o item 8 com certeza, o próximo diagnóstico deveria capturar e comparar os **valores** de `requestId` e `requestAuxId` no mesmo registro (não só os nomes dos campos) — hoje `collectFieldPaths` só lista caminhos, não valores, para não vazar dado potencialmente sensível sem controle. Também ficou pendente confirmar a paginação real da listagem (item 4) e iniciar a extração para `src/koper/` (item 9).
+
+**Próxima alteração pequena sugerida:** ajustar a captura para incluir o valor de `requestId` e `requestAuxId` (só esses dois campos, não o payload inteiro) no resultado do diagnóstico de detalhe, para decidir em definitivo qual usar como `koper_id`.
