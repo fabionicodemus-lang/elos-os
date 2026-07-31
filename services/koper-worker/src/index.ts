@@ -8,6 +8,7 @@ import { inspectKoperMenuMap } from "./diagnostics/inspect-koper-menu-map.js";
 import { inspectKoperNavigation } from "./diagnostics/inspect-koper-navigation.js";
 import { inspectStockRequestDetail } from "./diagnostics/inspect-stock-request-detail.js";
 import { inspectStockRequests } from "./diagnostics/inspect-stock-requests.js";
+import { runLiveRecording } from "./diagnostics/live-recording.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
 
 function sendJson(
@@ -183,6 +184,19 @@ async function handleRequest(
     return;
   }
 
+  if (
+    method === "POST" &&
+    url.pathname === "/diagnostics/koper/live-recording"
+  ) {
+    if (!requireAuthorization(request, response)) {
+      return;
+    }
+
+    const result = await runLiveRecording();
+    sendJson(response, result.authenticated ? 200 : 422, result);
+    return;
+  }
+
   sendJson(response, 404, { ok: false, error: "NOT_FOUND" });
 }
 
@@ -225,7 +239,9 @@ server.listen(env.PORT, "0.0.0.0", () => {
             ? inspectKoperCompanies
             : startupDiagnostic === "flow-context"
               ? inspectKoperFlowContext
-              : null;
+              : startupDiagnostic === "live-recording"
+                ? runLiveRecording
+                : null;
 
   if (diagnostic) {
     void diagnostic()

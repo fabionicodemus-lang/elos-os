@@ -404,6 +404,10 @@ Só depois disso, avançar para cotações.
 - **O endpoint de detalhe de uma entidade não segue o padrão REST `/{recurso}/{id}` do endpoint de listagem.** Para solicitações de estoque, a listagem é `GET /stock/v1/request` mas o detalhe é `GET /stock/v1/product_request?requestId={numero}` — um recurso com nome diferente, identificador como query param em vez de segmento de caminho. Não presumir o endpoint de detalhe por convenção; sempre mapear o tráfego de rede completo da tela de detalhe antes de filtrar (ver `docs/koper-progress.md`, ciclo "Detalhe da solicitação de estoque descoberto").
 
 
+### Gravação assistida autorizada (2026-07-31)
+
+O Fábio aprovou a proposta 4.1 de `docs/koper-metodo-otimizacao.md`: o diagnóstico `live-recording` (`KOPER_STARTUP_DIAGNOSTIC=live-recording` ou `POST /diagnostics/koper/live-recording`) abre uma sessão visual temporária (LiveURL do Browserless) já autenticada, com o interceptor de escrita ativo (só GET/HEAD/OPTIONS passam para `*.koper.com.br`; única exceção é o `POST /login/change_company` allowlisted para as três empresas confirmadas, permitindo que o Fábio troque de empresa manualmente). O Fábio navega; o worker grava endpoints GET de `api.koper.com.br` sanitizados (endpoint, chaves de query, `dataKeys`, `fieldPaths` — sem valores de fornecedor/produto) e os templates `views/*.html` carregados. Duração padrão 15 min (`KOPER_LIVE_RECORDING_MS`), parciais logadas por minuto (`KOPER_LIVE_PARTIAL`) para sobreviver a queda de sessão. Este é o caminho preferido para descobrir telas novas cujo clique automatizado custaria múltiplos ciclos (caso detalhe da cotação 3268, 5 ciclos sem sucesso).
+
 ### Aprendizado adicional — Solicitações multiempresa (2026-07-31)
 
 No contexto `Flow Aptos - Bossa`, `GET /stock/v1/request` usa `open=yes` para solicitações não finalizadas e `open=no` para finalizadas/canceladas. Os dois conjuntos usam `limit`/`offset` e precisam ser extraídos separadamente. “Aprovado” continua no conjunto aberto. `requestId` é o número da solicitação; `requestAuxId` não é identificador do registro. Sempre persistir também o `enterpriseId` de origem.
