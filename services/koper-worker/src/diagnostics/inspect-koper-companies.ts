@@ -272,7 +272,7 @@ type StockRequestSample = {
 };
 
 type StockRequestRead = NetworkSummary & {
-  listMode: "active" | "finalized";
+  listMode: "active" | "active-page-2" | "finalized";
   statusCode: number;
   queryParams: Record<string, string>;
   itemsAmount: number | null;
@@ -510,7 +510,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     const stockRequestReads: StockRequestRead[] = [];
     const switchAttempts: SwitchAttemptShape[] = [];
     const pendingStockResponses: Promise<void>[] = [];
-    let stockListMode: "active" | "finalized" = "active";
+    let stockListMode: "active" | "active-page-2" | "finalized" = "active";
+    let activeRequestUrl: string | null = null;
 
     await page.route("**/*", async (route) => {
       const request = route.request();
@@ -578,6 +579,11 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           parsedUrl.pathname === "/stock/v1/request"
         ) {
           const listMode = stockListMode;
+
+          if (listMode === "active") {
+            activeRequestUrl = response.url();
+          }
+
           const summary = sanitizeRequest(
             response.url(),
             request.method(),
@@ -681,6 +687,25 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       stockListReached =
         page.url().includes("/suprimentos/solicitacoes") ||
         stockRequestReads.length > 0;
+
+      if (stockListReached && activeRequestUrl) {
+        const secondPageUrl = new URL(activeRequestUrl);
+        secondPageUrl.searchParams.set("offset", "25");
+        stockListMode = "active-page-2";
+
+        await page
+          .evaluate(async (rawUrl) => {
+            const response = await fetch(rawUrl, { credentials: "include" });
+
+            if (!response.ok) {
+              throw new Error(`KOPER_STOCK_PAGE_2_HTTP_${response.status}`);
+            }
+
+            await response.json();
+          }, secondPageUrl.toString())
+          .catch(() => undefined);
+        await page.waitForTimeout(2_000);
+      }
 
       if (stockListReached) {
         const finalized = page
