@@ -41,6 +41,7 @@ begin
   from public.finance_tax_types
   where id=p_tax_type_id and status='active';
   if v_type.id is null then raise exception 'Regra de retenção não encontrada ou inativa.'; end if;
+  if not public.is_company_member(v_type.company_id) then raise exception 'Sem acesso à regra tributária.'; end if;
 
   v_base:=case v_type.due_trigger
     when 'issue_date' then p_issue_date
@@ -64,6 +65,58 @@ begin
   end if;
 
   return public.finance_adjust_weekend(v_due,v_type.business_day_adjustment);
+end;
+$$;
+
+create or replace function public.manual_invoice_mutability(
+  p_company_id uuid,p_project_id uuid,p_invoice_id uuid
+) returns jsonb
+language plpgsql
+stable
+security definer
+set search_path=public
+as $$
+declare
+  v_invoice public.finance_manual_invoices%rowtype;
+  v_has_payment boolean:=false;
+  v_has_receipt boolean:=false;
+begin
+  if not public.has_company_permission(p_company_id,'finance.manual_invoices.view')
+     and not public.has_company_permission(p_company_id,'finance.manual_invoices.manage')
+     and not public.has_company_permission(p_company_id,'finance.manual_invoices.cancel') then
+    raise exception 'Sem permissão para consultar esta nota manual.';
+  end if;
+
+  select * into v_invoice from public.finance_manual_invoices
+  where id=p_invoice_id and company_id=p_company_id and project_id=p_project_id;
+  if v_invoice.id is null then
+    return jsonb_build_object('mutable',false,'reason','Nota manual não encontrada.','has_payment',false,'has_receipt',false);
+  end if;
+
+  v_has_receipt:=v_invoice.material_receipt_id is not null;
+  select exists(
+    select 1 from public.payables p
+    where p.company_id=v_invoice.company_id
+      and p.source_system='elos_os'
+      and p.source_id like 'manual_invoice:'||v_invoice.id::text||':%'
+      and (p.status='paid' or p.paid_at is not null)
+  ) or exists(
+    select 1 from public.finance_tax_obligations o
+    left join public.payables p on p.id=o.payable_id
+    where o.manual_invoice_id=v_invoice.id
+      and (o.status='paid' or p.status='paid' or p.paid_at is not null)
+  ) into v_has_payment;
+
+  return jsonb_build_object(
+    'mutable',not v_has_payment and not v_has_receipt and v_invoice.status<>'cancelled',
+    'has_payment',v_has_payment,
+    'has_receipt',v_has_receipt,
+    'reason',case
+      when v_invoice.status='cancelled' then 'A nota foi cancelada.'
+      when v_has_payment then 'A nota possui pagamento do fornecedor ou de imposto vinculado.'
+      when v_has_receipt then 'A nota possui recebimento de material vinculado.'
+      else null end
+  );
 end;
 $$;
 
@@ -95,6 +148,11 @@ create trigger payables_protect_manual_invoice_source
 before update of status on public.payables
 for each row execute function public.protect_manual_invoice_generated_payable();
 
-grant execute on function public.finance_compute_tax_due_date(uuid,date,date,date) to authenticated;
+-- Funções auxiliares destrutivas são chamadas apenas pelas operações atômicas de
+-- salvar e excluir. Elas não ficam expostas como RPC direta ao usuário autenticado.
+revoke all on function public.remove_manual_invoice_generated_finance(uuid) from public,authenticated;
+revoke all on function public.sync_manual_invoice_retained_taxes(uuid) from public,authenticated;
+revoke all on function public.finance_compute_tax_due_date(uuid,date,date,date) from public,authenticated;
+grant execute on function public.manual_invoice_mutability(uuid,uuid,uuid) to authenticated;
 
 commit;
