@@ -158,3 +158,18 @@ O botão do período é localizável e pode ser aberto por `div.input-default.dr
 - nem por seleção textual global sem risco de confusão com o filtro de fornecedor.
 
 Nenhuma nova chamada a `GET /purchase/v1/budget` foi disparada. As leituras observadas continuaram restritas a julho de 2026 e retornaram 404. Ainda não está confirmado se selecionar `Todos` remove `initialDate`/`finalDate`, envia valores vazios ou utiliza outro parâmetro.
+
+
+### Opções confirmadas do filtro de período
+
+Abertura manual do dropdown de `Data orçamento` confirmou a ordem visual:
+
+1. `Todos`;
+2. `Hoje`;
+3. `Semana atual`;
+4. `Mês atual`;
+5. `Últimos 7 dias`;
+6. `Últimos 30 dias`;
+7. `Período específico`.
+
+A primeira opção começa imediatamente abaixo do controle que exibe o intervalo. A estratégia de clique relativo foi implementada, mas a sessão Browserless encerrou antes do resultado; a alteração dos parâmetros da API continua pendente de confirmação.
