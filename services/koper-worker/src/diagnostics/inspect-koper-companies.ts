@@ -1004,6 +1004,37 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               );
               await allPeriodResponse.catch(() => undefined);
               await page.waitForTimeout(1_000);
+
+              const pageTwoResponse = page.waitForResponse(
+                (response) => {
+                  try {
+                    const url = new URL(response.url());
+                    return (
+                      response.request().method() === "GET"
+                      && url.hostname === "api.koper.com.br"
+                      && url.pathname === "/purchase/v1/budget"
+                      && url.searchParams.get("offset") === "25"
+                    );
+                  } catch {
+                    return false;
+                  }
+                },
+                { timeout: 15_000 },
+              );
+
+              await page.evaluate(() => {
+                window.scrollTo(0, document.body.scrollHeight);
+
+                for (const element of document.querySelectorAll<HTMLElement>("body *")) {
+                  if (element.scrollHeight > element.clientHeight + 100) {
+                    element.scrollTop = element.scrollHeight;
+                    element.dispatchEvent(new Event("scroll"));
+                  }
+                }
+              });
+              await page.mouse.wheel(0, 100_000);
+              await pageTwoResponse.catch(() => undefined);
+              await page.waitForTimeout(1_000);
             }
           }
         }
