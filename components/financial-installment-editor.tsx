@@ -9,7 +9,7 @@ import {
   type FinancialInstallmentDraft,
 } from "@/lib/financial-installments";
 
-const paymentMethods = ["Boleto", "PIX", "Transferência", "Débito automático", "Dinheiro", "Cartão", "Outro"];
+const paymentMethods = ["Não informado", "Boleto", "PIX", "Transferência", "Débito automático", "Dinheiro", "Cartão", "Outro"];
 
 function money(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0));
