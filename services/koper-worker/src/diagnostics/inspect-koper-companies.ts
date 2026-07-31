@@ -812,6 +812,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
           if (/flow/i.test(activeCompanyAfter ?? "")) {
             break;
           }
+        }
       } else {
         message = "KOPER_FLOW_ACCESS_ACTION_NOT_FOUND";
       }
@@ -954,7 +955,6 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
             waitUntil: "domcontentloaded",
             timeout: 15_000,
           }).catch(() => undefined);
-        }
         }
       } else {
         const purchasesButton = page.locator('[data-testid="button-Compras"]').first();
