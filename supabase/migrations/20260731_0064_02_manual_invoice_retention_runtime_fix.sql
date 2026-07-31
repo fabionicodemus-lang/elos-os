@@ -3,6 +3,22 @@
 
 begin;
 
+-- IRRF e as contribuições federais podem depender do evento de crédito/pagamento e
+-- da apuração fiscal adotada. Cadastros globais identificados automaticamente não
+-- devem virar obrigações definitivas com uma data presumida. A empresa precisa
+-- confirmar explicitamente data-base, prazo e órgão antes do primeiro lançamento.
+update public.finance_tax_types set
+  due_trigger='issue_date',
+  due_rule='manual',
+  due_day=null,
+  due_month_offset=0,
+  due_days_after_event=0,
+  business_day_adjustment='none',
+  auto_generate_payable=true,
+  updated_at=now()
+where project_id is null
+  and retention_key in('irrf','pis','cofins','csll');
+
 create or replace function public.finance_compute_tax_due_date(
   p_tax_type_id uuid,
   p_issue_date date,
