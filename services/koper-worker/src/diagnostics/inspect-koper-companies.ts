@@ -919,24 +919,13 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
             await page.waitForTimeout(500);
 
             const toggleBox = await periodToggle.boundingBox();
-            const allOptions = page.getByText(/^Todos$/i, { exact: true });
-            const optionCount = Math.min(await allOptions.count(), 20);
 
-            for (let index = 0; index < optionCount; index += 1) {
-              const option = allOptions.nth(index);
-              const optionBox = await option.boundingBox().catch(() => null);
-
-              if (
-                toggleBox
-                && optionBox
-                && optionBox.y >= toggleBox.y + toggleBox.height - 2
-                && Math.abs(optionBox.x - toggleBox.x) < 220
-                && await option.isVisible().catch(() => false)
-              ) {
-                await option.click();
-                await page.waitForTimeout(8_000);
-                break;
-              }
+            if (toggleBox) {
+              await page.mouse.click(
+                toggleBox.x + Math.min(30, toggleBox.width / 2),
+                toggleBox.y + toggleBox.height + 18,
+              );
+              await page.waitForTimeout(8_000);
             }
           }
         }
