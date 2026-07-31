@@ -55,8 +55,9 @@ Estas regras não são negociáveis por prompt de sessão. Se você se pegar con
 ### 3.1 Sobre o Koper (origem)
 
 - **Nunca** disparar requisição contra o domínio do Koper com method `PUT`, `PATCH`, `DELETE`.
-- `POST` só é permitido para operações GraphQL cujo `operationName` claramente indica leitura: começa com `query`, `list`, `get`, `find`, `search`, `read`. Qualquer outra coisa, **pare**.
-- Nunca executar aprovação, cancelamento, exclusão ou alteração de qualquer registro no Koper.
+- `POST` só é permitido para operações GraphQL cujo `operationName` claramente indica leitura: começa com `query`, `list`, `get`, `find`, `search`, `read`.
+- **Exceção REST autorizada pelo Fábio em 2026-07-31:** `POST https://api.koper.com.br/login/change_company` pode ser usado exclusivamente para trocar o contexto da sessão entre empresas previamente confirmadas. O parâmetro `changeCompany` deve corresponder ao `enterpriseId` ou `branchId` allowlisted de Bossa, Flow ou Alma; qualquer outro valor deve ser bloqueado. Nunca registrar o valor de `accessToken`. Após a chamada, confirmar a empresa ativa por `GET /administrative/v1/enterprise`. Nenhum outro `POST` REST está autorizado.
+- Nunca executar aprovação, cancelamento, exclusão ou alteração de qualquer registro operacional no Koper.
 - Nunca fazer login com credenciais diferentes das que estão em `KOPER_USERNAME` / `KOPER_PASSWORD`.
 
 ### 3.2 Sobre segredos
