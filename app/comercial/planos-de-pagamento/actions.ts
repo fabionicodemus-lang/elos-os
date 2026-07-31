@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { financialInstallmentSummary, type FinancialInstallmentDraft } from "@/lib/financial-installments";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const PATH = "/comercial/planos-de-pagamento";
@@ -12,12 +13,7 @@ function safeReturnPath(formData: FormData) {
   return PATH;
 }
 
-function pageUrl(
-  message: string,
-  type: "error" | "success" = "error",
-  saleId?: string,
-  basePath = PATH,
-) {
+function pageUrl(message: string, type: "error" | "success" = "error", saleId?: string, basePath = PATH) {
   const params = new URLSearchParams({ [type]: message });
   if (saleId && basePath === PATH) params.set("sale", saleId);
   return `${basePath}?${params.toString()}`;
@@ -32,6 +28,22 @@ function parseMoney(value: FormDataEntryValue | null) {
   if (!raw) return Number.NaN;
   const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
   return Number(normalized);
+}
+
+function parseInstallments(formData: FormData): FinancialInstallmentDraft[] {
+  try {
+    const parsed = JSON.parse(String(formData.get("installments_json") ?? "[]"));
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((row, index) => ({
+      id: `server-${index + 1}`,
+      label: String(row?.label ?? row?.number ?? `${index + 1} / ${parsed.length}`),
+      due_date: String(row?.due_date ?? ""),
+      amount: Number(row?.amount ?? 0),
+      payment_method: String(row?.payment_method ?? "Boleto"),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 function addMonths(dateValue: string, months: number) {
@@ -66,32 +78,42 @@ export async function createReceivableSeries(formData: FormData) {
   const saleId = String(formData.get("sale_id") ?? "");
   const returnPath = safeReturnPath(formData);
   const category = String(formData.get("category") ?? "");
-  const firstDueDate = String(formData.get("first_due_date") ?? "");
-  const frequency = String(formData.get("frequency") ?? "once");
-  const amount = parseMoney(formData.get("amount"));
-  const requestedQuantity = Number.parseInt(String(formData.get("quantity") ?? "1"), 10);
-  const quantity = frequency === "once" ? 1 : requestedQuantity;
   const correctionIndexId = String(formData.get("correction_index_id") ?? "").trim() || null;
+  const customInstallments = parseInstallments(formData);
+  const customTotal = parseMoney(formData.get("total_amount"));
 
-  if (
-    !saleId ||
-    !categoryLabels[category] ||
-    !firstDueDate ||
-    frequencyMonths[frequency] === undefined ||
-    !Number.isFinite(amount) ||
-    amount <= 0 ||
-    !Number.isInteger(quantity) ||
-    quantity < 1 ||
-    quantity > 240
-  ) {
-    redirect(pageUrl("Informe venda, tipo, vencimento, quantidade e valor válidos.", "error", saleId, returnPath));
+  let installments: FinancialInstallmentDraft[];
+  if (customInstallments.length) {
+    const summary = financialInstallmentSummary(customTotal, customInstallments);
+    if (!summary.valid || customInstallments.length > 240) {
+      redirect(pageUrl("As parcelas precisam possuir datas e valores válidos e somar exatamente o total do lançamento.", "error", saleId, returnPath));
+    }
+    installments = customInstallments;
+  } else {
+    const firstDueDate = String(formData.get("first_due_date") ?? "");
+    const frequency = String(formData.get("frequency") ?? "once");
+    const amount = parseMoney(formData.get("amount"));
+    const requestedQuantity = Number.parseInt(String(formData.get("quantity") ?? "1"), 10);
+    const quantity = frequency === "once" ? 1 : requestedQuantity;
+
+    if (!firstDueDate || frequencyMonths[frequency] === undefined || !Number.isFinite(amount) || amount <= 0 || !Number.isInteger(quantity) || quantity < 1 || quantity > 240) {
+      redirect(pageUrl("Informe venda, tipo, vencimento, quantidade e valor válidos.", "error", saleId, returnPath));
+    }
+    installments = Array.from({ length: quantity }, (_, index) => ({
+      id: `legacy-${index + 1}`,
+      label: `${index + 1} / ${quantity}`,
+      due_date: addMonths(firstDueDate, frequencyMonths[frequency] * index),
+      amount,
+      payment_method: "Não informado",
+    }));
+  }
+
+  if (!saleId || !categoryLabels[category]) {
+    redirect(pageUrl("Informe a venda e o tipo das parcelas.", "error", saleId, returnPath));
   }
 
   const { supabase, companyId, projectId, userId } = await requireCompanyPermission("receivables.manage");
-
-  if (!projectId) {
-    redirect(pageUrl("Selecione uma obra antes de montar o plano.", "error", saleId, returnPath));
-  }
+  if (!projectId) redirect(pageUrl("Selecione uma obra antes de montar o plano.", "error", saleId, returnPath));
 
   const { data: sale } = await supabase
     .from("sales")
@@ -117,14 +139,10 @@ export async function createReceivableSeries(formData: FormData) {
       .eq("company_id", companyId)
       .eq("status", "active")
       .maybeSingle();
-
-    if (!indexResult.data) {
-      redirect(pageUrl("O índice de correção selecionado não está disponível.", "error", saleId, returnPath));
-    }
+    if (!indexResult.data) redirect(pageUrl("O índice de correção selecionado não está disponível.", "error", saleId, returnPath));
 
     correctionIndex = indexResult.data;
     correctionBaseMonth = `${sale.sale_date.slice(0, 7)}-01`;
-
     const baseValueResult = await supabase
       .from("correction_index_values")
       .select("value")
@@ -134,17 +152,15 @@ export async function createReceivableSeries(formData: FormData) {
       .order("reference_month", { ascending: false })
       .limit(1)
       .maybeSingle();
-
     correctionBaseValue = baseValueResult.data ? Number(baseValueResult.data.value) : null;
   }
 
   const description = optional(formData, "description") || categoryLabels[category];
   const interestRate = parseMoney(formData.get("interest_rate_monthly"));
   const notes = optional(formData, "notes");
-  const stepMonths = frequencyMonths[frequency];
   const batchId = crypto.randomUUID();
 
-  const rows = Array.from({ length: quantity }, (_, index) => ({
+  const rows = installments.map((installment, index) => ({
     company_id: companyId,
     project_id: projectId,
     sale_id: sale.id,
@@ -153,9 +169,9 @@ export async function createReceivableSeries(formData: FormData) {
     category,
     description,
     sequence_number: index + 1,
-    sequence_total: quantity,
-    due_date: addMonths(firstDueDate, stepMonths * index),
-    amount,
+    sequence_total: installments.length,
+    due_date: installment.due_date,
+    amount: installment.amount,
     adjustment_index: correctionIndex?.code ?? null,
     correction_index_id: correctionIndex?.id ?? null,
     correction_base_month: correctionBaseMonth,
@@ -173,9 +189,11 @@ export async function createReceivableSeries(formData: FormData) {
   if (error) redirect(pageUrl(error.message, "error", saleId, returnPath));
 
   revalidatePath(PATH);
+  revalidatePath("/financeiro/contas-a-receber");
+  revalidatePath("/financeiro/fluxo-de-caixa");
   revalidatePath("/comercial/vendas");
   revalidatePath(returnPath);
-  redirect(pageUrl(`${quantity} parcela(s) adicionada(s) ao plano.`, "success", saleId, returnPath));
+  redirect(pageUrl(`${installments.length} parcela(s) adicionada(s) ao plano.`, "success", saleId, returnPath));
 }
 
 export async function markReceivablePaid(formData: FormData) {
@@ -191,13 +209,7 @@ export async function markReceivablePaid(formData: FormData) {
   }
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("receivables.manage");
-  const receivableResult = await supabase
-    .from("receivables")
-    .select("id,project_id,status")
-    .eq("id", receivableId)
-    .eq("company_id", companyId)
-    .maybeSingle();
-
+  const receivableResult = await supabase.from("receivables").select("id,project_id,status").eq("id", receivableId).eq("company_id", companyId).maybeSingle();
   if (!receivableResult.data || receivableResult.data.status !== "open") {
     redirect(pageUrl("A parcela não está disponível para recebimento.", "error", saleId, returnPath));
   }
@@ -211,7 +223,6 @@ export async function markReceivablePaid(formData: FormData) {
     p_paid_at: paidAt,
     p_paid_amount: paidAmount,
   });
-
   if (result.error) redirect(pageUrl(result.error.message, "error", saleId, returnPath));
 
   revalidatePath(PATH);
@@ -229,13 +240,7 @@ export async function cancelReceivable(formData: FormData) {
   if (!receivableId) redirect(pageUrl("Parcela inválida.", "error", saleId, returnPath));
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("receivables.manage");
-  let query = supabase
-    .from("receivables")
-    .update({ status: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", receivableId)
-    .eq("company_id", companyId)
-    .eq("status", "open");
-
+  let query = supabase.from("receivables").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", receivableId).eq("company_id", companyId).eq("status", "open");
   if (projectId) query = query.eq("project_id", projectId);
   const { error } = await query;
   if (error) redirect(pageUrl(error.message, "error", saleId, returnPath));
