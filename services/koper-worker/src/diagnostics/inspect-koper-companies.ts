@@ -129,10 +129,10 @@ async function openCompanySelectorAndCollectOptions(
   }
 
   await control.click();
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(1_500);
 
   return page
-    .locator("button, a, [role='button'], [role='menuitem'], [role='option'], li")
+    .locator("body *")
     .evaluateAll((elements) => {
       const seen = new Set<string>();
 
