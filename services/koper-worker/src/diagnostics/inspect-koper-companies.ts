@@ -776,10 +776,33 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     let quotationFinalizedClicked = false;
 
     if (/flow/i.test(activeCompanyAfter ?? "")) {
-      const purchases = page.locator('[data-testid="button-Compras"]').first();
+      network.splice(0);
+      const purchasesButton = page.locator('[data-testid="button-Compras"]').first();
+      const purchasesImage = page.locator('img[src*="purchase-"]').first();
+      const purchases =
+        await purchasesButton.isVisible().catch(() => false)
+          ? purchasesButton
+          : purchasesImage;
 
       if (await purchases.isVisible().catch(() => false)) {
-        await purchases.click({ force: true });
+        await purchases.evaluate((element) => {
+          let current: HTMLElement | null = element as HTMLElement;
+
+          for (let depth = 0; current && depth < 8; depth += 1) {
+            if (
+              current.tagName.toLowerCase() === "button" ||
+              current.getAttribute("role") === "button" ||
+              current.hasAttribute("onclick")
+            ) {
+              current.click();
+              return;
+            }
+
+            current = current.parentElement;
+          }
+
+          (element as HTMLElement).click();
+        });
         await page.waitForTimeout(1_500);
 
         const budgets = page.getByText(/^Orçamentos$/i, { exact: true });
