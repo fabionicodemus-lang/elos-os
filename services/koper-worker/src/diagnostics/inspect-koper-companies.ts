@@ -3,12 +3,21 @@ import { performKoperLogin } from "../auth/koper-auto-login.js";
 import { withBrowserless } from "../browser/browserless.js";
 import { collectFieldPaths } from "./discover-stock-route.js";
 
+type CompanySummary = {
+  enterpriseId: string | number | null;
+  branchId: string | number | null;
+  enterpriseName: string | null;
+  fantasyName: string | null;
+  stockPlaceName: string | null;
+};
+
 type CompanyApiRead = {
   method: string;
   status: number;
   endpoint: string;
   dataKeys: string[];
   fieldPaths: string[];
+  companies: CompanySummary[];
 };
 
 export type KoperCompaniesDiagnostic = {
@@ -28,6 +37,31 @@ const companyEndpointPaths = new Set([
   "/administrative/v1/enterprise",
   "/administrative/v1/multi_company",
 ]);
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" ? value.slice(0, 200) : null;
+}
+
+function idValue(value: unknown): string | number | null {
+  return typeof value === "string" || typeof value === "number" ? value : null;
+}
+
+function collectCompanies(body: unknown): CompanySummary[] {
+  const items = Array.isArray(body) ? body : [body];
+
+  return items
+    .filter(
+      (item): item is Record<string, unknown> =>
+        typeof item === "object" && item !== null,
+    )
+    .map((item) => ({
+      enterpriseId: idValue(item.enterpriseId),
+      branchId: idValue(item.branchId),
+      enterpriseName: stringValue(item.enterpriseName),
+      fantasyName: stringValue(item.fantasyName),
+      stockPlaceName: stringValue(item.stockPlaceName),
+    }));
+}
 
 async function readActiveCompanyLabel(page: Page): Promise<string | null> {
   const candidates = page.locator("button, [role='button'], [class*='company' i], [class*='enterprise' i]");
@@ -100,6 +134,7 @@ export async function inspectKoperCompanies(): Promise<KoperCompaniesDiagnostic>
                 endpoint: parsedUrl.origin + parsedUrl.pathname,
                 dataKeys: object ? Object.keys(object).slice(0, 50) : [],
                 fieldPaths: collectFieldPaths(body).slice(0, 200),
+                companies: collectCompanies(body),
               });
             })
             .catch(() => undefined);
