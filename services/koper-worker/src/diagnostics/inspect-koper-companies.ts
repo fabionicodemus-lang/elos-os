@@ -3,6 +3,14 @@ import { performKoperLogin } from "../auth/koper-auto-login.js";
 import { withBrowserless } from "../browser/browserless.js";
 import { collectFieldPaths } from "./discover-stock-route.js";
 
+type CompanyOption = {
+  text: string;
+  tag: string;
+  role: string | null;
+  testId: string | null;
+  href: string | null;
+};
+
 type CompanySummary = {
   enterpriseId: string | number | null;
   branchId: string | number | null;
@@ -24,6 +32,7 @@ export type KoperCompaniesDiagnostic = {
   ok: true;
   authenticated: boolean;
   activeCompanyLabel: string | null;
+  companyOptions: CompanyOption[];
   companyReads: CompanyApiRead[];
   message: string | null;
   checkedAt: string;
@@ -106,6 +115,59 @@ async function readActiveCompanyLabel(page: Page): Promise<string | null> {
   return best && best.score >= 8 ? best.text : null;
 }
 
+async function openCompanySelectorAndCollectOptions(
+  page: Page,
+  activeCompanyLabel: string,
+): Promise<CompanyOption[]> {
+  const label = page.getByText(activeCompanyLabel, { exact: true }).last();
+  const control = label.locator(
+    "xpath=ancestor-or-self::*[self::button or self::a or @role='button'][1]",
+  );
+
+  if (!(await control.isVisible().catch(() => false))) {
+    return [];
+  }
+
+  await control.click();
+  await page.waitForTimeout(500);
+
+  return page
+    .locator("button, a, [role='button'], [role='menuitem'], [role='option'], li")
+    .evaluateAll((elements) => {
+      const seen = new Set<string>();
+
+      return elements.flatMap((element) => {
+        const node = element as HTMLElement;
+        const text = (node.innerText || "").replace(/\s+/g, " ").trim();
+        const style = window.getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        const visible =
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.display !== "none" &&
+          style.visibility !== "hidden";
+
+        if (
+          !visible ||
+          !/bossa|flow|alma/i.test(text) ||
+          text.length > 100 ||
+          seen.has(text)
+        ) {
+          return [];
+        }
+
+        seen.add(text);
+        return [{
+          text,
+          tag: node.tagName.toLowerCase(),
+          role: node.getAttribute("role"),
+          testId: node.getAttribute("data-testid"),
+          href: node instanceof HTMLAnchorElement ? node.getAttribute("href") : null,
+        }];
+      });
+    });
+}
+
 export async function inspectKoperCompanies(): Promise<KoperCompaniesDiagnostic> {
   return withBrowserless(async ({ page }) => {
     const companyReads: CompanyApiRead[] = [];
@@ -150,10 +212,18 @@ export async function inspectKoperCompanies(): Promise<KoperCompaniesDiagnostic>
 
     const login = await performKoperLogin(page);
     let activeCompanyLabel: string | null = null;
+    let companyOptions: CompanyOption[] = [];
 
     if (login.authenticated) {
       await page.waitForTimeout(3_000);
       activeCompanyLabel = await readActiveCompanyLabel(page).catch(() => null);
+
+      if (activeCompanyLabel) {
+        companyOptions = await openCompanySelectorAndCollectOptions(
+          page,
+          activeCompanyLabel,
+        ).catch(() => []);
+      }
     }
 
     await Promise.allSettled(pendingResponses);
@@ -163,6 +233,7 @@ export async function inspectKoperCompanies(): Promise<KoperCompaniesDiagnostic>
       ok: true,
       authenticated: login.authenticated,
       activeCompanyLabel,
+      companyOptions,
       companyReads,
       message: login.authenticated ? null : login.message,
       checkedAt: new Date().toISOString(),
