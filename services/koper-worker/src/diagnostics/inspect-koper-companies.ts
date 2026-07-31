@@ -320,10 +320,45 @@ type QuotationRowTarget = {
   role: string | null;
 };
 
+type QuotationDetailProduct = {
+  productId: string | number | null;
+  mainProductId: string | number | null;
+  budgetProductId: string | number | null;
+  selBudProdId: string | number | null;
+  unitMeasureId: string | number | null;
+  productAmount: number | null;
+  deliveryAmount: number | null;
+  price: number | null;
+  priceWithDiscount: number | null;
+  discount: number | null;
+  deadline: number | null;
+  measures: number | null;
+  conversionFactor: number | null;
+  prodCanceled: boolean | null;
+  open: boolean | null;
+};
+
+type QuotationDetailSample = {
+  budgetId: string | number | null;
+  supplierId: string | number | null;
+  costCenterId: string | number | null;
+  buildMonitoringId: string | number | null;
+  deliverySupplierId: string | number | null;
+  budgetDate: string | null;
+  expirationDate: string | null;
+  requestDeadline: string | null;
+  responseDate: string | null;
+  totalProducts: number | null;
+  totalValue: number | null;
+  costShipping: number | null;
+  products: QuotationDetailProduct[];
+};
+
 type QuotationDetailRead = NetworkSummary & {
   statusCode: number;
   dataKeys: string[];
   fieldPaths: string[];
+  budget: QuotationDetailSample | null;
 };
 
 type SwitchAttemptShape = {
@@ -389,6 +424,51 @@ function safeText(value: unknown): string | null {
 
 function safeBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
+}
+
+function collectSafeQuotationDetail(body: unknown): QuotationDetailSample | null {
+  const value = typeof body === "object" && body !== null
+    ? body as Record<string, unknown>
+    : null;
+  if (!value || value.budgetId === undefined) return null;
+  const products = Array.isArray(value.products) ? value.products : [];
+
+  return {
+    budgetId: safeIdentifier(value.budgetId),
+    supplierId: safeIdentifier(value.supplierId),
+    costCenterId: safeIdentifier(value.costCenterId),
+    buildMonitoringId: safeIdentifier(value.buildMonitoringId),
+    deliverySupplierId: safeIdentifier(value.deliverySupplierId),
+    budgetDate: safeText(value.budgetDate),
+    expirationDate: safeText(value.expirationDate),
+    requestDeadline: safeText(value.requestDeadline),
+    responseDate: safeText(value.responseDate),
+    totalProducts: safeNumber(value.totalProducts),
+    totalValue: safeNumber(value.totalValue),
+    costShipping: safeNumber(value.costShipping),
+    products: products.slice(0, 50).map((item: unknown) => {
+      const product = typeof item === "object" && item !== null
+        ? item as Record<string, unknown>
+        : {};
+      return {
+        productId: safeIdentifier(product.productId),
+        mainProductId: safeIdentifier(product.mainProductId),
+        budgetProductId: safeIdentifier(product.budgetProductId),
+        selBudProdId: safeIdentifier(product.selBudProdId),
+        unitMeasureId: safeIdentifier(product.unitMeasureId),
+        productAmount: safeNumber(product.productAmount),
+        deliveryAmount: safeNumber(product.deliveryAmount),
+        price: safeNumber(product.price),
+        priceWithDiscount: safeNumber(product.priceWithDiscount),
+        discount: safeNumber(product.discount),
+        deadline: safeNumber(product.deadline),
+        measures: safeNumber(product.measures),
+        conversionFactor: safeNumber(product.conversionFactor),
+        prodCanceled: safeBoolean(product.prodCanceled),
+        open: safeBoolean(product.open),
+      };
+    }),
+  };
 }
 
 function collectSafeStockRequests(body: unknown): {
@@ -702,6 +782,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
                 statusCode: response.status(),
                 dataKeys: object ? Object.keys(object).slice(0, 50) : [],
                 fieldPaths: collectFieldPaths(body).slice(0, 200),
+                budget: collectSafeQuotationDetail(body),
               });
               return;
             }
@@ -762,6 +843,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               statusCode: response.status(),
               dataKeys: object ? Object.keys(object).slice(0, 50) : [],
               fieldPaths: collectFieldPaths(body).slice(0, 200),
+              budget: collectSafeQuotationDetail(body),
             });
           }).catch(() => undefined);
 
