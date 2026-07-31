@@ -416,6 +416,12 @@ type PurchaseDetailRead = NetworkSummary & {
   purchase: PurchaseDetailSample | null;
 };
 
+type BillDetailRead = NetworkSummary & {
+  statusCode: number;
+  dataKeys: string[];
+  fieldPaths: string[];
+};
+
 type SwitchAttemptShape = {
   queryValueKind: "uuid" | "flag" | "other" | "missing";
   bodyKind: "json" | "form" | "text" | "empty";
@@ -444,6 +450,7 @@ export type KoperFlowContextDiagnostic = {
   quotationRowTargets: QuotationRowTarget[];
   purchaseDetailReads: PurchaseDetailRead[];
   purchaseDetailUrl: string | null;
+  billDetailReads: BillDetailRead[];
   finalUrl: string;
   network: NetworkSummary[];
   blockedWrites: NetworkSummary[];
@@ -781,6 +788,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         quotationRowTargets: [],
         purchaseDetailReads: [],
         purchaseDetailUrl: null,
+        billDetailReads: [],
         finalUrl: login.finalUrl,
         network: [],
         blockedWrites: [],
@@ -807,6 +815,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     const quotationReads: QuotationRead[] = [];
     const quotationDetailReads: QuotationDetailRead[] = [];
     const purchaseDetailReads: PurchaseDetailRead[] = [];
+    const billDetailReads: BillDetailRead[] = [];
     const switchAttempts: SwitchAttemptShape[] = [];
     let quotationDetailMode = false;
     let purchaseDetailMode = false;
@@ -965,6 +974,32 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
                     };
                   })
                 : [],
+            });
+          }).catch(() => undefined);
+
+          pendingStockResponses.push(task);
+        } else if (
+          purchaseDetailMode
+          && request.method() === "GET"
+          && parsedUrl.hostname === "web.koper.com.br"
+          && /\/financeiro\/contas-a-pagar\/15902\.json$/.test(parsedUrl.pathname)
+        ) {
+          const summary = sanitizeRequest(
+            response.url(),
+            request.method(),
+            request.resourceType(),
+          );
+          const task = response.json().then((body: unknown) => {
+            const object =
+              typeof body === "object" && body !== null
+                ? (body as Record<string, unknown>)
+                : null;
+
+            billDetailReads.push({
+              ...summary,
+              statusCode: response.status(),
+              dataKeys: object ? Object.keys(object).slice(0, 80) : [],
+              fieldPaths: collectFieldPaths(body).slice(0, 400),
             });
           }).catch(() => undefined);
 
@@ -1481,6 +1516,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       quotationRowTargets,
       purchaseDetailReads,
       purchaseDetailUrl,
+      billDetailReads,
       finalUrl: page.url(),
       network,
       blockedWrites,
