@@ -1189,6 +1189,8 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       process.env.KOPER_BILL_DETAIL_ONLY === "true";
     const materialFlowOnly =
       process.env.KOPER_MATERIAL_FLOW_ONLY === "true";
+    const productDiscoveryOnly =
+      process.env.KOPER_PRODUCT_DISCOVERY_ONLY === "true";
 
     const activeCompanyBefore = await readActiveCompanyLabel(page).catch(() => null);
     const storageKeysBefore = await readStorageKeys(page).catch(() => emptyStorage);
@@ -1626,6 +1628,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       && !purchaseDetailOnly
       && !billDetailOnly
       && !materialFlowOnly
+      && !productDiscoveryOnly
       && /flow/i.test(activeCompanyAfter ?? "")
     ) {
       const supplies = page.locator('[data-testid="button-Suprimentos"]').first();
@@ -1737,6 +1740,13 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       }
     }
 
+    if (productDiscoveryOnly && /flow/i.test(activeCompanyAfter ?? "")) {
+      await page.goto("https://web.koper.com.br/suprimentos/produtos", {
+        waitUntil: "domcontentloaded",
+      });
+      await page.waitForTimeout(12_000);
+    }
+
     let quotationListReached = false;
     let quotationFinalizedClicked = false;
     let quotationFilterControls: FilterControl[] = [];
@@ -1805,6 +1815,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       !purchaseDetailOnly
       && !billDetailOnly
       && !materialFlowOnly
+      && !productDiscoveryOnly
       && /flow/i.test(activeCompanyAfter ?? "")
     ) {
       network.splice(0);
