@@ -9,8 +9,9 @@ const PATH = "/suprimentos/controle-integrado";
 function text(formData: FormData, key: string) { return String(formData.get(key) ?? "").trim(); }
 function optional(formData: FormData, key: string) { return text(formData, key) || null; }
 function numeric(formData: FormData, key: string) {
-  const raw = text(formData, key).replace(/\./g, "").replace(",", ".");
-  const value = Number(raw);
+  const source = text(formData, key);
+  const normalized = source.includes(",") ? source.replace(/\./g, "").replace(",", ".") : source;
+  const value = Number(normalized);
   return Number.isFinite(value) ? value : 0;
 }
 function target(message: string, type: "success" | "error", extra: Record<string, string | undefined> = {}) {
