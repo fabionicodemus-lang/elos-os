@@ -60,19 +60,40 @@
 
 ---
 
+
+## `quotation` — Orçamentos/cotações de compra
+
+| Campo | Conteúdo |
+|---|---|
+| módulo do Koper | Compras |
+| rota visual ativa | `/compras/orcamentos` — título “Orçamentos Recebidos”; visualizações por produtos, fornecedores e conjunto de orçamento |
+| rota visual finalizada | `/compras/orcamentos/finalizados` — título “Orçamentos” |
+| endpoint de listagem | `GET https://api.koper.com.br/purchase/v1/budget` — REST |
+| endpoints relacionados | `GET /purchase/v1/budget_negotiation`; `GET /purchase/v1/supplier` |
+| query finalizada observada | chaves `budgetId`, `initialDate`, `finalDate`, `limit`, `offset`, `orderFlag`, `orderby`, `typeDate`; valores ainda não capturados |
+| campos visíveis na listagem | Código, Fornecedor, Data Orçamento, Data Resposta, Qtd. Produtos, Valor Total |
+| detalhe visual observado | orçamento 3268; informações gerais; etapas Produtos, Frete e Pagamento; código do fornecedor, datas, validade, itens, quantidades, preços, descontos, prazo e total |
+| endpoint de detalhe | `GET https://api.koper.com.br/purchase/v1/budget?budgetId={id}&group=request` — **confirmado via HAR 2026-07-31.** Não depende de clicar na linha virtualizada; basta listar (`budgetId=all`) e chamar por `budgetId`. Corpo do detalhe ainda não capturado. |
+| identificador | `budgetId` (usado tanto na listagem `budgetId=all` quanto no detalhe `budgetId={id}`) |
+| paginação | listagem: `limit=25`/`offset` em passos de 25, `budgetAmount=440` no Flow (confirmado antes) |
+| volume | 440 orçamentos históricos no Flow |
+| tabela staging | não criada |
+| status | **rota, endpoints (listagem + detalhe) e paginação confirmados via HAR.** Bloqueio do crawl visual da 3268 resolvido — ver `docs/koper-api-map.md`. Falta capturar o corpo do detalhe. |
+
+
 ## Todas as demais entidades do fluxo prioritário
 
 Ainda **não iniciado**: cotação, participantes/preços, pedido de compra, recebimento, nota fiscal, conta a pagar, pagamento — e toda a Fase 2 (cadastros-base: empresas, empreendimentos, obras, centros de custo, etapas, fornecedores, clientes, unidades imobiliárias, usuários).
 
 | entidade | status |
 |---|---|
-| cadastros-base (Fase 2) | não iniciado |
-| quotation (cotação) | não iniciado |
-| purchase_order (pedido de compra) | não iniciado |
-| receipt (recebimento) | não iniciado |
-| invoice (nota fiscal) | não iniciado |
-| accounts_payable (conta a pagar) | não iniciado |
-| payment (pagamento) | não iniciado |
+| cadastros-base (Fase 2) | **rotas mapeadas via HAR** (`enterprise`, `multi_company`, `user`, `supplier`, `stock_place`, `sector`, `item_chart_account`, `account`, `tags`) — ver `docs/koper-api-map.md`; corpos de vários já capturados |
+| quotation (cotação) | **rota listagem + detalhe confirmadas** (`purchase/v1/budget`) — falta corpo do detalhe |
+| purchase_order (pedido de compra) | **rota mapeada** (`purchase/v1/purchase_order`, `purchase`, `service_order`, `supply/v2/purchases/details/{id}`) — falta corpo |
+| receipt (recebimento/entrada) | **rota mapeada** (`stock/v1/entry`, `pending_entry`, `product_entry`, `temp_entry`) — falta corpo |
+| invoice (nota fiscal) | **rota + corpo capturados** (`financial/v1/xml_invoice?invoiceId=` — inclui XML, produtos, impostos, fornecedor, duplicatas) — ver api-map |
+| accounts_payable (conta a pagar) | **rota + corpo capturados** (`financial/v1/bills_to_pay` + `/events`) — ver api-map |
+| payment (pagamento) | dados de pagamento aparecem embutidos em `bills_to_pay.bills[]` (`paymentDate`, `paymentValue`, `paymentType`, `isPaid`) e em `xml_invoice.bill.duplicates[]`; entidade própria não confirmada |
 | comercial / contas a receber (Fase 5) | não iniciado — **lembrete:** antes de desenhar qualquer estrutura de recebíveis/CUB, rodar grep por `CUB`, `receb`, `correc`, `INCC`, `IPCA` no repositório (Seção 11 da constituição); já existem migrations `supabase/migrations/20260723_0007_koper_receivable_details.sql` e `20260723_0007_koper_receivables_audit.sql` que precisam ser revisadas antes de duplicar trabalho. |
 
 
@@ -99,3 +120,102 @@ Mapeamento de identidade confirmado:
 - cada registro migrado também deve carregar o `enterpriseId` do Flow para isolamento multiempresa.
 
 A paginação foi validada ponta a ponta pela rolagem infinita da interface: `limit=25`, `offset=0` e depois `offset=25`, com 25 registros distintos em cada resposta e `itemsAmount=73`. O extrator deve incrementar o offset em 25 até acumular `itemsAmount` ou receber página menor que o limite.
+
+
+## Orçamentos finalizados — estrutura do filtro de período
+
+Rota visual confirmada: `/compras/orcamentos/finalizados`.
+
+A inspeção sanitizada do DOM distinguiu dois componentes que antes eram confundidos:
+
+| Função | Estrutura observada | Texto atual |
+|---|---|---|
+| Fornecedor | `div.dropdown.custom-select > a.dropdown-toggle` | `Todos` |
+| Período | `div.dropdown > div.input-default.dropdown-toggle` | `01/07/2026 - 31/07/2026` |
+| Pesquisa | `input.form-control[type=search]` | vazio |
+
+Consequência para o extrator: o filtro de período é um dropdown customizado e não deve ser tratado como `<select>`. A opção `Todos` vista no topo sem abrir o calendário pertence ao filtro de fornecedor.
+
+Consulta histórica observada antes da alteração do período:
+
+- endpoint: `GET /purchase/v1/budget`;
+- `budgetId=all`;
+- `initialDate=2026-07-01 00:00:00`;
+- `finalDate=2026-07-31 23:59:59`;
+- `limit=25`, `offset=0`;
+- `orderFlag=desc`, `orderby=budgetId`;
+- `typeDate=budgetDate`;
+- resposta: 404 no período, sem `itemsAmount`.
+
+Ainda pendente: abrir o dropdown de período, inventariar suas opções/estrutura e confirmar a query produzida pela opção `Todos`, inclusive paginação e total histórico.
+
+
+### Bloqueio na opção “Todos” do período
+
+O botão do período é localizável e pode ser aberto por `div.input-default.dropdown-toggle` contendo um intervalo de datas. Entretanto, a opção `Todos` do popover não foi encontrada:
+
+- como descendente do dropdown;
+- como texto visível alinhado abaixo do botão;
+- nem por seleção textual global sem risco de confusão com o filtro de fornecedor.
+
+Nenhuma nova chamada a `GET /purchase/v1/budget` foi disparada. As leituras observadas continuaram restritas a julho de 2026 e retornaram 404. Ainda não está confirmado se selecionar `Todos` remove `initialDate`/`finalDate`, envia valores vazios ou utiliza outro parâmetro.
+
+
+### Opções confirmadas do filtro de período
+
+Abertura manual do dropdown de `Data orçamento` confirmou a ordem visual:
+
+1. `Todos`;
+2. `Hoje`;
+3. `Semana atual`;
+4. `Mês atual`;
+5. `Últimos 7 dias`;
+6. `Últimos 30 dias`;
+7. `Período específico`.
+
+A primeira opção começa imediatamente abaixo do controle que exibe o intervalo. A estratégia de clique relativo foi implementada, mas a sessão Browserless encerrou antes do resultado; a alteração dos parâmetros da API continua pendente de confirmação.
+
+
+## Orçamentos finalizados do Flow — contrato de listagem confirmado
+
+Empresa: `Flow Aptos - Bossa`.
+
+Endpoint:
+
+`GET https://api.koper.com.br/purchase/v1/budget`
+
+Consulta para o filtro `Todos`:
+
+| Parâmetro | Valor |
+|---|---|
+| `budgetId` | `all` |
+| `limit` | `25` |
+| `offset` | `0`, depois `25` |
+| `orderFlag` | `desc` |
+| `orderby` | `budgetId` |
+| `initialDate` | ausente |
+| `finalDate` | ausente |
+| `typeDate` | ausente |
+
+Estrutura de resposta confirmada:
+
+- `budgetAmount`: total histórico, **440**;
+- `budgets`: página de registros;
+- 25 registros por página;
+- campos observados: `budgetId`, `supplierId`, `buildMonitoringId`, `budgetDate`, `responseDate`, `productAmount`, `totalValue`;
+- `responseDate` e `totalValue` podem ser nulos;
+- `buildMonitoringId` pode ser nulo.
+
+Paginação visual confirmada: a rolagem infinita incrementa `offset` em 25. As duas primeiras páginas retornaram 25 IDs distintos cada. O extrator deve continuar em `offset += 25` até acumular `budgetAmount` ou receber página menor que `limit`.
+
+
+### Alvo visual do detalhe da cotação
+
+Estrutura confirmada para o código 3268 na primeira página:
+
+- célula: `td.ng-binding`;
+- linha: `tr.ng-scope`;
+- sem link ou atributo declarativo de navegação;
+- abertura provavelmente controlada por listener JavaScript da linha.
+
+Para o próximo diagnóstico, o detalhe deve ser aberto clicando no `tr` pai enquanto a primeira página ainda está visível, antes da rolagem que carrega `offset=25`.
