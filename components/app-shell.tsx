@@ -65,7 +65,9 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const materialRequestsHref = can("execution.material_requests.view") ? "/execucao/solicitacoes-materiais" : undefined;
   const dailyLogsHref = can("execution.daily_logs.view") ? "/execucao/diario-obras" : undefined;
   const qualityHref = can("execution.quality.view") ? "/execucao/qualidade" : undefined;
+  const serviceProcurementHref = can("execution.contract_procurement.view") ? "/execucao/contratacoes-servicos" : undefined;
   const serviceContractsHref = can("execution.contracts.view") ? "/execucao/contratos-servicos" : undefined;
+  const stageMeasurementsHref = can("execution.measurements.view") ? "/execucao/medicoes-por-etapas" : undefined;
   const contractMeasurementsHref = can("execution.measurements.view") ? "/execucao/medicoes-contratos" : undefined;
   const workOrdersHref = can("execution.work_orders.view") ? "/execucao/ordens-servico" : undefined;
   const materialQuotationsHref = can("procurement.quotations.view") ? "/suprimentos/orcamentos-materiais" : undefined;
@@ -121,8 +123,11 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Diário de Obras", href: dailyLogsHref, active: activeItem === "daily-logs", disabled: !dailyLogsHref },
       { label: "Qualidade", href: qualityHref, active: activeItem === "quality", disabled: !qualityHref },
       { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "execution-suppliers", disabled: !can("suppliers.view") },
-      { label: "Contratos de Serviços", href: serviceContractsHref, active: activeItem === "service-contracts", disabled: !serviceContractsHref },
-      { label: "Medições dos Contratos", href: contractMeasurementsHref, active: activeItem === "contract-measurements", disabled: !contractMeasurementsHref },
+      { label: "Contratação de serviços", sectionLabel: "Contratação de serviços" },
+      { label: "Solicitações e Concorrências", href: serviceProcurementHref, active: activeItem === "service-procurement", disabled: !serviceProcurementHref },
+      { label: "Contratos Formalizados", href: serviceContractsHref, active: activeItem === "service-contracts", disabled: !serviceContractsHref },
+      { label: "Medições por Etapas", href: stageMeasurementsHref, active: activeItem === "stage-measurements", disabled: !stageMeasurementsHref },
+      { label: "Aprovação e Financeiro", href: contractMeasurementsHref, active: activeItem === "contract-measurements", disabled: !contractMeasurementsHref },
       { label: "Ordens de Serviço", href: workOrdersHref, active: activeItem === "work-orders", disabled: !workOrdersHref },
     ]},
     { key: "procurement", label: "Suprimentos", icon: "🛒", active: activeGroup === "procurement", items: [
@@ -176,7 +181,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.69.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.70.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
