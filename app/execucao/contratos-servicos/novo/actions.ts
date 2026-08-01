@@ -120,5 +120,5 @@ export async function createContractFromServiceRequest(formData: FormData) {
   revalidatePath(PATH);
   revalidatePath("/execucao/contratos-servicos");
   revalidatePath("/execucao/medicoes-contratos");
-  redirect(`/execucao/contratos-servicos?contract=${encodeURIComponent(String(data))}&success=${encodeURIComponent("Contrato criado com etapas de medição. Revise os dados e faça a ativação.")}`);
+  redirect(`/execucao/contratos-servicos?contract=${encodeURIComponent(String(data))}&success=${encodeURIComponent("Contrato criado e ativado com etapas de medição. Já está disponível para medições.")}`);
 }
