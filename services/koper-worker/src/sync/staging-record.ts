@@ -3,7 +3,7 @@ import { hashKoperPayload, normalizeKoperPayload } from "../koper/payload-hash.j
 export type KoperProcessingStatus = "pending" | "processed" | "error";
 
 export type KoperStagingRecord = {
-  tenant_id: string;
+  company_id: string;
   source: "koper";
   entity: string;
   koper_id: string;
@@ -21,7 +21,7 @@ export type KoperStagingRecord = {
 };
 
 export type CreateKoperStagingRecordInput = {
-  tenantId: string;
+  companyId: string;
   entity: string;
   koperId: string | number;
   koperParentId?: string | number | null;
@@ -37,7 +37,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3
 export function createKoperStagingRecord(
   input: CreateKoperStagingRecordInput,
 ): KoperStagingRecord {
-  if (!UUID_PATTERN.test(input.tenantId)) throw new Error("tenantId must be a UUID");
+  if (!UUID_PATTERN.test(input.companyId)) throw new Error("companyId must be a UUID");
   if (!input.entity.trim()) throw new Error("entity is required");
 
   const koperId = String(input.koperId).trim();
@@ -50,7 +50,7 @@ export function createKoperStagingRecord(
   const seenAt = (input.seenAt ?? new Date()).toISOString();
 
   return {
-    tenant_id: input.tenantId,
+    company_id: input.companyId,
     source: "koper",
     entity: input.entity.trim(),
     koper_id: koperId,
