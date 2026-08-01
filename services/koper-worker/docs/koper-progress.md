@@ -753,3 +753,25 @@ Os testes em `src/sync/staging-record.test.ts` confirmaram a montagem completa d
 Commits `8cab741` e `96470f9`; deployments Railway `0460c4cb-8574-44cd-aa9b-237083173cd0` e `edbe6dab-d80d-414c-b9c3-a086c6146022`, ambos SUCCESS. **Hipótese confirmada.** Não houve chamada ao Koper nem gravação no Supabase.
 
 **Próximo passo:** inspecionar as migrations existentes para decidir se a staging será uma tabela genérica ou tabelas por entidade; antes de qualquer escrita, criar/verificar RLS, policy por tenant e unicidade `(tenant_id, source, entity, koper_id)`.
+
+---
+
+## 2026-08-01 — Contrato e migration da staging padronizados em `company_id`
+
+Commits `566a85d` e `01fb4eb`; deployments Railway `13d6be22` e `f6db20a2` (`SUCCESS`).
+
+**Hipótese:** usar a mesma identidade multiempresa do Elos OS em todo o contrato evita um segundo modelo paralelo baseado em `tenant_id`, e a combinação de chave canônica + RLS torna segura a preparação da primeira carga.
+
+**Resultado: confirmada no código e na migration.** O tipo `KoperStagingRecord`, seu construtor e os testes agora usam `company_id`/`companyId`. Typecheck e build passaram; os seis testes de normalização, hash e invariantes da staging passaram.
+
+Foi criada a migration `20260801_0066_koper_staging_records.sql`, ainda **não executada**, com:
+
+- unicidade por `(company_id, source, entity, koper_id)`;
+- `payload_hash` SHA-256 validado e `mapping_version` positivo;
+- estados `processing_status` e `missing_at_source`;
+- RLS habilitada e leitura autenticada limitada a `public.is_company_member(company_id)`;
+- nenhuma policy de escrita para usuários autenticados; futuras gravações ficam restritas ao worker com service role.
+
+O Fábio informou o CNPJ da Bossa em 01/08/2026. O valor não foi versionado nem gravado no Railway. Ele será usado somente para resolver `public.companies.id`; depois o worker receberá apenas `BOSSA_COMPANY_ID` como UUID.
+
+**Próximo passo:** executar e verificar a migration no Supabase, resolver o UUID da Bossa pelo CNPJ e configurar `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e `BOSSA_COMPANY_ID` no worker antes da primeira amostra do Flow.
