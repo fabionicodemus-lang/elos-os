@@ -764,7 +764,7 @@ Commits `566a85d` e `01fb4eb`; deployments Railway `13d6be22` e `f6db20a2` (`SUC
 
 **Resultado: confirmada no código e na migration.** O tipo `KoperStagingRecord`, seu construtor e os testes agora usam `company_id`/`companyId`. Typecheck e build passaram; os seis testes de normalização, hash e invariantes da staging passaram.
 
-Foi criada a migration `20260801_0066_koper_staging_records.sql`, ainda **não executada**, com:
+Foi criada a migration `20260801_0067_koper_staging_records.sql`, ainda **não executada**, após confirmar que `0066` já pertence à Inteligência de Suprimentos, com:
 
 - unicidade por `(company_id, source, entity, koper_id)`;
 - `payload_hash` SHA-256 validado e `mapping_version` positivo;
