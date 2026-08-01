@@ -289,6 +289,7 @@ type ProductCatalogRead = {
   itemsAmount: number | null;
   returnedRecords: number;
   sample: Array<Record<string, unknown>>;
+  records?: Array<Record<string, unknown>>;
 };
 
 type FilterControl = {
@@ -1315,7 +1316,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               "unitMeasureId", "symbol", "groupId", "groupName", "subgroupId",
               "subgroupName", "packingId", "packingName", "status", "active",
             ]);
-            const sample = (records as unknown[]).slice(0, 25).flatMap((item) => {
+            const safeRecords = (records as unknown[]).flatMap((item) => {
               if (typeof item !== "object" || item === null || Array.isArray(item)) return [];
               return [Object.fromEntries(
                 Object.entries(item as Record<string, unknown>)
@@ -1323,6 +1324,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
                     && ["string", "number", "boolean"].includes(typeof value)),
               )];
             });
+            const sample = safeRecords.slice(0, 25);
             const queryParams = Object.fromEntries(
               ["limit", "offset", "subgroupId", "formatted", "allProducts", "groupId", "orderFlag", "orderby"]
                 .flatMap((key) => parsedUrl.searchParams.has(key)
@@ -1339,6 +1341,11 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               itemsAmount: safeNumber(object?.itemsAmount ?? object?.total),
               returnedRecords: (records as unknown[]).length,
               sample,
+              ...(process.env.KOPER_PRODUCT_FULL_IMPORT_MODE === "true"
+                && parsedUrl.pathname === "/stock/v1/product"
+                && parsedUrl.searchParams.get("allProducts") === "all"
+                ? { records: safeRecords }
+                : {}),
             });
           }).catch(() => undefined);
           pendingStockResponses.push(task);

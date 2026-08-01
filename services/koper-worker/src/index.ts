@@ -12,6 +12,7 @@ import { runLiveRecording } from "./diagnostics/live-recording.js";
 import { previewFlowStaging } from "./diagnostics/preview-flow-staging.js";
 import { writeFlowStagingSample } from "./diagnostics/write-flow-staging-sample.js";
 import { writeFlowProductSample } from "./diagnostics/write-flow-product-sample.js";
+import { writeFlowProductCatalog } from "./diagnostics/write-flow-product-catalog.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
 import { checkKoperStagingReadiness } from "./elos/supabase.js";
 
@@ -253,6 +254,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
                       ? writeFlowStagingSample
                       : startupDiagnostic === "product-staging-write-sample"
                         ? writeFlowProductSample
+                        : startupDiagnostic === "product-staging-write-full"
+                          ? writeFlowProductCatalog
                   : null;
 
   if (diagnostic) {
