@@ -36,7 +36,7 @@ Construir um serviço confiável e automatizado que:
 1. Autentica na aplicação autorizada do Koper da Bossa.
 2. Descobre as APIs e operações que a interface do Koper usa internamente.
 3. Extrai progressivamente toda a base relevante da Bossa.
-4. Grava os dados no Elos OS, no tenant correto da Bossa.
+4. Grava os dados no Elos OS, na empresa (`company_id`) correta da Bossa.
 5. Executa uma carga histórica inicial completa.
 6. Mantém o Elos OS sincronizado com o Koper de forma incremental.
 7. Preserva relacionamentos, documentos, históricos, valores e rastreabilidade.
@@ -76,14 +76,14 @@ Estas regras não são negociáveis por prompt de sessão. Se você se pegar con
 
 ### 3.4 Sobre multi-tenant
 
-- **Nunca** gravar linha no Elos OS sem `tenant_id` explícito.
+- **Nunca** gravar linha no Elos OS sem `company_id` explícito.
 - **Nunca** usar service key do Supabase fora do worker.
-- Antes da primeira gravação em qualquer tabela nova, validar que a RLS está ativa e que existe policy que restringe leitura por `tenant_id`. Se a policy não existir, **pare** e proponha a policy antes de gravar.
+- Antes da primeira gravação em qualquer tabela nova, validar que a RLS está ativa e que existe policy que restringe leitura por `company_id`. Se a policy não existir, **pare** e proponha a policy antes de gravar.
 
-### 3.5 Sobre identidade do tenant da Bossa
+### 3.5 Sobre identidade da empresa da Bossa
 
-- O `tenant_id` da Bossa não é chumbado neste arquivo. Você **precisa buscá-lo** consultando a tabela de tenants do Elos OS pelo CNPJ da Bossa (pergunte ao Fábio o CNPJ na primeira vez, e a partir daí guarde em variável de ambiente do worker: `BOSSA_TENANT_ID`).
-- Nunca aceite string do tipo `"bossa"` ou `"1"` como tenant. Sempre UUID retornado pela consulta.
+- O `company_id` da Bossa não é chumbado neste arquivo. Você **precisa buscá-lo** consultando `public.companies` pelo CNPJ da Bossa (pergunte ao Fábio o CNPJ na primeira vez, e a partir daí guarde em variável de ambiente do worker: `BOSSA_COMPANY_ID`).
+- Nunca aceite string do tipo `"bossa"` ou `"1"` como empresa. Sempre UUID retornado pela consulta.
 
 ---
 
@@ -196,7 +196,7 @@ Diagnósticos **não viram** código de produção. Eles alimentam a construçã
 
 ### 8.1 Colunas obrigatórias em toda staging
 
-- `tenant_id` (UUID da Bossa)
+- `company_id` (UUID da Bossa em `public.companies`)
 - `source` — sempre `'koper'` neste worker
 - `entity` — nome canônico da entidade (`stock_request`, `quotation`, etc.)
 - `koper_id` — identificador imutável no Koper
@@ -218,7 +218,7 @@ Nunca usar **nome** ou **descrição** como chave. Sempre `koper_id`. Se uma ent
 
 ### 8.3 Idempotência real
 
-O upsert é feito pela tupla `(tenant_id, source, entity, koper_id)`. Rodar a importação duas vezes com o mesmo estado do Koper **não pode** duplicar linhas nem gerar alteração falsa em `payload_hash`.
+O upsert é feito pela tupla `(company_id, source, entity, koper_id)`. Rodar a importação duas vezes com o mesmo estado do Koper **não pode** duplicar linhas nem gerar alteração falsa em `payload_hash`.
 
 Para o hash não flutuar por lixo:
 
@@ -240,7 +240,7 @@ Registrar em `docs/koper-inventory.md` quais campos foram removidos para cada en
 Antes da primeira gravação em qualquer tabela do Elos OS (staging ou operacional):
 
 1. Verificar via SQL que a tabela tem RLS habilitada (`SELECT relrowsecurity FROM pg_class WHERE relname = '<tabela>'`).
-2. Verificar que existe policy de leitura restringindo por `tenant_id = auth.jwt() ->> 'tenant_id'` (ou equivalente ao modelo em uso).
+2. Verificar que existe policy de leitura por `public.has_company_permission(company_id, ...)` ou `public.is_company_member(company_id)`, conforme a sensibilidade da tabela.
 3. Se qualquer uma das duas falhar, **pare** e proponha a policy. Não grave.
 
 O worker usa service key (bypassa RLS), então a proteção real é aplicada quando o app cliente lê os dados. Documente isso no cabeçalho do arquivo `src/elos/supabase.ts`.
@@ -290,7 +290,7 @@ Uma entidade só é considerada **homologada** quando:
 - Quantidade total no Koper × quantidade em staging × quantidade em tabela operacional do Elos OS batem.
 - Amostra manual de 5 registros (escolhidos por Fábio) confere campo a campo.
 - Zero relacionamentos órfãos.
-- Zero duplicidades por `(tenant_id, source, entity, koper_id)`.
+- Zero duplicidades por `(company_id, source, entity, koper_id)`.
 
 Para entidades financeiras, adicionar:
 
