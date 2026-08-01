@@ -1,0 +1,1 @@
+Solicitação controlada de execução do Supabase 0069 — módulo RH, folha e integração financeira.
