@@ -493,3 +493,285 @@ A segunda página trouxe IDs diferentes da primeira (início observado: `6998`, 
 **Segurança:** nenhum `accessToken`, `userName` ou `userId` foi registrado; nenhuma criação, edição, aprovação, cancelamento ou exclusão foi executada. POSTs GraphQL não classificados permaneceram bloqueados. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado após a leitura.
 
 **Marco:** a descoberta de Solicitações de estoque está fechada para revisão no PR #152. Não iniciar cotações nem gravação no Elos OS antes da revisão do Fábio.
+
+
+---
+
+## 2026-07-31 — Primeira descoberta automatizada de Orçamentos do Flow
+
+**Hipótese:** no contexto `Flow Aptos - Bossa`, navegar por `Compras → Orçamentos → Ver finalizados` revelaria a rota e o transporte reais da listagem histórica sem executar escrita operacional.
+
+**Iteração 1 — commit `d1ba4ade`:** o seletor presumido `button-Compras` não existia no DOM; `quotationListReached=false`. O build inicialmente falhou por dois campos obrigatórios ausentes no retorno sem autenticação e foi corrigido no commit `5bbbbb23`.
+
+**Iteração 2 — commit `3ee270ec`:** o módulo Compras foi localizado pelo asset visual `purchase` já carregado pela interface.
+
+**Execução final:** diagnóstico `flow-context`, deployment Railway `437ff62c-dd1d-45df-a44f-34404516635a` (SUCCESS), resultado em 2026-07-31T18:14:46Z.
+
+**Resultado:**
+- `quotationListReached=true`;
+- `quotationFinalizedClicked=true`;
+- rota final: `https://app.koper.com.br/compras/orcamentos/finalizados`;
+- listagem: `GET https://api.koper.com.br/purchase/v1/budget`;
+- endpoint relacionado: `GET /purchase/v1/budget_negotiation`;
+- fornecedores/filtro: `GET /purchase/v1/supplier`;
+- query finalizada expõe as chaves `budgetId`, `initialDate`, `finalDate`, `limit`, `offset`, `orderFlag`, `orderby` e `typeDate`, além dos parâmetros sensíveis sanitizados.
+
+**Hipótese confirmada.** O transporte da listagem é REST. O corpo ainda não foi lido; volume, campos, identificadores e paginação visual permanecem abertos.
+
+Nenhuma criação, aprovação, negociação, escolha de fornecedor ou ordem de compra foi executada. POSTs GraphQL não classificados permaneceram bloqueados. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado após a leitura.
+
+
+---
+
+## 2026-07-31 — Pausa obrigatória: carregar histórico completo de Orçamentos
+
+**Hipótese:** selecionar visualmente o período `Todos` na listagem finalizada faria `GET /purchase/v1/budget` retornar o corpo histórico.
+
+**Tentativa 1 — commit `1a76ea32`:** leitura segura do JSON. O Koper consultou o período padrão de julho de 2026 e respondeu 404 porque não há orçamentos nesse intervalo. Contrato confirmado: `budgetId=all`, `limit=25`, `offset=0`, `orderFlag=desc`, `orderby=budgetId`, `typeDate=budgetDate`.
+
+**Tentativa 2 — commit `742b56c6`:** tentativa de selecionar `Todos` por um elemento `<select>` nativo. Nenhuma nova requisição foi disparada; o filtro não é um select HTML nativo.
+
+**Tentativa 3 — commits `a014f635`/`fb4191f3`:** tentativa de abrir o dropdown Angular pelo texto do período atual e clicar em `Todos`. O build intermediário falhou por uma chave excedente e foi corrigido; na execução válida, nenhuma nova requisição foi disparada. O componente não expõe esses textos como elementos clicáveis no DOM acessível.
+
+**Execução final:** deployment `4c690bbe-6892-4fe9-a842-98f1106c080a` (SUCCESS). Resultado: rota e endpoints confirmados, mas `quotationReads` contém somente as duas respostas 404 do período vazio; corpo, volume e campos continuam abertos.
+
+Trabalho pausado após três tentativas no mesmo bloqueio, conforme a Seção 5. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado. Nenhuma escrita operacional foi executada.
+
+**Alternativas:**
+1. Diagnosticar o DOM do filtro, registrando somente tags, classes, atributos e textos curtos dos controles próximos a “DATA ORÇAMENTO”, para construir um seletor fundamentado.
+2. Reproduzir a seleção manual do Fábio por coordenadas visuais relativas ao rótulo e capturar o XHR normal do Koper.
+3. Testar em dry-run uma cópia do GET autenticado removendo `initialDate`/`finalDate`, hipótese indicada pela opção “Todos”, sem persistência.
+
+**Recomendação:** alternativa 1, porque descobre o controle real sem depender de resolução de tela nem repetir os problemas de autenticação do GET separado.
+
+
+## 2026-07-31 — Diagnóstico estrutural do filtro histórico de Orçamentos
+
+Commit `1a1c5a2`.
+
+**Hipótese:** o filtro de período da tela `/compras/orcamentos/finalizados` é um componente customizado, e a inspeção sanitizada do DOM revelaria um seletor fundamentado. **Resultado:** confirmada.
+
+No contexto `Flow Aptos - Bossa`, a área superior da tela contém:
+
+- filtro de fornecedor: `div.dropdown.custom-select` e `a.dropdown-toggle`, ambos com o texto `Todos`;
+- filtro de período: `div.dropdown` contendo `div.input-default.dropdown-toggle`, com o texto `01/07/2026 - 31/07/2026`;
+- pesquisa: `input.form-control[type=search]`.
+
+Isso comprova que o texto `Todos` identificado nas tentativas anteriores pertence ao fornecedor, não ao período. O filtro de data não é um `<select>` nativo; por isso, seleção nativa e clique textual em `Mês atual`/`Todos` não produziram nova leitura.
+
+As únicas leituras observadas continuaram sendo `GET /purchase/v1/budget`: uma consulta de 25–31/07/2026 e a listagem finalizada de 01–31/07/2026, esta com `budgetId=all`, `limit=25`, `offset=0`, `orderFlag=desc`, `orderby=budgetId` e `typeDate=budgetDate`. Ambas responderam 404 por ausência de registros nos períodos consultados.
+
+O diagnóstico foi executado no Railway com sucesso e `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado imediatamente após a coleta. Nenhuma escrita operacional foi executada.
+
+**Próximo passo seguro:** clicar especificamente em `div.input-default.dropdown-toggle` associado ao rótulo de data, inspecionar as opções abertas e somente então selecionar `Todos`, capturando a requisição normal produzida pela interface.
+
+
+## 2026-07-31 — Tentativas de selecionar “Todos” no período de Orçamentos
+
+Commits `11c0022` e `f4a4d60`.
+
+Objetivo autorizado: abrir o dropdown de período da rota `/compras/orcamentos/finalizados` e selecionar `Todos`, preservando o Koper como origem somente leitura.
+
+Foram testadas duas estratégias fundamentadas pela inspeção anterior:
+
+1. localizar `div.input-default.dropdown-toggle` pelo texto no formato de intervalo de datas e buscar `Todos` dentro do mesmo dropdown;
+2. após abrir o controle datado, buscar globalmente o `Todos` visível abaixo e horizontalmente alinhado ao botão, descartando o `Todos` do fornecedor.
+
+A primeira execução foi interrompida por encerramento transitório da página remota pelo Browserless. A repetição e a estratégia visual chegaram normalmente à tela finalizada, porém não produziram uma nova leitura: permaneceram somente as consultas de julho de 2026 com resposta 404. Isso indica que o item do menu de período é renderizado por mecanismo que não foi alcançado pelos seletores atuais, possivelmente calendário/popover com eventos Angular associados a outro nó.
+
+Por segurança e em cumprimento ao limite de tentativas da constituição, o ciclo foi interrompido sem novas tentativas. `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado. Nenhuma escrita operacional, mudança de filtro equivocada ou captura de segredo foi executada.
+
+**Bloqueio atual:** identificar o nó/evento efetivamente acionável da opção `Todos` após o popover de período estar aberto.
+
+**Próximo caminho recomendado:** em um diagnóstico separado, capturar somente a árvore sanitizada e as caixas visuais dos elementos que surgem após abrir o controle de data, sem tentar selecionar opção. Com essa evidência, construir um seletor exato em novo ciclo.
+
+
+## 2026-07-31 — Evidência visual do menu de período e encerramento da sessão
+
+Commit `d8404ac`.
+
+O print manual confirmou que o dropdown datado abre um menu vertical imediatamente abaixo do controle, nesta ordem: `Todos`, `Hoje`, `Semana atual`, `Mês atual`, `Últimos 7 dias`, `Últimos 30 dias` e `Período específico`.
+
+Com base nessa evidência, o diagnóstico passou a clicar na primeira opção por coordenada relativa ao botão do período: 30 px à direita do início e 18 px abaixo da borda inferior. O deploy do código ficou saudável.
+
+Duas execuções do diagnóstico foram encerradas pelo Browserless durante a espera posterior ao clique, com `Target page, context or browser has been closed`, antes da emissão do JSON final. Portanto, ainda não há confirmação da query produzida por `Todos`. O ciclo foi interrompido e `KOPER_STARTUP_DIAGNOSTIC` foi esvaziado.
+
+**Próximo passo:** reduzir o tempo total do diagnóstico de orçamentos, removendo esperas e etapas anteriores que não são necessárias nesta rodada, e só então repetir o clique relativo.
+
+
+## 2026-07-31 — “Todos” e paginação de Orçamentos confirmados
+
+Commits `a407c52`, `201b239`, `20347e2`, `d2a5c01` e `cc37615`.
+
+Foi criado o modo temporário `KOPER_QUOTATION_ONLY=true`, que preserva login e troca autorizada para `Flow Aptos - Bossa`, mas pula o inventário já concluído de Solicitações. A rota confirmada `/compras/orcamentos/finalizados` passou a ser aberta diretamente por GET, evitando a tela intermediária dependente de GraphQL POST bloqueado.
+
+A seleção visual de `Todos`, pela primeira opção imediatamente abaixo do controle datado, foi confirmada por uma nova leitura com status 200:
+
+- endpoint: `GET /purchase/v1/budget`;
+- `budgetId=all`;
+- `limit=25`;
+- `offset=0`;
+- `orderFlag=desc`;
+- `orderby=budgetId`;
+- sem `initialDate`, `finalDate` ou `typeDate`.
+
+A resposta usa `budgetAmount`, não `itemsAmount`, e informou **440 registros históricos**. A primeira página retornou 25 registros.
+
+A rolagem infinita foi validada em seguida. Ela disparou a mesma consulta com `offset=25`, retornando mais 25 registros distintos. Página 1: IDs 3268 a 3037 na amostra ordenada; página 2: IDs 3006 a 2709. Não houve repetição entre as páginas.
+
+O diagnóstico registrou somente `budgetId`, `supplierId`, `buildMonitoringId`, datas, quantidade de produtos e valor total. Nomes de fornecedores foram excluídos da amostra. `KOPER_STARTUP_DIAGNOSTIC` e `KOPER_QUOTATION_ONLY` foram esvaziados após a leitura. Nenhuma escrita operacional foi executada.
+
+
+## 2026-07-31 — Início do detalhe da cotação 3268
+
+Após concluir listagem e paginação, iniciou-se a descoberta somente leitura do detalhe da cotação 3268.
+
+A primeira tentativa buscou o texto `3268` depois da rolagem para `offset=25`; o elemento já não estava visível. A segunda voltou os contêineres ao topo, mas a tabela virtualizada não tornou o código acionável novamente. A terceira ação foi somente estrutural e confirmou:
+
+- código em `td.ng-binding`;
+- pai imediato `tr.ng-scope`;
+- ausência de `href`, `ng-click`, `ui-sref` e `role`;
+- o comportamento de abertura é provavelmente um listener Angular/JavaScript ligado à linha.
+
+Nenhum detalhe foi aberto e nenhum endpoint adicional foi capturado. Conforme o limite de tentativas, o ciclo foi encerrado. `KOPER_STARTUP_DIAGNOSTIC` e `KOPER_QUOTATION_ONLY` foram esvaziados.
+
+**Próximo passo fundamentado:** localizar o `td` com texto exato `3268` e clicar diretamente no `tr` pai antes de executar a paginação visual.
+
+
+## 2026-07-31 — Quinta tentativa no detalhe 3268 e leitura de processo
+
+Commit `25ca0b6`, deployment `505347e2` (SUCCESS), resultado lido em 2026-07-31T20:22:02Z.
+
+**Hipótese:** o detalhe abre quando o `tr.ng-scope` pai da célula `td.ng-binding` com texto `3268` é clicado enquanto a primeira página ainda está visível, antes da rolagem para `offset=25`. **Resultado: descartada.** O elemento existe no DOM (a inspeção estrutural o encontra de novo), mas `getByText(/^3268$/).locator("xpath=ancestor::tr[1]")` não o resolveu como visível — o clique não ocorreu, o fallback pós-rolagem também não encontrou o código, `quotationDetailReads=[]` e `quotationDetailUrl=null`. A troca para o Flow, a seleção de "Todos" (`budgetAmount=440`) e a paginação (`offset=0` e `offset=25`, 25 registros distintos cada) funcionaram normalmente — o bloqueio é exclusivamente o clique na linha virtualizada.
+
+Este é o **quinto ciclo** consecutivo na mesma família de bloqueio (abrir o detalhe por clique). Variáveis `KOPER_STARTUP_DIAGNOSTIC` e `KOPER_QUOTATION_ONLY` esvaziadas imediatamente após a leitura. Nenhuma escrita operacional.
+
+**Decisão de processo:** em vez de uma sexta hipótese de clique, o Fábio pediu uma leitura do processo. Ela está em `docs/koper-metodo-otimizacao.md` — com a recomendação principal de resolver esta classe de bloqueio por **sessão de gravação assistida (LiveURL)**: o Fábio clica, o worker grava os endpoints. O detalhe da 3268 é o primeiro candidato.
+
+---
+
+## 2026-07-31 — HAR manual do Fábio: mapa da API do fluxo prioritário inteiro
+
+**Método:** em vez de continuar o crawl visual do detalhe da cotação 3268 (5 ciclos sem sucesso por causa da tabela Angular virtualizada), o Fábio capturou manualmente um HAR navegando o fluxo prioritário completo no contexto `Flow Aptos - Bossa`, com o DevTools → Network filtrado em Fetch/XHR. Arquivo de 40MB entregue zipado neste chat.
+
+**Processamento (somente leitura, sanitizado):** o HAR bruto **não foi versionado** (contém `accessToken` e dados pessoais/valores). Um script local extraiu apenas método, caminho, chaves de query (nunca valores) e a **estrutura de campos** das respostas (nunca valores), conforme Seção 3.2/3.3. Resultado consolidado no novo `docs/koper-api-map.md`.
+
+**Resultado — 29 operações REST mapeadas** cobrindo todas as fases do fluxo prioritário:
+- **Cadastros-base:** `enterprise`, `multi_company`, `user`, `tags`, `stock_place`, `sector`, `purchase/supplier`, `financial/supplier`, `item_chart_account`, `account`.
+- **Suprimentos:** `stock/request`, `product_request`, `entry`, `pending_entry`, `product_entry`, `temp_entry`, `prod_req_comment`.
+- **Compras:** `purchase/budget` (cotação), `budget_negotiation`, `purchase`, `purchase_order`, `service_order`, `supply/v2/purchases/details/{id}`.
+- **Financeiro:** `bills_to_pay` (+ `/events`), `account`, `item_chart_account`, `receipt`, `xml_invoice`.
+- **Troca de empresa:** `POST /login/change_company`.
+
+**Corpos de resposta capturados (8, estrutura no api-map):** `enterprise`, `multi_company`, `user`, `tags`, `stock_place`, `purchase/supplier`, `financial/account`, `financial/bills_to_pay`, `financial/xml_invoice`. Os demais vieram vazios (o Chrome descartou 183 de 195 corpos ao salvar) — endpoint e params confirmados, corpo pendente.
+
+**Bloqueio da cotação 3268 RESOLVIDO:** o detalhe do orçamento é `GET /purchase/v1/budget?budgetId={id}&group=request` — não depende de clicar na linha virtualizada. O crawl visual fica obsoleto. O commit `25ca0b6` (clique no `tr` pai) não é mais necessário para descobrir o endpoint; pode ser mantido só como fallback ou removido. O corpo do detalhe ainda não foi capturado (resposta vazia neste HAR); capturar em diagnóstico direcionado por `budgetId` ou em novo HAR abrindo uma cotação.
+
+**Hipótese confirmada.** O HAR manual é ordens de magnitude mais eficiente que o crawl visual para mapear rotas: uma navegada de ~10 min do Fábio substituiu dezenas de ciclos de deploy. **Registrado em `CLAUDE.md`, Seção 18, como método preferido para descoberta de rotas de telas novas.**
+
+**Próximo passo sugerido:** com as rotas conhecidas, capturar os corpos que faltam por diagnóstico direcionado (agora que o endpoint é conhecido, um GET autenticado pela interface resolve) — priorizar `budget?budgetId` (detalhe da cotação), `purchase`, `purchase_order`, `service_order` e as entradas de estoque. Ou pedir ao Fábio um segundo HAR abrindo uma cotação, um pedido e um recebimento, um de cada, para pegar os corpos numa tacada.
+
+---
+
+## 2026-07-31 — Detalhe do pedido/compra 13667 confirmado
+
+Deployment Railway `f537a98c-041f-47ef-b4ba-ea4c043b46e6` (SUCCESS), resultado em 2026-07-31T22:06:50Z.
+
+O modo direcionado `KOPER_PURCHASE_DETAIL_ONLY=true` abriu somente a rota conhecida pelo HAR, `https://web.koper.com.br/suprimentos/compras/13667`, após login e troca autorizada para `Flow Aptos - Bossa`. A interface disparou `GET /supply/v2/purchases/details/13667`, status 200.
+
+O corpo confirmou a ligação operacional do pedido de serviço: `purchaseId=13667`, `costCenterId=168`, `supplierId=38`, `receiptId=12828`, `receiptNumber=16931`, `purchaseDate=2026-07-30`, `purchaseValue=31415`, `totalPurchase=31415`, `totalProducts=0`, `totalServices=31415`, serviço `17` com quantidade `51,5` e valor unitário `610`, ordem de serviço `11516` finalizada e conta a pagar `billId=15902` / `billToPayId=14525`, vencimento em 19/08/2026, valor `29844,25`. Não há XML/nota fiscal ligada neste registro (`xmlInvoiceId`, `invoiceNumber` nulos).
+
+O navegador também revelou a rota de leitura do próximo elo: `GET /_next/data/{build}/financeiro/contas-a-pagar/15902.json?billToPayId=14525`. Nove POSTs GraphQL auxiliares foram bloqueados; nenhuma escrita operacional foi executada. As variáveis temporárias foram esvaziadas após a coleta.
+
+**Próximo passo:** capturar somente a estrutura sanitizada desse JSON de conta a pagar durante o mesmo diagnóstico direcionado e, com os campos confirmados, mapear o detalhe financeiro sem depender de navegação visual.
+
+---
+
+## 2026-07-31 — Conta a pagar 15902 mapeada diretamente
+
+Deployments Railway `67476478-44f9-400a-a254-cfcc7584238c` e `de103dbc-3079-477d-abc8-0b4364cbea8f` (SUCCESS). O diagnóstico abriu diretamente `https://web.koper.com.br/financeiro/contas-a-pagar/15902?billToPayId=14525` no contexto `Flow Aptos - Bossa`.
+
+Endpoints confirmados:
+
+- `GET /financial/v1/bills_to_pay?billId=15902` — detalhe financeiro;
+- `GET /financial/v2/bills-to-pay/15902/events` — histórico de eventos;
+- auxiliares de leitura: `item_chart_account`, `account`, `supplier`, `stock_place` e `tags`.
+
+Valores operacionais sanitizados confirmados: `billId=15902`, `billToPayId=14525`, `supplierId=38`, `costCenterId=168`, `chartAccountId=9`, `itemChartAccountId=58`, valor `29844,25`, vencimento em 19/08/2026, status `Pendente`, `isPaid=false`, sem conta bancária, pagamento, comprovante ou boleto vinculados. O endpoint de eventos retornou um registro criado em 31/07/2026. Nomes, CPF/CNPJ, comentários, textos livres e corpo do evento não foram registrados.
+
+O vínculo pedido `13667` → conta a pagar `15902/14525` está fechado. Nenhuma origem de nota fiscal ou recebimento veio em `origins[]` neste título; a ligação foi obtida pelo corpo do pedido. Nove POSTs GraphQL auxiliares permaneceram bloqueados. Nenhuma escrita operacional foi executada. As variáveis temporárias foram esvaziadas após a leitura.
+
+**Próximo passo:** voltar ao fluxo de suprimentos e mapear uma compra de materiais que contenha `purchaseOrders[]` e `products[]`, pois o exemplo 13667 é uma contratação de serviço. Priorizar no HAR as rotas `purchase_order`, `stock/entry`, `pending_entry` e `product_entry` para fechar pedido de materiais → entrada → nota fiscal.
+
+---
+
+## 2026-07-31 — Fluxo de materiais fechado até a conta a pagar
+
+Deployment Railway `33e2e4fb-b8f2-4217-a7c0-e605e200c43c` (SUCCESS). A partir dos identificadores descobertos no HAR, o diagnóstico direcionado e somente leitura confirmou o encadeamento completo de uma compra programada de materiais.
+
+Endpoints confirmados:
+
+- `GET /purchase/v1/purchase_order?orderId=10455` — ordem de compra;
+- `GET /stock/v1/product_entry?entryId=13373&pending=false` — entrada de estoque;
+- `GET /financial/v1/xml_invoice?invoiceId=d4360ae6-85f9-11f1-9cb1-86c46e718d59` — nota fiscal;
+- ao abrir a nota, `GET /purchase/v1/purchase_order?invoiceId={invoiceId}&page=invoice` — vínculo reverso com a ordem.
+
+A ordem `10455`, finalizada, contém o produto `14826`, `orderProductId=12186`, `inputId=14810`, quantidade pedida e recebida `10`, preço final unitário `225,81`, e está ligada à solicitação `10556` / item `10254`. A entrada `13373`, do tipo `Compra programada`, registra quantidade `10`, movimento `15307`, valor total `2258,20` e liga explicitamente a nota fiscal `49222`.
+
+A nota fiscal confirmou `purchaseOrderIds=[10455]`, o mesmo fornecedor `9607`, produto `14826`, quantidade `10`, valor unitário `225,82`, valor dos produtos `2258,20` e total da nota `2478,37`. Ela gerou a conta a pagar `billId=15791` / `billToPayId=14475`, valor `2478,37`, vencimento em 18/08/2026 e ainda não paga.
+
+Assim, o fluxo material está fechado por identificadores estáveis: solicitação `10556` → ordem `10455` → entrada `13373` → nota `49222` → conta a pagar `15791/14475`. Diferenças centesimais entre o preço da ordem (`225,81`) e o valor unitário fiscal (`225,82`) foram preservadas como dados de origem, sem normalização destrutiva.
+
+POSTs GraphQL auxiliares permaneceram bloqueados e nenhuma escrita operacional foi executada. Todos os modos diagnósticos foram desativados após a coleta.
+
+**Próximo passo:** substituir os IDs fixos dos diagnósticos por um extrator de produção parametrizado, com paginação, persistência idempotente e checkpoints por empresa, começando por solicitações, ordens, entradas, notas e contas a pagar.
+
+---
+
+## 2026-07-31 — Núcleo de idempotência iniciado
+
+**Hipótese:** normalizar o JSON recursivamente antes do SHA-256 evita alterações falsas quando o Koper devolve as mesmas chaves em outra ordem ou inclui metadados efêmeros.
+
+Foi criado `src/koper/payload-hash.ts`, já fora da camada de diagnósticos. A normalização ordena alfabeticamente as chaves em todos os níveis e remove `_responseAt` e `_traceId`, inclusive quando aninhados. `hashKoperPayload` gera o SHA-256 do JSON normalizado.
+
+Três testes em `src/koper/payload-hash.test.ts` confirmaram: (1) objetos equivalentes com chaves em ordens diferentes geram o mesmo hash; (2) campos voláteis são removidos em qualquer profundidade; (3) mudança real de status gera outro hash. `typecheck`, `build` e `node --test` passaram sem falhas.
+
+Commits `a63729a` e `e547b4a`; deployments Railway `85e5f97f-5913-4ac9-b8a8-a2e9eb1cefda` e `df79a57e-3323-4b0e-aa5f-12d555973844`, ambos SUCCESS. **Hipótese confirmada.** Nenhuma chamada ao Koper e nenhuma gravação no Elos OS foram feitas neste ciclo.
+
+**Próximo passo:** criar o tipo canônico de registro de staging com `tenant_id`, `entity`, `koper_id`, payload normalizado, hash e metadados obrigatórios; ainda sem conectar ao Supabase até verificar tabela, RLS e policy.
+
+---
+
+## 2026-07-31 — Contrato canônico de staging validado
+
+**Hipótese:** concentrar a criação de registros de staging em um único construtor impede linhas incompletas ou sem identidade multi-tenant antes mesmo de existir persistência.
+
+Foi criado `src/sync/staging-record.ts` com os 15 campos obrigatórios da constituição. `createKoperStagingRecord` exige `tenantId` UUID, entidade não vazia, `koperId` imutável e `mappingVersion` inteiro positivo; define `source='koper'`, normaliza e hasheia o payload sanitizado, inicia o processamento como `pending` e preenche `first_seen_at` / `last_seen_at` com o mesmo instante.
+
+Os testes em `src/sync/staging-record.test.ts` confirmaram a montagem completa da linha e a rejeição explícita de `tenantId='bossa'` e `koperId` vazio. Somados aos testes do hash, são 6 testes passando. `typecheck` e `build` também passaram.
+
+Commits `8cab741` e `96470f9`; deployments Railway `0460c4cb-8574-44cd-aa9b-237083173cd0` e `edbe6dab-d80d-414c-b9c3-a086c6146022`, ambos SUCCESS. **Hipótese confirmada.** Não houve chamada ao Koper nem gravação no Supabase.
+
+**Próximo passo:** inspecionar as migrations existentes para decidir se a staging será uma tabela genérica ou tabelas por entidade; antes de qualquer escrita, criar/verificar RLS, policy por tenant e unicidade `(tenant_id, source, entity, koper_id)`.
+
+---
+
+## 2026-08-01 — Contrato e migration da staging padronizados em `company_id`
+
+Commits `566a85d` e `01fb4eb`; deployments Railway `13d6be22` e `f6db20a2` (`SUCCESS`).
+
+**Hipótese:** usar a mesma identidade multiempresa do Elos OS em todo o contrato evita um segundo modelo paralelo baseado em `tenant_id`, e a combinação de chave canônica + RLS torna segura a preparação da primeira carga.
+
+**Resultado: confirmada no código e na migration.** O tipo `KoperStagingRecord`, seu construtor e os testes agora usam `company_id`/`companyId`. Typecheck e build passaram; os seis testes de normalização, hash e invariantes da staging passaram.
+
+Foi criada a migration `20260801_0067_koper_staging_records.sql`, ainda **não executada**, após confirmar que `0066` já pertence à Inteligência de Suprimentos, com:
+
+- unicidade por `(company_id, source, entity, koper_id)`;
+- `payload_hash` SHA-256 validado e `mapping_version` positivo;
+- estados `processing_status` e `missing_at_source`;
+- RLS habilitada e leitura autenticada limitada a `public.is_company_member(company_id)`;
+- nenhuma policy de escrita para usuários autenticados; futuras gravações ficam restritas ao worker com service role.
+
+O Fábio informou o CNPJ da Bossa em 01/08/2026. O valor não foi versionado nem gravado no Railway. Ele será usado somente para resolver `public.companies.id`; depois o worker receberá apenas `BOSSA_COMPANY_ID` como UUID.
+
+**Próximo passo:** executar e verificar a migration no Supabase, resolver o UUID da Bossa pelo CNPJ e configurar `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e `BOSSA_COMPANY_ID` no worker antes da primeira amostra do Flow.

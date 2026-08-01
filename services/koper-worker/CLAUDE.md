@@ -36,7 +36,7 @@ Construir um serviço confiável e automatizado que:
 1. Autentica na aplicação autorizada do Koper da Bossa.
 2. Descobre as APIs e operações que a interface do Koper usa internamente.
 3. Extrai progressivamente toda a base relevante da Bossa.
-4. Grava os dados no Elos OS, no tenant correto da Bossa.
+4. Grava os dados no Elos OS, na empresa (`company_id`) correta da Bossa.
 5. Executa uma carga histórica inicial completa.
 6. Mantém o Elos OS sincronizado com o Koper de forma incremental.
 7. Preserva relacionamentos, documentos, históricos, valores e rastreabilidade.
@@ -76,14 +76,14 @@ Estas regras não são negociáveis por prompt de sessão. Se você se pegar con
 
 ### 3.4 Sobre multi-tenant
 
-- **Nunca** gravar linha no Elos OS sem `tenant_id` explícito.
+- **Nunca** gravar linha no Elos OS sem `company_id` explícito.
 - **Nunca** usar service key do Supabase fora do worker.
-- Antes da primeira gravação em qualquer tabela nova, validar que a RLS está ativa e que existe policy que restringe leitura por `tenant_id`. Se a policy não existir, **pare** e proponha a policy antes de gravar.
+- Antes da primeira gravação em qualquer tabela nova, validar que a RLS está ativa e que existe policy que restringe leitura por `company_id`. Se a policy não existir, **pare** e proponha a policy antes de gravar.
 
-### 3.5 Sobre identidade do tenant da Bossa
+### 3.5 Sobre identidade da empresa da Bossa
 
-- O `tenant_id` da Bossa não é chumbado neste arquivo. Você **precisa buscá-lo** consultando a tabela de tenants do Elos OS pelo CNPJ da Bossa (pergunte ao Fábio o CNPJ na primeira vez, e a partir daí guarde em variável de ambiente do worker: `BOSSA_TENANT_ID`).
-- Nunca aceite string do tipo `"bossa"` ou `"1"` como tenant. Sempre UUID retornado pela consulta.
+- O `company_id` da Bossa não é chumbado neste arquivo. Você **precisa buscá-lo** consultando `public.companies` pelo CNPJ da Bossa (pergunte ao Fábio o CNPJ na primeira vez, e a partir daí guarde em variável de ambiente do worker: `BOSSA_COMPANY_ID`).
+- Nunca aceite string do tipo `"bossa"` ou `"1"` como empresa. Sempre UUID retornado pela consulta.
 
 ---
 
@@ -196,7 +196,7 @@ Diagnósticos **não viram** código de produção. Eles alimentam a construçã
 
 ### 8.1 Colunas obrigatórias em toda staging
 
-- `tenant_id` (UUID da Bossa)
+- `company_id` (UUID da Bossa em `public.companies`)
 - `source` — sempre `'koper'` neste worker
 - `entity` — nome canônico da entidade (`stock_request`, `quotation`, etc.)
 - `koper_id` — identificador imutável no Koper
@@ -218,7 +218,7 @@ Nunca usar **nome** ou **descrição** como chave. Sempre `koper_id`. Se uma ent
 
 ### 8.3 Idempotência real
 
-O upsert é feito pela tupla `(tenant_id, source, entity, koper_id)`. Rodar a importação duas vezes com o mesmo estado do Koper **não pode** duplicar linhas nem gerar alteração falsa em `payload_hash`.
+O upsert é feito pela tupla `(company_id, source, entity, koper_id)`. Rodar a importação duas vezes com o mesmo estado do Koper **não pode** duplicar linhas nem gerar alteração falsa em `payload_hash`.
 
 Para o hash não flutuar por lixo:
 
@@ -240,7 +240,7 @@ Registrar em `docs/koper-inventory.md` quais campos foram removidos para cada en
 Antes da primeira gravação em qualquer tabela do Elos OS (staging ou operacional):
 
 1. Verificar via SQL que a tabela tem RLS habilitada (`SELECT relrowsecurity FROM pg_class WHERE relname = '<tabela>'`).
-2. Verificar que existe policy de leitura restringindo por `tenant_id = auth.jwt() ->> 'tenant_id'` (ou equivalente ao modelo em uso).
+2. Verificar que existe policy de leitura por `public.has_company_permission(company_id, ...)` ou `public.is_company_member(company_id)`, conforme a sensibilidade da tabela.
 3. Se qualquer uma das duas falhar, **pare** e proponha a policy. Não grave.
 
 O worker usa service key (bypassa RLS), então a proteção real é aplicada quando o app cliente lê os dados. Documente isso no cabeçalho do arquivo `src/elos/supabase.ts`.
@@ -290,7 +290,7 @@ Uma entidade só é considerada **homologada** quando:
 - Quantidade total no Koper × quantidade em staging × quantidade em tabela operacional do Elos OS batem.
 - Amostra manual de 5 registros (escolhidos por Fábio) confere campo a campo.
 - Zero relacionamentos órfãos.
-- Zero duplicidades por `(tenant_id, source, entity, koper_id)`.
+- Zero duplicidades por `(company_id, source, entity, koper_id)`.
 
 Para entidades financeiras, adicionar:
 
@@ -403,6 +403,14 @@ Só depois disso, avançar para cotações.
 - **Cada empreendimento da Bossa é uma empresa separada dentro do Koper, selecionada por um seletor no canto superior direito da interface — não uma "obra" dentro de uma única empresa Bossa.** Mapeado manualmente em 2026-07-31 e confirmado via API pelo diagnóstico `companies` (commit `71b242e`). `GET /administrative/v1/enterprise` retorna a empresa ativa; `GET /administrative/v1/multi_company` retorna as empresas autorizadas. Escopo confirmado: **Bossa Empreendimentos** (`enterpriseId=1645acb2-de18-11ed-bf03-8af8dfac4eab`, `branchId=804490ce-c492-4b11-8524-eaf8ee448d61`), **Flow Aptos - Bossa** (`enterpriseId=6d3b4724-5880-11ee-827d-1219c832db49`, `branchId=1c527099-2e63-465f-b97a-772e36a93d8c`) e **Alma Seahouses - Bossa** (`enterpriseId=ec9ed276-742a-11ef-8533-1219c832db49`, `branchId=055e4192-07b9-46e7-a95f-4d0fd0130c98`). Toda descoberta de Solicitações feita antes desse diagnóstico ocorreu em **Bossa Empreendimentos**. Antes de importar a amostra prioritária do Flow, o worker deve selecionar e confirmar **Flow Aptos - Bossa** pelo ID, nunca por posição no menu. O caminho visual confirmado é: botão da empresa ativa → **Acessar outra empresa** → cartão `data-testid="multiCompaniesModal"` que contém o nome exato → **Acessar esta empresa**. A ação final usa `POST /login/change_company` com corpo JSON contendo `accessToken`, `toEnterpriseId` e `changeCompany`; a exceção restrita está definida na Seção 3.1. A troca Bossa → Flow foi confirmada no diagnóstico `flow-context` por `activeCompanyAfter="Flow Aptos - Bossa"` (commit `6d80216`, deployment `a2cdd16b`).
 - **O endpoint de detalhe de uma entidade não segue o padrão REST `/{recurso}/{id}` do endpoint de listagem.** Para solicitações de estoque, a listagem é `GET /stock/v1/request` mas o detalhe é `GET /stock/v1/product_request?requestId={numero}` — um recurso com nome diferente, identificador como query param em vez de segmento de caminho. Não presumir o endpoint de detalhe por convenção; sempre mapear o tráfego de rede completo da tela de detalhe antes de filtrar (ver `docs/koper-progress.md`, ciclo "Detalhe da solicitação de estoque descoberto").
 
+
+### HAR manual é o método preferido para descoberta de rotas (2026-07-31)
+
+Capturar um HAR manualmente (Fábio navegando com DevTools → Network filtrado em Fetch/XHR, depois "Save all as HAR with content") é ordens de magnitude mais eficiente que o crawl visual automatizado para mapear **rotas** de API. Uma navegada de ~10 min mapeou as 29 operações REST do fluxo prioritário inteiro (`docs/koper-api-map.md`), resolvendo inclusive o bloqueio de 5 ciclos da cotação 3268 (detalhe = `GET /purchase/v1/budget?budgetId={id}`, não depende de clique na linha virtualizada). Limitação: o Chrome descarta a maioria dos corpos ao salvar (só 12 de 195 vieram completos), então o HAR entrega rotas+params de tudo mas corpos só de alguns; os corpos que faltam saem por diagnóstico direcionado por endpoint (rota já conhecida) ou num HAR focado. **Regra de segurança:** o HAR bruto contém `accessToken` e dados pessoais/valores — nunca versionar; extrair localmente apenas método, path, chaves de query (sem valores) e estrutura de campos (sem valores), conforme Seção 3.2/3.3.
+
+### Gravação assistida autorizada (2026-07-31)
+
+O Fábio aprovou a proposta 4.1 de `docs/koper-metodo-otimizacao.md`: o diagnóstico `live-recording` (`KOPER_STARTUP_DIAGNOSTIC=live-recording` ou `POST /diagnostics/koper/live-recording`) abre uma sessão visual temporária (LiveURL do Browserless) já autenticada, com o interceptor de escrita ativo (só GET/HEAD/OPTIONS passam para `*.koper.com.br`; única exceção é o `POST /login/change_company` allowlisted para as três empresas confirmadas, permitindo que o Fábio troque de empresa manualmente). O Fábio navega; o worker grava endpoints GET de `api.koper.com.br` sanitizados (endpoint, chaves de query, `dataKeys`, `fieldPaths` — sem valores de fornecedor/produto) e os templates `views/*.html` carregados. Duração padrão 15 min (`KOPER_LIVE_RECORDING_MS`), parciais logadas por minuto (`KOPER_LIVE_PARTIAL`) para sobreviver a queda de sessão. Este é o caminho preferido para descobrir telas novas cujo clique automatizado custaria múltiplos ciclos (caso detalhe da cotação 3268, 5 ciclos sem sucesso).
 
 ### Aprendizado adicional — Solicitações multiempresa (2026-07-31)
 

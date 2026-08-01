@@ -12,14 +12,25 @@ export type BrowserlessSession = {
   page: Page;
 };
 
-function buildBrowserlessEndpoint(): string {
+export type BrowserlessConnectOptions = {
+  sessionTimeoutMs?: number;
+};
+
+function buildBrowserlessEndpoint(options?: BrowserlessConnectOptions): string {
   const endpoint = new URL(env.BROWSERLESS_WS_URL);
   endpoint.searchParams.set("token", env.BROWSERLESS_TOKEN);
+
+  if (options?.sessionTimeoutMs) {
+    endpoint.searchParams.set("timeout", String(options.sessionTimeoutMs));
+  }
+
   return endpoint.toString();
 }
 
-export async function connectBrowserless(): Promise<BrowserlessSession> {
-  const browser = await chromium.connectOverCDP(buildBrowserlessEndpoint(), {
+export async function connectBrowserless(
+  options?: BrowserlessConnectOptions,
+): Promise<BrowserlessSession> {
+  const browser = await chromium.connectOverCDP(buildBrowserlessEndpoint(options), {
     timeout: 30_000,
   });
 
@@ -44,8 +55,9 @@ export async function connectBrowserless(): Promise<BrowserlessSession> {
 
 export async function withBrowserless<T>(
   task: (session: BrowserlessSession) => Promise<T>,
+  options?: BrowserlessConnectOptions,
 ): Promise<T> {
-  const session = await connectBrowserless();
+  const session = await connectBrowserless(options);
 
   try {
     return await task(session);
