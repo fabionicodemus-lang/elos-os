@@ -739,3 +739,17 @@ Três testes em `src/koper/payload-hash.test.ts` confirmaram: (1) objetos equiva
 Commits `a63729a` e `e547b4a`; deployments Railway `85e5f97f-5913-4ac9-b8a8-a2e9eb1cefda` e `df79a57e-3323-4b0e-aa5f-12d555973844`, ambos SUCCESS. **Hipótese confirmada.** Nenhuma chamada ao Koper e nenhuma gravação no Elos OS foram feitas neste ciclo.
 
 **Próximo passo:** criar o tipo canônico de registro de staging com `tenant_id`, `entity`, `koper_id`, payload normalizado, hash e metadados obrigatórios; ainda sem conectar ao Supabase até verificar tabela, RLS e policy.
+
+---
+
+## 2026-07-31 — Contrato canônico de staging validado
+
+**Hipótese:** concentrar a criação de registros de staging em um único construtor impede linhas incompletas ou sem identidade multi-tenant antes mesmo de existir persistência.
+
+Foi criado `src/sync/staging-record.ts` com os 15 campos obrigatórios da constituição. `createKoperStagingRecord` exige `tenantId` UUID, entidade não vazia, `koperId` imutável e `mappingVersion` inteiro positivo; define `source='koper'`, normaliza e hasheia o payload sanitizado, inicia o processamento como `pending` e preenche `first_seen_at` / `last_seen_at` com o mesmo instante.
+
+Os testes em `src/sync/staging-record.test.ts` confirmaram a montagem completa da linha e a rejeição explícita de `tenantId='bossa'` e `koperId` vazio. Somados aos testes do hash, são 6 testes passando. `typecheck` e `build` também passaram.
+
+Commits `8cab741` e `96470f9`; deployments Railway `0460c4cb-8574-44cd-aa9b-237083173cd0` e `edbe6dab-d80d-414c-b9c3-a086c6146022`, ambos SUCCESS. **Hipótese confirmada.** Não houve chamada ao Koper nem gravação no Supabase.
+
+**Próximo passo:** inspecionar as migrations existentes para decidir se a staging será uma tabela genérica ou tabelas por entidade; antes de qualquer escrita, criar/verificar RLS, policy por tenant e unicidade `(tenant_id, source, entity, koper_id)`.
