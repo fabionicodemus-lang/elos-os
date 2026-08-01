@@ -10,8 +10,8 @@ const envSchema = z.object({
   KOPER_LOGIN_URL: z.string().url(),
   KOPER_USERNAME: z.string().min(1),
   KOPER_PASSWORD: z.string().min(1),
-  SUPABASE_URL: z.string().url(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(32),
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(32).optional(),
   BOSSA_COMPANY_ID: z.string().uuid(),
 });
 
