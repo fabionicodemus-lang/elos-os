@@ -280,6 +280,17 @@ type StockRequestRead = NetworkSummary & {
   requests: StockRequestSample[];
 };
 
+type ProductCatalogRead = {
+  endpoint: string;
+  statusCode: number;
+  queryParams: Record<string, string>;
+  dataKeys: string[];
+  fieldPaths: string[];
+  itemsAmount: number | null;
+  returnedRecords: number;
+  sample: Array<Record<string, unknown>>;
+};
+
 type FilterControl = {
   tag: string;
   text: string;
@@ -576,6 +587,7 @@ export type KoperFlowContextDiagnostic = {
   quotationListReached: boolean;
   quotationFinalizedClicked: boolean;
   stockRequestReads: StockRequestRead[];
+  productCatalogReads: ProductCatalogRead[];
   quotationReads: QuotationRead[];
   quotationFilterControls: FilterControl[];
   quotationDetailReads: QuotationDetailRead[];
@@ -1157,6 +1169,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         quotationListReached: false,
         quotationFinalizedClicked: false,
         stockRequestReads: [],
+        productCatalogReads: [],
         quotationReads: [],
         quotationFilterControls: [],
         quotationDetailReads: [],
@@ -1197,6 +1210,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
     const network: NetworkSummary[] = [];
     const blockedWrites: NetworkSummary[] = [];
     const stockRequestReads: StockRequestRead[] = [];
+    const productCatalogReads: ProductCatalogRead[] = [];
     const quotationReads: QuotationRead[] = [];
     const quotationDetailReads: QuotationDetailRead[] = [];
     const purchaseDetailReads: PurchaseDetailRead[] = [];
@@ -1275,7 +1289,60 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
         const request = response.request();
         const parsedUrl = new URL(response.url());
 
+        const productCatalogPaths = new Set([
+          "/stock/v1/product",
+          "/stock/v1/group",
+          "/stock/v1/subgroup",
+          "/stock/v1/unit_measure",
+          "/stock/v1/packing",
+        ]);
+
         if (
+          productDiscoveryOnly
+          && request.method() === "GET"
+          && parsedUrl.hostname === "api.koper.com.br"
+          && productCatalogPaths.has(parsedUrl.pathname)
+        ) {
+          const task = response.json().then((body: unknown) => {
+            const object = typeof body === "object" && body !== null && !Array.isArray(body)
+              ? body as Record<string, unknown>
+              : null;
+            const records = Array.isArray(body)
+              ? body
+              : Object.values(object ?? {}).find((value) => Array.isArray(value)) ?? [];
+            const allowedFields = new Set([
+              "productId", "productName", "productFullName", "mainProductId",
+              "unitMeasureId", "symbol", "groupId", "groupName", "subgroupId",
+              "subgroupName", "packingId", "packingName", "status", "active",
+            ]);
+            const sample = (records as unknown[]).slice(0, 5).flatMap((item) => {
+              if (typeof item !== "object" || item === null || Array.isArray(item)) return [];
+              return [Object.fromEntries(
+                Object.entries(item as Record<string, unknown>)
+                  .filter(([key, value]) => allowedFields.has(key)
+                    && ["string", "number", "boolean"].includes(typeof value)),
+              )];
+            });
+            const queryParams = Object.fromEntries(
+              ["limit", "offset", "subgroupId", "formatted", "allProducts", "groupId", "orderFlag", "orderby"]
+                .flatMap((key) => parsedUrl.searchParams.has(key)
+                  ? [[key, parsedUrl.searchParams.get(key) ?? ""] as const]
+                  : []),
+            );
+
+            productCatalogReads.push({
+              endpoint: parsedUrl.origin + parsedUrl.pathname,
+              statusCode: response.status(),
+              queryParams,
+              dataKeys: object ? Object.keys(object).slice(0, 50) : [],
+              fieldPaths: collectFieldPaths(body).slice(0, 200),
+              itemsAmount: safeNumber(object?.itemsAmount ?? object?.total),
+              returnedRecords: (records as unknown[]).length,
+              sample,
+            });
+          }).catch(() => undefined);
+          pendingStockResponses.push(task);
+        } else if (
           request.method() === "GET" &&
           parsedUrl.hostname === "api.koper.com.br" &&
           parsedUrl.pathname === "/stock/v1/request"
@@ -2085,6 +2152,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
       quotationListReached,
       quotationFinalizedClicked,
       stockRequestReads,
+      productCatalogReads,
       quotationReads,
       quotationFilterControls,
       quotationDetailReads,
