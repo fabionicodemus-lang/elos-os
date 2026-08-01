@@ -1315,7 +1315,7 @@ export async function inspectKoperFlowContext(): Promise<KoperFlowContextDiagnos
               "unitMeasureId", "symbol", "groupId", "groupName", "subgroupId",
               "subgroupName", "packingId", "packingName", "status", "active",
             ]);
-            const sample = (records as unknown[]).slice(0, 5).flatMap((item) => {
+            const sample = (records as unknown[]).slice(0, 25).flatMap((item) => {
               if (typeof item !== "object" || item === null || Array.isArray(item)) return [];
               return [Object.fromEntries(
                 Object.entries(item as Record<string, unknown>)
