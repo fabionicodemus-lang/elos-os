@@ -9,6 +9,7 @@ import { inspectKoperNavigation } from "./diagnostics/inspect-koper-navigation.j
 import { inspectStockRequestDetail } from "./diagnostics/inspect-stock-request-detail.js";
 import { inspectStockRequests } from "./diagnostics/inspect-stock-requests.js";
 import { runLiveRecording } from "./diagnostics/live-recording.js";
+import { previewFlowStaging } from "./diagnostics/preview-flow-staging.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
 import { checkKoperStagingReadiness } from "./elos/supabase.js";
 
@@ -244,6 +245,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
                 ? runLiveRecording
                 : startupDiagnostic === "supabase-staging"
                   ? checkKoperStagingReadiness
+                  : startupDiagnostic === "staging-preview"
+                    ? previewFlowStaging
                   : null;
 
   if (diagnostic) {
