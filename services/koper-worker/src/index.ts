@@ -10,6 +10,7 @@ import { inspectStockRequestDetail } from "./diagnostics/inspect-stock-request-d
 import { inspectStockRequests } from "./diagnostics/inspect-stock-requests.js";
 import { runLiveRecording } from "./diagnostics/live-recording.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
+import { checkKoperStagingReadiness } from "./elos/supabase.js";
 
 function sendJson(
   response: ServerResponse,
@@ -241,7 +242,9 @@ server.listen(env.PORT, "0.0.0.0", () => {
               ? inspectKoperFlowContext
               : startupDiagnostic === "live-recording"
                 ? runLiveRecording
-                : null;
+                : startupDiagnostic === "supabase-staging"
+                  ? checkKoperStagingReadiness
+                  : null;
 
   if (diagnostic) {
     void diagnostic()
