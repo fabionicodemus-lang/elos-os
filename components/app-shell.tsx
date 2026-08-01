@@ -72,6 +72,9 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const purchaseOrdersHref = can("procurement.orders.view") ? "/suprimentos/pedidos-compras" : undefined;
   const materialReceiptsHref = can("procurement.receipts.view") ? "/suprimentos/recebimento-materiais" : undefined;
   const inventoryHref = can("procurement.inventory.view") ? "/suprimentos/estoque" : undefined;
+  const intelligenceHref = can("procurement.intelligence.view") ? "/suprimentos/controle-integrado" : undefined;
+  const supplierPerformanceHref = can("procurement.intelligence.view") ? "/suprimentos/desempenho-fornecedores" : undefined;
+  const procurementIndicatorsHref = can("procurement.intelligence.view") ? "/suprimentos/indicadores" : undefined;
   const manualInvoicesHref = can("finance.manual_invoices.view") ? "/financeiro/notas-manuais" : undefined;
   const electronicInvoicesHref = can("finance.invoices.view") ? "/financeiro/notas-eletronicas" : undefined;
   const bankAccountsHref = can("finance.bank_accounts.view") ? "/financeiro/contas-bancarias" : undefined;
@@ -123,11 +126,16 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Ordens de Serviço", href: workOrdersHref, active: activeItem === "work-orders", disabled: !workOrdersHref },
     ]},
     { key: "procurement", label: "Suprimentos", icon: "🛒", active: activeGroup === "procurement", items: [
+      { label: "Operação", sectionLabel: "Operação" },
       { label: "Orçamentos de Materiais", href: materialQuotationsHref, active: activeItem === "material-quotations", disabled: !materialQuotationsHref },
       { label: "Pedidos de Compras", href: purchaseOrdersHref, active: activeItem === "purchase-orders", disabled: !purchaseOrdersHref },
+      { label: "Recebimento de Materiais", href: materialReceiptsHref, active: activeItem === "material-receipts", disabled: !materialReceiptsHref },
       { label: "Estoque", href: inventoryHref, active: activeItem === "inventory", disabled: !inventoryHref },
       { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "procurement-suppliers", disabled: !can("suppliers.view") },
-      { label: "Recebimento de Materiais", href: materialReceiptsHref, active: activeItem === "material-receipts", disabled: !materialReceiptsHref },
+      { label: "Gestão e inteligência", sectionLabel: "Gestão e inteligência" },
+      { label: "Controle Integrado", href: intelligenceHref, active: activeItem === "integrated-control", disabled: !intelligenceHref },
+      { label: "Desempenho de Fornecedores", href: supplierPerformanceHref, active: activeItem === "supplier-performance", disabled: !supplierPerformanceHref },
+      { label: "Indicadores", href: procurementIndicatorsHref, active: activeItem === "procurement-indicators", disabled: !procurementIndicatorsHref },
     ]},
     { key: "finance", label: "Financeiro", icon: "$", active: activeGroup === "finance", items: [
       { label: "Contas a Pagar", href: can("payables.view") ? "/financeiro/contas-a-pagar" : undefined, active: activeItem === "payables", disabled: !can("payables.view") },
@@ -168,7 +176,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.67.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.69.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
