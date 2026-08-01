@@ -40,7 +40,11 @@ export function ServiceContractDialog({ suppliers, budgets, services, locations,
   const locationMap = useMemo(() => new Map(locations.map((item) => [item.id, item])), [locations]);
   const activityMap = useMemo(() => new Map(activities.map((item) => [item.id, item])), [activities]);
   const total = rows.reduce((sum, row) => sum + Number(row.contracted_quantity || 0) * Number(row.unit_price || 0), 0);
-  useEffect(() => { if (autoOpen) ref.current?.showModal(); }, [autoOpen]);
+  useEffect(() => { if (autoOpen && contract) ref.current?.showModal(); }, [autoOpen, contract]);
+
+  if (!contract) {
+    return <a className="elos-button contract-main-button" href="/execucao/contratacoes-servicos?view=requests&new=1">+ Iniciar contratação</a>;
+  }
 
   function update(index: number, patch: Partial<ContractItem>) {
     setRows((current) => current.map((row, itemIndex) => itemIndex === index ? { ...row, ...patch, total_value: Number((Number(patch.contracted_quantity ?? row.contracted_quantity) * Number(patch.unit_price ?? row.unit_price)).toFixed(2)) } : row));
@@ -68,34 +72,34 @@ export function ServiceContractDialog({ suppliers, budgets, services, locations,
   }
 
   return <>
-    <button className="elos-button contract-main-button" type="button" onClick={() => ref.current?.showModal()}>{label ?? (contract ? "Editar contrato" : "+ Novo contrato")}</button>
+    <button className="elos-button contract-main-button" type="button" onClick={() => ref.current?.showModal()}>{label ?? "Editar contrato"}</button>
     <dialog ref={ref} className="contract-dialog">
       <form action={saveServiceContract}>
-        <input type="hidden" name="contract_id" value={contract?.id ?? ""} />
+        <input type="hidden" name="contract_id" value={contract.id} />
         <input type="hidden" name="items_json" value={JSON.stringify(rows.filter((row) => row.service_id).map((row) => ({
           service_id: row.service_id, location_id: row.location_id, schedule_activity_id: row.schedule_activity_id,
           quantity: row.contracted_quantity, unit_price: row.unit_price, planned_start: row.planned_start, planned_finish: row.planned_finish, notes: row.scope_notes,
         })))} />
-        <div className="contract-dialog-head"><div><span>Execução · Contratos</span><h2>{contract ? "Editar contrato em elaboração" : "Novo contrato de serviços"}</h2><p>Fornecedor ativo, escopo técnico e apropriação por serviço da obra.</p></div><button type="button" onClick={() => ref.current?.close()}>×</button></div>
+        <div className="contract-dialog-head"><div><span>Execução · Contratos</span><h2>Editar contrato em elaboração</h2><p>O fornecedor e os valores vieram do mapa aprovado. Revise apenas enquanto o contrato estiver em elaboração.</p></div><button type="button" onClick={() => ref.current?.close()}>×</button></div>
         <div className="contract-dialog-body">
           <section className="contract-form-grid">
-            <label className="span2">Fornecedor / prestador<select name="supplier_id" defaultValue={contract?.supplier_id ?? ""} required><option value="">Selecione</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.trade_name || supplier.legal_name}{supplier.tax_id ? ` · ${supplier.tax_id}` : ""}</option>)}</select></label>
-            <label>Orçamento aprovado<select name="budget_id" defaultValue={contract?.budget_id ?? ""}><option value="">Sem vínculo específico</option>{budgets.map((budget) => <option key={budget.id} value={budget.id}>{budget.code ? `${budget.code} · ` : ""}{budget.name}</option>)}</select></label>
-            <label>Data da assinatura<input name="signed_date" type="date" defaultValue={contract?.signed_date ?? ""} /></label>
-            <label className="span2">Título do contrato<input name="title" defaultValue={contract?.title ?? ""} placeholder="Ex.: Execução de alvenaria e reboco interno" required /></label>
-            <label className="span2">Resumo do escopo<textarea name="scope_summary" rows={3} defaultValue={contract?.scope_summary ?? ""} placeholder="Descreva o objeto, limites, fornecimentos incluídos e responsabilidades principais." required /></label>
+            <label className="span2">Fornecedor / prestador<select name="supplier_id" defaultValue={contract.supplier_id} required><option value="">Selecione</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.trade_name || supplier.legal_name}{supplier.tax_id ? ` · ${supplier.tax_id}` : ""}</option>)}</select></label>
+            <label>Orçamento aprovado<select name="budget_id" defaultValue={contract.budget_id ?? ""}><option value="">Sem vínculo específico</option>{budgets.map((budget) => <option key={budget.id} value={budget.id}>{budget.code ? `${budget.code} · ` : ""}{budget.name}</option>)}</select></label>
+            <label>Data da assinatura<input name="signed_date" type="date" defaultValue={contract.signed_date ?? ""} /></label>
+            <label className="span2">Título do contrato<input name="title" defaultValue={contract.title} required /></label>
+            <label className="span2">Resumo do escopo<textarea name="scope_summary" rows={3} defaultValue={contract.scope_summary} required /></label>
             <label>Início da vigência<input name="start_date" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} required /></label>
-            <label>Fim da vigência<input name="end_date" type="date" defaultValue={contract?.end_date ?? addMonths(startDate, 6)} required /></label>
-            <label>Retenção contratual (%)<input name="retention_percent" type="number" min="0" max="100" step="0.01" defaultValue={contract?.retention_percent ?? 5} /></label>
-            <label>Garantia retida (%)<input name="guarantee_percent" type="number" min="0" max="100" step="0.01" defaultValue={contract?.guarantee_percent ?? 0} /></label>
-            <label>Garantia do serviço (meses)<input name="guarantee_months" type="number" min="0" max="240" defaultValue={contract?.guarantee_months ?? 60} /></label>
-            <label>Prazo de pagamento (dias)<input name="payment_days" type="number" min="0" max="365" defaultValue={contract?.payment_days ?? 15} /></label>
-            <label>Índice de reajuste<input name="adjustment_index" defaultValue={contract?.adjustment_index ?? ""} placeholder="Ex.: CUB-SC, INCC ou sem reajuste" /></label>
-            <label>Data-base do reajuste<input name="adjustment_base_date" type="date" defaultValue={contract?.adjustment_base_date ?? ""} /></label>
+            <label>Fim da vigência<input name="end_date" type="date" defaultValue={contract.end_date ?? addMonths(startDate, 6)} required /></label>
+            <label>Retenção contratual (%)<input name="retention_percent" type="number" min="0" max="100" step="0.01" defaultValue={contract.retention_percent ?? 5} /></label>
+            <label>Garantia retida (%)<input name="guarantee_percent" type="number" min="0" max="100" step="0.01" defaultValue={contract.guarantee_percent ?? 0} /></label>
+            <label>Garantia do serviço (meses)<input name="guarantee_months" type="number" min="0" max="240" defaultValue={contract.guarantee_months ?? 60} /></label>
+            <label>Prazo de pagamento (dias)<input name="payment_days" type="number" min="0" max="365" defaultValue={contract.payment_days ?? 15} /></label>
+            <label>Índice de reajuste<input name="adjustment_index" defaultValue={contract.adjustment_index ?? ""} /></label>
+            <label>Data-base do reajuste<input name="adjustment_base_date" type="date" defaultValue={contract.adjustment_base_date ?? ""} /></label>
           </section>
 
           <section className="contract-scope-section">
-            <div className="contract-section-title"><div><span>Escopo contratado</span><h3>Serviços, locais, quantidades e valores</h3></div><strong>{money(total)}</strong></div>
+            <div className="contract-section-title"><div><span>Escopo contratado</span><h3>Serviços, locais, quantidades e valores aprovados</h3></div><strong>{money(total)}</strong></div>
             <div className="contract-items">
               {rows.map((row, index) => <article className="contract-item" key={index}>
                 <div className="contract-item-number">{String(index + 1).padStart(2, "0")}</div>
@@ -109,7 +113,7 @@ export function ServiceContractDialog({ suppliers, budgets, services, locations,
                   <label>Total<input value={money(row.contracted_quantity * row.unit_price)} readOnly /></label>
                   <label>Início previsto<input type="date" value={row.planned_start ?? ""} onChange={(event) => update(index, { planned_start: event.target.value || null })} /></label>
                   <label>Fim previsto<input type="date" value={row.planned_finish ?? ""} onChange={(event) => update(index, { planned_finish: event.target.value || null })} /></label>
-                  <label className="wide">Detalhe do escopo<input value={row.scope_notes ?? ""} onChange={(event) => update(index, { scope_notes: event.target.value })} placeholder="Exclusões, critérios de medição e observações deste item" /></label>
+                  <label className="wide">Detalhe do escopo<input value={row.scope_notes ?? ""} onChange={(event) => update(index, { scope_notes: event.target.value })} /></label>
                 </div>
                 <button className="contract-remove-item" type="button" onClick={() => setRows((current) => current.length === 1 ? [emptyItem()] : current.filter((_, itemIndex) => itemIndex !== index))}>Remover</button>
               </article>)}
@@ -118,13 +122,13 @@ export function ServiceContractDialog({ suppliers, budgets, services, locations,
           </section>
 
           <section className="contract-form-grid">
-            <label>Contato do fornecedor<input name="contact_name" defaultValue={contract?.contact_name ?? ""} /></label>
-            <label>Telefone<input name="contact_phone" defaultValue={contract?.contact_phone ?? ""} /></label>
-            <label>E-mail<input name="contact_email" type="email" defaultValue={contract?.contact_email ?? ""} /></label>
-            <label className="span2">Observações contratuais<textarea name="notes" rows={3} defaultValue={contract?.notes ?? ""} placeholder="Seguros, documentos, condições especiais, retenções tributárias e demais observações." /></label>
+            <label>Contato do fornecedor<input name="contact_name" defaultValue={contract.contact_name ?? ""} /></label>
+            <label>Telefone<input name="contact_phone" defaultValue={contract.contact_phone ?? ""} /></label>
+            <label>E-mail<input name="contact_email" type="email" defaultValue={contract.contact_email ?? ""} /></label>
+            <label className="span2">Observações contratuais<textarea name="notes" rows={3} defaultValue={contract.notes ?? ""} /></label>
           </section>
         </div>
-        <div className="contract-dialog-foot"><div><small>Valor original calculado pelos itens</small><strong>{money(total)}</strong></div><div><button type="button" onClick={() => ref.current?.close()}>Cancelar</button><button className="primary" type="submit">{contract ? "Salvar alterações" : "Criar contrato"}</button></div></div>
+        <div className="contract-dialog-foot"><div><small>Valor original calculado pelos itens</small><strong>{money(total)}</strong></div><div><button type="button" onClick={() => ref.current?.close()}>Cancelar</button><button className="primary" type="submit">Salvar alterações</button></div></div>
       </form>
     </dialog>
   </>;
