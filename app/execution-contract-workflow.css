@@ -31,3 +31,55 @@
 .workflow-items-section+.workflow-notes{margin-top:18px}
 @media(max-width:980px){.contract-workflow-dialog.wide{width:min(940px,calc(100vw - 24px))}.workflow-items-section .workflow-item-card{padding-right:18px}.workflow-items-section .workflow-item-card .workflow-remove{position:static;display:block;margin:12px 0 0 auto}.workflow-items-section .workflow-item-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important}.workflow-items-section .workflow-item-fields .span3,.workflow-items-section .workflow-item-fields label:nth-child(3){grid-column:1/-1!important}.workflow-items-section .workflow-item-fields label:nth-child(4),.workflow-items-section .workflow-item-fields label:nth-child(5),.workflow-items-section .workflow-item-fields label:nth-child(6){grid-column:span 1}}
 @media(max-width:640px){.contract-workflow-dialog.wide{width:calc(100vw - 12px);border-radius:16px}.contract-workflow-dialog>form>header,.workflow-dialog-body,.contract-workflow-dialog>form>footer{padding-left:16px;padding-right:16px}.workflow-form-grid,.workflow-items-section .workflow-item-fields{grid-template-columns:1fr!important}.workflow-form-grid .span2,.workflow-form-grid .span3,.workflow-items-section .workflow-item-fields .span3,.workflow-items-section .workflow-item-fields label:nth-child(n){grid-column:1/-1!important}.workflow-items-section .workflow-item-card{padding:58px 14px 14px}.workflow-items-section .workflow-item-card>b{top:14px;left:14px}.workflow-section-head,.contract-workflow-dialog>form>footer{align-items:flex-start;flex-direction:column}.contract-workflow-dialog footer div{width:100%;justify-content:flex-end}}
+
+/* Compatibilidade com o tema atual do Elos OS e correção do posicionamento nativo do dialog. */
+:root{
+  --surface:var(--card,#fff);
+  --border:var(--line,#e5eae8);
+  --text:var(--foreground,#16211f);
+}
+.contract-workflow-dialog{
+  position:fixed!important;
+  inset:0!important;
+  margin:auto!important;
+  background:#fff!important;
+  color:var(--foreground,#16211f)!important;
+  border:1px solid var(--line,#e5eae8)!important;
+  overflow:hidden;
+  isolation:isolate;
+}
+.contract-workflow-dialog>form{
+  background:#fff;
+  color:var(--foreground,#16211f);
+}
+.contract-workflow-dialog>form>header,
+.contract-workflow-dialog>form>footer{
+  background:#fff;
+  border-color:var(--line,#e5eae8);
+}
+.contract-workflow-dialog .workflow-dialog-body{
+  background:#fff;
+}
+.contract-workflow-dialog input,
+.contract-workflow-dialog select,
+.contract-workflow-dialog textarea{
+  background:#fff!important;
+  color:var(--foreground,#16211f)!important;
+  border-color:var(--line,#d7e0df)!important;
+}
+.contract-workflow-dialog::backdrop{
+  background:rgba(7,26,24,.62);
+  backdrop-filter:blur(2px);
+}
+.contract-workflow-card,
+.contract-workflow-kpis article,
+.contract-workflow-flow div,
+.contract-workflow-tabs a,
+.contract-workflow-toolbar,
+.competition-detail-head,
+.competition-context,
+.competition-approval{
+  background:#fff;
+  border-color:var(--line,#e5eae8);
+  color:var(--foreground,#16211f);
+}
