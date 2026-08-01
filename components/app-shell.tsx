@@ -15,7 +15,7 @@ function initials(value: string) {
 }
 
 export async function AppShell({ activeGroup, activeItem, eyebrow, title, description, actions, children }: {
-  activeGroup: "home" | "system" | "projects" | "engineering" | "execution" | "procurement" | "finance" | "commercial" | "postwork";
+  activeGroup: "home" | "system" | "projects" | "engineering" | "execution" | "procurement" | "hr" | "finance" | "commercial" | "postwork";
   activeItem?: string; eyebrow: string; title: string; description?: string; actions?: ReactNode; children: ReactNode;
 }) {
   const { supabase, userId, email, company, companyId, projectId, role } = await resolveActiveWorkspace();
@@ -81,6 +81,8 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const electronicInvoicesHref = can("finance.invoices.view") ? "/financeiro/notas-eletronicas" : undefined;
   const bankAccountsHref = can("finance.bank_accounts.view") ? "/financeiro/contas-bancarias" : undefined;
   const taxesHref = can("finance.taxes.view") ? "/financeiro/impostos" : undefined;
+  const hrEmployeesHref = can("hr.employees.view") || can("hr.employees.manage") ? "/rh/colaboradores" : undefined;
+  const hrPayrollHref = can("hr.payroll.view") || can("hr.payroll.manage") || can("hr.payroll.approve") ? "/rh/folha" : undefined;
   const proposalsHref = can("commercial.proposals.view") ? "/comercial/propostas" : undefined;
   const brokersHref = can("commercial.brokers.view") ? "/comercial/corretores" : undefined;
   const assistanceHref = can("postwork.assistance.view") ? "/pos-obra/assistencias" : undefined;
@@ -142,6 +144,13 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Desempenho de Fornecedores", href: supplierPerformanceHref, active: activeItem === "supplier-performance", disabled: !supplierPerformanceHref },
       { label: "Indicadores", href: procurementIndicatorsHref, active: activeItem === "procurement-indicators", disabled: !procurementIndicatorsHref },
     ]},
+    { key: "hr", label: "RH", icon: "♧", active: activeGroup === "hr", items: [
+      { label: "Cadastros", sectionLabel: "Cadastros" },
+      { label: "Colaboradores", href: hrEmployeesHref, active: activeItem === "hr-employees", disabled: !hrEmployeesHref },
+      { label: "Folha e financeiro", sectionLabel: "Folha e financeiro" },
+      { label: "Folha de Pagamento", href: hrPayrollHref, active: activeItem === "hr-payroll", disabled: !hrPayrollHref },
+      { label: "Contas a Pagar da Folha", href: can("payables.view") ? "/financeiro/contas-a-pagar?q=RH" : undefined, active: activeItem === "hr-payables", disabled: !can("payables.view") },
+    ]},
     { key: "finance", label: "Financeiro", icon: "$", active: activeGroup === "finance", items: [
       { label: "Contas a Pagar", href: can("payables.view") ? "/financeiro/contas-a-pagar" : undefined, active: activeItem === "payables", disabled: !can("payables.view") },
       { label: "Contas a Receber", href: financeReceivablesHref, active: activeItem === "receivables", disabled: !financeReceivablesHref },
@@ -181,7 +190,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.70.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.71.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
