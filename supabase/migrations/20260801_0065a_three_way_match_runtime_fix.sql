@@ -38,6 +38,25 @@ after update of supplier_id,order_id,receipt_id
 on public.finance_electronic_invoices
 for each row execute function public.trigger_recompute_finance_three_way_header();
 
+-- A rotina legada de importação ainda cria comparações provisórias depois de cada
+-- item. A inserção das parcelas acontece ao final, portanto este trigger garante um
+-- último recálculo com todos os itens e remove as comparações legadas restantes.
+drop trigger if exists finance_invoice_installments_three_way_insert on public.finance_electronic_invoice_installments;
+create trigger finance_invoice_installments_three_way_insert
+after insert on public.finance_electronic_invoice_installments
+for each row execute function public.trigger_recompute_finance_three_way_match();
+
+drop trigger if exists finance_invoice_installments_three_way_update on public.finance_electronic_invoice_installments;
+create trigger finance_invoice_installments_three_way_update
+after update of amount,due_date,payment_method
+on public.finance_electronic_invoice_installments
+for each row execute function public.trigger_recompute_finance_three_way_match();
+
+drop trigger if exists finance_invoice_installments_three_way_delete on public.finance_electronic_invoice_installments;
+create trigger finance_invoice_installments_three_way_delete
+after delete on public.finance_electronic_invoice_installments
+for each row execute function public.trigger_recompute_finance_three_way_match();
+
 revoke all on function public.trigger_recompute_finance_three_way_match() from public,authenticated;
 revoke all on function public.trigger_recompute_finance_three_way_header() from public,authenticated;
 
