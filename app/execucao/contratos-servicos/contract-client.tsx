@@ -23,6 +23,11 @@ export type ContractRecord = {
   status: string;
 };
 
+type ServiceContractDialogProps = {
+  suppliers: SupplierOption[]; budgets: BudgetOption[]; services: ServiceOption[]; locations: LocationOption[]; activities: ActivityOption[];
+  contract?: ContractRecord | null; items?: ContractItem[]; autoOpen?: boolean; label?: string;
+};
+
 function emptyItem(): ContractItem {
   return { service_id: "", location_id: null, schedule_activity_id: null, service_code: "", service_name: "", location_name: null, unit_snapshot: "", contracted_quantity: 1, unit_price: 0, total_value: 0, measured_quantity: 0, measured_value: 0, planned_start: null, planned_finish: null, scope_notes: null };
 }
@@ -30,14 +35,12 @@ function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "
 function today() { return new Date().toISOString().slice(0, 10); }
 function addMonths(value: string, months: number) { const date = new Date(`${value}T12:00:00Z`); date.setUTCMonth(date.getUTCMonth() + months); return date.toISOString().slice(0, 10); }
 
-export function ServiceContractDialog({ suppliers, budgets, services, locations, activities, contract, items = [], autoOpen = false, label }: {
-  suppliers: SupplierOption[]; budgets: BudgetOption[]; services: ServiceOption[]; locations: LocationOption[]; activities: ActivityOption[];
-  contract?: ContractRecord | null; items?: ContractItem[]; autoOpen?: boolean; label?: string;
-}) {
-  if (!contract) {
-    return <Link className="elos-button contract-main-button" href="/execucao/contratos-servicos/novo">{label ?? "+ Nova contratação"}</Link>;
-  }
+export function ServiceContractDialog(props: ServiceContractDialogProps) {
+  if (!props.contract) return <Link className="elos-button contract-main-button" href="/execucao/contratos-servicos/novo">{props.label ?? "+ Nova contratação"}</Link>;
+  return <ServiceContractEditor {...props} contract={props.contract} />;
+}
 
+function ServiceContractEditor({ suppliers, budgets, services, locations, activities, contract, items = [], autoOpen = false, label }: Omit<ServiceContractDialogProps, "contract"> & { contract: ContractRecord }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [rows, setRows] = useState<ContractItem[]>(items.length ? items : [emptyItem()]);
   const [startDate, setStartDate] = useState(contract.start_date ?? today());
