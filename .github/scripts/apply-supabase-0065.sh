@@ -36,6 +36,9 @@ begin
   if not exists(select 1 from pg_trigger where tgname='finance_invoice_three_way_header_update' and not tgisinternal) then
     raise exception 'Recálculo após alteração de vínculos não criado';
   end if;
+  if not exists(select 1 from pg_trigger where tgname='finance_invoice_installments_three_way_insert' and not tgisinternal) then
+    raise exception 'Recálculo final após as parcelas não criado';
+  end if;
   if exists(
     select invoice_id,rule_key from public.finance_electronic_invoice_divergences
     where status='open' and rule_key like '3way:%'
