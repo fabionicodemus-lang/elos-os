@@ -1,0 +1,54 @@
+name: Aplicar migration Supabase 0068
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: apply-supabase-0068
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: github.event.issue.title == '[RUN] Supabase 0068'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: require
+      PGCONNECT_TIMEOUT: "10"
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/koper-connector-bootstrap
+      - name: Aplicar e validar
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then echo 'SUPABASE_DB_URL não configurada'; exit 89; fi
+          python - <<'PY'
+          import os,re
+          value=os.environ['SUPABASE_DB_URL']
+          print(f'::add-mask::{value}')
+          if re.search(r'\[(?:your-)?password\]|your-password',value,re.I): raise SystemExit(90)
+          PY
+          sudo timeout 60s apt-get update >/dev/null
+          sudo timeout 60s apt-get install -y postgresql-client >/dev/null
+          timeout 120s psql "$SUPABASE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 --file=supabase/migrations/20260802_0068_koper_direct_purchase_orders.sql
+          timeout 35s psql "$SUPABASE_DB_URL" --no-psqlrc --set=ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          begin
+            if (select is_nullable from information_schema.columns where table_schema='public' and table_name='procurement_purchase_orders' and column_name='quotation_id') <> 'YES' then raise exception 'quotation_id do pedido continua obrigatório'; end if;
+            if (select is_nullable from information_schema.columns where table_schema='public' and table_name='procurement_purchase_order_items' and column_name='request_item_id') <> 'YES' then raise exception 'request_item_id do item continua obrigatório'; end if;
+            if not exists(select 1 from pg_constraint where conname='procurement_purchase_orders_company_source_key') then raise exception 'identidade externa do pedido ausente'; end if;
+            if not exists(select 1 from pg_constraint where conname='procurement_purchase_order_items_company_source_key') then raise exception 'identidade externa do item ausente'; end if;
+          end $$;
+          SQL
+          gh issue comment "$ISSUE_NUMBER" --body '✅ Migration 0068 aplicada e validada. Pedidos diretos do Koper podem ser importados sem criar cotações fictícias.'
+          gh issue close "$ISSUE_NUMBER" --reason completed

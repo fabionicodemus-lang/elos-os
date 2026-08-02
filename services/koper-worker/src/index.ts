@@ -12,6 +12,10 @@ import { inspectStockRequestDetail } from "./diagnostics/inspect-stock-request-d
 import { inspectStockRequests } from "./diagnostics/inspect-stock-requests.js";
 import { inspectFlowPurchaseOrders } from "./diagnostics/inspect-flow-purchase-orders.js";
 import { writeFlowPurchaseOrderBatch } from "./diagnostics/write-flow-purchase-orders.js";
+import {
+  checkPurchaseOrderPromotionReadiness,
+  promoteKoperPurchaseOrders,
+} from "./diagnostics/promote-koper-purchase-orders.js";
 import { runLiveRecording } from "./diagnostics/live-recording.js";
 import { previewFlowStaging } from "./diagnostics/preview-flow-staging.js";
 import { writeFlowStagingSample } from "./diagnostics/write-flow-staging-sample.js";
@@ -313,6 +317,10 @@ server.listen(env.PORT, "0.0.0.0", () => {
                               ? inspectFlowPurchaseOrders
                             : startupDiagnostic === "purchase-order-staging-write"
                               ? writeFlowPurchaseOrderBatch
+                            : startupDiagnostic === "purchase-order-promotion-readiness"
+                              ? checkPurchaseOrderPromotionReadiness
+                            : startupDiagnostic === "purchase-order-promote-full"
+                              ? promoteKoperPurchaseOrders
                             : startupDiagnostic === "product-promote-full"
                               ? promoteKoperProducts
                               : startupDiagnostic === "service-promote-full"

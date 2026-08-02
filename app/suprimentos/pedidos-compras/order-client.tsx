@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { savePurchaseOrderHeader } from "./actions";
 
 export type PurchaseOrderRecord = {
-  id:string; quotation_id:string; supplier_id:string; order_number:string; status:string; issue_date:string|null;
+  id:string; quotation_id:string|null; supplier_id:string; order_number:string; status:string; issue_date:string|null;
   expected_delivery_date:string|null; delivery_address:string|null; payment_terms:string|null; freight_terms:string|null;
   warranty_terms:string|null; supplier_contact_name:string|null; supplier_contact_email:string|null; supplier_contact_phone:string|null;
   notes:string|null; supplier_notes:string|null;

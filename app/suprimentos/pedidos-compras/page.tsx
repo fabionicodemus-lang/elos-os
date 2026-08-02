@@ -14,7 +14,7 @@ type Supplier={id:string;legal_name:string;trade_name:string|null;tax_id:string|
 type Quotation={id:string;quotation_number:string;title:string;status:string;desired_delivery_date:string|null;delivery_address:string|null;total_awarded_amount:number;approved_at:string|null};
 type Award={id:string;quotation_id:string;supplier_id:string;awarded_total_cost:number};
 type Order=PurchaseOrderRecord&{company_id:string;project_id:string;sequence_no:number;subtotal_amount:number;freight_amount:number;tax_amount:number;other_cost_amount:number;discount_amount:number;total_amount:number;received_amount:number;invoiced_amount:number;buyer_name:string|null;supplier_confirmation_reference:string|null;issued_at:string|null;confirmed_at:string|null;closed_at:string|null;cancellation_reason:string|null;created_at:string};
-type OrderItem={id:string;order_id:string;award_id:string;request_number:string;input_code:string;input_name:string;unit_snapshot:string;cost_center_code:string;cost_center_name:string;brand:string|null;manufacturer:string|null;ordered_quantity:number;received_quantity:number;accepted_quantity:number;rejected_quantity:number;cancelled_quantity:number;unit_price:number;discount_percent:number;tax_percent:number;freight_amount:number;other_cost_amount:number;delivered_unit_cost:number;total_amount:number;expected_delivery_date:string|null;notes:string|null};
+type OrderItem={id:string;order_id:string;award_id:string|null;request_number:string;input_code:string;input_name:string;unit_snapshot:string;cost_center_code:string;cost_center_name:string;brand:string|null;manufacturer:string|null;ordered_quantity:number;received_quantity:number;accepted_quantity:number;rejected_quantity:number;cancelled_quantity:number;unit_price:number;discount_percent:number;tax_percent:number;freight_amount:number;other_cost_amount:number;delivered_unit_cost:number;total_amount:number;expected_delivery_date:string|null;notes:string|null};
 type Document={id:string;order_id:string;document_type:string;storage_path:string;file_name:string;caption:string|null;uploaded_at:string};
 type SignedDocument=Document&{signed_url:string|null};
 
@@ -46,7 +46,7 @@ export default async function PurchaseOrdersPage({searchParams}:{searchParams:Pr
   const quoteMap=new Map(quotesResult.data.map(q=>[q.id,q]));
   const itemMap=new Map<string,OrderItem[]>();itemsResult.data.forEach(i=>itemMap.set(i.order_id,[...(itemMap.get(i.order_id)??[]),i]));
   const docMap=new Map<string,Document[]>();docsResult.data.forEach(d=>docMap.set(d.order_id,[...(docMap.get(d.order_id)??[]),d]));
-  const convertedAwards=new Set(itemsResult.data.map(i=>i.award_id));
+  const convertedAwards=new Set(itemsResult.data.flatMap(i=>i.award_id?[i.award_id]:[]));
   const eligibleQuotes=quotesResult.data.filter(q=>awardsResult.data.some(a=>a.quotation_id===q.id&&!convertedAwards.has(a.id)));
   const selected=params.order?orders.find(o=>o.id===params.order)??null:null;
   const selectedItems=selected?itemMap.get(selected.id)??[]:[];
