@@ -27,6 +27,9 @@ jobs:
           else
             echo 'skip=false' >> "$GITHUB_OUTPUT"
           fi
+      - name: Aplicar correção do executor
+        if: steps.guard.outputs.skip != 'true'
+        run: python .github/scripts/fix-budget-base-ui-v0716.py
       - name: Aplicar alterações
         if: steps.guard.outputs.skip != 'true'
         run: python .github/scripts/apply-budget-base-ui-v0716.py
