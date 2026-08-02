@@ -71,7 +71,7 @@ function safeErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : "Erro desconhecido";
   return message
     .replace(/((?:x-accesstoken|authorization|cookie):)[^\r\n]*/gi, "$1 [REDACTED]")
-    .replace(/([?&]token=)[^&\s]+/gi, "$1[REDACTED]")
+    .replace(/([?&](?:access_?token|token)=)[^&\s]+/gi, "$1[REDACTED]")
     .slice(0, 2_000);
 }
 

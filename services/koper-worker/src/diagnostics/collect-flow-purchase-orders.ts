@@ -68,6 +68,30 @@ function detailUrl(template: string, orderId: string): string {
   return url.toString();
 }
 
+async function fetchPurchaseOrderDetail(
+  page: Page,
+  url: string,
+  headers: Record<string, string>,
+  orderId: string,
+): Promise<Record<string, unknown>> {
+  let lastStatus: number | null = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await page.request.get(url, { headers, timeout: 30_000 });
+      lastStatus = response.status();
+      if (response.ok()) {
+        const body: unknown = await response.json();
+        const payload = objectValue(body);
+        if (payload) return payload;
+      }
+    } catch {
+      // A API do Koper encerra conexões esporadicamente; a repetição é idempotente.
+    }
+    if (attempt < 3) await page.waitForTimeout(attempt * 1_000);
+  }
+  throw new Error(`Koper purchase order ${orderId} failed${lastStatus === null ? "" : ` (HTTP ${lastStatus})`}`);
+}
+
 export async function collectFlowPurchaseOrderBatch(batchIndex: number, batchSize = 100): Promise<{
   ok: true;
   authenticated: boolean;
@@ -130,14 +154,12 @@ export async function collectFlowPurchaseOrderBatch(batchIndex: number, batchSiz
     for (let index = 0; index < ids.length; index += concurrency) {
       const batch = ids.slice(index, index + concurrency);
       details.push(...await Promise.all(batch.map(async (orderId) => {
-        const detailResponse = await page.request.get(detailUrl(transport.url, orderId), {
-          headers: transport.headers,
-          timeout: 30_000,
-        });
-        if (!detailResponse.ok()) throw new Error(`Koper purchase order ${orderId} failed (HTTP ${detailResponse.status()})`);
-        const detailBody: unknown = await detailResponse.json();
-        const payload = objectValue(detailBody);
-        if (!payload) throw new Error(`Koper purchase order ${orderId} is invalid`);
+        const payload = await fetchPurchaseOrderDetail(
+          page,
+          detailUrl(transport.url, orderId),
+          transport.headers,
+          orderId,
+        );
         return { orderId, payload };
       })));
     }
