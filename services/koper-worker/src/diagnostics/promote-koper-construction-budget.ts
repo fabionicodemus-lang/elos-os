@@ -140,8 +140,10 @@ export async function promoteKoperConstructionBudget(): Promise<{
     throw new Error("Expected exactly one staged Flow construction budget");
   }
 
-  const sourceBudget = payloadObject(budgetRows[0]);
-  const sourceBudgetId = budgetRows[0].koper_id;
+  const budgetRow = budgetRows[0];
+  if (!budgetRow) throw new Error("Staged Flow construction budget is missing");
+  const sourceBudget = payloadObject(budgetRow);
+  const sourceBudgetId = budgetRow.koper_id;
   const sourceStatus = normalize(text(sourceBudget.engBudgetStatus) ?? "");
   const status =
     sourceStatus.includes("aprov")
@@ -177,7 +179,9 @@ export async function promoteKoperConstructionBudget(): Promise<{
   });
 
   if (budgets.length !== 1) throw new Error("Flow budget upsert did not return one row");
-  const budgetId = budgets[0].id;
+  const promotedBudget = budgets[0];
+  if (!promotedBudget) throw new Error("Flow budget upsert returned no row");
+  const budgetId = promotedBudget.id;
 
   const sourceItems: BudgetItemSource[] = itemRows.map((row) => ({
     koperId: row.koper_id,
@@ -311,8 +315,9 @@ export async function promoteKoperConstructionBudget(): Promise<{
 
   for (let index = 0; index < desired.length; index += 1) {
     const item = desired[index];
-    const koperId = leafItems[index].koperId;
-    const existingId = existingByKoperId.get(koperId);
+    const sourceItem = leafItems[index];
+    if (!item || !sourceItem) throw new Error("Budget item mapping became misaligned");
+    const existingId = existingByKoperId.get(sourceItem.koperId);
     if (existingId) updates.push({ id: existingId, payload: item });
     else inserts.push(item);
   }
