@@ -426,11 +426,7 @@ async function fetchCompositionDetailsByService(
     }
 
     const body: unknown = await response.json();
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      throw new Error(`Invalid Koper composition detail for service ${serviceId}`);
-    }
-
-    details.push({ serviceId, ...(body as Record<string, unknown>) });
+    details.push({ serviceId, response: body });
   }
 
   return details;

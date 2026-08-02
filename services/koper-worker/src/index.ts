@@ -256,10 +256,20 @@ server.listen(env.PORT, "0.0.0.0", () => {
                 : startupDiagnostic === "engineering-flow"
                   ? inspectKoperEngineering
                   : startupDiagnostic === "engineering-composition-sample"
-                    ? () => inspectKoperEngineering({
-                      collectFullBudget: true,
-                      collectCompositionSample: true,
-                    })
+                    ? async () => {
+                      const result = await inspectKoperEngineering({
+                        collectFullBudget: true,
+                        collectCompositionSample: true,
+                      });
+                      return {
+                        ok: true,
+                        authenticated: result.authenticated,
+                        flowSelected: result.flowSelected,
+                        fullCompositionDetails: result.fullCompositionDetails ?? [],
+                        message: result.message,
+                        checkedAt: result.checkedAt,
+                      };
+                    }
                   : startupDiagnostic === "engineering-staging-inspect"
                     ? inspectFlowEngineeringStaging
                   : startupDiagnostic === "supabase-staging"
