@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, type FormEvent } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 export type ProjectSwitcherOption = {
@@ -13,7 +13,6 @@ export function ProjectSwitcher({
   companyId,
   activeProjectId,
   projects,
-  action,
 }: {
   companyId: string;
   activeProjectId: string | null;
@@ -22,32 +21,37 @@ export function ProjectSwitcher({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [selectedProjectId, setSelectedProjectId] = useState(activeProjectId ?? "");
-
-  useEffect(() => {
-    setSelectedProjectId(activeProjectId ?? "");
-  }, [activeProjectId]);
 
   const returnTo = useMemo(() => {
     const query = searchParams.toString();
     return query ? `${pathname}?${query}` : pathname;
   }, [pathname, searchParams]);
 
+  useEffect(() => {
+    document.querySelectorAll<HTMLElement>(".elos-module-version").forEach((element) => {
+      element.textContent = "V0.71.1 · sistema integrado";
+    });
+  }, [pathname]);
+
   function submitOnChange(event: FormEvent<HTMLSelectElement>) {
-    const form = event.currentTarget.form;
-    setSelectedProjectId(event.currentTarget.value);
-    window.setTimeout(() => form?.requestSubmit(), 0);
+    event.currentTarget.form?.requestSubmit();
   }
 
   return (
-    <form className="elos-project-switcher" action={action}>
+    <form
+      className="elos-project-switcher"
+      action="/api/workspace/select"
+      method="post"
+      data-build-version="V0.71.1"
+    >
       <input type="hidden" name="company_id" value={companyId} />
       <input type="hidden" name="return_to" value={returnTo} />
       <label htmlFor="elos-project-select">Empreendimento</label>
       <select
+        key={activeProjectId ?? "company-overview"}
         id="elos-project-select"
         name="project_id"
-        value={selectedProjectId}
+        defaultValue={activeProjectId ?? ""}
         onChange={submitOnChange}
         aria-label="Selecionar empreendimento"
       >
