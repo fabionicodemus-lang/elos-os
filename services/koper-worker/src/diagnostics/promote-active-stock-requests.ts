@@ -83,15 +83,21 @@ function dateOnly(value: unknown, fallback: string): string {
   return (sourceDate(value) ?? fallback).slice(0, 10);
 }
 
-function headerStatus(value: unknown): "requested" | "approved" {
+type HeaderStatus = "requested" | "approved" | "attended" | "cancelled";
+
+function headerStatus(value: unknown): HeaderStatus {
   const normalized = normalize(text(value) ?? "");
+  if (normalized.includes("finalizado")) return "attended";
+  if (normalized.includes("cancelado") || normalized.includes("reprovado")) return "cancelled";
   return normalized.includes("aprovado") ? "approved" : "requested";
 }
 
-export async function promoteActiveStockRequests(): Promise<{
+export async function promoteAllStockRequests(): Promise<{
   ok: true;
   requests: number;
+  sourceItems: number;
   items: number;
+  requestStatuses: Record<string, number>;
   currentServiceAllocations: number;
   legacyServiceAllocations: number;
   verifiedRequests: number;
@@ -99,8 +105,8 @@ export async function promoteActiveStockRequests(): Promise<{
 }> {
   if (
     process.env.KOPER_MATERIAL_REQUESTS_WRITE_ENABLED !== "true"
-    || process.env.KOPER_STOCK_REQUEST_ACTIVE_PROMOTION_ENABLED !== "true"
-  ) throw new Error("Active Koper stock request promotion is not explicitly enabled");
+    || process.env.KOPER_STOCK_REQUEST_FULL_PROMOTION_ENABLED !== "true"
+  ) throw new Error("Full Koper stock request promotion is not explicitly enabled");
 
   const [requestRows, itemRows, budgetItemRows, inputs, services, projects, budgets, memberships] = await Promise.all([
     readStaging("stock_request"),
@@ -215,6 +221,8 @@ export async function promoteActiveStockRequests(): Promise<{
     const numericId = Number(row.koper_id);
     if (!Number.isInteger(numericId) || numericId <= 0) throw new Error(`Invalid Koper request id ${row.koper_id}`);
     const status = headerStatus(payload.status);
+    const isApproved = status === "approved" || status === "attended";
+    const isCancelled = status === "cancelled";
     const createdAt = sourceDate(payload.requestDate) ?? now;
     const approvedDates = (Array.isArray(payload.products) ? payload.products : [])
       .map((value) => sourceDate(objectValue(value).approvedDate))
@@ -236,8 +244,15 @@ export async function promoteActiveStockRequests(): Promise<{
         `local=${text(payload.stockPlaceName) ?? "Flow Aptos"}`,
         text(payload.commentRequest),
       ].filter(Boolean).join(" · "),
-      approved_by: status === "approved" ? actor.user_id : null,
-      approved_at: status === "approved" ? approvedDates.at(-1) ?? createdAt : null,
+      approved_by: isApproved ? actor.user_id : null,
+      approved_at: isApproved ? approvedDates.at(-1) ?? createdAt : null,
+      cancelled_by: isCancelled ? actor.user_id : null,
+      cancelled_at: isCancelled
+        ? sourceDate(payload.cancelledDate) ?? sourceDate(payload.updatedAt) ?? createdAt
+        : null,
+      cancellation_reason: isCancelled
+        ? `Status original no Koper: ${text(payload.status) ?? "Cancelado"}`
+        : null,
       created_by: actor.user_id,
       updated_by: actor.user_id,
       created_at: createdAt,
@@ -368,31 +383,67 @@ export async function promoteActiveStockRequests(): Promise<{
     });
   }
 
-  const verifiedRequests = await requestSupabase<Array<{ id: string }>>("execution_material_requests", {
+  const intendedStatusByRequestNumber = new Map(headerPayloads.map((header) => [
+    header.request_number,
+    header.status,
+  ]));
+  for (const status of ["requested", "approved", "attended", "cancelled"] as const) {
+    const ids = promotedHeaders.flatMap((header) =>
+      intendedStatusByRequestNumber.get(header.request_number) === status ? [header.id] : []
+    );
+    for (const batch of chunks(ids, 100)) {
+      await requestSupabase<Array<{ id: string }>>("execution_material_requests", {
+        method: "PATCH",
+        body: { status, updated_at: now },
+        prefer: "return=representation",
+        query: new URLSearchParams({ id: `in.(${batch.join(",")})`, select: "id" }),
+      });
+    }
+  }
+
+  const verifiedRequests = await requestSupabase<Array<{
+    id: string;
+    request_number: string;
+    status: HeaderStatus;
+  }>>("execution_material_requests", {
     query: new URLSearchParams({
-      select: "id",
+      select: "id,request_number,status",
       company_id: `eq.${env.BOSSA_COMPANY_ID}`,
       project_id: `eq.${project.id}`,
       request_number: "like.KOPER-*",
       limit: "1000",
     }),
   });
-  const verifiedItems = await requestSupabase<Array<{ id: string }>>("execution_material_request_items", {
-    query: new URLSearchParams({
-      select: "id",
-      company_id: `eq.${env.BOSSA_COMPANY_ID}`,
-      project_id: `eq.${project.id}`,
-      notes: "like.Koper productRequestIds=*",
-      limit: "1000",
-    }),
-  });
+  const verifiedItems: Array<{ id: string }> = [];
+  for (let offset = 0; ; offset += 1_000) {
+    const page = await requestSupabase<Array<{ id: string }>>("execution_material_request_items", {
+      query: new URLSearchParams({
+        select: "id",
+        company_id: `eq.${env.BOSSA_COMPANY_ID}`,
+        project_id: `eq.${project.id}`,
+        notes: "like.Koper productRequestIds=*",
+        limit: "1000",
+        offset: String(offset),
+      }),
+    });
+    verifiedItems.push(...page);
+    if (page.length < 1_000) break;
+  }
   if (verifiedRequests.length !== headerPayloads.length || verifiedItems.length !== itemPayloads.length) {
     throw new Error("Active Koper stock request verification failed");
   }
+  if (verifiedRequests.some((request) =>
+    intendedStatusByRequestNumber.get(request.request_number) !== request.status
+  )) throw new Error("Koper stock request status verification failed");
   return {
     ok: true,
     requests: headerPayloads.length,
+    sourceItems: itemRows.length,
     items: itemPayloads.length,
+    requestStatuses: verifiedRequests.reduce<Record<string, number>>((counts, request) => {
+      counts[request.status] = (counts[request.status] ?? 0) + 1;
+      return counts;
+    }, {}),
     currentServiceAllocations,
     legacyServiceAllocations,
     verifiedRequests: verifiedRequests.length,

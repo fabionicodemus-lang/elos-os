@@ -32,7 +32,7 @@ import {
   checkStockRequestPromotionReadiness,
 } from "./diagnostics/check-stock-request-promotion-readiness.js";
 import { promoteStockRequestInputs } from "./diagnostics/promote-stock-request-inputs.js";
-import { promoteActiveStockRequests } from "./diagnostics/promote-active-stock-requests.js";
+import { promoteAllStockRequests } from "./diagnostics/promote-active-stock-requests.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
 import { checkKoperStagingReadiness } from "./elos/supabase.js";
 
@@ -331,8 +331,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
                                               ? checkStockRequestAllocationMismatches
                                             : startupDiagnostic === "stock-request-input-promote"
                                               ? promoteStockRequestInputs
-                                              : startupDiagnostic === "stock-request-active-promote"
-                                                ? promoteActiveStockRequests
+                                            : startupDiagnostic === "stock-request-full-promote"
+                                                ? promoteAllStockRequests
                   : null;
 
   if (diagnostic) {
