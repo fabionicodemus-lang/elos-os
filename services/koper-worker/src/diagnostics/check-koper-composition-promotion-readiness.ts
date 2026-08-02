@@ -40,7 +40,18 @@ function payloadObject(payload: unknown): Record<string, unknown> {
     : {};
 }
 
-async function readStagingDetails(): Promise<StagingRow[]> {
+function scalarPayload(payload: unknown): Record<string, string | number | boolean | null> {
+  return Object.fromEntries(
+    Object.entries(payloadObject(payload)).filter(([, value]) =>
+      value === null
+      || typeof value === "string"
+      || typeof value === "number"
+      || typeof value === "boolean"
+    ),
+  ) as Record<string, string | number | boolean | null>;
+}
+
+async function readStaging(entity: "budget_composition_detail" | "budget_input"): Promise<StagingRow[]> {
   const rows: StagingRow[] = [];
   const pageSize = 1_000;
 
@@ -50,7 +61,7 @@ async function readStagingDetails(): Promise<StagingRow[]> {
         select: "koper_id,payload",
         company_id: `eq.${env.BOSSA_COMPANY_ID}`,
         source: "eq.koper",
-        entity: "eq.budget_composition_detail",
+        entity: `eq.${entity}`,
         sync_state: "eq.present",
         order: "koper_id.asc",
         limit: String(pageSize),
@@ -124,6 +135,10 @@ export async function checkKoperCompositionPromotionReadiness(): Promise<{
   missingServiceIds: string[];
   missingInputIds: string[];
   unsupportedItemTypes: string[];
+  missingInputDetails: Array<{
+    inputId: string;
+    payload: Record<string, string | number | boolean | null> | null;
+  }>;
   invalidItems: Array<{
     compositionId: string;
     serviceId: string | null;
@@ -131,8 +146,9 @@ export async function checkKoperCompositionPromotionReadiness(): Promise<{
     coefficient: number | null;
   }>;
 }> {
-  const [details, services, inputs] = await Promise.all([
-    readStagingDetails(),
+  const [details, budgetInputs, services, inputs] = await Promise.all([
+    readStaging("budget_composition_detail"),
+    readStaging("budget_input"),
     readCatalog("engineering_services"),
     readCatalog("engineering_inputs"),
   ]);
@@ -143,6 +159,7 @@ export async function checkKoperCompositionPromotionReadiness(): Promise<{
   const referencedInputs = unique(items.map((item) => item.itemId));
   const missingServiceIds = referencedServices.filter((id) => !serviceIds.has(id));
   const missingInputIds = referencedInputs.filter((id) => !inputIds.has(id));
+  const budgetInputById = new Map(budgetInputs.map((row) => [row.koper_id, row]));
   const itemTypes = items.reduce<Record<string, number>>((counts, item) => {
     counts[item.itemType] = (counts[item.itemType] ?? 0) + 1;
     return counts;
@@ -176,6 +193,12 @@ export async function checkKoperCompositionPromotionReadiness(): Promise<{
     referencedInputs: referencedInputs.length,
     missingServiceIds,
     missingInputIds,
+    missingInputDetails: missingInputIds.map((inputId) => ({
+      inputId,
+      payload: budgetInputById.has(inputId)
+        ? scalarPayload(budgetInputById.get(inputId)?.payload)
+        : null,
+    })),
     unsupportedItemTypes,
     invalidItems,
   };
