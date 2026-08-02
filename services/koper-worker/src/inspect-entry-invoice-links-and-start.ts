@@ -24,6 +24,7 @@ const SAMPLES = [
     expectedInputIds: ["15305", "15306"],
   },
 ];
+const FIRST_SAMPLE = SAMPLES[0]!;
 
 function objectValue(value: unknown): UnknownRecord | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -124,7 +125,7 @@ const result = await withBrowserless(async ({ page }) => {
     }
   };
   page.on("response", capture);
-  await page.goto(`https://app.koper.com.br/financeiro/notas_fiscais/view/${SAMPLES[0].invoiceId}`, {
+  await page.goto(`https://app.koper.com.br/financeiro/notas_fiscais/view/${FIRST_SAMPLE.invoiceId}`, {
     waitUntil: "domcontentloaded",
     timeout: 20_000,
   }).catch(() => undefined);
