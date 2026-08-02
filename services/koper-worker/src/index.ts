@@ -252,6 +252,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
                 ? runLiveRecording
                 : startupDiagnostic === "engineering-flow"
                   ? inspectKoperEngineering
+                  : startupDiagnostic === "engineering-staging-inspect"
+                    ? inspectFlowEngineeringStaging
                   : startupDiagnostic === "supabase-staging"
                     ? checkKoperStagingReadiness
                   : startupDiagnostic === "staging-preview"
