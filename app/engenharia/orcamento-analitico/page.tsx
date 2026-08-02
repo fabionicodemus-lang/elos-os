@@ -11,14 +11,35 @@ type Budget = {
   status: "draft" | "in_progress" | "review" | "approved" | "archived";
   reference_date: string | null;
   area_m2: number;
+  source_system: string | null;
   updated_at: string;
 };
 
 type BudgetGroup = {
+  id: string;
   budget_id: string;
   code: string;
   name: string;
   sort_order: number;
+};
+
+type BudgetItem = {
+  id: string;
+  budget_id: string;
+  group_id: string | null;
+  service_id: string | null;
+  code: string | null;
+  description: string;
+  unit: string;
+  quantity: number;
+  material_unit_cost: number;
+  labor_unit_cost: number;
+  equipment_unit_cost: number;
+  other_unit_cost: number;
+  unit_direct_cost: number;
+  total_direct_cost: number;
+  sort_order: number;
+  notes: string | null;
 };
 
 type Service = {
@@ -80,15 +101,23 @@ type NatureTotals = {
 };
 
 type AnalyticalRow = {
-  service: Service;
+  id: string;
+  source: "revision" | "takeoff";
+  sourceLabel: string;
+  serviceId: string | null;
+  code: string;
+  description: string;
+  unit: string;
+  groupCode: string;
+  groupName: string;
+  groupOrder: number;
+  sortOrder: number;
   quantities: QuantitySummary;
   quantityUsed: number;
   unitCost: number | null;
   totalCost: number | null;
   unitNature: NatureTotals;
   totalNature: NatureTotals;
-  missingPrices: number;
-  compositionItems: number;
   statusKey: "complete" | "missing_composition" | "missing_price" | "no_quantity";
   statusLabel: string;
 };
@@ -141,6 +170,21 @@ function percentage(value: number) {
   return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)}%`;
 }
 
+function sumNature(value: NatureTotals) {
+  return Object.values(value).reduce((sum, current) => sum + current, 0);
+}
+
+function multiplyNature(value: NatureTotals, quantity: number): NatureTotals {
+  return {
+    material: value.material * quantity,
+    labor: value.labor * quantity,
+    equipment: value.equipment * quantity,
+    service: value.service * quantity,
+    freight: value.freight * quantity,
+    other: value.other * quantity,
+  };
+}
+
 function addNature(target: NatureTotals, source: NatureTotals) {
   (Object.keys(target) as (keyof NatureTotals)[]).forEach((key) => {
     target[key] += source[key];
@@ -173,7 +217,7 @@ export default async function AnalyticalBudgetPage({
   const budgetsPromise = projectId
     ? supabase
         .from("engineering_budgets")
-        .select("id, code, name, version, status, reference_date, area_m2, updated_at")
+        .select("id, code, name, version, status, reference_date, area_m2, source_system, updated_at")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .neq("status", "archived")
@@ -185,6 +229,7 @@ export default async function AnalyticalBudgetPage({
     projectResult,
     budgetsResult,
     groupsResult,
+    budgetItemsResult,
     servicesResult,
     takeoffsResult,
     compositionsResult,
@@ -198,7 +243,7 @@ export default async function AnalyticalBudgetPage({
       ? fetchAllRows<BudgetGroup>(async (from, to) => {
           const { data, error } = await supabase
             .from("engineering_budget_groups")
-            .select("budget_id, code, name, sort_order")
+            .select("id, budget_id, code, name, sort_order")
             .eq("company_id", companyId)
             .eq("project_id", projectId)
             .eq("status", "active")
@@ -208,6 +253,19 @@ export default async function AnalyticalBudgetPage({
           return { data: (data ?? []) as BudgetGroup[], error };
         })
       : Promise.resolve({ data: [] as BudgetGroup[], error: null }),
+    projectId
+      ? fetchAllRows<BudgetItem>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("engineering_budget_items")
+            .select("id, budget_id, group_id, service_id, code, description, unit, quantity, material_unit_cost, labor_unit_cost, equipment_unit_cost, other_unit_cost, unit_direct_cost, total_direct_cost, sort_order, notes")
+            .eq("company_id", companyId)
+            .eq("project_id", projectId)
+            .eq("status", "active")
+            .order("sort_order")
+            .range(from, to);
+          return { data: (data ?? []) as BudgetItem[], error };
+        })
+      : Promise.resolve({ data: [] as BudgetItem[], error: null }),
     fetchAllRows<Service>(async (from, to) => {
       const { data, error } = await supabase
         .from("engineering_services")
@@ -269,13 +327,99 @@ export default async function AnalyticalBudgetPage({
   const budgets = (budgetsResult.data ?? []) as Budget[];
   const selectedBudget = budgets.find((budget) => budget.id === params.budget) ?? budgets[0] ?? null;
   const project = projectResult.data as { id: string; code: string | null; name: string } | null;
-  const services = servicesResult.data;
-  const serviceMap = new Map(services.map((service) => [service.id, service]));
   const selectedGroups = selectedBudget
     ? groupsResult.data.filter((group) => group.budget_id === selectedBudget.id)
     : [];
-  const groupNameMap = new Map(selectedGroups.map((group) => [group.code.trim().toLowerCase(), group.name]));
-  const groupOrderMap = new Map(selectedGroups.map((group) => [group.code.trim().toLowerCase(), group.sort_order]));
+  const groupById = new Map(selectedGroups.map((group) => [group.id, group]));
+  const groupByCode = new Map(selectedGroups.map((group) => [group.code.trim().toLowerCase(), group]));
+  const serviceMap = new Map(servicesResult.data.map((service) => [service.id, service]));
+
+  const compositionByService = new Map(
+    compositionsResult.data
+      .filter((composition) => composition.status === "active")
+      .map((composition) => [composition.service_id, composition]),
+  );
+  const itemsByComposition = new Map<string, CompositionItem[]>();
+  compositionItemsResult.data.forEach((item) => {
+    if (item.status !== "active") return;
+    const current = itemsByComposition.get(item.composition_id) ?? [];
+    current.push(item);
+    itemsByComposition.set(item.composition_id, current);
+  });
+  const inputMap = new Map(inputsResult.data.map((input) => [input.id, input]));
+  const corporatePriceMap = new Map<string, AdoptedPrice>();
+  const projectPriceMap = new Map<string, AdoptedPrice>();
+  pricesResult.data.forEach((price) => {
+    if (projectId && price.project_id === projectId) projectPriceMap.set(price.input_id, price);
+    else if (!price.project_id) corporatePriceMap.set(price.input_id, price);
+  });
+
+  const rows: AnalyticalRow[] = [];
+  const directServiceIds = new Set<string>();
+  const importedRevision = Boolean(selectedBudget?.source_system === "koper" || selectedBudget?.code.startsWith("KOPER-"));
+
+  if (selectedBudget) {
+    budgetItemsResult.data
+      .filter((item) => item.budget_id === selectedBudget.id)
+      .forEach((item) => {
+        if (item.service_id) directServiceIds.add(item.service_id);
+        const group = item.group_id ? groupById.get(item.group_id) : null;
+        const quantity = Number(item.quantity ?? 0);
+        const unitNature: NatureTotals = {
+          material: Number(item.material_unit_cost ?? 0),
+          labor: Number(item.labor_unit_cost ?? 0),
+          equipment: Number(item.equipment_unit_cost ?? 0),
+          service: 0,
+          freight: 0,
+          other: Number(item.other_unit_cost ?? 0),
+        };
+        const calculatedUnitCost = sumNature(unitNature);
+        const unitCost = Number(item.unit_direct_cost ?? 0) > 0
+          ? Number(item.unit_direct_cost)
+          : calculatedUnitCost;
+        const totalCost = Number(item.total_direct_cost ?? 0) > 0
+          ? Number(item.total_direct_cost)
+          : unitCost * quantity;
+
+        let statusKey: AnalyticalRow["statusKey"] = "complete";
+        let statusLabel = importedRevision ? "Completo · Koper" : "Completo · revisão";
+        if (quantity <= 0) {
+          statusKey = "no_quantity";
+          statusLabel = "Sem quantidade na revisão";
+        } else if (unitCost <= 0) {
+          statusKey = "missing_price";
+          statusLabel = "Sem custo na revisão";
+        }
+
+        rows.push({
+          id: `budget-item:${item.id}`,
+          source: "revision",
+          sourceLabel: importedRevision ? "Koper" : "Revisão",
+          serviceId: item.service_id,
+          code: item.code ?? "—",
+          description: item.description,
+          unit: item.unit,
+          groupCode: group?.code ?? "Sem grupo",
+          groupName: group?.name ?? "Serviços sem grupo",
+          groupOrder: group?.sort_order ?? 999999,
+          sortOrder: Number(item.sort_order ?? 0),
+          quantities: {
+            memories: 0,
+            draft: 0,
+            inReview: 0,
+            approved: quantity,
+            total: quantity,
+          },
+          quantityUsed: quantity,
+          unitCost: unitCost > 0 ? unitCost : null,
+          totalCost: unitCost > 0 ? totalCost : null,
+          unitNature,
+          totalNature: multiplyNature(unitNature, quantity),
+          statusKey,
+          statusLabel,
+        });
+      });
+  }
 
   const quantitiesByService = new Map<string, QuantitySummary>();
   if (selectedBudget) {
@@ -299,30 +443,11 @@ export default async function AnalyticalBudgetPage({
       });
   }
 
-  const compositionByService = new Map(
-    compositionsResult.data
-      .filter((composition) => composition.status === "active")
-      .map((composition) => [composition.service_id, composition]),
-  );
-  const itemsByComposition = new Map<string, CompositionItem[]>();
-  compositionItemsResult.data.forEach((item) => {
-    if (item.status !== "active") return;
-    const current = itemsByComposition.get(item.composition_id) ?? [];
-    current.push(item);
-    itemsByComposition.set(item.composition_id, current);
-  });
-  const inputMap = new Map(inputsResult.data.map((input) => [input.id, input]));
-  const corporatePriceMap = new Map<string, AdoptedPrice>();
-  const projectPriceMap = new Map<string, AdoptedPrice>();
-  pricesResult.data.forEach((price) => {
-    if (projectId && price.project_id === projectId) projectPriceMap.set(price.input_id, price);
-    else if (!price.project_id) corporatePriceMap.set(price.input_id, price);
-  });
-
-  const analyticalRows: AnalyticalRow[] = [];
   quantitiesByService.forEach((quantities, serviceId) => {
+    if (directServiceIds.has(serviceId)) return;
     const service = serviceMap.get(serviceId);
     if (!service) return;
+
     const quantityUsed = baseMode === "approved" ? quantities.approved : quantities.total;
     const composition = compositionByService.get(serviceId);
     const compositionItems = composition ? itemsByComposition.get(composition.id) ?? [] : [];
@@ -341,12 +466,10 @@ export default async function AnalyticalBudgetPage({
     });
 
     const unitCost = composition && compositionItems.length > 0 && missingPrices === 0
-      ? Object.values(unitNature).reduce((sum, value) => sum + value, 0)
+      ? sumNature(unitNature)
       : null;
-    const totalNature = emptyNature();
-    (Object.keys(totalNature) as (keyof NatureTotals)[]).forEach((key) => {
-      totalNature[key] = unitNature[key] * quantityUsed;
-    });
+    const groupCode = service.group_code?.trim() || "Sem grupo";
+    const group = groupByCode.get(groupCode.toLowerCase());
 
     let statusKey: AnalyticalRow["statusKey"] = "complete";
     let statusLabel = "Completo";
@@ -361,40 +484,44 @@ export default async function AnalyticalBudgetPage({
       statusLabel = baseMode === "approved" ? "Sem quantidade aprovada" : "Sem quantitativo";
     }
 
-    analyticalRows.push({
-      service,
+    rows.push({
+      id: `takeoff:${service.id}`,
+      source: "takeoff",
+      sourceLabel: "Levantamento",
+      serviceId,
+      code: service.code,
+      description: service.description,
+      unit: service.unit,
+      groupCode,
+      groupName: group?.name ?? (groupCode === "Sem grupo" ? "Serviços sem grupo" : groupCode),
+      groupOrder: group?.sort_order ?? 999999,
+      sortOrder: 0,
       quantities,
       quantityUsed,
       unitCost,
       totalCost: unitCost == null ? null : unitCost * quantityUsed,
       unitNature,
-      totalNature,
-      missingPrices,
-      compositionItems: compositionItems.length,
+      totalNature: multiplyNature(unitNature, quantityUsed),
       statusKey,
       statusLabel,
     });
   });
 
-  analyticalRows.sort((a, b) => {
-    const groupA = (a.service.group_code ?? "").trim().toLowerCase();
-    const groupB = (b.service.group_code ?? "").trim().toLowerCase();
-    const orderA = groupOrderMap.get(groupA) ?? 999999;
-    const orderB = groupOrderMap.get(groupB) ?? 999999;
-    return orderA - orderB
-      || groupA.localeCompare(groupB, "pt-BR", { numeric: true })
-      || a.service.code.localeCompare(b.service.code, "pt-BR", { numeric: true });
-  });
+  rows.sort((a, b) =>
+    a.groupOrder - b.groupOrder
+    || a.groupCode.localeCompare(b.groupCode, "pt-BR", { numeric: true })
+    || a.sortOrder - b.sortOrder
+    || a.code.localeCompare(b.code, "pt-BR", { numeric: true }),
+  );
 
-  const groupOptions = [...new Set(analyticalRows.map((row) => row.service.group_code?.trim() || "Sem grupo"))]
+  const groupOptions = [...new Set(rows.map((row) => row.groupCode))]
     .sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
   const groupFilter = groupOptions.includes(params.group ?? "") ? params.group! : "";
-  const filteredRows = analyticalRows.filter((row) => {
-    const group = row.service.group_code?.trim() || "Sem grupo";
-    if (groupFilter && group !== groupFilter) return false;
+  const filteredRows = rows.filter((row) => {
+    if (groupFilter && row.groupCode !== groupFilter) return false;
     if (situationFilter && row.statusKey !== situationFilter) return false;
     if (!queryText) return true;
-    return [row.service.code, row.service.description, row.service.unit, row.service.group_code ?? ""]
+    return [row.code, row.description, row.unit, row.groupCode, row.groupName, row.sourceLabel]
       .join(" ")
       .toLowerCase()
       .includes(queryText);
@@ -402,14 +529,13 @@ export default async function AnalyticalBudgetPage({
 
   const groupedRows = new Map<string, AnalyticalRow[]>();
   filteredRows.forEach((row) => {
-    const code = row.service.group_code?.trim() || "Sem grupo";
-    const current = groupedRows.get(code) ?? [];
+    const current = groupedRows.get(row.groupCode) ?? [];
     current.push(row);
-    groupedRows.set(code, current);
+    groupedRows.set(row.groupCode, current);
   });
 
-  const completeRows = analyticalRows.filter((row) => row.statusKey === "complete" && row.quantityUsed > 0);
-  const rowsWithQuantity = analyticalRows.filter((row) => row.quantityUsed > 0);
+  const completeRows = rows.filter((row) => row.statusKey === "complete" && row.quantityUsed > 0);
+  const rowsWithQuantity = rows.filter((row) => row.quantityUsed > 0);
   const totalCost = completeRows.reduce((sum, row) => sum + Number(row.totalCost ?? 0), 0);
   const costPerM2 = selectedBudget && Number(selectedBudget.area_m2) > 0
     ? totalCost / Number(selectedBudget.area_m2)
@@ -417,24 +543,13 @@ export default async function AnalyticalBudgetPage({
   const totalNature = emptyNature();
   completeRows.forEach((row) => addNature(totalNature, row.totalNature));
   const coverage = rowsWithQuantity.length > 0 ? completeRows.length / rowsWithQuantity.length * 100 : 0;
-  const activeMemories = analyticalRows.reduce((sum, row) => sum + row.quantities.memories, 0);
-  const approvedQuantityServices = analyticalRows.filter((row) => row.quantities.approved > 0).length;
-  const missingCompositionCount = analyticalRows.filter((row) => row.statusKey === "missing_composition").length;
-  const missingPriceCount = analyticalRows.filter((row) => row.statusKey === "missing_price").length;
-  const staleInputs = new Set<string>();
-  const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
-  analyticalRows.forEach((row) => {
-    const composition = compositionByService.get(row.service.id);
-    if (!composition) return;
-    (itemsByComposition.get(composition.id) ?? []).forEach((item) => {
-      const price = projectPriceMap.get(item.input_id) ?? corporatePriceMap.get(item.input_id);
-      if (price && new Date(price.price_date).getTime() < ninetyDaysAgo) staleInputs.add(item.input_id);
-    });
-  });
+  const activeMemories = rows.reduce((sum, row) => sum + row.quantities.memories, 0);
+  const reviewCount = rows.filter((row) => row.statusKey !== "complete").length;
 
   const structureErrors = [
     budgetsResult.error,
     groupsResult.error,
+    budgetItemsResult.error,
     servicesResult.error,
     takeoffsResult.error,
     compositionsResult.error,
@@ -442,6 +557,7 @@ export default async function AnalyticalBudgetPage({
     inputsResult.error,
     pricesResult.error,
   ].filter(Boolean);
+
   const projectLabel = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "nenhuma obra selecionada";
 
   return (
@@ -450,7 +566,7 @@ export default async function AnalyticalBudgetPage({
       activeItem="analytical-budget"
       eyebrow="Engenharia · Orçamento de Obras"
       title="Orçamento Analítico"
-      description={`${company.name} · consolidação de quantitativos, composições e preços. Obra atual: ${projectLabel}.`}
+      description={`${company.name} · consolidação de quantitativos, composições e valores da revisão. Obra atual: ${projectLabel}.`}
       actions={selectedBudget ? (
         <>
           <Link className="elos-button" href={`/engenharia/levantamento?budget=${selectedBudget.id}`}>Abrir levantamento</Link>
@@ -480,7 +596,7 @@ export default async function AnalyticalBudgetPage({
       {project && budgets.length === 0 ? (
         <section className="analytical-empty-card">
           <strong>A obra ainda não possui revisão de orçamento.</strong>
-          <span>Crie uma revisão e faça o levantamento dos serviços antes da consolidação.</span>
+          <span>Crie uma revisão para iniciar a consolidação dos serviços.</span>
           <Link href="/engenharia/orcamentos">Criar revisão</Link>
         </section>
       ) : null}
@@ -491,7 +607,10 @@ export default async function AnalyticalBudgetPage({
             <div>
               <span>Revisão consolidada</span>
               <h2>{selectedBudget.code} · {selectedBudget.version} · {selectedBudget.name}</h2>
-              <p>{statusLabels[selectedBudget.status]} · data-base {dateBR(selectedBudget.reference_date)} · área {decimal(selectedBudget.area_m2, 2)} m²</p>
+              <p>
+                {statusLabels[selectedBudget.status]} · data-base {dateBR(selectedBudget.reference_date)} · área {decimal(selectedBudget.area_m2, 2)} m²
+                {importedRevision ? " · valores importados do Koper" : ""}
+              </p>
             </div>
             <form method="get" className="analytical-reference-form">
               <label>
@@ -503,27 +622,33 @@ export default async function AnalyticalBudgetPage({
               <label>
                 <span>Base das quantidades</span>
                 <select name="base" defaultValue={baseMode}>
-                  <option value="active">Todas as memórias ativas</option>
-                  <option value="approved">Somente quantidades aprovadas</option>
+                  <option value="active">Revisão + memórias ativas</option>
+                  <option value="approved">Revisão + levantamentos aprovados</option>
                 </select>
               </label>
               <button type="submit">Recalcular</button>
             </form>
           </section>
 
+          {importedRevision ? (
+            <div className="auth-message success workspace-message">
+              As quantidades importadas do Koper pertencem à própria revisão e são consideradas nas duas bases, sem exigir memória de levantamento.
+            </div>
+          ) : null}
+
           <section className="analytical-kpi-grid">
-            <article><span>Custo consolidado</span><strong>{money(totalCost)}</strong><small>somente serviços com custo completo</small></article>
+            <article><span>Custo consolidado</span><strong>{money(totalCost)}</strong><small>serviços completos da revisão</small></article>
             <article><span>Custo por m²</span><strong>{money(costPerM2)}</strong><small>{decimal(selectedBudget.area_m2, 2)} m² na revisão</small></article>
-            <article><span>Cobertura do orçamento</span><strong>{percentage(coverage)}</strong><small>{completeRows.length} de {rowsWithQuantity.length} serviço(s) com quantidade</small></article>
-            <article><span>Serviços a revisar</span><strong className={analyticalRows.length - completeRows.length > 0 ? "analytical-alert-number" : ""}>{analyticalRows.length - completeRows.length}</strong><small>{missingCompositionCount} sem composição · {missingPriceCount} sem preço</small></article>
-            <article><span>Memórias do levantamento</span><strong>{activeMemories}</strong><small>{approvedQuantityServices} serviço(s) com quantidade aprovada</small></article>
-            <article><span>Preços desatualizados</span><strong className={staleInputs.size > 0 ? "analytical-alert-number" : ""}>{staleInputs.size}</strong><small>insumos adotados há mais de 90 dias</small></article>
+            <article><span>Cobertura do orçamento</span><strong>{percentage(coverage)}</strong><small>{completeRows.length} de {rowsWithQuantity.length} serviço(s) com custo</small></article>
+            <article><span>Serviços da revisão</span><strong>{rows.length}</strong><small>{rowsWithQuantity.length} com quantidade</small></article>
+            <article><span>Memórias do levantamento</span><strong>{activeMemories}</strong><small>além dos quantitativos da revisão</small></article>
+            <article><span>Serviços a revisar</span><strong className={reviewCount > 0 ? "analytical-alert-number" : ""}>{reviewCount}</strong><small>sem quantidade, composição ou custo</small></article>
           </section>
 
           <section className="analytical-nature-card">
             <div className="analytical-section-head">
               <div><span>Composição do custo</span><h2>Distribuição por natureza</h2></div>
-              <p>Os valores consideram a base de quantidade selecionada e apenas serviços completos.</p>
+              <p>Valores importados preservam a natureza registrada na revisão; levantamentos usam composições e preços adotados.</p>
             </div>
             <div className="analytical-nature-grid">
               {(Object.keys(natureLabels) as (keyof NatureTotals)[]).map((key) => {
@@ -545,7 +670,7 @@ export default async function AnalyticalBudgetPage({
             <form method="get" className="analytical-filter">
               <input type="hidden" name="budget" value={selectedBudget.id} />
               <input type="hidden" name="base" value={baseMode} />
-              <input name="q" defaultValue={params.q ?? ""} placeholder="Código, serviço, grupo ou unidade" />
+              <input name="q" defaultValue={params.q ?? ""} placeholder="Código, serviço, grupo, origem ou unidade" />
               <select name="group" defaultValue={groupFilter}>
                 <option value="">Todos os grupos</option>
                 {groupOptions.map((group) => <option key={group} value={group}>{group}</option>)}
@@ -554,7 +679,7 @@ export default async function AnalyticalBudgetPage({
                 <option value="">Todas as situações</option>
                 <option value="complete">Completo</option>
                 <option value="missing_composition">Sem composição</option>
-                <option value="missing_price">Preço faltante</option>
+                <option value="missing_price">Sem custo ou preço</option>
                 <option value="no_quantity">Sem quantidade</option>
               </select>
               <button type="submit">Filtrar</button>
@@ -564,26 +689,26 @@ export default async function AnalyticalBudgetPage({
 
           <section className="analytical-groups-card">
             <div className="analytical-section-head">
-              <div><span>Estrutura analítica</span><h2>Serviços e custos da revisão</h2></div>
+              <div><span>Estrutura analítica</span><h2>Serviços, quantidades e valores da revisão</h2></div>
               <p>{filteredRows.length} serviço(s) no filtro atual.</p>
             </div>
 
             <div className="analytical-groups-list">
-              {[...groupedRows.entries()].map(([groupCode, rows]) => {
-                const groupTotal = rows.reduce((sum, row) => sum + Number(row.totalCost ?? 0), 0);
-                const normalizedCode = groupCode.trim().toLowerCase();
-                const groupName = groupNameMap.get(normalizedCode) ?? (groupCode === "Sem grupo" ? "Serviços sem grupo" : groupCode);
+              {[...groupedRows.entries()].map(([groupCode, groupRows]) => {
+                const groupTotal = groupRows.reduce((sum, row) => sum + Number(row.totalCost ?? 0), 0);
+                const groupName = groupRows[0]?.groupName ?? groupCode;
                 return (
                   <section key={groupCode} className="analytical-group-section">
                     <header>
                       <div><span>Grupo {groupCode}</span><strong>{groupName}</strong></div>
-                      <div><small>{rows.length} serviço(s)</small><b>{money(groupTotal)}</b></div>
+                      <div><small>{groupRows.length} serviço(s)</small><b>{money(groupTotal)}</b></div>
                     </header>
                     <div className="registry-table-wrap">
                       <table className="registry-table analytical-table">
                         <thead>
                           <tr>
                             <th>Serviço</th>
+                            <th>Origem</th>
                             <th>Un.</th>
                             <th>Memórias</th>
                             <th>Qtd. total</th>
@@ -595,21 +720,31 @@ export default async function AnalyticalBudgetPage({
                           </tr>
                         </thead>
                         <tbody>
-                          {rows.map((row) => (
-                            <tr key={row.service.id}>
-                              <td><strong>{row.service.code}</strong><span>{row.service.description}</span></td>
-                              <td>{row.service.unit}</td>
+                          {groupRows.map((row) => (
+                            <tr key={row.id}>
+                              <td><strong>{row.code}</strong><span>{row.description}</span></td>
+                              <td>{row.sourceLabel}</td>
+                              <td>{row.unit}</td>
                               <td>{row.quantities.memories}</td>
-                              <td>{decimal(row.quantities.total)} {row.service.unit}</td>
-                              <td>{decimal(row.quantities.approved)} {row.service.unit}</td>
-                              <td><strong>{decimal(row.quantityUsed)} {row.service.unit}</strong></td>
+                              <td>{decimal(row.quantities.total)} {row.unit}</td>
+                              <td>{decimal(row.quantities.approved)} {row.unit}</td>
+                              <td><strong>{decimal(row.quantityUsed)} {row.unit}</strong></td>
                               <td>{money(row.unitCost)}</td>
                               <td><strong>{money(row.totalCost)}</strong></td>
                               <td>
                                 <span className={`analytical-status ${row.statusKey}`}>{row.statusLabel}</span>
-                                {row.statusKey === "missing_composition" ? <Link href={`/engenharia/composicoes?q=${encodeURIComponent(row.service.code)}`}>Abrir composição</Link> : null}
-                                {row.statusKey === "missing_price" ? <Link href="/engenharia/precos">Abrir preços</Link> : null}
-                                {row.statusKey === "no_quantity" ? <Link href={`/engenharia/levantamento?budget=${selectedBudget.id}`}>Abrir levantamento</Link> : null}
+                                {row.source === "revision" && row.statusKey !== "complete"
+                                  ? <Link href={`/engenharia/orcamentos/${selectedBudget.id}`}>Revisar item</Link>
+                                  : null}
+                                {row.source === "takeoff" && row.statusKey === "missing_composition"
+                                  ? <Link href={`/engenharia/composicoes?q=${encodeURIComponent(row.code)}`}>Abrir composição</Link>
+                                  : null}
+                                {row.source === "takeoff" && row.statusKey === "missing_price"
+                                  ? <Link href="/engenharia/precos">Abrir preços</Link>
+                                  : null}
+                                {row.source === "takeoff" && row.statusKey === "no_quantity"
+                                  ? <Link href={`/engenharia/levantamento?budget=${selectedBudget.id}`}>Abrir levantamento</Link>
+                                  : null}
                               </td>
                             </tr>
                           ))}
@@ -619,10 +754,11 @@ export default async function AnalyticalBudgetPage({
                   </section>
                 );
               })}
+
               {filteredRows.length === 0 ? (
                 <div className="analytical-empty-inline">
                   <strong>Nenhum serviço encontrado.</strong>
-                  <span>Faça o levantamento dos serviços ou altere os filtros.</span>
+                  <span>Altere os filtros ou revise os itens do orçamento.</span>
                 </div>
               ) : null}
             </div>
