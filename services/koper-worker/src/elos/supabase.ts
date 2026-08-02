@@ -20,6 +20,19 @@ export type SupabaseRestOptions = {
   prefer?: string;
 };
 
+function safeSupabaseErrorContext(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return [parsed.code, parsed.message, parsed.details, parsed.hint]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      .join(" · ")
+      .replace(/(Bearer|apikey|authorization)[^\s,;]*/gi, "$1 [REDACTED]")
+      .slice(0, 1_000);
+  } catch {
+    return "unavailable";
+  }
+}
+
 export async function requestSupabase<T>(
   resource: string,
   options: SupabaseRestOptions = {},
@@ -50,8 +63,11 @@ export async function requestSupabase<T>(
   const response = await fetch(url, requestInit);
 
   if (!response.ok) {
-    // Não inclua o corpo da resposta: ele pode conter dados operacionais.
-    throw new Error(`Supabase request failed (HTTP ${response.status})`);
+    const raw = await response.text();
+    const context = safeSupabaseErrorContext(raw);
+    throw new Error(
+      `Supabase ${requestInit.method} ${normalizedResource} failed (HTTP ${response.status}) · ${context}`,
+    );
   }
 
   if (response.status === 204) return undefined as T;
