@@ -56,10 +56,9 @@ export async function resolveActiveWorkspace() {
     .order("created_at", { ascending: true });
 
   const memberships = (membershipData ?? []) as unknown as Membership[];
-  const membership =
-    memberships.find((item) => item.company_id === requestedCompanyId) ??
-    memberships[0] ??
-    null;
+  const membership = requestedCompanyId
+    ? memberships.find((item) => item.company_id === requestedCompanyId) ?? null
+    : memberships[0] ?? null;
   const company = membership ? relatedOne(membership.companies) : null;
   const role = membership ? relatedOne(membership.roles) : null;
 
