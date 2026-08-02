@@ -175,7 +175,7 @@ export async function inventoryFlowStockEntries(): Promise<{
         if (
           response.request().method() === "GET"
           && url.hostname === "api.koper.com.br"
-          && url.pathname === "/stock/v1/entry"
+          && url.pathname.startsWith("/stock/v1/")
         ) stockHeaders ??= response.request().headers();
       } catch {
         // Ignora URLs inválidas.
