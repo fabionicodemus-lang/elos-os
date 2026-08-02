@@ -61,17 +61,17 @@ export async function requestSupabase<T>(
   if (options.body !== undefined) requestInit.body = JSON.stringify(options.body);
 
   const response = await fetch(url, requestInit);
+  const raw = await response.text();
 
   if (!response.ok) {
-    const raw = await response.text();
     const context = safeSupabaseErrorContext(raw);
     throw new Error(
       `Supabase ${requestInit.method} ${normalizedResource} failed (HTTP ${response.status}) · ${context}`,
     );
   }
 
-  if (response.status === 204) return undefined as T;
-  return await response.json() as T;
+  if (!raw.trim()) return undefined as T;
+  return JSON.parse(raw) as T;
 }
 
 export type KoperStagingReadiness = {
