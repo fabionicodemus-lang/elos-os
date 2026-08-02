@@ -159,11 +159,9 @@ export async function promoteActiveStockRequests(): Promise<{
     }
     const links = Array.isArray(payload.services) ? payload.services.map(objectValue) : [];
     if (links.length > 0) {
-      const allocated = links.reduce((sum, link) => sum + (numberValue(link.inputAmount) ?? 0), 0);
-      if (
-        links.some((link) => (numberValue(link.inputAmount) ?? 0) <= 0)
-        || Math.abs(allocated - quantity) > 0.00001
-      ) throw new Error(`Service allocation preflight failed for product request ${row.koper_id}`);
+      if (links.some((link) => (numberValue(link.inputAmount) ?? 0) <= 0)) {
+        throw new Error(`Service allocation preflight failed for product request ${row.koper_id}`);
+      }
     }
   }
 
@@ -290,21 +288,31 @@ export async function promoteActiveStockRequests(): Promise<{
     if (links.length === 0) {
       lineAllocations.push({ service: fallbackService, quantity, link: "sem vínculo de acompanhamento" });
     } else {
-      for (const link of links) {
-        const linkQuantity = numberValue(link.inputAmount);
-        if (linkQuantity === null || linkQuantity <= 0) {
-          throw new Error(`Invalid service allocation for Koper product request ${row.koper_id}`);
-        }
-        const service = linkedService(link) ?? fallbackService;
-        lineAllocations.push({
-          service,
-          quantity: linkQuantity,
-          link: `itemMonitInputId=${identifier(link.itemMonitInputId) ?? "n/a"},monitInputPchId=${identifier(link.monitInputPchId) ?? "n/a"}`,
-        });
-      }
-      const allocated = lineAllocations.reduce((sum, item) => sum + item.quantity, 0);
+      const allocated = links.reduce((sum, link) => sum + (numberValue(link.inputAmount) ?? 0), 0);
       if (Math.abs(allocated - quantity) > 0.00001) {
-        throw new Error(`Service allocations do not equal requested quantity for product request ${row.koper_id}`);
+        const legacyLinks = links.map((link) =>
+          `itemMonitInputId=${identifier(link.itemMonitInputId) ?? "n/a"},`
+          + `monitInputPchId=${identifier(link.monitInputPchId) ?? "n/a"},`
+          + `inputAmount=${numberValue(link.inputAmount) ?? "n/a"}`
+        ).join("|");
+        lineAllocations.push({
+          service: fallbackService,
+          quantity,
+          link: `divergência histórica: productAmount=${quantity},allocatedAmount=${allocated},links=[${legacyLinks}]`,
+        });
+      } else {
+        for (const link of links) {
+          const linkQuantity = numberValue(link.inputAmount);
+          if (linkQuantity === null || linkQuantity <= 0) {
+            throw new Error(`Invalid service allocation for Koper product request ${row.koper_id}`);
+          }
+          const service = linkedService(link) ?? fallbackService;
+          lineAllocations.push({
+            service,
+            quantity: linkQuantity,
+            link: `itemMonitInputId=${identifier(link.itemMonitInputId) ?? "n/a"},monitInputPchId=${identifier(link.monitInputPchId) ?? "n/a"},inputAmount=${linkQuantity}`,
+          });
+        }
       }
     }
 
