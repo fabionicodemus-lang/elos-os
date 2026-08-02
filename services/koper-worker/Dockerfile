@@ -22,4 +22,4 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 8080
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/inventory-active-orders-and-start.js"]
