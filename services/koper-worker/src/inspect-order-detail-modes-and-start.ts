@@ -5,6 +5,7 @@ import { isAllowedFlowSwitch } from "./diagnostics/inspect-koper-engineering.js"
 import { selectFlow } from "./diagnostics/collect-flow-stock-requests.js";
 
 type UnknownRecord = Record<string, unknown>;
+type Transport = { url: string; headers: Record<string, string>; status: number };
 
 function objectValue(value: unknown): UnknownRecord | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -46,7 +47,7 @@ const result = await withBrowserless(async ({ page }) => {
   const flowSelected = await selectFlow(page);
   if (!flowSelected) return { ok: false, message: "KOPER_FLOW_COMPANY_NOT_SELECTED", blockedWrites };
 
-  let transport: { url: string; headers: Record<string, string>; status: number } | null = null;
+  let transport: Transport | null = null;
   const capture = (response: Response): void => {
     try {
       const url = new URL(response.url());
@@ -67,9 +68,13 @@ const result = await withBrowserless(async ({ page }) => {
   }).catch(() => undefined);
   for (let attempt = 0; attempt < 10 && !transport; attempt += 1) await page.waitForTimeout(750);
   page.off("response", capture);
-  if (!transport) return { ok: false, message: "KOPER_PURCHASE_ORDER_TRANSPORT_NOT_CAPTURED", blockedWrites };
 
-  const baseUrl = new URL(transport.url);
+  const capturedTransport = transport as Transport | null;
+  if (!capturedTransport) {
+    return { ok: false, message: "KOPER_PURCHASE_ORDER_TRANSPORT_NOT_CAPTURED", blockedWrites };
+  }
+
+  const baseUrl = new URL(capturedTransport.url);
   const checks = [] as Array<{
     orderId: string;
     mode: "yes" | "no" | "absent";
@@ -90,7 +95,7 @@ const result = await withBrowserless(async ({ page }) => {
       else url.searchParams.set("open", mode);
       url.searchParams.set("cb", String(Date.now()));
       const response = await page.request.get(url.toString(), {
-        headers: transport.headers,
+        headers: capturedTransport.headers,
         timeout: 10_000,
       });
       let returnedOrderId: string | null = null;
@@ -109,7 +114,7 @@ const result = await withBrowserless(async ({ page }) => {
   return {
     ok: true,
     flowSelected: true,
-    capturedStatus: transport.status,
+    capturedStatus: capturedTransport.status,
     capturedOpen: baseUrl.searchParams.get("open"),
     checks,
     blockedWrites,
