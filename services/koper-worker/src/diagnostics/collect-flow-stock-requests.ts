@@ -120,7 +120,7 @@ async function fetchDetails(
     return id ? [id] : [];
   });
   const details: FlowStockRequestDetail[] = [];
-  const concurrency = 12;
+  const concurrency = requests.length > 200 ? 30 : 12;
 
   for (let offset = 0; offset < ids.length; offset += concurrency) {
     const batch = ids.slice(offset, offset + concurrency);
@@ -240,7 +240,7 @@ async function collectFlowStockRequests(
       blockedWrites,
       message: null,
     };
-  }, { sessionTimeoutMs: listMode === "active" ? 60_000 : 180_000 });
+  }, { sessionTimeoutMs: 60_000 });
 }
 
 export async function collectFlowActiveStockRequests(): Promise<FlowStockRequestCollection> {
