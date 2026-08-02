@@ -79,7 +79,7 @@ function extractItems(body: unknown): unknown[] {
   return [body];
 }
 
-async function readActiveCompanyLabel(page: Page): Promise<string | null> {
+export async function readActiveCompanyLabel(page: Page): Promise<string | null> {
   const candidates = page.locator(
     "button, [role='button'], [class*='company' i], [class*='enterprise' i]",
   );
@@ -117,7 +117,7 @@ async function readActiveCompanyLabel(page: Page): Promise<string | null> {
   return best && best.score >= 8 ? best.text : null;
 }
 
-async function openCompanySelector(page: Page, activeCompanyLabel: string): Promise<void> {
+export async function openCompanySelector(page: Page, activeCompanyLabel: string): Promise<void> {
   const label = page.getByText(activeCompanyLabel, { exact: true }).last();
   const control = label.locator(
     "xpath=ancestor-or-self::*[self::button or self::a or @role='button'][1]",
@@ -189,7 +189,7 @@ function isAllowedGraphQlRead(url: URL, method: string, postData: string | null)
   }
 }
 
-function isAllowedFlowSwitch(url: URL, method: string, postData: string | null): boolean {
+export function isAllowedFlowSwitch(url: URL, method: string, postData: string | null): boolean {
   if (
     method !== "POST" ||
     url.hostname !== "api.koper.com.br" ||
