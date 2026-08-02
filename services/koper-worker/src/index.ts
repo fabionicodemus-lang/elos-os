@@ -22,7 +22,10 @@ import { promoteKoperServices } from "./diagnostics/promote-koper-services.js";
 import { promoteKoperConstructionBudget } from "./diagnostics/promote-koper-construction-budget.js";
 import { checkKoperCompositionPromotionReadiness } from "./diagnostics/check-koper-composition-promotion-readiness.js";
 import { promoteKoperBudgetCompositions, promoteKoperBudgetInputs } from "./diagnostics/promote-koper-budget-compositions.js";
-import { writeFlowActiveStockRequests } from "./diagnostics/write-flow-stock-requests.js";
+import {
+  writeFlowActiveStockRequests,
+  writeFlowClosedStockRequests,
+} from "./diagnostics/write-flow-stock-requests.js";
 import {
   checkStockRequestAllocationMismatches,
   checkStockRequestPromotionReadiness,
@@ -307,8 +310,10 @@ server.listen(env.PORT, "0.0.0.0", () => {
                                       ? promoteKoperBudgetInputs
                                       : startupDiagnostic === "composition-promote-full"
                                         ? promoteKoperBudgetCompositions
-                                        : startupDiagnostic === "stock-request-active-staging-write-full"
-                                          ? writeFlowActiveStockRequests
+                                          : startupDiagnostic === "stock-request-active-staging-write-full"
+                                            ? writeFlowActiveStockRequests
+                                          : startupDiagnostic === "stock-request-closed-staging-write-full"
+                                            ? writeFlowClosedStockRequests
                                           : startupDiagnostic === "stock-request-promotion-readiness"
                                             ? checkStockRequestPromotionReadiness
                                             : startupDiagnostic === "stock-request-allocation-mismatches"

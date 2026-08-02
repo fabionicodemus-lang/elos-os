@@ -2,7 +2,10 @@ import { env } from "../config/env.js";
 import { saveKoperStagingBatch } from "../elos/koper-staging-repository.js";
 import { createKoperStagingRecord } from "../sync/staging-record.js";
 import type { KoperStagingRecord } from "../sync/staging-record.js";
-import { collectFlowActiveStockRequests } from "./collect-flow-stock-requests.js";
+import {
+  collectFlowActiveStockRequests,
+  collectFlowClosedStockRequests,
+} from "./collect-flow-stock-requests.js";
 
 const FLOW_ENTERPRISE_ID = "6d3b4724-5880-11ee-827d-1219c832db49";
 
@@ -86,6 +89,48 @@ export async function writeFlowActiveStockRequests(): Promise<{
     ok: true,
     extractedRequests: records.requests.length,
     extractedItems: records.items.length,
+    blockedWrites: collection.blockedWrites,
+    requests,
+    items,
+  };
+}
+
+export async function writeFlowClosedStockRequests(): Promise<{
+  ok: true;
+  extractedRequests: number;
+  extractedItems: number;
+  requestStatuses: Record<string, number>;
+  blockedWrites: number;
+  requests: { inserted: number; unchanged: number; updated: number };
+  items: { inserted: number; unchanged: number; updated: number };
+}> {
+  if (
+    process.env.KOPER_STAGING_WRITE_ENABLED !== "true"
+    || process.env.KOPER_STOCK_REQUEST_STAGING_WRITE_ENABLED !== "true"
+    || process.env.KOPER_STOCK_REQUEST_CLOSED_FULL_STAGING_WRITE_ENABLED !== "true"
+  ) throw new Error("Full closed Koper stock request staging write is not explicitly enabled");
+
+  const collection = await collectFlowClosedStockRequests();
+  if (!collection.authenticated || !collection.flowSelected || collection.message) {
+    throw new Error("Flow closed stock requests were not collected");
+  }
+  const records = buildStockRequestStagingRecords(collection.details);
+  if (records.requests.length !== collection.total) {
+    throw new Error("Closed Koper stock request count does not match API total");
+  }
+
+  const requestStatuses = collection.details.reduce<Record<string, number>>((counts, detail) => {
+    const status = text(detail.payload.status) ?? "(ausente)";
+    counts[status] = (counts[status] ?? 0) + 1;
+    return counts;
+  }, {});
+  const requests = await saveKoperStagingBatch(records.requests);
+  const items = await saveKoperStagingBatch(records.items);
+  return {
+    ok: true,
+    extractedRequests: records.requests.length,
+    extractedItems: records.items.length,
+    requestStatuses,
     blockedWrites: collection.blockedWrites,
     requests,
     items,

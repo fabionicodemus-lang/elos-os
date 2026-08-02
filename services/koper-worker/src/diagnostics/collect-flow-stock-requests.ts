@@ -18,7 +18,7 @@ export type FlowStockRequestCollection = {
   ok: true;
   authenticated: boolean;
   flowSelected: boolean;
-  listMode: "active";
+  listMode: "active" | "closed";
   total: number;
   requests: FlowStockRequest[];
   details: FlowStockRequestDetail[];
@@ -74,9 +74,10 @@ async function selectFlow(page: Page): Promise<boolean> {
   return false;
 }
 
-async function fetchActiveRequests(
+async function fetchRequests(
   page: Page,
   headers: Record<string, string>,
+  open: "yes" | "no",
 ): Promise<{ total: number; requests: FlowStockRequest[] }> {
   const requests: FlowStockRequest[] = [];
   const limit = 100;
@@ -87,7 +88,7 @@ async function fetchActiveRequests(
       group: "request",
       limit: String(limit),
       offset: String(offset),
-      open: "yes",
+      open,
       orderFlag: "desc",
       orderby: "requestDate",
       typeDate: "requestDate",
@@ -144,7 +145,9 @@ async function fetchDetails(
   return details;
 }
 
-export async function collectFlowActiveStockRequests(): Promise<FlowStockRequestCollection> {
+async function collectFlowStockRequests(
+  listMode: "active" | "closed",
+): Promise<FlowStockRequestCollection> {
   return withBrowserless(async ({ page }) => {
     const login = await performKoperLogin(page);
     if (!login.authenticated) {
@@ -152,7 +155,7 @@ export async function collectFlowActiveStockRequests(): Promise<FlowStockRequest
         ok: true,
         authenticated: false,
         flowSelected: false,
-        listMode: "active",
+        listMode,
         total: 0,
         requests: [],
         details: [],
@@ -186,7 +189,7 @@ export async function collectFlowActiveStockRequests(): Promise<FlowStockRequest
         ok: true,
         authenticated: true,
         flowSelected: false,
-        listMode: "active",
+        listMode,
         total: 0,
         requests: [],
         details: [],
@@ -220,22 +223,30 @@ export async function collectFlowActiveStockRequests(): Promise<FlowStockRequest
     page.off("request", captureHeaders);
     if (!requestHeaders) throw new Error("Koper stock request headers were not captured");
 
-    const active = await fetchActiveRequests(page, requestHeaders);
-    const details = await fetchDetails(page, requestHeaders, active.requests);
-    if (details.length !== active.requests.length) {
-      throw new Error("Koper active stock request detail count does not match list");
+    const collection = await fetchRequests(page, requestHeaders, listMode === "active" ? "yes" : "no");
+    const details = await fetchDetails(page, requestHeaders, collection.requests);
+    if (details.length !== collection.requests.length) {
+      throw new Error(`Koper ${listMode} stock request detail count does not match list`);
     }
 
     return {
       ok: true,
       authenticated: true,
       flowSelected: true,
-      listMode: "active",
-      total: active.total,
-      requests: active.requests,
+      listMode,
+      total: collection.total,
+      requests: collection.requests,
       details,
       blockedWrites,
       message: null,
     };
-  }, { sessionTimeoutMs: 60_000 });
+  }, { sessionTimeoutMs: listMode === "active" ? 60_000 : 180_000 });
+}
+
+export async function collectFlowActiveStockRequests(): Promise<FlowStockRequestCollection> {
+  return collectFlowStockRequests("active");
+}
+
+export async function collectFlowClosedStockRequests(): Promise<FlowStockRequestCollection> {
+  return collectFlowStockRequests("closed");
 }
