@@ -38,20 +38,28 @@ begin
   end if;
 
   select count(*) into v_bank_refs
-  from public.finance_bank_transactions transaction
-  join public.payables payable on payable.id = transaction.payable_id
+  from public.finance_bank_transactions txn
+  join public.payables payable on payable.id = txn.payable_id
   where payable.source_system = 'koper_flow';
 
   if v_bank_refs <> 0 then
     raise exception 'Proteção acionada: existem % movimentações bancárias ligadas às contas koper_flow', v_bank_refs;
   end if;
 
-  select count(*), min(id) into v_budget_count, v_budget_id
+  select count(*) into v_budget_count
   from public.engineering_budgets
   where source_system = 'elos_os'
     and source_id = 'flow_orcamento_r03'
     and code = 'FLOW-ORC'
     and version = 'R03';
+
+  select id into v_budget_id
+  from public.engineering_budgets
+  where source_system = 'elos_os'
+    and source_id = 'flow_orcamento_r03'
+    and code = 'FLOW-ORC'
+    and version = 'R03'
+  limit 1;
 
   if v_budget_count <> 1 or v_budget_id is null then
     raise exception 'Proteção acionada: orçamento manual FLOW-ORC/R03 não foi localizado de forma única';
@@ -102,7 +110,9 @@ end $$;
 with before_counts as (
   select
     (select count(*) from public.payables where source_system is distinct from 'koper_flow')::integer as other_payables,
-    (select count(*) from public.engineering_budgets where not (source_system = 'elos_os' and source_id = 'flow_orcamento_r03' and code = 'FLOW-ORC' and version = 'R03'))::integer as other_budgets
+    (select count(*) from public.engineering_budgets
+      where row(source_system, source_id, code, version)
+        is distinct from row('elos_os', 'flow_orcamento_r03', 'FLOW-ORC', 'R03'))::integer as other_budgets
 ),
 deleted_payables as (
   delete from public.payables
@@ -131,12 +141,14 @@ select
   before_counts.other_payables,
   (select count(*) from public.payables where source_system is distinct from 'koper_flow')::integer,
   before_counts.other_budgets,
-  (select count(*) from public.engineering_budgets where not (source_system = 'elos_os' and source_id = 'flow_orcamento_r03' and code = 'FLOW-ORC' and version = 'R03'))::integer
+  (select count(*) from public.engineering_budgets
+    where row(source_system, source_id, code, version)
+      is distinct from row('elos_os', 'flow_orcamento_r03', 'FLOW-ORC', 'R03'))::integer
 from before_counts;
 
 do $$
 declare
-  v_result cleanup_result%rowtype;
+  v_result record;
   v_koper_budget_count integer;
   v_koper_item_markers integer;
 begin
