@@ -29,6 +29,8 @@ export type KoperEngineeringDiagnostic = {
   reads: EngineeringRead[];
   blockedWrites: Array<{ method: string; endpoint: string }>;
   fullServiceRecords?: Array<Record<string, unknown>>;
+  fullConstructionBudget?: Record<string, unknown>;
+  fullBudgetItems?: Array<Record<string, unknown>>;
   message: string | null;
   checkedAt: string;
 };
@@ -262,8 +264,76 @@ async function fetchAllServiceRecords(
   return records;
 }
 
+async function fetchConstructionBudget(
+  page: Page,
+  requestHeaders: Record<string, string>,
+  engBudgetId: number,
+): Promise<Record<string, unknown>> {
+  const query = new URLSearchParams({ engBudgetId: String(engBudgetId) });
+  const response = await page.request.get(
+    `https://api.koper.com.br/engineering/v1/construction_budget?${query.toString()}`,
+    { headers: requestHeaders, timeout: 30_000 },
+  );
+
+  if (!response.ok()) {
+    throw new Error(`Koper budget request failed (HTTP ${response.status()})`);
+  }
+
+  const body: unknown = await response.json();
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    throw new Error("Invalid Koper construction budget response");
+  }
+
+  return body as Record<string, unknown>;
+}
+
+async function fetchAllBudgetItems(
+  page: Page,
+  requestHeaders: Record<string, string>,
+  engBudgetId: number,
+): Promise<Array<Record<string, unknown>>> {
+  const records: Array<Record<string, unknown>> = [];
+  const limit = 40;
+
+  for (let offset = 0; ; offset += limit) {
+    const query = new URLSearchParams({
+      engBudgetId: String(engBudgetId),
+      limit: String(limit),
+      offset: String(offset),
+    });
+    const response = await page.request.get(
+      `https://api.koper.com.br/engineering/v1/item_budget?${query.toString()}`,
+      { headers: requestHeaders, timeout: 30_000 },
+    );
+
+    if (!response.ok()) {
+      throw new Error(`Koper budget items request failed (HTTP ${response.status()})`);
+    }
+
+    const body: unknown = await response.json();
+    const object =
+      typeof body === "object" && body !== null
+        ? (body as Record<string, unknown>)
+        : null;
+    const items = Array.isArray(object?.items) ? object.items : [];
+    const total =
+      typeof object?.itemsAmount === "number" ? object.itemsAmount : null;
+
+    records.push(
+      ...items.filter(
+        (item): item is Record<string, unknown> =>
+          typeof item === "object" && item !== null,
+      ),
+    );
+
+    if (items.length < limit || (total !== null && records.length >= total)) break;
+  }
+
+  return records;
+}
+
 export async function inspectKoperEngineering(
-  options: { collectFullServices?: boolean } = {},
+  options: { collectFullServices?: boolean; collectFullBudget?: boolean } = {},
 ): Promise<KoperEngineeringDiagnostic> {
   return withBrowserless(async ({ page }) => {
     const login = await performKoperLogin(page);
@@ -290,7 +360,10 @@ export async function inspectKoperEngineering(
     const pendingResponses: Promise<void>[] = [];
     const visitedPages: VisitedPage[] = [];
     let serviceRequestHeaders: Record<string, string> | null = null;
+    let budgetRequestHeaders: Record<string, string> | null = null;
     let fullServiceRecords: Array<Record<string, unknown>> | undefined;
+    let fullConstructionBudget: Record<string, unknown> | undefined;
+    let fullBudgetItems: Array<Record<string, unknown>> | undefined;
     const activeCompanyBefore = await readActiveCompanyLabel(page).catch(() => null);
 
     await page.route("**/*", async (route) => {
@@ -347,6 +420,12 @@ export async function inspectKoperEngineering(
           serviceRequestHeaders === null
         ) {
           serviceRequestHeaders = request.headers();
+        }
+        if (
+          parsed.pathname.startsWith("/engineering/v1/") &&
+          budgetRequestHeaders === null
+        ) {
+          budgetRequestHeaders = request.headers();
         }
 
         const task = response
@@ -468,6 +547,22 @@ export async function inspectKoperEngineering(
         } else {
           message = "KOPER_CONSTRUCTION_BUDGET_100_ROW_NOT_FOUND";
         }
+
+        if (options.collectFullBudget && !message) {
+          if (!budgetRequestHeaders) {
+            throw new Error("Koper budget request headers were not captured");
+          }
+          fullConstructionBudget = await fetchConstructionBudget(
+            page,
+            budgetRequestHeaders,
+            100,
+          );
+          fullBudgetItems = await fetchAllBudgetItems(
+            page,
+            budgetRequestHeaders,
+            100,
+          );
+        }
       } catch (error) {
         message =
           error instanceof Error
@@ -489,6 +584,8 @@ export async function inspectKoperEngineering(
       reads,
       blockedWrites,
       ...(fullServiceRecords ? { fullServiceRecords } : {}),
+      ...(fullConstructionBudget ? { fullConstructionBudget } : {}),
+      ...(fullBudgetItems ? { fullBudgetItems } : {}),
       message,
       checkedAt: new Date().toISOString(),
     };
