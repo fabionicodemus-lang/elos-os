@@ -22,7 +22,7 @@ function numberValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-async function readStaging(entity: "stock_request" | "stock_request_item"): Promise<StagingRow[]> {
+async function readStaging(entity: "stock_request" | "stock_request_item" | "budget_item"): Promise<StagingRow[]> {
   const rows: StagingRow[] = [];
   const pageSize = 1_000;
   for (let offset = 0; ; offset += pageSize) {
@@ -88,14 +88,17 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     monitInputPchId: string | null;
     inputAmount: number | null;
   }>;
+  serviceLinkResolution: Record<string, number>;
+  unresolvedServiceLinks: number;
   flowProjects: number;
   flowBudgets: number;
   flowBudgetStatuses: Record<string, number>;
   activeCompanyMembers: number;
 }> {
-  const [requests, items, catalog, projects, budgets, memberships] = await Promise.all([
+  const [requests, items, budgetItems, catalog, projects, budgets, memberships] = await Promise.all([
     readStaging("stock_request"),
     readStaging("stock_request_item"),
+    readStaging("budget_item"),
     readKoperInputs(),
     requestSupabase<Array<{ id: string; name: string }>>("projects", {
       query: new URLSearchParams({
@@ -144,6 +147,13 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
   let resolvedInputs = 0;
   let itemsWithServiceLinks = 0;
   let serviceLinks = 0;
+  let unresolvedServiceLinks = 0;
+  const serviceLinkResolution: Record<string, number> = {};
+  const budgetItemIds = new Set(budgetItems.map((row) => row.koper_id));
+  const budgetInputIds = new Set(budgetItems.flatMap((row) => {
+    const id = identifier(objectValue(row.payload).inputId);
+    return id ? [id] : [];
+  }));
 
   for (const row of items) {
     const payload = objectValue(row.payload);
@@ -175,11 +185,25 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     for (const value of links) {
       if (serviceLinkSamples.length >= 20) break;
       const link = objectValue(value);
+      const itemMonitInputId = identifier(link.itemMonitInputId);
+      const monitInputPchId = identifier(link.monitInputPchId);
+      const resolution =
+        itemMonitInputId && budgetItemIds.has(itemMonitInputId)
+          ? "itemMonitInputId->budgetItemId"
+          : monitInputPchId && budgetItemIds.has(monitInputPchId)
+            ? "monitInputPchId->budgetItemId"
+            : itemMonitInputId && budgetInputIds.has(itemMonitInputId)
+              ? "itemMonitInputId->budgetInputId"
+              : monitInputPchId && budgetInputIds.has(monitInputPchId)
+                ? "monitInputPchId->budgetInputId"
+                : null;
+      if (resolution) serviceLinkResolution[resolution] = (serviceLinkResolution[resolution] ?? 0) + 1;
+      else unresolvedServiceLinks += 1;
       serviceLinkSamples.push({
         productRequestId: row.koper_id,
         requestId: row.koper_parent_id,
-        itemMonitInputId: identifier(link.itemMonitInputId),
-        monitInputPchId: identifier(link.monitInputPchId),
+        itemMonitInputId,
+        monitInputPchId,
         inputAmount: numberValue(link.inputAmount),
       });
     }
@@ -196,7 +220,9 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     && invalidQuantities.length === 0
     && projects.length === 1
     && budgets.length === 1
-    && memberships.length > 0;
+    && memberships.length > 0
+    && unresolvedServiceLinks === 0
+    && itemsWithServiceLinks === items.length;
 
   return {
     ok: true,
@@ -211,6 +237,8 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     itemsWithServiceLinks,
     serviceLinks,
     serviceLinkSamples,
+    serviceLinkResolution,
+    unresolvedServiceLinks,
     flowProjects: projects.length,
     flowBudgets: budgets.length,
     flowBudgetStatuses: budgets.reduce<Record<string, number>>((counts, budget) => {
