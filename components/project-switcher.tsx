@@ -30,7 +30,7 @@ export function ProjectSwitcher({
 
   useEffect(() => {
     document.querySelectorAll<HTMLElement>(".elos-module-version").forEach((element) => {
-      element.textContent = "V0.71.2 · sistema integrado";
+      element.textContent = "V0.71.4 · sistema integrado";
     });
   }, [pathname]);
 
@@ -45,7 +45,7 @@ export function ProjectSwitcher({
       className="elos-project-switcher"
       action="/api/workspace/select"
       method="post"
-      data-build-version="V0.71.2"
+      data-build-version="V0.71.4"
     >
       <input type="hidden" name="company_id" value={companyId} />
       <input type="hidden" name="return_to" value={returnTo} />

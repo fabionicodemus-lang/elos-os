@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "python .github/scripts/apply-analytical-budget-details-v0713.py",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
