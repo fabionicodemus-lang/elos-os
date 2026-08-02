@@ -5,6 +5,7 @@ set -euo pipefail
 
 report_file="${RUNNER_TEMP:-/tmp}/manual-koper-imports-audit.txt"
 
+PGOPTIONS='-c statement_timeout=30000 -c lock_timeout=5000' \
 psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q -A -t > "$report_file" <<'SQL'
 select 'PAYABLE_GROUPS';
 select jsonb_build_object(
@@ -41,50 +42,6 @@ from public.engineering_budgets b
 left join public.engineering_budget_items i on i.budget_id = b.id
 group by b.id
 order by b.created_at, b.id;
-
-select 'PAYABLE_REFERENCES';
-select jsonb_build_object(
-  'schema', tc.table_schema,
-  'table', tc.table_name,
-  'column', kcu.column_name,
-  'delete_rule', rc.delete_rule
-)::text
-from information_schema.table_constraints tc
-join information_schema.key_column_usage kcu
-  on tc.constraint_name = kcu.constraint_name
- and tc.constraint_schema = kcu.constraint_schema
-join information_schema.referential_constraints rc
-  on tc.constraint_name = rc.constraint_name
- and tc.constraint_schema = rc.constraint_schema
-join information_schema.constraint_column_usage ccu
-  on rc.unique_constraint_name = ccu.constraint_name
- and rc.unique_constraint_schema = ccu.constraint_schema
-where tc.constraint_type = 'FOREIGN KEY'
-  and ccu.table_schema = 'public'
-  and ccu.table_name = 'payables'
-order by tc.table_schema, tc.table_name, kcu.column_name;
-
-select 'BUDGET_REFERENCES';
-select jsonb_build_object(
-  'schema', tc.table_schema,
-  'table', tc.table_name,
-  'column', kcu.column_name,
-  'delete_rule', rc.delete_rule
-)::text
-from information_schema.table_constraints tc
-join information_schema.key_column_usage kcu
-  on tc.constraint_name = kcu.constraint_name
- and tc.constraint_schema = kcu.constraint_schema
-join information_schema.referential_constraints rc
-  on tc.constraint_name = rc.constraint_name
- and tc.constraint_schema = rc.constraint_schema
-join information_schema.constraint_column_usage ccu
-  on rc.unique_constraint_name = ccu.constraint_name
- and rc.unique_constraint_schema = ccu.constraint_schema
-where tc.constraint_type = 'FOREIGN KEY'
-  and ccu.table_schema = 'public'
-  and ccu.table_name = 'engineering_budgets'
-order by tc.table_schema, tc.table_name, kcu.column_name;
 SQL
 
 cat "$report_file"
