@@ -398,6 +398,7 @@ async function fetchCompositionDetailsByService(
   page: Page,
   requestHeaders: Record<string, string>,
   budgetItems: Array<Record<string, unknown>>,
+  maxDetails: number,
 ): Promise<Array<Record<string, unknown>>> {
   const pairs = new Map<string, { serviceId: string; compositionId: string }>();
   for (const item of budgetItems) {
@@ -411,28 +412,34 @@ async function fetchCompositionDetailsByService(
       serviceId: String(serviceId),
       compositionId: String(compositionId),
     });
-    if (pairs.size >= 3) break;
+    if (pairs.size >= maxDetails) break;
   }
+  const pairList = [...pairs.values()];
   const details: Array<Record<string, unknown>> = [];
+  const concurrency = 6;
 
-  for (const { serviceId, compositionId } of pairs.values()) {
-    const query = new URLSearchParams({
-      compositionId,
-      sourceTable: "Própria",
-    });
-    const response = await page.request.get(
-      `https://api.koper.com.br/engineering/v1/composition?${query.toString()}`,
-      { headers: requestHeaders, timeout: 30_000 },
-    );
-
-    if (!response.ok()) {
-      throw new Error(
-        `Koper composition detail request failed for composition ${compositionId} (HTTP ${response.status()})`,
+  for (let offset = 0; offset < pairList.length; offset += concurrency) {
+    const batch = pairList.slice(offset, offset + concurrency);
+    const responses = await Promise.all(batch.map(async ({ serviceId, compositionId }) => {
+      const query = new URLSearchParams({
+        compositionId,
+        sourceTable: "Própria",
+      });
+      const response = await page.request.get(
+        `https://api.koper.com.br/engineering/v1/composition?${query.toString()}`,
+        { headers: requestHeaders, timeout: 30_000 },
       );
-    }
 
-    const body: unknown = await response.json();
-    details.push({ serviceId, compositionId, response: body });
+      if (!response.ok()) {
+        throw new Error(
+          `Koper composition detail request failed for composition ${compositionId} (HTTP ${response.status()})`,
+        );
+      }
+
+      const body: unknown = await response.json();
+      return { serviceId, compositionId, response: body };
+    }));
+    details.push(...responses);
   }
 
   return details;
@@ -443,6 +450,7 @@ export async function inspectKoperEngineering(
     collectFullServices?: boolean;
     collectFullBudget?: boolean;
     collectCompositionSample?: boolean;
+    collectFullCompositionDetails?: boolean;
   } = {},
 ): Promise<KoperEngineeringDiagnostic> {
   return withBrowserless(async ({ page }) => {
@@ -691,11 +699,12 @@ export async function inspectKoperEngineering(
             "inputName",
             100,
           );
-          if (options.collectCompositionSample) {
+          if (options.collectCompositionSample || options.collectFullCompositionDetails) {
             fullCompositionDetails = await fetchCompositionDetailsByService(
               page,
               budgetRequestHeaders,
               fullBudgetItems,
+              options.collectFullCompositionDetails ? Number.POSITIVE_INFINITY : 3,
             );
           }
         }

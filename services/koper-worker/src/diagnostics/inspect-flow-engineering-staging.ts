@@ -16,6 +16,7 @@ const ENGINEERING_ENTITIES = [
   "construction_budget",
   "budget_item",
   "budget_composition",
+  "budget_composition_detail",
   "budget_input",
 ] as const;
 
