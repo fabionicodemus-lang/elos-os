@@ -75,6 +75,7 @@ async function readStaging(entity: "purchase_order" | "purchase_order_item" | "s
     source: "eq.koper",
     entity: `eq.${entity}`,
     sync_state: "eq.present",
+    order: "koper_id.asc",
   });
 }
 
@@ -113,10 +114,10 @@ type PreparedContext = {
 async function context(): Promise<PreparedContext> {
   const [orderRows, itemRows, supplierRows, inputs, services, requestRows, requestItems, projects, memberships] = await Promise.all([
     readStaging("purchase_order"), readStaging("purchase_order_item"), readStaging("supplier"),
-    readAll<InputRow>("engineering_inputs", { select: "id,source_id,code,description,unit", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper" }),
-    readAll<ServiceRow>("engineering_services", { select: "id,source_id,code,description", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper" }),
-    readAll<RequestRow>("execution_material_requests", { select: "id,request_number", company_id: `eq.${env.BOSSA_COMPANY_ID}`, request_number: "like.KOPER-*" }),
-    readAll<RequestItemRow>("execution_material_request_items", { select: "id,request_id,input_id,cost_center_service_id,input_code,input_name,unit_snapshot,cost_center_code,cost_center_name,notes", company_id: `eq.${env.BOSSA_COMPANY_ID}`, notes: "like.Koper productRequestIds=*" }),
+    readAll<InputRow>("engineering_inputs", { select: "id,source_id,code,description,unit", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", order: "source_id.asc" }),
+    readAll<ServiceRow>("engineering_services", { select: "id,source_id,code,description", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", order: "source_id.asc" }),
+    readAll<RequestRow>("execution_material_requests", { select: "id,request_number", company_id: `eq.${env.BOSSA_COMPANY_ID}`, request_number: "like.KOPER-*", order: "request_number.asc" }),
+    readAll<RequestItemRow>("execution_material_request_items", { select: "id,request_id,input_id,cost_center_service_id,input_code,input_name,unit_snapshot,cost_center_code,cost_center_name,notes", company_id: `eq.${env.BOSSA_COMPANY_ID}`, notes: "like.Koper productRequestIds=*", order: "id.asc" }),
     requestSupabase<Array<{ id: string }>>("projects", { query: new URLSearchParams({ select: "id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, name: "ilike.*Flow*", status: "neq.archived", limit: "10" }) }),
     requestSupabase<Array<{ user_id: string }>>("company_memberships", { query: new URLSearchParams({ select: "user_id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, status: "eq.active", order: "created_at.asc", limit: "1" }) }),
   ]);
@@ -197,7 +198,7 @@ export async function promotePurchaseOrderInputs(): Promise<{
     });
     promoted += rows.length;
   }
-  const verifiedCatalogInputs = (await readAll<{ id: string }>("engineering_inputs", { select: "id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper" })).length;
+  const verifiedCatalogInputs = (await readAll<{ id: string }>("engineering_inputs", { select: "id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", order: "id.asc" })).length;
   if (verifiedCatalogInputs !== data.inputs.length + payloads.length) throw new Error("Historical purchase order input verification failed");
   return { ok: true, sourceItems: data.itemRows.length, historicalInputs: payloads.length, promoted, verifiedCatalogInputs };
 }
@@ -348,8 +349,8 @@ export async function promoteKoperPurchaseOrders(): Promise<{
     method: "POST", body: batch, prefer: "resolution=merge-duplicates,return=minimal",
     query: new URLSearchParams({ on_conflict: "company_id,source_system,source_id" }),
   });
-  const verifiedOrders = await readAll<{ id: string; status: OrderStatus }>("procurement_purchase_orders", { select: "id,status", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper" });
-  const verifiedItems = await readAll<{ id: string }>("procurement_purchase_order_items", { select: "id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper" });
+  const verifiedOrders = await readAll<{ id: string; status: OrderStatus }>("procurement_purchase_orders", { select: "id,status", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", order: "id.asc" });
+  const verifiedItems = await readAll<{ id: string }>("procurement_purchase_order_items", { select: "id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", order: "id.asc" });
   if (verifiedOrders.length !== headerPayloads.length || verifiedItems.length !== itemPayloads.length) throw new Error("Koper purchase order verification failed");
   return { ok: true, orders: headerPayloads.length, items: itemPayloads.length, suppliers: suppliers.length, linkedItems, unlinkedItems, verifiedOrders: verifiedOrders.length, verifiedItems: verifiedItems.length, statuses: verifiedOrders.reduce<Record<string, number>>((counts, row) => { counts[row.status] = (counts[row.status] ?? 0) + 1; return counts; }, {}) };
 }
