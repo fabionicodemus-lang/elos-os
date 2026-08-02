@@ -19,6 +19,7 @@ import { writeFlowServiceCatalog } from "./diagnostics/write-flow-service-catalo
 import { writeFlowConstructionBudget } from "./diagnostics/write-flow-construction-budget.js";
 import { promoteKoperProducts } from "./diagnostics/promote-koper-products.js";
 import { promoteKoperServices } from "./diagnostics/promote-koper-services.js";
+import { promoteKoperConstructionBudget } from "./diagnostics/promote-koper-construction-budget.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
 import { checkKoperStagingReadiness } from "./elos/supabase.js";
 
@@ -274,6 +275,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
                               ? promoteKoperProducts
                               : startupDiagnostic === "service-promote-full"
                                 ? promoteKoperServices
+                                : startupDiagnostic === "budget-promote-full"
+                                  ? promoteKoperConstructionBudget
                   : null;
 
   if (diagnostic) {
