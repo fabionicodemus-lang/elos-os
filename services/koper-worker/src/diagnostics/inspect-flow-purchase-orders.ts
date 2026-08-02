@@ -65,6 +65,10 @@ async function readShape(
   path: string,
   query: URLSearchParams,
 ): Promise<ResponseShape> {
+  const accessToken = headers["x-accesstoken"] ?? headers["x-access-token"];
+  if (!accessToken) throw new Error("Koper access token header was not captured");
+  query.set("accessToken", accessToken);
+  query.set("cb", String(Date.now()));
   const response = await page.request.get(`https://api.koper.com.br${path}?${query.toString()}`, {
     headers,
     timeout: 30_000,
