@@ -1,9 +1,11 @@
 import { env } from "../config/env.js";
 import { saveKoperStagingBatch } from "../elos/koper-staging-repository.js";
 import { requestSupabase } from "../elos/supabase.js";
+import { hashKoperPayload, normalizeKoperPayload } from "../koper/payload-hash.js";
 import { createKoperStagingRecord } from "../sync/staging-record.js";
 
 type StagingRow = {
+  id: string;
   koper_id: string;
   payload: unknown;
 };
@@ -25,7 +27,7 @@ async function readAll(entity: "purchase_order" | "supplier"): Promise<StagingRo
   for (let offset = 0; ; offset += 1_000) {
     const page = await requestSupabase<StagingRow[]>("koper_staging_records", {
       query: new URLSearchParams({
-        select: "koper_id,payload",
+        select: "id,koper_id,payload",
         company_id: `eq.${env.BOSSA_COMPANY_ID}`,
         source: "eq.koper",
         entity: `eq.${entity}`,
@@ -47,11 +49,11 @@ export async function backfillKoperHistoricalSuppliers(): Promise<{
   suppliersBefore: number;
   missingSupplierIds: string[];
   missingSuppliers: number;
+  syntheticSupplierOrderIds: string[];
   inserted: number;
   updated: number;
   unchanged: number;
   suppliersAfter: number;
-  ordersWithoutSupplierId: number;
   unresolvedSupplierIds: string[];
 }> {
   if (process.env.KOPER_BACKFILL_HISTORICAL_SUPPLIERS_ENABLED !== "true") {
@@ -65,24 +67,49 @@ export async function backfillKoperHistoricalSuppliers(): Promise<{
 
   const supplierIds = new Set(suppliers.map((row) => row.koper_id));
   const missingBySupplierId = new Map<string, Record<string, unknown>>();
-  const ordersWithoutSupplierId: string[] = [];
+  const syntheticSupplierOrderIds: string[] = [];
+  const now = new Date().toISOString();
 
   for (const order of orders) {
-    const payload = objectValue(order.payload);
-    const supplierId = identifier(payload.supplierId);
+    const originalPayload = objectValue(order.payload);
+    let payload = originalPayload;
+    let supplierId = identifier(payload.supplierId);
+
     if (!supplierId) {
-      ordersWithoutSupplierId.push(order.koper_id);
-      continue;
+      supplierId = `historical-order-${order.koper_id}`;
+      syntheticSupplierOrderIds.push(order.koper_id);
+      payload = normalizeKoperPayload({
+        ...payload,
+        supplierId,
+        supplierName: identifier(payload.supplierName)
+          ?? identifier(payload.companyName)
+          ?? `Fornecedor histórico não identificado — pedido Koper ${order.koper_id}`,
+        historicalSupplierReconstructed: true,
+        historicalSupplierSource: "purchase_order_header_missing_supplier_id",
+      }) as Record<string, unknown>;
+
+      const patched = await requestSupabase<Array<{ id: string }>>("koper_staging_records", {
+        method: "PATCH",
+        body: {
+          payload,
+          payload_hash: hashKoperPayload(payload),
+          processing_status: "pending",
+          processing_error: null,
+          mapping_version: 1,
+          sync_state: "present",
+          updated_at: now,
+        },
+        prefer: "return=representation",
+        query: new URLSearchParams({ id: `eq.${order.id}`, select: "id" }),
+      });
+      if (patched.length !== 1) {
+        throw new Error(`Could not patch synthetic supplier into Koper order ${order.koper_id}`);
+      }
     }
+
     if (!supplierIds.has(supplierId) && !missingBySupplierId.has(supplierId)) {
       missingBySupplierId.set(supplierId, payload);
     }
-  }
-
-  if (ordersWithoutSupplierId.length > 0) {
-    throw new Error(
-      `Purchase orders without supplierId: ${ordersWithoutSupplierId.slice(0, 20).join(",")}`,
-    );
   }
 
   const records = [...missingBySupplierId.entries()].map(([supplierId, payload]) =>
@@ -92,8 +119,10 @@ export async function backfillKoperHistoricalSuppliers(): Promise<{
       koperId: supplierId,
       sanitizedPayload: {
         ...payload,
+        supplierId,
         historicalSupplierReconstructed: true,
-        historicalSupplierSource: "purchase_order_header",
+        historicalSupplierSource: identifier(payload.historicalSupplierSource)
+          ?? "purchase_order_header",
       },
       mappingVersion: 1,
     }),
@@ -116,11 +145,11 @@ export async function backfillKoperHistoricalSuppliers(): Promise<{
     suppliersBefore: suppliers.length,
     missingSupplierIds: [...missingBySupplierId.keys()],
     missingSuppliers: missingBySupplierId.size,
+    syntheticSupplierOrderIds,
     inserted: saved.inserted,
     updated: saved.updated,
     unchanged: saved.unchanged,
     suppliersAfter: verifiedSuppliers.length,
-    ordersWithoutSupplierId: ordersWithoutSupplierId.length,
     unresolvedSupplierIds,
   };
 }
