@@ -1,6 +1,8 @@
 import { env } from "../config/env.js";
 import { requestSupabase } from "../elos/supabase.js";
 import { collectFieldPaths } from "./discover-stock-route.js";
+import { analyzeBudgetRelationships } from "./budget-relationships.js";
+import type { BudgetRelationshipSummary } from "./budget-relationships.js";
 
 type StagingRow = {
   entity: string;
@@ -64,6 +66,7 @@ async function readEntity(entity: string): Promise<StagingRow[]> {
 
 export async function inspectFlowEngineeringStaging(): Promise<{
   ok: true;
+  relationships: BudgetRelationshipSummary;
   entities: Array<{
     entity: string;
     count: number;
@@ -76,9 +79,11 @@ export async function inspectFlowEngineeringStaging(): Promise<{
   }>;
 }> {
   const entities = [];
+  const rowsByEntity = new Map<string, StagingRow[]>();
 
   for (const entity of ENGINEERING_ENTITIES) {
     const rows = await readEntity(entity);
+    rowsByEntity.set(entity, rows);
     const sampleRows = rows.slice(0, 3);
 
     entities.push({
@@ -95,5 +100,13 @@ export async function inspectFlowEngineeringStaging(): Promise<{
     });
   }
 
-  return { ok: true, entities };
+  return {
+    ok: true,
+    relationships: analyzeBudgetRelationships(
+      rowsByEntity.get("budget_item") ?? [],
+      rowsByEntity.get("budget_composition") ?? [],
+      rowsByEntity.get("budget_input") ?? [],
+    ),
+    entities,
+  };
 }
