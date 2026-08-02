@@ -28,6 +28,7 @@ export type KoperEngineeringDiagnostic = {
   visitedPages: VisitedPage[];
   reads: EngineeringRead[];
   blockedWrites: Array<{ method: string; endpoint: string }>;
+  fullServiceRecords?: Array<Record<string, unknown>>;
   message: string | null;
   checkedAt: string;
 };
@@ -216,7 +217,54 @@ function isAllowedFlowSwitch(url: URL, method: string, postData: string | null):
   }
 }
 
-export async function inspectKoperEngineering(): Promise<KoperEngineeringDiagnostic> {
+async function fetchAllServiceRecords(
+  page: Page,
+  requestHeaders: Record<string, string>,
+): Promise<Array<Record<string, unknown>>> {
+  const records: Array<Record<string, unknown>> = [];
+  const limit = 100;
+
+  for (let offset = 0; ; offset += limit) {
+    const query = new URLSearchParams({
+      orderFlag: "desc",
+      sort: "id",
+      search: "",
+      limit: String(limit),
+      offset: String(offset),
+    });
+    const response = await page.request.get(
+      `https://api.koper.com.br/supply/v2/services?${query.toString()}`,
+      { headers: requestHeaders, timeout: 30_000 },
+    );
+
+    if (!response.ok()) {
+      throw new Error(`Koper services request failed (HTTP ${response.status()})`);
+    }
+
+    const body: unknown = await response.json();
+    const object =
+      typeof body === "object" && body !== null
+        ? (body as Record<string, unknown>)
+        : null;
+    const items = Array.isArray(object?.items) ? object.items : [];
+    const total = typeof object?.total === "number" ? object.total : null;
+
+    records.push(
+      ...items.filter(
+        (item): item is Record<string, unknown> =>
+          typeof item === "object" && item !== null,
+      ),
+    );
+
+    if (items.length < limit || (total !== null && records.length >= total)) break;
+  }
+
+  return records;
+}
+
+export async function inspectKoperEngineering(
+  options: { collectFullServices?: boolean } = {},
+): Promise<KoperEngineeringDiagnostic> {
   return withBrowserless(async ({ page }) => {
     const login = await performKoperLogin(page);
 
@@ -241,6 +289,8 @@ export async function inspectKoperEngineering(): Promise<KoperEngineeringDiagnos
     const blockedWrites: Array<{ method: string; endpoint: string }> = [];
     const pendingResponses: Promise<void>[] = [];
     const visitedPages: VisitedPage[] = [];
+    let serviceRequestHeaders: Record<string, string> | null = null;
+    let fullServiceRecords: Array<Record<string, unknown>> | undefined;
     const activeCompanyBefore = await readActiveCompanyLabel(page).catch(() => null);
 
     await page.route("**/*", async (route) => {
@@ -290,6 +340,13 @@ export async function inspectKoperEngineering(): Promise<KoperEngineeringDiagnos
           !engineeringPaths.some((pattern) => pattern.test(parsed.pathname))
         ) {
           return;
+        }
+
+        if (
+          parsed.pathname === "/supply/v2/services" &&
+          serviceRequestHeaders === null
+        ) {
+          serviceRequestHeaders = request.headers();
         }
 
         const task = response
@@ -370,6 +427,16 @@ export async function inspectKoperEngineering(): Promise<KoperEngineeringDiagnos
         await page.waitForTimeout(8_000);
         visitedPages.push(await collectVisitedPage(page));
 
+        if (options.collectFullServices) {
+          if (!serviceRequestHeaders) {
+            throw new Error("Koper service request headers were not captured");
+          }
+          fullServiceRecords = await fetchAllServiceRecords(
+            page,
+            serviceRequestHeaders,
+          );
+        }
+
         await page.goto(
           "https://app.koper.com.br/engenharia/orcamentos_obra",
           { waitUntil: "domcontentloaded", timeout: 30_000 },
@@ -421,6 +488,7 @@ export async function inspectKoperEngineering(): Promise<KoperEngineeringDiagnos
       visitedPages,
       reads,
       blockedWrites,
+      ...(fullServiceRecords ? { fullServiceRecords } : {}),
       message,
       checkedAt: new Date().toISOString(),
     };
