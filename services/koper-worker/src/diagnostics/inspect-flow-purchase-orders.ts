@@ -37,7 +37,11 @@ function arrayShapes(value: unknown, prefix = "", depth = 0): ResponseShape["arr
   );
 }
 
-async function responseShape(response: Response): Promise<ResponseShape> {
+async function responseShape(response: {
+  url(): string;
+  status(): number;
+  json(): Promise<unknown>;
+}): Promise<ResponseShape> {
   const url = new URL(response.url());
   const body: unknown = await response.json();
   const object = objectValue(body);
@@ -106,11 +110,17 @@ export async function inspectFlowPurchaseOrders(): Promise<{
 
     const reads: ResponseShape[] = [];
     const pending: Promise<void>[] = [];
+    let orderListUrl: string | null = null;
+    let orderListHeaders: Record<string, string> | null = null;
     const onResponse = (response: Response): void => {
       try {
         const url = new URL(response.url());
         if (response.request().method() !== "GET" || url.hostname !== "api.koper.com.br") return;
         if (url.pathname !== "/purchase/v1/purchase_order" && url.pathname !== "/purchase/v1/purchase") return;
+        if (url.pathname === "/purchase/v1/purchase_order" && url.searchParams.get("orderId") === "all") {
+          orderListUrl = response.url();
+          orderListHeaders = response.request().headers();
+        }
         pending.push(responseShape(response).then((shape) => {
           reads.push(shape);
         }).catch(() => undefined));
@@ -131,6 +141,16 @@ export async function inspectFlowPurchaseOrders(): Promise<{
       visitedUrls.push(page.url());
     }
     await Promise.allSettled(pending);
+    if (orderListUrl && orderListHeaders) {
+      const finalizedUrl = new URL(orderListUrl);
+      finalizedUrl.searchParams.set("open", "no");
+      finalizedUrl.searchParams.set("cb", String(Date.now()));
+      const response = await page.request.get(finalizedUrl.toString(), {
+        headers: orderListHeaders,
+        timeout: 30_000,
+      });
+      reads.push(await responseShape(response));
+    }
     page.off("response", onResponse);
 
     return {
