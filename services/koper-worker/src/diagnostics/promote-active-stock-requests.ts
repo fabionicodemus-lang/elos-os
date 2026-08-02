@@ -163,12 +163,6 @@ export async function promoteAllStockRequests(): Promise<{
     if (!sourceRequestId || !sourceRequestIds.has(sourceRequestId) || !input || quantity === null || quantity <= 0) {
       throw new Error(`Active request preflight failed for product request ${row.koper_id}`);
     }
-    const links = Array.isArray(payload.services) ? payload.services.map(objectValue) : [];
-    if (links.length > 0) {
-      if (links.some((link) => (numberValue(link.inputAmount) ?? 0) <= 0)) {
-        throw new Error(`Service allocation preflight failed for product request ${row.koper_id}`);
-      }
-    }
   }
 
   const fallbackRows = await requestSupabase<ServiceRow[]>("engineering_services", {
@@ -304,7 +298,8 @@ export async function promoteAllStockRequests(): Promise<{
       lineAllocations.push({ service: fallbackService, quantity, link: "sem vínculo de acompanhamento" });
     } else {
       const allocated = links.reduce((sum, link) => sum + (numberValue(link.inputAmount) ?? 0), 0);
-      if (Math.abs(allocated - quantity) > 0.00001) {
+      const hasInvalidLinkQuantity = links.some((link) => (numberValue(link.inputAmount) ?? 0) <= 0);
+      if (hasInvalidLinkQuantity || Math.abs(allocated - quantity) > 0.00001) {
         const legacyLinks = links.map((link) =>
           `itemMonitInputId=${identifier(link.itemMonitInputId) ?? "n/a"},`
           + `monitInputPchId=${identifier(link.monitInputPchId) ?? "n/a"},`
@@ -313,7 +308,7 @@ export async function promoteAllStockRequests(): Promise<{
         lineAllocations.push({
           service: fallbackService,
           quantity,
-          link: `divergência histórica: productAmount=${quantity},allocatedAmount=${allocated},links=[${legacyLinks}]`,
+          link: `divergência histórica: productAmount=${quantity},allocatedAmount=${allocated},invalidLinkQuantity=${hasInvalidLinkQuantity},links=[${legacyLinks}]`,
         });
       } else {
         for (const link of links) {
