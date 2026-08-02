@@ -7,7 +7,7 @@ type ServiceRow = { id: string; source_id: string | null; code: string; descript
 type RequestRow = { id: string; request_number: string };
 type RequestItemRow = {
   id: string; request_id: string; input_id: string; cost_center_service_id: string | null;
-  request_number: string; input_code: string; input_name: string; unit_snapshot: string;
+  input_code: string; input_name: string; unit_snapshot: string;
   cost_center_code: string; cost_center_name: string; notes: string | null;
 };
 
@@ -116,7 +116,7 @@ async function context(): Promise<PreparedContext> {
     readAll<InputRow>("engineering_inputs", { select: "id,source_id,code,description,unit", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper" }),
     readAll<ServiceRow>("engineering_services", { select: "id,source_id,code,description", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper" }),
     readAll<RequestRow>("execution_material_requests", { select: "id,request_number", company_id: `eq.${env.BOSSA_COMPANY_ID}`, request_number: "like.KOPER-*" }),
-    readAll<RequestItemRow>("execution_material_request_items", { select: "id,request_id,input_id,cost_center_service_id,request_number,input_code,input_name,unit_snapshot,cost_center_code,cost_center_name,notes", company_id: `eq.${env.BOSSA_COMPANY_ID}`, notes: "like.Koper productRequestIds=*" }),
+    readAll<RequestItemRow>("execution_material_request_items", { select: "id,request_id,input_id,cost_center_service_id,input_code,input_name,unit_snapshot,cost_center_code,cost_center_name,notes", company_id: `eq.${env.BOSSA_COMPANY_ID}`, notes: "like.Koper productRequestIds=*" }),
     requestSupabase<Array<{ id: string }>>("projects", { query: new URLSearchParams({ select: "id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, name: "ilike.*Flow*", status: "neq.archived", limit: "10" }) }),
     requestSupabase<Array<{ user_id: string }>>("company_memberships", { query: new URLSearchParams({ select: "user_id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, status: "eq.active", order: "created_at.asc", limit: "1" }) }),
   ]);
@@ -197,6 +197,7 @@ export async function promoteKoperPurchaseOrders(): Promise<{
   const inputBySource = new Map(data.inputs.map((row) => [row.source_id, row]));
   const serviceBySource = new Map(data.services.map((row) => [row.source_id, row]));
   const requestBySource = new Map(data.requestRows.map((row) => [row.request_number.replace(/^KOPER-/, ""), row]));
+  const requestById = new Map(data.requestRows.map((row) => [row.id, row]));
   const requestItemByProduct = new Map(data.requestItems.flatMap((row) => productRequestIds(row.notes).map((id) => [id, row] as const)));
   const itemsByOrder = new Map<string, StagingRow[]>();
   for (const row of data.itemRows) itemsByOrder.set(row.koper_parent_id ?? "", [...(itemsByOrder.get(row.koper_parent_id ?? "") ?? []), row]);
@@ -282,7 +283,7 @@ export async function promoteKoperPurchaseOrders(): Promise<{
         quotation_id: null, quotation_item_id: null, award_id: null, offer_item_id: null,
         request_id: request?.id ?? null, request_item_id: requestItem?.id ?? null, input_id: input.id,
         cost_center_service_id: requestItem?.cost_center_service_id ?? service?.id ?? null,
-        request_number: requestItem?.request_number ?? (requestSource ? `KOPER-${requestSource}` : "KOPER-SEM-SOLICITACAO"),
+        request_number: requestItem ? requestById.get(requestItem.request_id)?.request_number ?? "KOPER-SOLICITACAO-LEGADA" : requestSource ? `KOPER-${requestSource}` : "KOPER-SEM-SOLICITACAO",
         input_code: requestItem?.input_code ?? input.code, input_name: requestItem?.input_name ?? input.description,
         unit_snapshot: requestItem?.unit_snapshot ?? input.unit, cost_center_code: costCenterCode, cost_center_name: costCenterName,
         brand: textValue(payload.brand), manufacturer: textValue(payload.manufacturer), ordered_quantity: split.quantity,
