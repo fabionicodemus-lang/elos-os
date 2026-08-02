@@ -152,6 +152,37 @@ async function collectVisitedPage(page: Page): Promise<VisitedPage> {
   };
 }
 
+function isAllowedGraphQlRead(url: URL, method: string, postData: string | null): boolean {
+  if (
+    method !== "POST" ||
+    url.hostname !== "graphql.koper.com.br" ||
+    url.pathname !== "/" ||
+    !postData
+  ) {
+    return false;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(postData);
+    const operations = Array.isArray(parsed) ? parsed : [parsed];
+
+    return (
+      operations.length > 0 &&
+      operations.every((operation) => {
+        if (typeof operation !== "object" || operation === null) return false;
+        const query = (operation as Record<string, unknown>).query;
+        return (
+          typeof query === "string" &&
+          !/\bmutation\b/i.test(query) &&
+          /\bquery\b/i.test(query)
+        );
+      })
+    );
+  } catch {
+    return false;
+  }
+}
+
 function isAllowedFlowSwitch(url: URL, method: string, postData: string | null): boolean {
   if (
     method !== "POST" ||
@@ -222,7 +253,18 @@ export async function inspectKoperEngineering(): Promise<KoperEngineeringDiagnos
           parsed.hostname === "koper.com.br" || parsed.hostname.endsWith(".koper.com.br");
         const safeRead = ["GET", "HEAD", "OPTIONS"].includes(method);
 
-        if (isKoper && !safeRead && !isAllowedFlowSwitch(parsed, method, request.postData())) {
+        const allowedReadPost = isAllowedGraphQlRead(
+          parsed,
+          method,
+          request.postData(),
+        );
+
+        if (
+          isKoper &&
+          !safeRead &&
+          !allowedReadPost &&
+          !isAllowedFlowSwitch(parsed, method, request.postData())
+        ) {
           blockedWrites.push({
             method,
             endpoint: parsed.origin + parsed.pathname,
@@ -337,7 +379,10 @@ export async function inspectKoperEngineering(): Promise<KoperEngineeringDiagnos
 
         const budgetRow = page
           .locator("tr")
-          .filter({ has: page.getByText(/^100$/, { exact: true }) })
+          .filter({ hasText: /Flow Aptos - OBRA/i })
+          .first();
+        const budgetName = page
+          .getByText(/^Flow Aptos - OBRA$/i, { exact: true })
           .first();
 
         if (await budgetRow.isVisible().catch(() => false)) {
@@ -347,6 +392,10 @@ export async function inspectKoperEngineering(): Promise<KoperEngineeringDiagnos
           } else {
             await budgetRow.click();
           }
+          await page.waitForTimeout(8_000);
+          visitedPages.push(await collectVisitedPage(page));
+        } else if (await budgetName.isVisible().catch(() => false)) {
+          await budgetName.click();
           await page.waitForTimeout(8_000);
           visitedPages.push(await collectVisitedPage(page));
         } else {
