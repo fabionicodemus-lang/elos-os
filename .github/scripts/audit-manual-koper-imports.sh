@@ -36,7 +36,7 @@ create temp table manual_schedule_reference_counts (
   referencing_column text not null,
   delete_rule text not null,
   row_count bigint not null
-) on commit drop;
+) on commit preserve rows;
 
 do $$
 declare
