@@ -737,5 +737,7 @@ export async function inspectKoperEngineering(
       message,
       checkedAt: new Date().toISOString(),
     };
+  }, {
+    sessionTimeoutMs: options.collectFullCompositionDetails ? 240_000 : 120_000,
   });
 }

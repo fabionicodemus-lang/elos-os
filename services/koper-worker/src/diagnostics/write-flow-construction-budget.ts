@@ -165,7 +165,16 @@ export async function writeFlowConstructionBudget(): Promise<{
     !diagnostic.fullBudgetInputs ||
     !diagnostic.fullCompositionDetails
   ) {
-    throw new Error("Full Koper construction budget was not captured");
+    const missing = [
+      !diagnostic.fullConstructionBudget ? "construction_budget" : null,
+      !diagnostic.fullBudgetItems ? "budget_items" : null,
+      !diagnostic.fullBudgetCompositions ? "budget_compositions" : null,
+      !diagnostic.fullBudgetInputs ? "budget_inputs" : null,
+      !diagnostic.fullCompositionDetails ? "composition_details" : null,
+    ].filter(Boolean).join(",");
+    throw new Error(
+      `Full Koper construction budget was not captured (missing=${missing}; diagnostic=${diagnostic.message ?? "none"})`,
+    );
   }
 
   const budgetRecord = buildConstructionBudgetStagingRecord(
