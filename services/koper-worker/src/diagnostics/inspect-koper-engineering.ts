@@ -33,6 +33,7 @@ export type KoperEngineeringDiagnostic = {
   fullBudgetItems?: Array<Record<string, unknown>>;
   fullBudgetCompositions?: Array<Record<string, unknown>>;
   fullBudgetInputs?: Array<Record<string, unknown>>;
+  fullCompositionDetails?: Array<Record<string, unknown>>;
   message: string | null;
   checkedAt: string;
 };
@@ -393,8 +394,54 @@ async function fetchAllBudgetCollection(
   return records;
 }
 
+async function fetchCompositionDetailsByService(
+  page: Page,
+  requestHeaders: Record<string, string>,
+  engBudgetId: number,
+  budgetItems: Array<Record<string, unknown>>,
+): Promise<Array<Record<string, unknown>>> {
+  const serviceIds = [...new Set(
+    budgetItems
+      .map((item) => item.serviceId)
+      .filter((value): value is string | number =>
+        typeof value === "string" || typeof value === "number")
+      .map(String),
+  )].slice(0, 3);
+  const details: Array<Record<string, unknown>> = [];
+
+  for (const serviceId of serviceIds) {
+    const query = new URLSearchParams({
+      engBudgetId: String(engBudgetId),
+      serviceId,
+    });
+    const response = await page.request.get(
+      `https://api.koper.com.br/engineering/v1/composition?${query.toString()}`,
+      { headers: requestHeaders, timeout: 30_000 },
+    );
+
+    if (!response.ok()) {
+      throw new Error(
+        `Koper composition detail request failed for service ${serviceId} (HTTP ${response.status()})`,
+      );
+    }
+
+    const body: unknown = await response.json();
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      throw new Error(`Invalid Koper composition detail for service ${serviceId}`);
+    }
+
+    details.push({ serviceId, ...(body as Record<string, unknown>) });
+  }
+
+  return details;
+}
+
 export async function inspectKoperEngineering(
-  options: { collectFullServices?: boolean; collectFullBudget?: boolean } = {},
+  options: {
+    collectFullServices?: boolean;
+    collectFullBudget?: boolean;
+    collectCompositionSample?: boolean;
+  } = {},
 ): Promise<KoperEngineeringDiagnostic> {
   return withBrowserless(async ({ page }) => {
     const login = await performKoperLogin(page);
@@ -427,6 +474,7 @@ export async function inspectKoperEngineering(
     let fullBudgetItems: Array<Record<string, unknown>> | undefined;
     let fullBudgetCompositions: Array<Record<string, unknown>> | undefined;
     let fullBudgetInputs: Array<Record<string, unknown>> | undefined;
+    let fullCompositionDetails: Array<Record<string, unknown>> | undefined;
     const activeCompanyBefore = await readActiveCompanyLabel(page).catch(() => null);
 
     await page.route("**/*", async (route) => {
@@ -641,6 +689,14 @@ export async function inspectKoperEngineering(
             "inputName",
             100,
           );
+          if (options.collectCompositionSample) {
+            fullCompositionDetails = await fetchCompositionDetailsByService(
+              page,
+              budgetRequestHeaders,
+              100,
+              fullBudgetItems,
+            );
+          }
         }
       } catch (error) {
         message =
@@ -667,6 +723,7 @@ export async function inspectKoperEngineering(
       ...(fullBudgetItems ? { fullBudgetItems } : {}),
       ...(fullBudgetCompositions ? { fullBudgetCompositions } : {}),
       ...(fullBudgetInputs ? { fullBudgetInputs } : {}),
+      ...(fullCompositionDetails ? { fullCompositionDetails } : {}),
       message,
       checkedAt: new Date().toISOString(),
     };
