@@ -64,6 +64,14 @@ function isAuthorized(request: IncomingMessage): boolean {
   );
 }
 
+function safeErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "Erro desconhecido";
+  return message
+    .replace(/((?:x-accesstoken|authorization|cookie):)[^\r\n]*/gi, "$1 [REDACTED]")
+    .replace(/([?&]token=)[^&\s]+/gi, "$1[REDACTED]")
+    .slice(0, 2_000);
+}
+
 function requireAuthorization(
   request: IncomingMessage,
   response: ServerResponse,
@@ -331,8 +339,7 @@ server.listen(env.PORT, "0.0.0.0", () => {
       })
       .catch((error: unknown) => {
         console.error("KOPER_STARTUP_DIAGNOSTIC_FAILED", {
-          message:
-            error instanceof Error ? error.message : "Erro desconhecido",
+          message: safeErrorMessage(error),
         });
       });
   }

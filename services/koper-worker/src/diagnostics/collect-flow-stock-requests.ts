@@ -78,12 +78,13 @@ async function fetchRequests(
   page: Page,
   headers: Record<string, string>,
   open: "yes" | "no",
+  range?: { offset: number; limit: number },
 ): Promise<{ total: number; requests: FlowStockRequest[] }> {
   const requests: FlowStockRequest[] = [];
-  const limit = 100;
+  const limit = range?.limit ?? 100;
   let total = 0;
 
-  for (let offset = 0; ; offset += limit) {
+  for (let offset = range?.offset ?? 0; ; offset += limit) {
     const query = new URLSearchParams({
       group: "request",
       limit: String(limit),
@@ -104,6 +105,7 @@ async function fetchRequests(
     const pageRequests = requestList(body);
     total = totalValue(body) ?? total;
     requests.push(...pageRequests);
+    if (range) break;
     if (pageRequests.length < limit || (total > 0 && requests.length >= total)) break;
   }
 
@@ -147,6 +149,7 @@ async function fetchDetails(
 
 async function collectFlowStockRequests(
   listMode: "active" | "closed",
+  range?: { offset: number; limit: number },
 ): Promise<FlowStockRequestCollection> {
   return withBrowserless(async ({ page }) => {
     const login = await performKoperLogin(page);
@@ -223,7 +226,12 @@ async function collectFlowStockRequests(
     page.off("request", captureHeaders);
     if (!requestHeaders) throw new Error("Koper stock request headers were not captured");
 
-    const collection = await fetchRequests(page, requestHeaders, listMode === "active" ? "yes" : "no");
+    const collection = await fetchRequests(
+      page,
+      requestHeaders,
+      listMode === "active" ? "yes" : "no",
+      range,
+    );
     const details = await fetchDetails(page, requestHeaders, collection.requests);
     if (details.length !== collection.requests.length) {
       throw new Error(`Koper ${listMode} stock request detail count does not match list`);
@@ -249,4 +257,12 @@ export async function collectFlowActiveStockRequests(): Promise<FlowStockRequest
 
 export async function collectFlowClosedStockRequests(): Promise<FlowStockRequestCollection> {
   return collectFlowStockRequests("closed");
+}
+
+export async function collectFlowClosedStockRequestBatch(
+  batchIndex: number,
+  batchSize = 100,
+): Promise<FlowStockRequestCollection> {
+  if (!Number.isInteger(batchIndex) || batchIndex < 0) throw new Error("Invalid closed request batch index");
+  return collectFlowStockRequests("closed", { offset: batchIndex * batchSize, limit: batchSize });
 }
