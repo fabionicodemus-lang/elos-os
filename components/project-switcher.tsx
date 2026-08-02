@@ -21,6 +21,7 @@ export function ProjectSwitcher({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const companyOverview = searchParams.get("workspace") === "company";
 
   const returnTo = useMemo(() => {
     const query = searchParams.toString();
@@ -29,7 +30,7 @@ export function ProjectSwitcher({
 
   useEffect(() => {
     document.querySelectorAll<HTMLElement>(".elos-module-version").forEach((element) => {
-      element.textContent = "V0.71.1 · sistema integrado";
+      element.textContent = "V0.71.2 · sistema integrado";
     });
   }, [pathname]);
 
@@ -37,21 +38,23 @@ export function ProjectSwitcher({
     event.currentTarget.form?.requestSubmit();
   }
 
+  const selectedValue = companyOverview ? "" : activeProjectId ?? "";
+
   return (
     <form
       className="elos-project-switcher"
       action="/api/workspace/select"
       method="post"
-      data-build-version="V0.71.1"
+      data-build-version="V0.71.2"
     >
       <input type="hidden" name="company_id" value={companyId} />
       <input type="hidden" name="return_to" value={returnTo} />
       <label htmlFor="elos-project-select">Empreendimento</label>
       <select
-        key={activeProjectId ?? "company-overview"}
+        key={companyOverview ? "company-overview" : activeProjectId ?? "company-overview"}
         id="elos-project-select"
         name="project_id"
-        defaultValue={activeProjectId ?? ""}
+        defaultValue={selectedValue}
         onChange={submitOnChange}
         aria-label="Selecionar empreendimento"
       >
