@@ -4,12 +4,44 @@ import { loginKoperAutomatically } from "./auth/koper-auto-login.js";
 import { env } from "./config/env.js";
 import { discoverStockRoute } from "./diagnostics/discover-stock-route.js";
 import { inspectKoperCompanies, inspectKoperFlowContext } from "./diagnostics/inspect-koper-companies.js";
+import { inspectKoperEngineering } from "./diagnostics/inspect-koper-engineering.js";
+import { inspectFlowEngineeringStaging } from "./diagnostics/inspect-flow-engineering-staging.js";
 import { inspectKoperMenuMap } from "./diagnostics/inspect-koper-menu-map.js";
 import { inspectKoperNavigation } from "./diagnostics/inspect-koper-navigation.js";
 import { inspectStockRequestDetail } from "./diagnostics/inspect-stock-request-detail.js";
 import { inspectStockRequests } from "./diagnostics/inspect-stock-requests.js";
+import { inspectFlowPurchaseOrders } from "./diagnostics/inspect-flow-purchase-orders.js";
+import { writeFlowPurchaseOrderBatch } from "./diagnostics/write-flow-purchase-orders.js";
+import {
+  checkPurchaseOrderPromotionReadiness,
+  promotePurchaseOrderInputs,
+  promoteKoperPurchaseOrders,
+} from "./diagnostics/promote-koper-purchase-orders.js";
 import { runLiveRecording } from "./diagnostics/live-recording.js";
+import { previewFlowStaging } from "./diagnostics/preview-flow-staging.js";
+import { writeFlowStagingSample } from "./diagnostics/write-flow-staging-sample.js";
+import { writeFlowProductSample } from "./diagnostics/write-flow-product-sample.js";
+import { writeFlowProductCatalog } from "./diagnostics/write-flow-product-catalog.js";
+import { writeFlowServiceCatalog } from "./diagnostics/write-flow-service-catalog.js";
+import { writeFlowConstructionBudget } from "./diagnostics/write-flow-construction-budget.js";
+import { promoteKoperProducts } from "./diagnostics/promote-koper-products.js";
+import { promoteKoperServices } from "./diagnostics/promote-koper-services.js";
+import { promoteKoperConstructionBudget } from "./diagnostics/promote-koper-construction-budget.js";
+import { checkKoperCompositionPromotionReadiness } from "./diagnostics/check-koper-composition-promotion-readiness.js";
+import { promoteKoperBudgetCompositions, promoteKoperBudgetInputs } from "./diagnostics/promote-koper-budget-compositions.js";
+import {
+  writeFlowActiveStockRequests,
+  writeFlowClosedStockRequests,
+} from "./diagnostics/write-flow-stock-requests.js";
+import {
+  checkStockRequestAllocationMismatches,
+  checkStockRequestFullPromotionSummary,
+  checkStockRequestPromotionReadiness,
+} from "./diagnostics/check-stock-request-promotion-readiness.js";
+import { promoteStockRequestInputs } from "./diagnostics/promote-stock-request-inputs.js";
+import { promoteAllStockRequests } from "./diagnostics/promote-active-stock-requests.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
+import { checkKoperStagingReadiness } from "./elos/supabase.js";
 
 function sendJson(
   response: ServerResponse,
@@ -38,6 +70,14 @@ function isAuthorized(request: IncomingMessage): boolean {
     receivedBuffer.length === expectedBuffer.length &&
     timingSafeEqual(receivedBuffer, expectedBuffer)
   );
+}
+
+function safeErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "Erro desconhecido";
+  return message
+    .replace(/((?:x-accesstoken|authorization|cookie):)[^\r\n]*/gi, "$1 [REDACTED]")
+    .replace(/([?&](?:access_?token|token)=)[^&\s]+/gi, "$1[REDACTED]")
+    .slice(0, 2_000);
 }
 
 function requireAuthorization(
@@ -241,7 +281,76 @@ server.listen(env.PORT, "0.0.0.0", () => {
               ? inspectKoperFlowContext
               : startupDiagnostic === "live-recording"
                 ? runLiveRecording
-                : null;
+                : startupDiagnostic === "engineering-flow"
+                  ? inspectKoperEngineering
+                  : startupDiagnostic === "engineering-composition-sample"
+                    ? async () => {
+                      const result = await inspectKoperEngineering({
+                        collectFullBudget: true,
+                        collectCompositionSample: true,
+                      });
+                      return {
+                        ok: true,
+                        authenticated: result.authenticated,
+                        flowSelected: result.flowSelected,
+                        fullCompositionDetails: result.fullCompositionDetails ?? [],
+                        message: result.message,
+                        checkedAt: result.checkedAt,
+                      };
+                    }
+                  : startupDiagnostic === "engineering-staging-inspect"
+                    ? inspectFlowEngineeringStaging
+                  : startupDiagnostic === "supabase-staging"
+                    ? checkKoperStagingReadiness
+                  : startupDiagnostic === "staging-preview"
+                    ? previewFlowStaging
+                    : startupDiagnostic === "staging-write-sample"
+                      ? writeFlowStagingSample
+                      : startupDiagnostic === "product-staging-write-sample"
+                        ? writeFlowProductSample
+                        : startupDiagnostic === "product-staging-write-full"
+                          ? writeFlowProductCatalog
+                          : startupDiagnostic === "budget-staging-write-full"
+                            ? writeFlowConstructionBudget
+                            : startupDiagnostic === "service-staging-write-full"
+                              ? writeFlowServiceCatalog
+                            : startupDiagnostic === "purchase-order-shape"
+                              ? inspectFlowPurchaseOrders
+                            : startupDiagnostic === "purchase-order-staging-write"
+                              ? writeFlowPurchaseOrderBatch
+                            : startupDiagnostic === "purchase-order-promotion-readiness"
+                              ? checkPurchaseOrderPromotionReadiness
+                            : startupDiagnostic === "purchase-order-input-promote"
+                              ? promotePurchaseOrderInputs
+                            : startupDiagnostic === "purchase-order-promote-full"
+                              ? promoteKoperPurchaseOrders
+                            : startupDiagnostic === "product-promote-full"
+                              ? promoteKoperProducts
+                              : startupDiagnostic === "service-promote-full"
+                                ? promoteKoperServices
+                                : startupDiagnostic === "budget-promote-full"
+                                  ? promoteKoperConstructionBudget
+                                  : startupDiagnostic === "composition-promotion-readiness"
+                                    ? checkKoperCompositionPromotionReadiness
+                                    : startupDiagnostic === "budget-input-promote"
+                                      ? promoteKoperBudgetInputs
+                                      : startupDiagnostic === "composition-promote-full"
+                                        ? promoteKoperBudgetCompositions
+                                          : startupDiagnostic === "stock-request-active-staging-write-full"
+                                            ? writeFlowActiveStockRequests
+                                          : startupDiagnostic === "stock-request-closed-staging-write-full"
+                                            ? writeFlowClosedStockRequests
+                                          : startupDiagnostic === "stock-request-promotion-readiness"
+                                            ? checkStockRequestPromotionReadiness
+                                            : startupDiagnostic === "stock-request-full-promotion-summary"
+                                              ? checkStockRequestFullPromotionSummary
+                                            : startupDiagnostic === "stock-request-allocation-mismatches"
+                                              ? checkStockRequestAllocationMismatches
+                                            : startupDiagnostic === "stock-request-input-promote"
+                                              ? promoteStockRequestInputs
+                                            : startupDiagnostic === "stock-request-full-promote"
+                                                ? promoteAllStockRequests
+                  : null;
 
   if (diagnostic) {
     void diagnostic()
@@ -250,8 +359,7 @@ server.listen(env.PORT, "0.0.0.0", () => {
       })
       .catch((error: unknown) => {
         console.error("KOPER_STARTUP_DIAGNOSTIC_FAILED", {
-          message:
-            error instanceof Error ? error.message : "Erro desconhecido",
+          message: safeErrorMessage(error),
         });
       });
   }
