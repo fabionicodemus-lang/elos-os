@@ -15,7 +15,7 @@ import "../../execution-material-requests.css";
 import "../../execution-material-requests-fixes.css";
 
 type Project = { id: string; code: string | null; name: string };
-type Budget = { id: string; code: string; name: string; version: string; status: string; updated_at: string };
+type Budget = { id: string; code: string; name: string; version: string; status: string; is_base: boolean; updated_at: string };
 type ServiceCenter = { id: string; code: string; description: string; unit: string | null; group_code: string | null };
 type BudgetServiceReference = { budget_id: string; service_id: string };
 type RequestStatus = "requested" | "approved" | "partially_ordered" | "attended" | "cancelled";
@@ -64,7 +64,7 @@ export default async function MaterialRequestsPage({ searchParams }: {
   const budgetsPromise = projectId
     ? fetchAllRows<Budget>(async (from, to) => {
         const { data, error } = await supabase.from("engineering_budgets")
-          .select("id, code, name, version, status, updated_at")
+          .select("id, code, name, version, status, is_base, updated_at")
           .eq("company_id", companyId).eq("project_id", projectId).eq("status", "approved")
           .order("updated_at", { ascending: false }).range(from, to);
         return { data: (data ?? []) as Budget[], error };
@@ -124,7 +124,7 @@ export default async function MaterialRequestsPage({ searchParams }: {
 
   const project = projectResult.data as Project | null;
   const budgets = budgetsResult.data;
-  const approvedBudget = budgets[0] ?? null;
+  const approvedBudget = budgets.find((budget) => budget.is_base) ?? null;
   const referenceMap = new Map<string, Set<string>>();
   budgetServicesResult.data.forEach((reference) => {
     const values = referenceMap.get(reference.budget_id) ?? new Set<string>();
@@ -169,13 +169,13 @@ export default async function MaterialRequestsPage({ searchParams }: {
   const structureError = requestsResult.error || itemsResult.error;
 
   return <AppShell activeGroup="execution" activeItem="material-requests" eyebrow="Execução · Suprimentos" title="Solicitações de Materiais"
-    description={`${company.name} · ${context} · materiais apropriados diretamente aos serviços do orçamento.`}
+    description={`${company.name} · ${context} · materiais apropriados diretamente aos serviços do orçamento base.`}
     actions={canManage && approvedBudget ? <MaterialRequestCreateDialog {...dialogBase} /> : undefined}>
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
     {structureError ? <div className="auth-message error workspace-message">A atualização dos centros de custo ainda não está instalada. Execute a migration <strong>20260728_0035_material_request_service_centers.sql</strong>.</div> : null}
     {!projectId ? <div className="material-requests-empty-page">Selecione uma obra no topo.</div> : null}
-    {projectId && !approvedBudget ? <div className="auth-message error workspace-message">A obra precisa ter um orçamento com status <strong>Revisão fechada</strong> antes de solicitar materiais.</div> : null}
+    {projectId && !approvedBudget ? <div className="auth-message error workspace-message">A obra precisa ter um orçamento <strong>aprovado e salvo como orçamento base</strong> antes de solicitar materiais.</div> : null}
 
     <section className="material-request-kpis">
       <article><span>Não atendidas</span><strong>{pendingRequests.length}</strong><small>aguardam aprovação ou pedido</small></article>
