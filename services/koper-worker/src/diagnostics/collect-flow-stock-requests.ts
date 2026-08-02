@@ -50,7 +50,7 @@ function totalValue(body: unknown): number | null {
   return typeof total === "number" && Number.isFinite(total) ? total : null;
 }
 
-async function selectFlow(page: Page): Promise<boolean> {
+export async function selectFlow(page: Page): Promise<boolean> {
   let activeCompany = await readActiveCompanyLabel(page).catch(() => null);
   if (/flow/i.test(activeCompany ?? "")) return true;
   if (!activeCompany) return false;

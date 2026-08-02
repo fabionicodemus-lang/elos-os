@@ -10,6 +10,7 @@ import { inspectKoperMenuMap } from "./diagnostics/inspect-koper-menu-map.js";
 import { inspectKoperNavigation } from "./diagnostics/inspect-koper-navigation.js";
 import { inspectStockRequestDetail } from "./diagnostics/inspect-stock-request-detail.js";
 import { inspectStockRequests } from "./diagnostics/inspect-stock-requests.js";
+import { inspectFlowPurchaseOrders } from "./diagnostics/inspect-flow-purchase-orders.js";
 import { runLiveRecording } from "./diagnostics/live-recording.js";
 import { previewFlowStaging } from "./diagnostics/preview-flow-staging.js";
 import { writeFlowStagingSample } from "./diagnostics/write-flow-staging-sample.js";
@@ -307,6 +308,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
                             ? writeFlowConstructionBudget
                             : startupDiagnostic === "service-staging-write-full"
                               ? writeFlowServiceCatalog
+                            : startupDiagnostic === "purchase-order-shape"
+                              ? inspectFlowPurchaseOrders
                             : startupDiagnostic === "product-promote-full"
                               ? promoteKoperProducts
                               : startupDiagnostic === "service-promote-full"
