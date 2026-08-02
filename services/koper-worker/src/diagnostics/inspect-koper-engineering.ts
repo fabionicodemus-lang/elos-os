@@ -33,8 +33,6 @@ export type KoperEngineeringDiagnostic = {
 };
 
 const flowEnterpriseId = "6d3b4724-5880-11ee-827d-1219c832db49";
-const flowBranchId = "1c527099-2e63-465f-b97a-772e36a93d8c";
-
 const engineeringPaths = [
   /^\/supply\/v2\/services(?:\/[^/]+(?:\/version)?)?$/,
   /^\/engineering\/v1\/(?:construction_budget|item_budget|budget_composition|budget_input|composition|service|category|building|source_table)$/,
@@ -155,13 +153,36 @@ async function collectVisitedPage(page: Page): Promise<VisitedPage> {
 }
 
 function isAllowedFlowSwitch(url: URL, method: string, postData: string | null): boolean {
-  return (
-    method === "POST" &&
-    url.hostname === "api.koper.com.br" &&
-    url.pathname === "/login/change_company" &&
-    Boolean(postData?.includes(flowEnterpriseId)) &&
-    Boolean(postData?.includes(flowBranchId))
-  );
+  if (
+    method !== "POST" ||
+    url.hostname !== "api.koper.com.br" ||
+    url.pathname !== "/login/change_company" ||
+    !postData
+  ) {
+    return false;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(postData);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return false;
+    }
+
+    const body = parsed as Record<string, unknown>;
+    const allowedKeys = new Set(["accessToken", "toEnterpriseId", "changeCompany"]);
+    const keys = Object.keys(body);
+
+    return (
+      keys.length === 3 &&
+      keys.every((key) => allowedKeys.has(key)) &&
+      typeof body.accessToken === "string" &&
+      body.accessToken.length > 0 &&
+      body.toEnterpriseId === flowEnterpriseId &&
+      Object.hasOwn(body, "changeCompany")
+    );
+  } catch {
+    return false;
+  }
 }
 
 export async function inspectKoperEngineering(): Promise<KoperEngineeringDiagnostic> {
