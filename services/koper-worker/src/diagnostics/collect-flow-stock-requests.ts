@@ -122,7 +122,7 @@ async function fetchDetails(
     return id ? [id] : [];
   });
   const details: FlowStockRequestDetail[] = [];
-  const concurrency = requests.length > 200 ? 30 : 12;
+  const concurrency = requests.length >= 100 ? 30 : 12;
 
   for (let offset = 0; offset < ids.length; offset += concurrency) {
     const batch = ids.slice(offset, offset + concurrency);
