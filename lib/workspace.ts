@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+const COMPANY_OVERVIEW_COOKIE = "__company_overview__";
+
 type Company = {
   id: string;
   name: string;
@@ -42,7 +44,9 @@ export async function resolveActiveWorkspace() {
   const email = typeof authData.claims.email === "string" ? authData.claims.email : "Usuário";
   const cookieStore = await cookies();
   const requestedCompanyId = cookieStore.get("elos_company_id")?.value ?? null;
-  const requestedProjectId = cookieStore.get("elos_project_id")?.value ?? null;
+  const projectCookie = cookieStore.get("elos_project_id")?.value ?? null;
+  const companyOverviewRequested = projectCookie === COMPANY_OVERVIEW_COOKIE;
+  const requestedProjectId = companyOverviewRequested ? null : projectCookie;
 
   const { data: membershipData, error: membershipError } = await supabase
     .from("company_memberships")
@@ -52,10 +56,9 @@ export async function resolveActiveWorkspace() {
     .order("created_at", { ascending: true });
 
   const memberships = (membershipData ?? []) as unknown as Membership[];
-  const membership =
-    memberships.find((item) => item.company_id === requestedCompanyId) ??
-    memberships[0] ??
-    null;
+  const membership = requestedCompanyId
+    ? memberships.find((item) => item.company_id === requestedCompanyId) ?? null
+    : memberships[0] ?? null;
   const company = membership ? relatedOne(membership.companies) : null;
   const role = membership ? relatedOne(membership.roles) : null;
 
@@ -71,10 +74,11 @@ export async function resolveActiveWorkspace() {
     .order("name", { ascending: true });
 
   const projects = (projectData ?? []) as Project[];
-  const project =
-    projects.find((item) => item.id === requestedProjectId) ??
-    projects[0] ??
-    null;
+  const project = companyOverviewRequested
+    ? null
+    : requestedProjectId
+      ? projects.find((item) => item.id === requestedProjectId) ?? null
+      : projects[0] ?? null;
 
   return {
     supabase,

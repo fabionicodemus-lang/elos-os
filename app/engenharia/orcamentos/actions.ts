@@ -48,7 +48,7 @@ async function findBudget(budgetId: string, manage = false) {
 
   let query = supabase
     .from("engineering_budgets")
-    .select("id, project_id, status")
+    .select("id, project_id, status, is_base")
     .eq("id", budgetId)
     .eq("company_id", companyId);
 
@@ -154,7 +154,48 @@ export async function closeBudgetRevision(formData: FormData) {
   if (error) redirect(detailUrl(budgetId, error.message));
   revalidatePath(LIST_PATH);
   revalidatePath(detailPath(budgetId));
-  redirect(detailUrl(budgetId, "Revisão fechada e registrada como referência da obra.", "success"));
+  redirect(detailUrl(budgetId, "Orçamento aprovado. Agora ele pode ser salvo como orçamento base da obra.", "success"));
+}
+
+export async function setBudgetAsBase(formData: FormData) {
+  const budgetId = text(formData, "budget_id");
+  if (!budgetId) redirect(listUrl("Orçamento inválido."));
+
+  const { supabase, companyId, budget } = await findBudget(budgetId, true);
+  if (!budget) redirect(listUrl("Orçamento não localizado."));
+
+  const { error } = await supabase.rpc("set_engineering_budget_base", {
+    p_company_id: companyId,
+    p_project_id: budget.project_id,
+    p_budget_id: budgetId,
+  });
+
+  if (error) redirect(detailUrl(budgetId, error.message));
+  revalidatePath(LIST_PATH);
+  revalidatePath(detailPath(budgetId));
+  revalidatePath("/engenharia/orcamento-analitico");
+  revalidatePath("/execucao/solicitacoes-materiais");
+  redirect(detailUrl(budgetId, "Orçamento salvo como base. Novos centros de custo serão gerados a partir desta revisão.", "success"));
+}
+
+export async function deleteBudget(formData: FormData) {
+  const budgetId = text(formData, "budget_id");
+  if (!budgetId) redirect(listUrl("Orçamento inválido."));
+
+  const { supabase, companyId, budget } = await findBudget(budgetId, true);
+  if (!budget) redirect(listUrl("Orçamento não localizado."));
+
+  const { error } = await supabase.rpc("delete_engineering_budget", {
+    p_company_id: companyId,
+    p_project_id: budget.project_id,
+    p_budget_id: budgetId,
+  });
+
+  if (error) redirect(detailUrl(budgetId, error.message));
+  revalidatePath(LIST_PATH);
+  revalidatePath("/engenharia/orcamento-analitico");
+  revalidatePath("/execucao/solicitacoes-materiais");
+  redirect(listUrl("Orçamento excluído com sucesso.", "success"));
 }
 
 export async function archiveBudget(formData: FormData) {

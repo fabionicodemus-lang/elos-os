@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { createClient } from "@/lib/supabase/server";
+import { resolveActiveWorkspace } from "@/lib/workspace";
 import { addExistingMember, changeMemberRole } from "./actions";
 
 type Member = {
@@ -31,42 +30,17 @@ export default async function AccessSettingsPage({
   searchParams: Promise<{ error?: string; success?: string }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
-  const { data: authData, error: authError } = await supabase.auth.getClaims();
+  const { supabase, userId, company, companyId, roleKey } = await resolveActiveWorkspace();
+  const privileged = roleKey === "owner" || roleKey === "admin";
+  const { data: permissionData } = privileged
+    ? { data: true }
+    : await supabase.rpc("has_company_permission", {
+        target_company_id: companyId,
+        target_permission: "admin.users.view",
+      });
 
-  if (authError || !authData?.claims) {
-    redirect("/login");
-  }
-
-  const userId = typeof authData.claims.sub === "string" ? authData.claims.sub : "";
-  const cookieStore = await cookies();
-  const companyId = cookieStore.get("elos_company_id")?.value;
-
-  if (!companyId) {
-    redirect("/dashboard");
-  }
-
-  const [{ data: company }, { data: permissionData }, { data: currentMembership }] = await Promise.all([
-    supabase.from("companies").select("id, name").eq("id", companyId).maybeSingle(),
-    supabase.rpc("has_company_permission", {
-      target_company_id: companyId,
-      target_permission: "admin.users.view",
-    }),
-    supabase
-      .from("company_memberships")
-      .select("role_id, roles(key)")
-      .eq("company_id", companyId)
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .maybeSingle(),
-  ]);
-
-  const roleRelation = currentMembership?.roles as { key?: string } | { key?: string }[] | null | undefined;
-  const currentRoleKey = Array.isArray(roleRelation) ? roleRelation[0]?.key : roleRelation?.key;
-  const privileged = currentRoleKey === "owner" || currentRoleKey === "admin";
-
-  if (!company || (permissionData !== true && !privileged)) {
-    redirect("/dashboard");
+  if (permissionData !== true && !privileged) {
+    redirect("/dashboard?error=Você%20não%20possui%20acesso%20a%20esta%20área.");
   }
 
   const [{ data: memberData }, { data: roleData }, { data: managePermission }] = await Promise.all([
@@ -80,10 +54,12 @@ export default async function AccessSettingsPage({
       .select("id, key, name, description, status")
       .eq("company_id", companyId)
       .order("name"),
-    supabase.rpc("has_company_permission", {
-      target_company_id: companyId,
-      target_permission: "admin.users.manage",
-    }),
+    privileged
+      ? Promise.resolve({ data: true })
+      : supabase.rpc("has_company_permission", {
+          target_company_id: companyId,
+          target_permission: "admin.users.manage",
+        }),
   ]);
 
   const members = (memberData ?? []) as Member[];
@@ -95,6 +71,11 @@ export default async function AccessSettingsPage({
   const profiles = (profileData ?? []) as Profile[];
   const canManage = managePermission === true || privileged;
   const assignableRoles = roles.filter((role) => role.key !== "owner" && role.status === "active");
+  const currentMembership = members.find((member) => member.user_id === userId);
+
+  if (!currentMembership) {
+    redirect("/dashboard?error=Seu%20vínculo%20com%20a%20empresa%20ativa%20não%20foi%20localizado.");
+  }
 
   return (
     <AppShell

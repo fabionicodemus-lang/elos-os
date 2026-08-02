@@ -6,6 +6,8 @@ import {
   closeBudgetRevision,
   createBudgetGroup,
   createBudgetItem,
+  deleteBudget,
+  setBudgetAsBase,
   updateBudget,
 } from "../actions";
 
@@ -18,6 +20,8 @@ type Budget = {
   reference_date: string | null;
   area_m2: number;
   notes: string | null;
+  is_base: boolean;
+  base_set_at: string | null;
 };
 
 type BudgetGroup = {
@@ -30,7 +34,7 @@ const statusLabels: Record<Budget["status"], string> = {
   draft: "Rascunho",
   in_progress: "Em elaboração",
   review: "Em revisão",
-  approved: "Revisão fechada",
+  approved: "Aprovado",
   archived: "Arquivado",
 };
 
@@ -39,11 +43,13 @@ export function BudgetRevisionDialogs({
   groups,
   units,
   itemCount,
+  hasCostCenterTransactions,
 }: {
   budget: Budget;
   groups: BudgetGroup[];
   units: string[];
   itemCount: number;
+  hasCostCenterTransactions: boolean;
 }) {
   const generalRef = useRef<HTMLDialogElement>(null);
   const groupRef = useRef<HTMLDialogElement>(null);
@@ -68,10 +74,33 @@ export function BudgetRevisionDialogs({
         <form action={closeBudgetRevision}>
           <input type="hidden" name="budget_id" value={budget.id} />
           <button className="elos-button budget-close-revision-button" type="submit">
-            Fechar revisão
+            Aprovar orçamento
           </button>
         </form>
       ) : null}
+      {budget.status === "approved" && !budget.is_base ? (
+        <form action={setBudgetAsBase}>
+          <input type="hidden" name="budget_id" value={budget.id} />
+          <button className="elos-button budget-base-button" type="submit">Salvar como orçamento base</button>
+        </form>
+      ) : null}
+      {budget.is_base ? <span className="budget-base-badge budget-base-badge-header">Orçamento base</span> : null}
+      <form
+        action={deleteBudget}
+        onSubmit={(event) => {
+          if (!window.confirm(`Excluir definitivamente o orçamento ${budget.code} · ${budget.version}?`)) event.preventDefault();
+        }}
+      >
+        <input type="hidden" name="budget_id" value={budget.id} />
+        <button
+          className="elos-button elos-button-danger"
+          type="submit"
+          disabled={hasCostCenterTransactions}
+          title={hasCostCenterTransactions ? "Este orçamento possui lançamentos nos centros de custo e não pode ser excluído." : "Excluir orçamento e seus dados internos."}
+        >
+          Excluir orçamento
+        </button>
+      </form>
 
       <dialog ref={generalRef} className="budget-modal">
         <form action={updateBudget} className="budget-modal-form">

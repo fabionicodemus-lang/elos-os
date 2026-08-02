@@ -15,7 +15,7 @@ function initials(value: string) {
 }
 
 export async function AppShell({ activeGroup, activeItem, eyebrow, title, description, actions, children }: {
-  activeGroup: "home" | "system" | "projects" | "engineering" | "execution" | "procurement" | "finance" | "commercial" | "postwork";
+  activeGroup: "home" | "system" | "projects" | "engineering" | "execution" | "procurement" | "hr" | "finance" | "commercial" | "postwork";
   activeItem?: string; eyebrow: string; title: string; description?: string; actions?: ReactNode; children: ReactNode;
 }) {
   const { supabase, userId, email, company, companyId, projectId, role } = await resolveActiveWorkspace();
@@ -56,7 +56,6 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const inputsHref = can("inputs.view") ? "/engenharia/insumos" : undefined;
   const pricesHref = can("prices.view") ? "/engenharia/precos" : undefined;
   const takeoffsHref = can("takeoffs.view") ? "/engenharia/levantamento" : undefined;
-  const analyticalBudgetHref = can("budgets.view") ? "/engenharia/orcamento-analitico" : undefined;
   const scheduleHref = can("schedule.view") ? "/engenharia/cronograma" : undefined;
   const curvesHref = can("schedule.view") ? "/engenharia/curvas" : undefined;
   const contractPlanHref = can("schedule.view") ? "/engenharia/plano-contratacoes" : undefined;
@@ -65,17 +64,24 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const materialRequestsHref = can("execution.material_requests.view") ? "/execucao/solicitacoes-materiais" : undefined;
   const dailyLogsHref = can("execution.daily_logs.view") ? "/execucao/diario-obras" : undefined;
   const qualityHref = can("execution.quality.view") ? "/execucao/qualidade" : undefined;
+  const serviceProcurementHref = can("execution.contract_procurement.view") ? "/execucao/contratacoes-servicos" : undefined;
   const serviceContractsHref = can("execution.contracts.view") ? "/execucao/contratos-servicos" : undefined;
+  const stageMeasurementsHref = can("execution.measurements.view") ? "/execucao/medicoes-por-etapas" : undefined;
   const contractMeasurementsHref = can("execution.measurements.view") ? "/execucao/medicoes-contratos" : undefined;
   const workOrdersHref = can("execution.work_orders.view") ? "/execucao/ordens-servico" : undefined;
   const materialQuotationsHref = can("procurement.quotations.view") ? "/suprimentos/orcamentos-materiais" : undefined;
   const purchaseOrdersHref = can("procurement.orders.view") ? "/suprimentos/pedidos-compras" : undefined;
   const materialReceiptsHref = can("procurement.receipts.view") ? "/suprimentos/recebimento-materiais" : undefined;
   const inventoryHref = can("procurement.inventory.view") ? "/suprimentos/estoque" : undefined;
+  const intelligenceHref = can("procurement.intelligence.view") ? "/suprimentos/controle-integrado" : undefined;
+  const supplierPerformanceHref = can("procurement.intelligence.view") ? "/suprimentos/desempenho-fornecedores" : undefined;
+  const procurementIndicatorsHref = can("procurement.intelligence.view") ? "/suprimentos/indicadores" : undefined;
   const manualInvoicesHref = can("finance.manual_invoices.view") ? "/financeiro/notas-manuais" : undefined;
   const electronicInvoicesHref = can("finance.invoices.view") ? "/financeiro/notas-eletronicas" : undefined;
   const bankAccountsHref = can("finance.bank_accounts.view") ? "/financeiro/contas-bancarias" : undefined;
   const taxesHref = can("finance.taxes.view") ? "/financeiro/impostos" : undefined;
+  const hrEmployeesHref = can("hr.employees.view") || can("hr.employees.manage") ? "/rh/colaboradores" : undefined;
+  const hrPayrollHref = can("hr.payroll.view") || can("hr.payroll.manage") || can("hr.payroll.approve") ? "/rh/folha" : undefined;
   const proposalsHref = can("commercial.proposals.view") ? "/comercial/propostas" : undefined;
   const brokersHref = can("commercial.brokers.view") ? "/comercial/corretores" : undefined;
   const assistanceHref = can("postwork.assistance.view") ? "/pos-obra/assistencias" : undefined;
@@ -100,12 +106,11 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
     ]},
     { key: "engineering", label: "Engenharia", icon: "♙", active: activeGroup === "engineering", items: [
       { label: "Orçamentos", sectionLabel: "Orçamentos" },
-      { label: "Cadastro de Orçamentos", href: budgetsHref, active: activeItem === "budgets", disabled: !budgetsHref },
+      { label: "Orçamentos", href: budgetsHref, active: activeItem === "budgets", disabled: !budgetsHref },
       { label: "Serviços", href: servicesHref, active: activeItem === "services", disabled: !servicesHref },
       { label: "Insumos", href: inputsHref, active: activeItem === "inputs", disabled: !inputsHref },
       { label: "Preços e Cotações", href: pricesHref, active: activeItem === "prices", disabled: !pricesHref },
       { label: "Levantamento de Quantitativos", href: takeoffsHref, active: activeItem === "takeoffs", disabled: !takeoffsHref },
-      { label: "Orçamento Analítico", href: analyticalBudgetHref, active: activeItem === "analytical-budget", disabled: !analyticalBudgetHref },
       { label: "Planejamento da obra", sectionLabel: "Planejamento da obra" },
       { label: "Cronograma Físico · Linha Base", href: scheduleHref, active: activeItem === "schedule", disabled: !scheduleHref },
       { label: "Curvas Física e Financeira", href: curvesHref, active: activeItem === "curves", disabled: !curvesHref },
@@ -118,16 +123,31 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Diário de Obras", href: dailyLogsHref, active: activeItem === "daily-logs", disabled: !dailyLogsHref },
       { label: "Qualidade", href: qualityHref, active: activeItem === "quality", disabled: !qualityHref },
       { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "execution-suppliers", disabled: !can("suppliers.view") },
-      { label: "Contratos de Serviços", href: serviceContractsHref, active: activeItem === "service-contracts", disabled: !serviceContractsHref },
-      { label: "Medições dos Contratos", href: contractMeasurementsHref, active: activeItem === "contract-measurements", disabled: !contractMeasurementsHref },
+      { label: "Contratação de serviços", sectionLabel: "Contratação de serviços" },
+      { label: "Solicitações e Concorrências", href: serviceProcurementHref, active: activeItem === "service-procurement", disabled: !serviceProcurementHref },
+      { label: "Contratos Formalizados", href: serviceContractsHref, active: activeItem === "service-contracts", disabled: !serviceContractsHref },
+      { label: "Medições por Etapas", href: stageMeasurementsHref, active: activeItem === "stage-measurements", disabled: !stageMeasurementsHref },
+      { label: "Aprovação e Financeiro", href: contractMeasurementsHref, active: activeItem === "contract-measurements", disabled: !contractMeasurementsHref },
       { label: "Ordens de Serviço", href: workOrdersHref, active: activeItem === "work-orders", disabled: !workOrdersHref },
     ]},
     { key: "procurement", label: "Suprimentos", icon: "🛒", active: activeGroup === "procurement", items: [
+      { label: "Operação", sectionLabel: "Operação" },
       { label: "Orçamentos de Materiais", href: materialQuotationsHref, active: activeItem === "material-quotations", disabled: !materialQuotationsHref },
       { label: "Pedidos de Compras", href: purchaseOrdersHref, active: activeItem === "purchase-orders", disabled: !purchaseOrdersHref },
+      { label: "Recebimento de Materiais", href: materialReceiptsHref, active: activeItem === "material-receipts", disabled: !materialReceiptsHref },
       { label: "Estoque", href: inventoryHref, active: activeItem === "inventory", disabled: !inventoryHref },
       { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "procurement-suppliers", disabled: !can("suppliers.view") },
-      { label: "Recebimento de Materiais", href: materialReceiptsHref, active: activeItem === "material-receipts", disabled: !materialReceiptsHref },
+      { label: "Gestão e inteligência", sectionLabel: "Gestão e inteligência" },
+      { label: "Controle Integrado", href: intelligenceHref, active: activeItem === "integrated-control", disabled: !intelligenceHref },
+      { label: "Desempenho de Fornecedores", href: supplierPerformanceHref, active: activeItem === "supplier-performance", disabled: !supplierPerformanceHref },
+      { label: "Indicadores", href: procurementIndicatorsHref, active: activeItem === "procurement-indicators", disabled: !procurementIndicatorsHref },
+    ]},
+    { key: "hr", label: "RH", icon: "♧", active: activeGroup === "hr", items: [
+      { label: "Cadastros", sectionLabel: "Cadastros" },
+      { label: "Colaboradores", href: hrEmployeesHref, active: activeItem === "hr-employees", disabled: !hrEmployeesHref },
+      { label: "Folha e financeiro", sectionLabel: "Folha e financeiro" },
+      { label: "Folha de Pagamento", href: hrPayrollHref, active: activeItem === "hr-payroll", disabled: !hrPayrollHref },
+      { label: "Contas a Pagar da Folha", href: can("payables.view") ? "/financeiro/contas-a-pagar?q=RH" : undefined, active: activeItem === "hr-payables", disabled: !can("payables.view") },
     ]},
     { key: "finance", label: "Financeiro", icon: "$", active: activeGroup === "finance", items: [
       { label: "Contas a Pagar", href: can("payables.view") ? "/financeiro/contas-a-pagar" : undefined, active: activeItem === "payables", disabled: !can("payables.view") },
@@ -168,7 +188,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.64.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">V0.71.0 · sistema integrado</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }

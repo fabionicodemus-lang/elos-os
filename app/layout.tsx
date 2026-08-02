@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
+import { BudgetAnalyticalDetails } from "@/components/budget-analytical-details";
 import { CurvesBarValues } from "@/components/curves-bar-values";
 import { GlobalSearchableSelect } from "@/components/global-searchable-select";
 import { SefazNfeLauncher } from "@/components/sefaz-nfe-launcher";
@@ -16,6 +17,7 @@ import "./cashflow.css";
 import "./date-range.css";
 import "./reports.css";
 import "./budgets.css";
+import "./budget-analytical-details.css";
 import "./services.css";
 import "./inputs.css";
 import "./prices.css";
@@ -44,6 +46,7 @@ import "./taxes.css";
 import "./proposals.css";
 import "./brokers.css";
 import "./sefaz-nfe.css";
+import "./financial-installments.css";
 import "./elos-theme.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -79,6 +82,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${ibmPlexSans.variable} ${spaceGrotesk.variable}`}>
       <body>
         {children}
+        <BudgetAnalyticalDetails />
         <ServiceInlineComposition />
         <CurvesBarValues />
         <GlobalSearchableSelect />

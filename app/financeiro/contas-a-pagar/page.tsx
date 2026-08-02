@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
-import { cancelPayable, createPayable, markPayablePaid } from "./actions";
+import { cancelPayable, markPayablePaid } from "./actions";
+import { PayableCreateForm } from "./payable-create-form";
 import { resolveDateRange } from "@/lib/date-range";
 import { requireCompanyPermission } from "@/lib/workspace";
 
@@ -24,6 +25,9 @@ type Payable = {
   paid_amount: number | null;
   paid_account_name: string | null;
   source_system: string | null;
+  source_category: string | null;
+  beneficiary_name: string | null;
+  beneficiary_tax_id: string | null;
   suppliers: Supplier | Supplier[] | null;
 };
 
@@ -51,6 +55,17 @@ function dateBR(value: string | null) {
   if (!value) return "—";
   const [year, month, day] = value.split("-");
   return `${day}/${month}/${year}`;
+}
+
+function sourceLabel(payable: Payable) {
+  if (payable.source_system === "koper_flow") return "KOPER";
+  if (payable.source_system === "elos_hr") {
+    if (payable.source_category === "salary") return "RH · Salário";
+    if (payable.source_category === "benefit") return "RH · Benefício";
+    if (payable.source_category === "withholding") return "RH · Retenção";
+    return "RH · Encargo";
+  }
+  return "";
 }
 
 export default async function PayablesPage({
@@ -94,7 +109,7 @@ export default async function PayablesPage({
 
   let listQuery = supabase
     .from("payables")
-    .select("id, document, due_date, amount, status, installment_label, notes, paid_at, paid_amount, paid_account_name, source_system, suppliers(id, legal_name, trade_name, tax_id)", { count: "exact" })
+    .select("id, document, due_date, amount, status, installment_label, notes, paid_at, paid_amount, paid_account_name, source_system, source_category, beneficiary_name, beneficiary_tax_id, suppliers(id, legal_name, trade_name, tax_id)", { count: "exact" })
     .eq("company_id", companyId)
     .order("due_date", { ascending: false })
     .range(fromRow, toRow);
@@ -106,7 +121,7 @@ export default async function PayablesPage({
   if (dateTo) listQuery = listQuery.lte("due_date", dateTo);
   if (queryText) {
     const safe = queryText.replace(/[,%()]/g, " ").trim();
-    listQuery = listQuery.or(`document.ilike.%${safe}%,notes.ilike.%${safe}%,installment_label.ilike.%${safe}%`);
+    listQuery = listQuery.or(`document.ilike.%${safe}%,notes.ilike.%${safe}%,installment_label.ilike.%${safe}%,beneficiary_name.ilike.%${safe}%,beneficiary_tax_id.ilike.%${safe}%`);
   }
 
   const [projectResult, suppliersResult, listResult, summaryResult, manageResult] = await Promise.all([
@@ -142,8 +157,11 @@ export default async function PayablesPage({
       activeItem="payables"
       eyebrow="Financeiro"
       title="Contas a Pagar"
-      description={`${company.name} · ${context} · compromissos, pagamentos e fornecedores da obra.`}
-      actions={<Link className="elos-button" href="/cadastros/fornecedores">Abrir fornecedores</Link>}
+      description={`${company.name} · ${context} · compromissos, pagamentos, fornecedores e folha de pagamento.`}
+      actions={<>
+        <Link className="elos-button" href="/rh/folha">Abrir RH</Link>
+        <Link className="elos-button" href="/cadastros/fornecedores">Abrir fornecedores</Link>
+      </>}
     >
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
@@ -152,7 +170,7 @@ export default async function PayablesPage({
         <section className="setup-panel">
           <span>Banco de dados pendente</span>
           <h2>Instale a estrutura de contas a pagar</h2>
-          <p>Execute no SQL Editor do Supabase o arquivo <code>supabase/migrations/20260722_0003_flow_payables.sql</code>.</p>
+          <p>Execute as migrations financeiras e a migration <code>20260801_0069_hr_payroll.sql</code>.</p>
         </section>
       ) : (
         <>
@@ -165,7 +183,7 @@ export default async function PayablesPage({
 
           <section className="registry-toolbar">
             <form className="finance-filter" method="get">
-              <input name="q" defaultValue={queryText} placeholder="Documento, parcela ou observação" />
+              <input name="q" defaultValue={queryText} placeholder="Documento, favorecido, parcela ou observação" />
               <select name="status" defaultValue={status}>
                 <option value="">Todos os status</option>
                 <option value="open">Em aberto</option>
@@ -184,19 +202,7 @@ export default async function PayablesPage({
             {canManage && projectId ? (
               <details className="registry-create">
                 <summary>+ Nova conta a pagar</summary>
-                <form action={createPayable}>
-                  <div className="registry-form-grid">
-                    <label className="registry-wide">Fornecedor<select name="supplier_id" required defaultValue=""><option value="" disabled>Selecione</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.trade_name || supplier.legal_name} {supplier.tax_id ? `· ${supplier.tax_id}` : ""}</option>)}</select></label>
-                    <label>Documento<input name="document" /></label>
-                    <label>Parcela<input name="installment_label" placeholder="1 / 3" /></label>
-                    <label>Vencimento<input name="due_date" type="date" required /></label>
-                    <label>Valor<input name="amount" inputMode="decimal" placeholder="0,00" required /></label>
-                    <label>Classe fiscal<input name="fiscal_class" /></label>
-                    <label>Forma de pagamento<input name="payment_method" /></label>
-                    <label className="registry-wide">Observações<textarea name="notes" rows={3} /></label>
-                  </div>
-                  <button className="auth-primary" type="submit">Salvar conta</button>
-                </form>
+                <PayableCreateForm suppliers={suppliers} />
               </details>
             ) : null}
           </section>
@@ -208,14 +214,17 @@ export default async function PayablesPage({
             </div>
             <div className="registry-table-wrap">
               <table className="registry-table finance-table">
-                <thead><tr><th>Fornecedor</th><th>Documento</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Pagamento</th><th>Ação</th></tr></thead>
+                <thead><tr><th>Favorecido</th><th>Documento</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Pagamento</th><th>Ação</th></tr></thead>
                 <tbody>
                   {payables.map((payable) => {
                     const supplier = relatedOne(payable.suppliers);
+                    const beneficiaryName = payable.beneficiary_name || supplier?.trade_name || supplier?.legal_name || "Favorecido";
+                    const beneficiaryTaxId = payable.beneficiary_tax_id || supplier?.tax_id;
+                    const origin = sourceLabel(payable);
                     return (
                       <tr key={payable.id}>
-                        <td><strong>{supplier?.trade_name || supplier?.legal_name || "Fornecedor"}</strong><small>{supplier?.tax_id}</small></td>
-                        <td><span>{payable.document || "—"}</span><small>{payable.installment_label}{payable.source_system === "koper_flow" ? " · KOPER" : ""}</small></td>
+                        <td><strong>{beneficiaryName}</strong><small>{beneficiaryTaxId}</small></td>
+                        <td><span>{payable.document || "—"}</span><small>{[payable.installment_label, origin].filter(Boolean).join(" · ")}</small></td>
                         <td>{dateBR(payable.due_date)}</td>
                         <td><strong>{money(payable.amount)}</strong></td>
                         <td><span className={`status-badge ${payable.status}`}>{payable.status === "open" ? "Em aberto" : payable.status === "paid" ? "Pago" : "Cancelado"}</span></td>

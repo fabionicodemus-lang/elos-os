@@ -1,6 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FinancialInstallmentEditor } from "@/components/financial-installment-editor";
+import {
+  buildFinancialInstallments,
+  financialInstallmentSummary,
+  localTodayIso,
+  suggestedFirstDueDate,
+  type FinancialInstallmentDraft,
+} from "@/lib/financial-installments";
 import { acceptWorkOrder, saveWorkOrder, updateWorkOrderProgress } from "./actions";
 
 export type ContractItemOption = {
@@ -26,6 +34,7 @@ export type PrerequisiteRecord = { id?: string; code: string | null; title: stri
 
 type DraftItem = { contract_item_id: string; authorized_quantity: number; planned_start: string | null; planned_finish: string | null; notes: string | null };
 type DraftPrerequisite = { code: string; title: string; is_required: boolean; is_completed: boolean; notes: string };
+type FinancialMode = "none" | "forecast_only" | "payable_on_acceptance";
 
 const defaultPrerequisites: DraftPrerequisite[] = [
   { code: "CONTRACT", title: "Contrato assinado e ativo", is_required: true, is_completed: true, notes: "" },
@@ -33,7 +42,7 @@ const defaultPrerequisites: DraftPrerequisite[] = [
   { code: "PROJECTS", title: "Projetos e detalhes executivos liberados", is_required: true, is_completed: false, notes: "" },
   { code: "SAFETY", title: "Documentação e orientações de segurança conferidas", is_required: true, is_completed: false, notes: "" },
 ];
-function today() { return new Date().toISOString().slice(0, 10); }
+function today() { return localTodayIso(); }
 function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0)); }
 function emptyItem(): DraftItem { return { contract_item_id: "", authorized_quantity: 0, planned_start: null, planned_finish: null, notes: null }; }
 
@@ -46,18 +55,29 @@ export function WorkOrderDialog({ contracts, contractItems, workOrder, items = [
   const [contractId, setContractId] = useState(initialContract);
   const [rows, setRows] = useState<DraftItem[]>(items.length ? items.map((item) => ({ contract_item_id: item.contract_item_id, authorized_quantity: Number(item.authorized_quantity), planned_start: item.planned_start, planned_finish: item.planned_finish, notes: item.scope_notes })) : [emptyItem()]);
   const [checks, setChecks] = useState<DraftPrerequisite[]>(prerequisites.length ? prerequisites.map((item) => ({ code: item.code ?? "", title: item.title, is_required: item.is_required, is_completed: item.is_completed, notes: item.notes ?? "" })) : defaultPrerequisites);
+  const [financialMode, setFinancialMode] = useState<FinancialMode>("none");
+  const [installments, setInstallments] = useState<FinancialInstallmentDraft[]>(() => buildFinancialInstallments({ total: 0, count: 1, firstDueDate: suggestedFirstDueDate(), paymentMethod: "Boleto" }));
   const itemMap = useMemo(() => new Map(contractItems.map((item) => [item.id, item])), [contractItems]);
   const selectedContract = contracts.find((contract) => contract.id === contractId) ?? null;
   const availableItems = contractItems.filter((item) => item.contract_id === contractId);
   const total = rows.reduce((sum, row) => sum + Number(row.authorized_quantity || 0) * Number(itemMap.get(row.contract_item_id)?.unit_price || 0), 0);
+  const installmentSummary = financialInstallmentSummary(total, installments);
   useEffect(() => { if (autoOpen) ref.current?.showModal(); }, [autoOpen]);
 
-  function changeContract(value: string) { setContractId(value); setRows([emptyItem()]); }
+  function changeContract(value: string) { setContractId(value); setRows([emptyItem()]); setFinancialMode("none"); }
   function updateRow(index: number, patch: Partial<DraftItem>) { setRows((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, ...patch } : row)); }
   function chooseItem(index: number, itemId: string) {
     const option = itemMap.get(itemId);
     updateRow(index, { contract_item_id: itemId, authorized_quantity: 0, planned_start: option?.planned_start ?? workOrder?.planned_start ?? null, planned_finish: option?.planned_finish ?? workOrder?.planned_finish ?? null, notes: null });
   }
+  function changeFinancialMode(mode: FinancialMode) {
+    setFinancialMode(mode);
+    if (mode !== "none") {
+      setInstallments(buildFinancialInstallments({ total, count: Math.max(1, installments.length), firstDueDate: installments[0]?.due_date || suggestedFirstDueDate(), paymentMethod: installments[0]?.payment_method || "Boleto" }));
+    }
+  }
+
+  const financeValid = workOrder || financialMode === "none" || installmentSummary.valid;
 
   return <>
     <button className="elos-button work-order-main-button" type="button" onClick={() => ref.current?.showModal()}>{label ?? (workOrder ? "Editar O.S." : "+ Nova O.S.")}</button>
@@ -67,6 +87,7 @@ export function WorkOrderDialog({ contracts, contractItems, workOrder, items = [
         <input type="hidden" name="contract_id" value={contractId} />
         <input type="hidden" name="items_json" value={JSON.stringify(rows.filter((row) => row.contract_item_id && row.authorized_quantity > 0))} />
         <input type="hidden" name="prerequisites_json" value={JSON.stringify(checks.filter((item) => item.title.trim()))} />
+        <input type="hidden" name="financial_mode" value={workOrder ? "preserve" : financialMode} />
         <div className="work-order-dialog-head"><div><span>Execução · Serviços</span><h2>{workOrder ? "Editar ordem em elaboração" : "Nova ordem de serviço"}</h2><p>Formalize a frente liberada, os serviços autorizados e os pré-requisitos.</p></div><button type="button" onClick={() => ref.current?.close()}>×</button></div>
         <div className="work-order-dialog-body">
           <section className="work-order-form-grid">
@@ -94,6 +115,15 @@ export function WorkOrderDialog({ contracts, contractItems, workOrder, items = [
             <button type="button" className="work-order-add" onClick={() => setRows((current) => [...current, emptyItem()])}>+ Adicionar item contratado</button>
           </section>
 
+          {!workOrder ? <section className="work-order-financial-mode">
+            <div className="work-order-section-title"><div><span>Financeiro opcional</span><h3>Como tratar o valor da O.S.?</h3></div><strong>{money(total)}</strong></div>
+            <label><input type="radio" checked={financialMode === "none"} onChange={() => changeFinancialMode("none")} /><span><strong>Não gerar financeiro</strong><small>Use o fluxo normal de medição e nota fiscal.</small></span></label>
+            <label><input type="radio" checked={financialMode === "forecast_only"} onChange={() => changeFinancialMode("forecast_only")} /><span><strong>Somente previsão de parcelas</strong><small>Leva as datas para acompanhamento, sem criar Contas a Pagar.</small></span></label>
+            <label><input type="radio" checked={financialMode === "payable_on_acceptance"} onChange={() => changeFinancialMode("payable_on_acceptance")} /><span><strong>Gerar Contas a Pagar no aceite técnico</strong><small>Use apenas quando esta O.S. substituir o faturamento por medição ou nota, evitando duplicidade.</small></span></label>
+            {financialMode !== "none" ? <FinancialInstallmentEditor total={total} installments={installments} onChange={setInstallments} inputName="installments_json" eyebrow="Ordem de serviço" title={financialMode === "forecast_only" ? "Previsão de desembolso" : "Parcelas a gerar no aceite"} compact /> : <input type="hidden" name="installments_json" value="[]" />}
+            {financialMode === "payable_on_acceptance" ? <p className="work-order-financial-note"><strong>Atenção:</strong> depois do aceite, as parcelas serão títulos financeiros independentes. Não lance novamente a mesma O.S. por medição ou nota fiscal.</p> : null}
+          </section> : null}
+
           <section className="work-order-prerequisites"><div className="work-order-section-title"><div><span>Liberação da frente</span><h3>Pré-requisitos</h3></div><small>Obrigatórios precisam estar concluídos para liberar a O.S.</small></div>
             {checks.map((item, index) => <div className="work-order-prerequisite" key={index}><input type="checkbox" checked={item.is_completed} onChange={(event) => setChecks((current) => current.map((entry, itemIndex) => itemIndex === index ? { ...entry, is_completed: event.target.checked } : entry))} /><input value={item.title} onChange={(event) => setChecks((current) => current.map((entry, itemIndex) => itemIndex === index ? { ...entry, title: event.target.value } : entry))} /><label><input type="checkbox" checked={item.is_required} onChange={(event) => setChecks((current) => current.map((entry, itemIndex) => itemIndex === index ? { ...entry, is_required: event.target.checked } : entry))} /> Obrigatório</label><input value={item.notes} onChange={(event) => setChecks((current) => current.map((entry, itemIndex) => itemIndex === index ? { ...entry, notes: event.target.value } : entry))} placeholder="Observação" /><button type="button" onClick={() => setChecks((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}
             <button type="button" className="work-order-add" onClick={() => setChecks((current) => [...current, { code: "", title: "", is_required: true, is_completed: false, notes: "" }])}>+ Adicionar pré-requisito</button>
@@ -106,7 +136,7 @@ export function WorkOrderDialog({ contracts, contractItems, workOrder, items = [
             <label className="span2">Observações<textarea name="notes" rows={3} defaultValue={workOrder?.notes ?? ""} /></label>
           </section>
         </div>
-        <div className="work-order-dialog-foot"><div><small>Valor autorizado</small><strong>{money(total)}</strong></div><div><button type="button" onClick={() => ref.current?.close()}>Cancelar</button><button className="primary" type="submit">{workOrder ? "Salvar alterações" : "Criar O.S."}</button></div></div>
+        <div className="work-order-dialog-foot"><div><small>Valor autorizado</small><strong>{money(total)}</strong></div><div><button type="button" onClick={() => ref.current?.close()}>Cancelar</button><button className="primary" type="submit" disabled={!financeValid || total <= 0}>{workOrder ? "Salvar alterações" : "Criar O.S."}</button></div></div>
       </form>
     </dialog>
   </>;

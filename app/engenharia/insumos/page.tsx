@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { toggleEngineeringInputStatus } from "./actions";
 import { InputCreateDialog, InputEditDialog, type EngineeringInputDialogData } from "./input-dialogs";
@@ -53,18 +54,24 @@ export default async function EngineeringInputsPage({
     : supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "inputs.manage" });
 
   const [inputsResult, serviceUnitsResult, manageResult] = await Promise.all([
-    supabase
+    fetchAllRows<EngineeringInput>(async (from, to) => {
+    const { data, error } = await supabase
       .from("engineering_inputs")
       .select("id, code, description, unit, category, family_code, family_label, brand_reference, technical_specification, source_system, source_code, notes, status, updated_at")
       .eq("company_id", companyId)
       .order("family_code", { ascending: true, nullsFirst: false })
       .order("code", { ascending: true })
-      .limit(10000),
-    supabase
+      .range(from, to);
+    return { data: (data ?? []) as EngineeringInput[], error };
+  }),
+  fetchAllRows<UnitRecord>(async (from, to) => {
+    const { data, error } = await supabase
       .from("engineering_services")
       .select("unit")
       .eq("company_id", companyId)
-      .limit(10000),
+      .range(from, to);
+    return { data: (data ?? []) as UnitRecord[], error };
+  }),
     managePromise,
   ]);
 
