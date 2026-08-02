@@ -24,6 +24,7 @@ import { checkKoperCompositionPromotionReadiness } from "./diagnostics/check-kop
 import { promoteKoperBudgetCompositions, promoteKoperBudgetInputs } from "./diagnostics/promote-koper-budget-compositions.js";
 import { writeFlowActiveStockRequests } from "./diagnostics/write-flow-stock-requests.js";
 import { checkStockRequestPromotionReadiness } from "./diagnostics/check-stock-request-promotion-readiness.js";
+import { promoteStockRequestInputs } from "./diagnostics/promote-stock-request-inputs.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
 import { checkKoperStagingReadiness } from "./elos/supabase.js";
 
@@ -306,6 +307,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
                                           ? writeFlowActiveStockRequests
                                           : startupDiagnostic === "stock-request-promotion-readiness"
                                             ? checkStockRequestPromotionReadiness
+                                            : startupDiagnostic === "stock-request-input-promote"
+                                              ? promoteStockRequestInputs
                   : null;
 
   if (diagnostic) {

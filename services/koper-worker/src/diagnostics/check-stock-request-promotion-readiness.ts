@@ -89,7 +89,8 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     inputAmount: number | null;
   }>;
   flowProjects: number;
-  approvedFlowBudgets: number;
+  flowBudgets: number;
+  flowBudgetStatuses: Record<string, number>;
   activeCompanyMembers: number;
 }> {
   const [requests, items, catalog, projects, budgets, memberships] = await Promise.all([
@@ -105,12 +106,11 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
         limit: "100",
       }),
     }),
-    requestSupabase<Array<{ id: string }>>("engineering_budgets", {
+    requestSupabase<Array<{ id: string; status: string }>>("engineering_budgets", {
       query: new URLSearchParams({
-        select: "id",
+        select: "id,status",
         company_id: `eq.${env.BOSSA_COMPANY_ID}`,
         source_system: "eq.koper",
-        status: "eq.approved",
         limit: "100",
       }),
     }),
@@ -212,7 +212,11 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     serviceLinks,
     serviceLinkSamples,
     flowProjects: projects.length,
-    approvedFlowBudgets: budgets.length,
+    flowBudgets: budgets.length,
+    flowBudgetStatuses: budgets.reduce<Record<string, number>>((counts, budget) => {
+      counts[budget.status] = (counts[budget.status] ?? 0) + 1;
+      return counts;
+    }, {}),
     activeCompanyMembers: memberships.length,
   };
 }
