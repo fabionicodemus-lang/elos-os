@@ -164,8 +164,8 @@ export async function inspectFlowStockEntries(): Promise<{
       "https://app.koper.com.br/suprimentos/entradas/view/13373",
       "https://app.koper.com.br/suprimentos/entradas/view/13374",
     ]) {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 25_000 }).catch(() => undefined);
-      await page.waitForTimeout(4_000);
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 18_000 }).catch(() => undefined);
+      await page.waitForTimeout(2_500);
       visitedUrls.push(page.url());
     }
 
@@ -179,7 +179,7 @@ export async function inspectFlowStockEntries(): Promise<{
         "https://api.koper.com.br/stock/v1/product_entry?entryId=13374&pending=false",
       ];
       for (const url of directReads) {
-        const response = await page.request.get(url, { headers: stockHeaders, timeout: 30_000 });
+        const response = await page.request.get(url, { headers: stockHeaders, timeout: 15_000 });
         reads.push(await responseShape(response));
       }
     }
@@ -195,5 +195,5 @@ export async function inspectFlowStockEntries(): Promise<{
       blockedWrites,
       message: null,
     };
-  }, { sessionTimeoutMs: 75_000 });
+  }, { sessionTimeoutMs: 58_000 });
 }
