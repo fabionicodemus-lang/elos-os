@@ -41,7 +41,19 @@ async function readAll(entity: "purchase_order" | "supplier"): Promise<StagingRo
   return rows;
 }
 
-async function main(): Promise<void> {
+export async function backfillKoperHistoricalSuppliers(): Promise<{
+  ok: true;
+  orders: number;
+  suppliersBefore: number;
+  missingSupplierIds: string[];
+  missingSuppliers: number;
+  inserted: number;
+  updated: number;
+  unchanged: number;
+  suppliersAfter: number;
+  ordersWithoutSupplierId: number;
+  unresolvedSupplierIds: string[];
+}> {
   if (process.env.KOPER_BACKFILL_HISTORICAL_SUPPLIERS_ENABLED !== "true") {
     throw new Error("Koper historical supplier backfill is not explicitly enabled");
   }
@@ -98,7 +110,7 @@ async function main(): Promise<void> {
     throw new Error(`Historical suppliers were not persisted: ${unresolvedSupplierIds.join(",")}`);
   }
 
-  console.log("KOPER_HISTORICAL_SUPPLIER_BACKFILL_RESULT", JSON.stringify({
+  return {
     ok: true,
     orders: orders.length,
     suppliersBefore: suppliers.length,
@@ -110,11 +122,5 @@ async function main(): Promise<void> {
     suppliersAfter: verifiedSuppliers.length,
     ordersWithoutSupplierId: ordersWithoutSupplierId.length,
     unresolvedSupplierIds,
-  }));
+  };
 }
-
-void main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : "Unknown error";
-  console.error("KOPER_HISTORICAL_SUPPLIER_BACKFILL_FAILED", { message });
-  process.exitCode = 1;
-});
