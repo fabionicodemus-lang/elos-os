@@ -397,22 +397,28 @@ async function fetchAllBudgetCollection(
 async function fetchCompositionDetailsByService(
   page: Page,
   requestHeaders: Record<string, string>,
-  engBudgetId: number,
   budgetItems: Array<Record<string, unknown>>,
 ): Promise<Array<Record<string, unknown>>> {
-  const serviceIds = [...new Set(
-    budgetItems
-      .map((item) => item.serviceId)
-      .filter((value): value is string | number =>
-        typeof value === "string" || typeof value === "number")
-      .map(String),
-  )].slice(0, 3);
+  const pairs = new Map<string, { serviceId: string; compositionId: string }>();
+  for (const item of budgetItems) {
+    const serviceId = item.serviceId;
+    const compositionId = item.compositionId;
+    if (
+      (typeof serviceId !== "string" && typeof serviceId !== "number")
+      || (typeof compositionId !== "string" && typeof compositionId !== "number")
+    ) continue;
+    pairs.set(`${serviceId}:${compositionId}`, {
+      serviceId: String(serviceId),
+      compositionId: String(compositionId),
+    });
+    if (pairs.size >= 3) break;
+  }
   const details: Array<Record<string, unknown>> = [];
 
-  for (const serviceId of serviceIds) {
+  for (const { serviceId, compositionId } of pairs.values()) {
     const query = new URLSearchParams({
-      engBudgetId: String(engBudgetId),
-      serviceId,
+      compositionId,
+      sourceTable: "Própria",
     });
     const response = await page.request.get(
       `https://api.koper.com.br/engineering/v1/composition?${query.toString()}`,
@@ -421,12 +427,12 @@ async function fetchCompositionDetailsByService(
 
     if (!response.ok()) {
       throw new Error(
-        `Koper composition detail request failed for service ${serviceId} (HTTP ${response.status()})`,
+        `Koper composition detail request failed for composition ${compositionId} (HTTP ${response.status()})`,
       );
     }
 
     const body: unknown = await response.json();
-    details.push({ serviceId, response: body });
+    details.push({ serviceId, compositionId, response: body });
   }
 
   return details;
@@ -689,7 +695,6 @@ export async function inspectKoperEngineering(
             fullCompositionDetails = await fetchCompositionDetailsByService(
               page,
               budgetRequestHeaders,
-              100,
               fullBudgetItems,
             );
           }
