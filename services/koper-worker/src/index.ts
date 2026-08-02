@@ -4,6 +4,7 @@ import { loginKoperAutomatically } from "./auth/koper-auto-login.js";
 import { env } from "./config/env.js";
 import { discoverStockRoute } from "./diagnostics/discover-stock-route.js";
 import { inspectKoperCompanies, inspectKoperFlowContext } from "./diagnostics/inspect-koper-companies.js";
+import { inspectKoperEngineering } from "./diagnostics/inspect-koper-engineering.js";
 import { inspectKoperMenuMap } from "./diagnostics/inspect-koper-menu-map.js";
 import { inspectKoperNavigation } from "./diagnostics/inspect-koper-navigation.js";
 import { inspectStockRequestDetail } from "./diagnostics/inspect-stock-request-detail.js";
@@ -247,8 +248,10 @@ server.listen(env.PORT, "0.0.0.0", () => {
               ? inspectKoperFlowContext
               : startupDiagnostic === "live-recording"
                 ? runLiveRecording
-                : startupDiagnostic === "supabase-staging"
-                  ? checkKoperStagingReadiness
+                : startupDiagnostic === "engineering-flow"
+                  ? inspectKoperEngineering
+                  : startupDiagnostic === "supabase-staging"
+                    ? checkKoperStagingReadiness
                   : startupDiagnostic === "staging-preview"
                     ? previewFlowStaging
                     : startupDiagnostic === "staging-write-sample"
