@@ -1,0 +1,1 @@
+Os centros de custo operacionais são derivados exclusivamente da revisão aprovada marcada como orçamento base. Revisões substituídas permanecem históricas e não podem ser excluídas quando já utilizadas.
