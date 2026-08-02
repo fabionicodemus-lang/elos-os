@@ -1,6 +1,7 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 export type ProjectSwitcherOption = {
   id: string;
@@ -19,18 +20,34 @@ export function ProjectSwitcher({
   projects: ProjectSwitcherOption[];
   action: (formData: FormData) => void | Promise<void>;
 }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [selectedProjectId, setSelectedProjectId] = useState(activeProjectId ?? "");
+
+  useEffect(() => {
+    setSelectedProjectId(activeProjectId ?? "");
+  }, [activeProjectId]);
+
+  const returnTo = useMemo(() => {
+    const query = searchParams.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }, [pathname, searchParams]);
+
   function submitOnChange(event: FormEvent<HTMLSelectElement>) {
-    event.currentTarget.form?.requestSubmit();
+    const form = event.currentTarget.form;
+    setSelectedProjectId(event.currentTarget.value);
+    window.setTimeout(() => form?.requestSubmit(), 0);
   }
 
   return (
     <form className="elos-project-switcher" action={action}>
       <input type="hidden" name="company_id" value={companyId} />
+      <input type="hidden" name="return_to" value={returnTo} />
       <label htmlFor="elos-project-select">Empreendimento</label>
       <select
         id="elos-project-select"
         name="project_id"
-        defaultValue={activeProjectId ?? ""}
+        value={selectedProjectId}
         onChange={submitOnChange}
         aria-label="Selecionar empreendimento"
       >

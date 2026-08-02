@@ -5,9 +5,31 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+const COMPANY_OVERVIEW_COOKIE = "__company_overview__";
+
 function dashboardUrl(message: string, type: "error" | "success" = "error") {
   const params = new URLSearchParams({ [type]: message });
   return `/dashboard?${params.toString()}`;
+}
+
+function safeReturnPath(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim();
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
+
+  try {
+    const url = new URL(raw, "https://elos.local");
+    if (url.origin !== "https://elos.local") return "/dashboard";
+    if (url.pathname === "/login" || url.pathname.startsWith("/auth/")) return "/dashboard";
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return "/dashboard";
+  }
+}
+
+function returnUrlWithMessage(returnTo: string, message: string, type: "error" | "success" = "error") {
+  const url = new URL(returnTo, "https://elos.local");
+  url.searchParams.set(type, message);
+  return `${url.pathname}${url.search}`;
 }
 
 export async function logout() {
@@ -74,11 +96,12 @@ export async function bootstrapWorkspace(formData: FormData) {
 }
 
 export async function selectWorkspace(formData: FormData) {
-  const companyId = String(formData.get("company_id") ?? "");
-  const projectId = String(formData.get("project_id") ?? "");
+  const companyId = String(formData.get("company_id") ?? "").trim();
+  const projectId = String(formData.get("project_id") ?? "").trim();
+  const returnTo = safeReturnPath(formData.get("return_to"));
 
   if (!companyId) {
-    redirect(dashboardUrl("Selecione uma empresa."));
+    redirect(returnUrlWithMessage(returnTo, "Selecione uma empresa."));
   }
 
   const supabase = await createClient();
@@ -90,7 +113,7 @@ export async function selectWorkspace(formData: FormData) {
     .maybeSingle();
 
   if (!membership) {
-    redirect(dashboardUrl("Você não possui acesso ativo a esta empresa."));
+    redirect(returnUrlWithMessage(returnTo, "Você não possui acesso ativo a esta empresa."));
   }
 
   if (projectId) {
@@ -99,34 +122,28 @@ export async function selectWorkspace(formData: FormData) {
       .select("id")
       .eq("id", projectId)
       .eq("company_id", companyId)
+      .neq("status", "archived")
       .maybeSingle();
 
     if (!project) {
-      redirect(dashboardUrl("A obra selecionada não pertence à empresa."));
+      redirect(returnUrlWithMessage(returnTo, "A obra selecionada não pertence à empresa ou está arquivada."));
     }
   }
 
   const cookieStore = await cookies();
-  cookieStore.set("elos_company_id", companyId, {
+  const cookieOptions = {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
-  });
+  };
 
-  if (projectId) {
-    cookieStore.set("elos_project_id", projectId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-    });
-  } else {
-    cookieStore.delete("elos_project_id");
-  }
+  cookieStore.set("elos_company_id", companyId, cookieOptions);
+  cookieStore.set("elos_project_id", projectId || COMPANY_OVERVIEW_COOKIE, cookieOptions);
 
-  revalidatePath("/dashboard");
-  redirect("/dashboard");
+  const pathname = returnTo.split("?")[0] || "/dashboard";
+  revalidatePath(pathname);
+  revalidatePath("/", "layout");
+  redirect(returnTo);
 }
