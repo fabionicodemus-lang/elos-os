@@ -1,4 +1,4 @@
-import type { Page } from "playwright-core";
+import type { Response } from "playwright-core";
 import { performKoperLogin } from "../auth/koper-auto-login.js";
 import { withBrowserless } from "../browser/browserless.js";
 import { collectFieldPaths } from "./discover-stock-route.js";
@@ -8,6 +8,7 @@ import { selectFlow } from "./collect-flow-stock-requests.js";
 type ResponseShape = {
   endpoint: string;
   status: number;
+  queryParams: Record<string, string>;
   topLevelKeys: string[];
   fieldPaths: string[];
   arrays: Array<{ path: string; length: number; firstItemKeys: string[] }>;
@@ -36,48 +37,17 @@ function arrayShapes(value: unknown, prefix = "", depth = 0): ResponseShape["arr
   );
 }
 
-async function captureApiHeaders(page: Page): Promise<Record<string, string>> {
-  let headers: Record<string, string> | null = null;
-  const capture = (request: { method(): string; url(): string; headers(): Record<string, string> }): void => {
-    try {
-      const url = new URL(request.url());
-      if (request.method() === "GET" && url.hostname === "api.koper.com.br" && headers === null) {
-        headers = request.headers();
-      }
-    } catch {
-      // Ignora URLs inválidas.
-    }
-  };
-  page.on("request", capture);
-  await page.goto("https://app.koper.com.br/suprimentos/solicitacoes/", {
-    waitUntil: "domcontentloaded",
-    timeout: 30_000,
-  });
-  for (let attempt = 0; attempt < 12 && !headers; attempt += 1) await page.waitForTimeout(1_000);
-  page.off("request", capture);
-  if (!headers) throw new Error("Koper API headers were not captured");
-  return headers;
-}
-
-async function readShape(
-  page: Page,
-  headers: Record<string, string>,
-  path: string,
-  query: URLSearchParams,
-): Promise<ResponseShape> {
-  const accessToken = headers["x-accesstoken"] ?? headers["x-access-token"];
-  if (!accessToken) throw new Error("Koper access token header was not captured");
-  query.set("accessToken", accessToken);
-  query.set("cb", String(Date.now()));
-  const response = await page.request.get(`https://api.koper.com.br${path}?${query.toString()}`, {
-    headers,
-    timeout: 30_000,
-  });
-  const body: unknown = response.ok() ? await response.json() : null;
+async function responseShape(response: Response): Promise<ResponseShape> {
+  const url = new URL(response.url());
+  const body: unknown = await response.json();
   const object = objectValue(body);
+  const allowedQueryKeys = new Set([
+    "orderId", "invoiceId", "page", "open", "limit", "offset", "orderFlag", "orderby", "typeDate",
+  ]);
   return {
-    endpoint: path,
+    endpoint: url.pathname,
     status: response.status(),
+    queryParams: Object.fromEntries([...url.searchParams.entries()].filter(([key]) => allowedQueryKeys.has(key))),
     topLevelKeys: object ? Object.keys(object).slice(0, 100) : [],
     fieldPaths: collectFieldPaths(body).slice(0, 500),
     arrays: arrayShapes(body),
@@ -88,6 +58,7 @@ export async function inspectFlowPurchaseOrders(): Promise<{
   ok: true;
   authenticated: boolean;
   flowSelected: boolean;
+  visitedUrls: string[];
   reads: ResponseShape[];
   blockedWrites: number;
   message: string | null;
@@ -98,6 +69,7 @@ export async function inspectFlowPurchaseOrders(): Promise<{
       ok: true,
       authenticated: false,
       flowSelected: false,
+      visitedUrls: [],
       reads: [],
       blockedWrites: 0,
       message: login.message,
@@ -126,30 +98,49 @@ export async function inspectFlowPurchaseOrders(): Promise<{
       ok: true,
       authenticated: true,
       flowSelected: false,
+      visitedUrls: [],
       reads: [],
       blockedWrites,
       message: "KOPER_FLOW_COMPANY_NOT_SELECTED",
     };
-    const headers = await captureApiHeaders(page);
-    const listQuery = (open: "yes" | "no") => new URLSearchParams({
-      limit: "100",
-      offset: "0",
-      open,
-      orderFlag: "desc",
-      orderby: "orderDate",
-      typeDate: "orderDate",
-    });
-    const reads = await Promise.all([
-      readShape(page, headers, "/purchase/v1/purchase_order", listQuery("yes")),
-      readShape(page, headers, "/purchase/v1/purchase_order", listQuery("no")),
-      readShape(page, headers, "/purchase/v1/purchase_order", new URLSearchParams({ orderId: "10455" })),
-      readShape(page, headers, "/purchase/v1/purchase", new URLSearchParams({
-        limit: "100",
-        offset: "0",
-        orderFlag: "desc",
-        orderby: "purchaseDate",
-      })),
-    ]);
-    return { ok: true, authenticated: true, flowSelected: true, reads, blockedWrites, message: null };
+
+    const reads: ResponseShape[] = [];
+    const pending: Promise<void>[] = [];
+    const onResponse = (response: Response): void => {
+      try {
+        const url = new URL(response.url());
+        if (response.request().method() !== "GET" || url.hostname !== "api.koper.com.br") return;
+        if (url.pathname !== "/purchase/v1/purchase_order" && url.pathname !== "/purchase/v1/purchase") return;
+        pending.push(responseShape(response).then((shape) => {
+          reads.push(shape);
+        }).catch(() => undefined));
+      } catch {
+        // Ignora URLs inválidas.
+      }
+    };
+    page.on("response", onResponse);
+
+    const visitedUrls: string[] = [];
+    for (const url of [
+      "https://app.koper.com.br/compras/ordens_compra",
+      "https://app.koper.com.br/compras/ordens_compra/finalizados",
+      "https://app.koper.com.br/compras/ordens_compra/view/10455",
+    ]) {
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => undefined);
+      await page.waitForTimeout(5_000);
+      visitedUrls.push(page.url());
+    }
+    await Promise.allSettled(pending);
+    page.off("response", onResponse);
+
+    return {
+      ok: true,
+      authenticated: true,
+      flowSelected: true,
+      visitedUrls,
+      reads,
+      blockedWrites,
+      message: null,
+    };
   }, { sessionTimeoutMs: 60_000 });
 }
