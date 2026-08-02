@@ -620,14 +620,13 @@ export async function inspectKoperEngineering(
       message = "KOPER_FLOW_COMPANY_NOT_SELECTED";
     } else {
       try {
-        await page.goto(
-          "https://web.koper.com.br/engenharia/cadastros/fichas-de-servicos",
-          { waitUntil: "domcontentloaded", timeout: 30_000 },
-        );
-        await page.waitForTimeout(8_000);
-        visitedPages.push(await collectVisitedPage(page));
-
         if (options.collectFullServices) {
+          await page.goto(
+            "https://web.koper.com.br/engenharia/cadastros/fichas-de-servicos",
+            { waitUntil: "domcontentloaded", timeout: 30_000 },
+          );
+          await page.waitForTimeout(8_000);
+          visitedPages.push(await collectVisitedPage(page));
           if (!serviceRequestHeaders) {
             throw new Error("Koper service request headers were not captured");
           }
@@ -641,32 +640,36 @@ export async function inspectKoperEngineering(
           "https://app.koper.com.br/engenharia/orcamentos_obra",
           { waitUntil: "domcontentloaded", timeout: 30_000 },
         );
-        await page.waitForTimeout(8_000);
+        for (let attempt = 0; attempt < 10 && !budgetRequestHeaders; attempt += 1) {
+          await page.waitForTimeout(1_000);
+        }
         visitedPages.push(await collectVisitedPage(page));
 
-        const budgetRow = page
-          .locator("tr")
-          .filter({ hasText: /Flow Aptos - OBRA/i })
-          .first();
-        const budgetName = page
-          .getByText(/^Flow Aptos - OBRA$/i, { exact: true })
-          .first();
+        if (!options.collectFullBudget) {
+          const budgetRow = page
+            .locator("tr")
+            .filter({ hasText: /Flow Aptos - OBRA/i })
+            .first();
+          const budgetName = page
+            .getByText(/^Flow Aptos - OBRA$/i, { exact: true })
+            .first();
 
-        if (await budgetRow.isVisible().catch(() => false)) {
-          const link = budgetRow.locator("a").first();
-          if (await link.isVisible().catch(() => false)) {
-            await link.click();
+          if (await budgetRow.isVisible().catch(() => false)) {
+            const link = budgetRow.locator("a").first();
+            if (await link.isVisible().catch(() => false)) {
+              await link.click();
+            } else {
+              await budgetRow.click();
+            }
+            await page.waitForTimeout(8_000);
+            visitedPages.push(await collectVisitedPage(page));
+          } else if (await budgetName.isVisible().catch(() => false)) {
+            await budgetName.click();
+            await page.waitForTimeout(8_000);
+            visitedPages.push(await collectVisitedPage(page));
           } else {
-            await budgetRow.click();
+            message = "KOPER_CONSTRUCTION_BUDGET_100_ROW_NOT_FOUND";
           }
-          await page.waitForTimeout(8_000);
-          visitedPages.push(await collectVisitedPage(page));
-        } else if (await budgetName.isVisible().catch(() => false)) {
-          await budgetName.click();
-          await page.waitForTimeout(8_000);
-          visitedPages.push(await collectVisitedPage(page));
-        } else {
-          message = "KOPER_CONSTRUCTION_BUDGET_100_ROW_NOT_FOUND";
         }
 
         if (options.collectFullBudget && !message) {
@@ -738,6 +741,6 @@ export async function inspectKoperEngineering(
       checkedAt: new Date().toISOString(),
     };
   }, {
-    sessionTimeoutMs: options.collectFullCompositionDetails ? 240_000 : 120_000,
+    sessionTimeoutMs: 60_000,
   });
 }
