@@ -22,4 +22,4 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 8080
 
-CMD ["node", "dist/stock-entry-direct-staging-job.js"]
+CMD ["node", "dist/run-stock-entry-direct-resilient.js"]
