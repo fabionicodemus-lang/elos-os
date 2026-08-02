@@ -183,7 +183,6 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     if (links.length > 0) itemsWithServiceLinks += 1;
     serviceLinks += links.length;
     for (const value of links) {
-      if (serviceLinkSamples.length >= 20) break;
       const link = objectValue(value);
       const itemMonitInputId = identifier(link.itemMonitInputId);
       const monitInputPchId = identifier(link.monitInputPchId);
@@ -199,13 +198,15 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
                 : null;
       if (resolution) serviceLinkResolution[resolution] = (serviceLinkResolution[resolution] ?? 0) + 1;
       else unresolvedServiceLinks += 1;
-      serviceLinkSamples.push({
-        productRequestId: row.koper_id,
-        requestId: row.koper_parent_id,
-        itemMonitInputId,
-        monitInputPchId,
-        inputAmount: numberValue(link.inputAmount),
-      });
+      if (serviceLinkSamples.length < 20) {
+        serviceLinkSamples.push({
+          productRequestId: row.koper_id,
+          requestId: row.koper_parent_id,
+          itemMonitInputId,
+          monitInputPchId,
+          inputAmount: numberValue(link.inputAmount),
+        });
+      }
     }
   }
 
