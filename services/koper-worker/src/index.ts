@@ -28,6 +28,7 @@ import {
 } from "./diagnostics/write-flow-stock-requests.js";
 import {
   checkStockRequestAllocationMismatches,
+  checkStockRequestFullPromotionSummary,
   checkStockRequestPromotionReadiness,
 } from "./diagnostics/check-stock-request-promotion-readiness.js";
 import { promoteStockRequestInputs } from "./diagnostics/promote-stock-request-inputs.js";
@@ -324,6 +325,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
                                             ? writeFlowClosedStockRequests
                                           : startupDiagnostic === "stock-request-promotion-readiness"
                                             ? checkStockRequestPromotionReadiness
+                                            : startupDiagnostic === "stock-request-full-promotion-summary"
+                                              ? checkStockRequestFullPromotionSummary
                                             : startupDiagnostic === "stock-request-allocation-mismatches"
                                               ? checkStockRequestAllocationMismatches
                                             : startupDiagnostic === "stock-request-input-promote"

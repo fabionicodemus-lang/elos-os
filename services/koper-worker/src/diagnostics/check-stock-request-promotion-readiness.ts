@@ -299,3 +299,43 @@ export async function checkStockRequestAllocationMismatches(): Promise<{
     mismatches: readiness.serviceQuantityMismatches,
   };
 }
+
+export async function checkStockRequestFullPromotionSummary(): Promise<{
+  ok: true;
+  requests: number;
+  items: number;
+  requestStatuses: Record<string, number>;
+  resolvedInputs: number;
+  missingInputs: number;
+  uniqueMissingProducts: number;
+  invalidQuantities: number;
+  itemsWithServiceLinks: number;
+  serviceLinks: number;
+  unresolvedServiceLinks: number;
+  serviceQuantityMismatches: number;
+  flowProjects: number;
+  flowBudgets: number;
+  activeCompanyMembers: number;
+}> {
+  const readiness = await checkStockRequestPromotionReadiness();
+  const uniqueMissingProducts = new Set(readiness.missingInputs.flatMap((item) =>
+    item.productId ? [item.productId] : item.inputId ? [item.inputId] : []
+  )).size;
+  return {
+    ok: true,
+    requests: readiness.requests,
+    items: readiness.items,
+    requestStatuses: readiness.requestStatuses,
+    resolvedInputs: readiness.resolvedInputs,
+    missingInputs: readiness.missingInputs.length,
+    uniqueMissingProducts,
+    invalidQuantities: readiness.invalidQuantities.length,
+    itemsWithServiceLinks: readiness.itemsWithServiceLinks,
+    serviceLinks: readiness.serviceLinks,
+    unresolvedServiceLinks: readiness.unresolvedServiceLinks,
+    serviceQuantityMismatches: readiness.serviceQuantityMismatches.length,
+    flowProjects: readiness.flowProjects,
+    flowBudgets: readiness.flowBudgets,
+    activeCompanyMembers: readiness.activeCompanyMembers,
+  };
+}
