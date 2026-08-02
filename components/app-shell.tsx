@@ -56,7 +56,6 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const inputsHref = can("inputs.view") ? "/engenharia/insumos" : undefined;
   const pricesHref = can("prices.view") ? "/engenharia/precos" : undefined;
   const takeoffsHref = can("takeoffs.view") ? "/engenharia/levantamento" : undefined;
-  const analyticalBudgetHref = can("budgets.view") ? "/engenharia/orcamento-analitico" : undefined;
   const scheduleHref = can("schedule.view") ? "/engenharia/cronograma" : undefined;
   const curvesHref = can("schedule.view") ? "/engenharia/curvas" : undefined;
   const contractPlanHref = can("schedule.view") ? "/engenharia/plano-contratacoes" : undefined;
@@ -107,12 +106,11 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
     ]},
     { key: "engineering", label: "Engenharia", icon: "♙", active: activeGroup === "engineering", items: [
       { label: "Orçamentos", sectionLabel: "Orçamentos" },
-      { label: "Cadastro de Orçamentos", href: budgetsHref, active: activeItem === "budgets", disabled: !budgetsHref },
+      { label: "Orçamentos", href: budgetsHref, active: activeItem === "budgets", disabled: !budgetsHref },
       { label: "Serviços", href: servicesHref, active: activeItem === "services", disabled: !servicesHref },
       { label: "Insumos", href: inputsHref, active: activeItem === "inputs", disabled: !inputsHref },
       { label: "Preços e Cotações", href: pricesHref, active: activeItem === "prices", disabled: !pricesHref },
       { label: "Levantamento de Quantitativos", href: takeoffsHref, active: activeItem === "takeoffs", disabled: !takeoffsHref },
-      { label: "Orçamento Analítico", href: analyticalBudgetHref, active: activeItem === "analytical-budget", disabled: !analyticalBudgetHref },
       { label: "Planejamento da obra", sectionLabel: "Planejamento da obra" },
       { label: "Cronograma Físico · Linha Base", href: scheduleHref, active: activeItem === "schedule", disabled: !scheduleHref },
       { label: "Curvas Física e Financeira", href: curvesHref, active: activeItem === "curves", disabled: !curvesHref },

@@ -21,6 +21,8 @@ type Budget = {
   reference_date: string | null;
   area_m2: number;
   notes: string | null;
+  is_base: boolean;
+  base_set_at: string | null;
   updated_at: string;
 };
 
@@ -64,7 +66,7 @@ const statusLabels: Record<Budget["status"], string> = {
   draft: "Rascunho",
   in_progress: "Em elaboração",
   review: "Em revisão",
-  approved: "Revisão fechada",
+  approved: "Aprovado",
   archived: "Arquivado",
 };
 
@@ -114,7 +116,7 @@ export default async function BudgetDetailPage({
 
   let budgetQuery = supabase
     .from("engineering_budgets")
-    .select("id, code, name, version, status, reference_date, area_m2, notes, updated_at")
+    .select("id, code, name, version, status, reference_date, area_m2, notes, is_base, base_set_at, updated_at")
     .eq("id", budgetId)
     .eq("company_id", companyId);
   let groupsQuery = supabase
@@ -160,6 +162,12 @@ export default async function BudgetDetailPage({
     .select("unit")
     .eq("company_id", companyId)
     .limit(10000);
+  let transactionsQuery = supabase
+    .from("execution_material_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId)
+    .eq("budget_id", budgetId);
+  if (projectId) transactionsQuery = transactionsQuery.eq("project_id", projectId);
 
   const [
     budgetResult,
@@ -169,6 +177,7 @@ export default async function BudgetDetailPage({
     manageResult,
     serviceUnitsResult,
     inputUnitsResult,
+    transactionsResult,
   ] = await Promise.all([
     budgetQuery.maybeSingle(),
     groupsQuery,
@@ -177,6 +186,7 @@ export default async function BudgetDetailPage({
     managePromise,
     serviceUnitsQuery,
     inputUnitsQuery,
+    transactionsQuery,
   ]);
 
   if (!budgetResult.data) redirect("/engenharia/orcamentos?error=Revisão%20não%20localizada.");
@@ -187,6 +197,7 @@ export default async function BudgetDetailPage({
   const serviceUnits = (serviceUnitsResult.data ?? []) as UnitRecord[];
   const inputUnits = (inputUnitsResult.data ?? []) as UnitRecord[];
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
+  const hasCostCenterTransactions = Number(transactionsResult.count ?? 0) > 0;
   const project = projectResult.data;
   const units = [...new Set([
     ...items.map((item) => item.unit),
@@ -240,20 +251,20 @@ export default async function BudgetDetailPage({
   }
 
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Obra ativa";
-  const structureError = budgetResult.error || groupsResult.error || itemsResult.error;
+  const structureError = budgetResult.error || groupsResult.error || itemsResult.error || transactionsResult.error;
 
   return (
     <AppShell
       activeGroup="engineering"
       activeItem="budgets"
       eyebrow="Engenharia · Orçamento de Obras"
-      title="Orçamento analítico"
+      title="Orçamento"
       description={`${company.name} · ${context} · ${budget.code} · ${budget.version} · ${budget.name}.`}
       actions={
         <>
           <Link className="elos-button" href="/engenharia/orcamentos">Voltar</Link>
-          {canManage ? <BudgetRevisionDialogs budget={budget} groups={groups} units={units} itemCount={items.length} /> : null}
-          {canManage && budget.status !== "archived" ? (
+          {canManage ? <BudgetRevisionDialogs budget={budget} groups={groups} units={units} itemCount={items.length} hasCostCenterTransactions={hasCostCenterTransactions} /> : null}
+          {canManage && budget.status !== "archived" && !budget.is_base ? (
             <form action={archiveBudget}>
               <input type="hidden" name="budget_id" value={budget.id} />
               <button className="elos-button elos-button-danger" type="submit">Arquivar</button>
@@ -267,7 +278,7 @@ export default async function BudgetDetailPage({
       {structureError ? <div className="auth-message error workspace-message">Não foi possível carregar todos os dados da revisão.</div> : null}
 
       <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">
-        <Link href="/engenharia/orcamentos">▦ Visão geral</Link>
+        <Link href="/engenharia/orcamentos">▦ Orçamentos</Link>
         <span>≡ Serviços</span>
         <span>◈ Insumos</span>
         <span>$ Preços e cotações</span>
@@ -282,6 +293,7 @@ export default async function BudgetDetailPage({
         </div>
         <div className="budget-reference-meta">
           <span className={`budget-status ${budget.status}`}>{statusLabels[budget.status]}</span>
+          {budget.is_base ? <span className="budget-base-badge">Orçamento base</span> : null}
           <small>Data-base {dateBR(budget.reference_date)} · atualização {dateBR(budget.updated_at)}</small>
         </div>
       </section>

@@ -37,6 +37,19 @@ export default async function AnalyticalBudgetRedirectPage({
   }
 
   if (!budgetId) {
+    const { data: baseBudget } = await supabase
+      .from("engineering_budgets")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("project_id", projectId)
+      .eq("status", "approved")
+      .eq("is_base", true)
+      .maybeSingle();
+
+    budgetId = baseBudget?.id ?? null;
+  }
+
+  if (!budgetId) {
     const { data: latestBudget } = await supabase
       .from("engineering_budgets")
       .select("id")

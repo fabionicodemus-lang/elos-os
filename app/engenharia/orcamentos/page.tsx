@@ -12,6 +12,8 @@ type Budget = {
   reference_date: string | null;
   area_m2: number;
   notes: string | null;
+  is_base: boolean;
+  base_set_at: string | null;
   updated_at: string;
 };
 
@@ -41,7 +43,7 @@ const statusLabels: Record<Budget["status"], string> = {
   draft: "Rascunho",
   in_progress: "Em elaboração",
   review: "Em revisão",
-  approved: "Revisão fechada",
+  approved: "Aprovado",
   archived: "Arquivado",
 };
 
@@ -117,7 +119,7 @@ export default async function BudgetsPage({
 
   let budgetsQuery = supabase
     .from("engineering_budgets")
-    .select("id, code, name, version, status, reference_date, area_m2, notes, updated_at")
+    .select("id, code, name, version, status, reference_date, area_m2, notes, is_base, base_set_at, updated_at")
     .eq("company_id", companyId)
     .order("updated_at", { ascending: false })
     .limit(10000);
@@ -179,7 +181,8 @@ export default async function BudgetsPage({
   const paginationQuery = `q=${encodeURIComponent(params.q ?? "")}&status=${status}`;
 
   const activeBudgets = budgets.filter((budget) => budget.status !== "archived");
-  const latestBudget = activeBudgets[0] ?? null;
+  const baseBudget = activeBudgets.find((budget) => budget.is_base) ?? null;
+  const latestBudget = baseBudget ?? activeBudgets[0] ?? null;
   const latestMetrics = latestBudget ? metricsByBudget.get(latestBudget.id) ?? buildMetrics([]) : buildMetrics([]);
   const inProgressCount = activeBudgets.filter((budget) => ["draft", "in_progress", "review"].includes(budget.status)).length;
   const approvedCount = activeBudgets.filter((budget) => budget.status === "approved").length;
@@ -195,7 +198,7 @@ export default async function BudgetsPage({
       activeGroup="engineering"
       activeItem="budgets"
       eyebrow="Engenharia · Orçamento de Obras"
-      title="Visão geral do orçamento"
+      title="Orçamentos"
       description={`${company.name} · ${context} · quantitativos e custos reais de execução do empreendimento.`}
       actions={canManage ? <BudgetCreateDialog /> : undefined}
     >
@@ -208,7 +211,7 @@ export default async function BudgetsPage({
       ) : null}
 
       <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">
-        <span className="active">▦ Visão geral</span>
+        <span className="active">▦ Orçamentos</span>
         <span>≡ Serviços</span>
         <span>◈ Insumos</span>
         <span>$ Preços e cotações</span>
@@ -218,17 +221,17 @@ export default async function BudgetsPage({
 
       <section className="budget-kpi-grid">
         <article>
-          <span>Revisões ativas</span>
+          <span>Orçamentos ativos</span>
           <strong>{activeBudgets.length}</strong>
           <small>{inProgressCount} em elaboração · {approvedCount} fechada(s)</small>
         </article>
         <article>
-          <span>Serviços na revisão atual</span>
+          <span>Serviços no orçamento base</span>
           <strong>{latestMetrics.itemCount}</strong>
           <small>{latestBudget ? `${latestBudget.code} · ${latestBudget.version}` : "nenhuma revisão criada"}</small>
         </article>
         <article>
-          <span>Custo total da revisão atual</span>
+          <span>Custo total do orçamento base</span>
           <strong>{money(latestMetrics.direct)}</strong>
           <small>custo real previsto para execução</small>
         </article>
@@ -300,7 +303,7 @@ export default async function BudgetsPage({
                       <strong className="budget-code">{budget.code} · {budget.version}</strong>
                       <span>{budget.name}</span>
                     </td>
-                    <td><span className={`budget-status ${budget.status}`}>{statusLabels[budget.status]}</span></td>
+                    <td><span className={`budget-status ${budget.status}`}>{statusLabels[budget.status]}</span>{budget.is_base ? <span className="budget-base-badge">Orçamento base</span> : null}</td>
                     <td>{dateBR(budget.reference_date)}</td>
                     <td>{decimal(budget.area_m2)} m²</td>
                     <td>
