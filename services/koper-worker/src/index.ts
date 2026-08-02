@@ -23,7 +23,10 @@ import { promoteKoperConstructionBudget } from "./diagnostics/promote-koper-cons
 import { checkKoperCompositionPromotionReadiness } from "./diagnostics/check-koper-composition-promotion-readiness.js";
 import { promoteKoperBudgetCompositions, promoteKoperBudgetInputs } from "./diagnostics/promote-koper-budget-compositions.js";
 import { writeFlowActiveStockRequests } from "./diagnostics/write-flow-stock-requests.js";
-import { checkStockRequestPromotionReadiness } from "./diagnostics/check-stock-request-promotion-readiness.js";
+import {
+  checkStockRequestAllocationMismatches,
+  checkStockRequestPromotionReadiness,
+} from "./diagnostics/check-stock-request-promotion-readiness.js";
 import { promoteStockRequestInputs } from "./diagnostics/promote-stock-request-inputs.js";
 import { promoteActiveStockRequests } from "./diagnostics/promote-active-stock-requests.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
@@ -308,6 +311,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
                                           ? writeFlowActiveStockRequests
                                           : startupDiagnostic === "stock-request-promotion-readiness"
                                             ? checkStockRequestPromotionReadiness
+                                            : startupDiagnostic === "stock-request-allocation-mismatches"
+                                              ? checkStockRequestAllocationMismatches
                                             : startupDiagnostic === "stock-request-input-promote"
                                               ? promoteStockRequestInputs
                                               : startupDiagnostic === "stock-request-active-promote"

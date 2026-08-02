@@ -280,3 +280,22 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     activeCompanyMembers: memberships.length,
   };
 }
+
+export async function checkStockRequestAllocationMismatches(): Promise<{
+  ok: true;
+  count: number;
+  mismatches: Array<{
+    productRequestId: string;
+    requestId: string | null;
+    productAmount: number | null;
+    allocatedAmount: number;
+    links: number;
+  }>;
+}> {
+  const readiness = await checkStockRequestPromotionReadiness();
+  return {
+    ok: true,
+    count: readiness.serviceQuantityMismatches.length,
+    mismatches: readiness.serviceQuantityMismatches,
+  };
+}
