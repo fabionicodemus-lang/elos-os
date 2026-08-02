@@ -42,17 +42,35 @@ function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-async function captureTransport(page: Page): Promise<{ url: string; headers: Record<string, string> }> {
-  let transport: { url: string; headers: Record<string, string> } | null = null;
+async function captureTransport(page: Page): Promise<{
+  url: string;
+  headers: Record<string, string>;
+  status: number;
+  body: UnknownRecord;
+}> {
+  let captured: Promise<{
+    url: string;
+    headers: Record<string, string>;
+    status: number;
+    body: UnknownRecord;
+  }> | null = null;
   const capture = (response: Response): void => {
     try {
       const url = new URL(response.url());
       if (
-        response.request().method() === "GET"
+        !captured
+        && response.request().method() === "GET"
         && url.hostname === "api.koper.com.br"
         && url.pathname === "/purchase/v1/purchase_order"
         && url.searchParams.get("orderId") === "all"
-      ) transport ??= { url: response.url(), headers: response.request().headers() };
+      ) {
+        captured = response.json().then((body: unknown) => ({
+          url: response.url(),
+          headers: response.request().headers(),
+          status: response.status(),
+          body: objectValue(body) ?? {},
+        }));
+      }
     } catch {
       // Ignora URLs inválidas.
     }
@@ -62,19 +80,10 @@ async function captureTransport(page: Page): Promise<{ url: string; headers: Rec
     waitUntil: "domcontentloaded",
     timeout: 18_000,
   }).catch(() => undefined);
-  for (let attempt = 0; attempt < 8 && !transport; attempt += 1) await page.waitForTimeout(750);
+  for (let attempt = 0; attempt < 10 && !captured; attempt += 1) await page.waitForTimeout(750);
   page.off("response", capture);
-  if (!transport) throw new Error("Koper purchase order transport was not captured");
-  return transport;
-}
-
-function listUrl(template: string, offset: number, limit: number): string {
-  const url = new URL(template);
-  url.searchParams.set("orderId", "all");
-  url.searchParams.set("offset", String(offset));
-  url.searchParams.set("limit", String(limit));
-  url.searchParams.set("cb", String(Date.now()));
-  return url.toString();
+  if (!captured) throw new Error("Koper purchase order transport was not captured");
+  return await captured;
 }
 
 function detailUrl(template: string, orderId: string): string {
@@ -104,36 +113,36 @@ export async function inventoryFlowActivePurchaseOrders(): Promise<{
   ok: true;
   authenticated: boolean;
   flowSelected: boolean;
-  capturedOpenParam: string | null;
+  capturedStatus: number | null;
+  capturedQuery: Record<string, string>;
   declaredTotal: number;
-  collected: number;
-  uniqueOrderIds: number;
-  entryUnmatchedSampleMatches: string[];
-  entryUnmatchedSampleMissing: string[];
-  statusCounts: Record<string, number>;
+  collectedFirstPage: number;
+  entryUnmatchedSampleMatchesFirstPage: string[];
+  statusCountsFirstPage: Record<string, number>;
   samples: OrderSummary[];
   detailChecks: Array<{ orderId: string; status: number; returnedOrderId: string | null; products: number | null }>;
   blockedWrites: number;
   message: string | null;
 }> {
   return withBrowserless(async ({ page }) => {
-    const login = await performKoperLogin(page);
-    if (!login.authenticated) return {
-      ok: true,
-      authenticated: false,
-      flowSelected: false,
-      capturedOpenParam: null,
+    const empty = (message: string | null, authenticated: boolean, flowSelected: boolean, blockedWrites: number) => ({
+      ok: true as const,
+      authenticated,
+      flowSelected,
+      capturedStatus: null,
+      capturedQuery: {},
       declaredTotal: 0,
-      collected: 0,
-      uniqueOrderIds: 0,
-      entryUnmatchedSampleMatches: [],
-      entryUnmatchedSampleMissing: ENTRY_UNMATCHED_SAMPLE,
-      statusCounts: {},
+      collectedFirstPage: 0,
+      entryUnmatchedSampleMatchesFirstPage: [],
+      statusCountsFirstPage: {},
       samples: [],
       detailChecks: [],
-      blockedWrites: 0,
-      message: login.message,
-    };
+      blockedWrites,
+      message,
+    });
+
+    const login = await performKoperLogin(page);
+    if (!login.authenticated) return empty(login.message, false, false, 0);
 
     let blockedWrites = 0;
     await page.route("**/*", async (route) => {
@@ -157,51 +166,25 @@ export async function inventoryFlowActivePurchaseOrders(): Promise<{
     });
 
     const flowSelected = await selectFlow(page);
-    if (!flowSelected) return {
-      ok: true,
-      authenticated: true,
-      flowSelected: false,
-      capturedOpenParam: null,
-      declaredTotal: 0,
-      collected: 0,
-      uniqueOrderIds: 0,
-      entryUnmatchedSampleMatches: [],
-      entryUnmatchedSampleMissing: ENTRY_UNMATCHED_SAMPLE,
-      statusCounts: {},
-      samples: [],
-      detailChecks: [],
-      blockedWrites,
-      message: "KOPER_FLOW_COMPANY_NOT_SELECTED",
-    };
+    if (!flowSelected) return empty("KOPER_FLOW_COMPANY_NOT_SELECTED", true, false, blockedWrites);
 
     const transport = await captureTransport(page);
-    const capturedOpenParam = new URL(transport.url).searchParams.get("open");
-    const summaries: OrderSummary[] = [];
-    let declaredTotal = 0;
-    const pageSize = 100;
-    for (let offset = 0; offset < 10_000; offset += pageSize) {
-      const response = await page.request.get(listUrl(transport.url, offset, pageSize), {
-        headers: transport.headers,
-        timeout: 15_000,
-      });
-      if (!response.ok()) throw new Error(`Koper active order list failed (HTTP ${response.status()})`);
-      const body = objectValue(await response.json());
-      declaredTotal = numeric(body?.ordersAmount) ?? declaredTotal;
-      const orders = Array.isArray(body?.orders) ? body.orders : [];
-      for (const value of orders) {
-        const parsed = orderSummary(value);
-        if (parsed) summaries.push(parsed);
-      }
-      if (orders.length < pageSize || (declaredTotal > 0 && summaries.length >= declaredTotal)) break;
-    }
-
-    const orderIds = new Set(summaries.map((item) => item.orderId));
-    const entryUnmatchedSampleMatches = ENTRY_UNMATCHED_SAMPLE.filter((id) => orderIds.has(id));
-    const entryUnmatchedSampleMissing = ENTRY_UNMATCHED_SAMPLE.filter((id) => !orderIds.has(id));
-    const statusCounts: Record<string, number> = {};
+    const safeQueryKeys = new Set(["orderId", "open", "limit", "offset", "page", "orderFlag", "orderby", "typeDate"]);
+    const capturedUrl = new URL(transport.url);
+    const capturedQuery = Object.fromEntries(
+      [...capturedUrl.searchParams.entries()].filter(([key]) => safeQueryKeys.has(key)),
+    );
+    const rawOrders = Array.isArray(transport.body.orders) ? transport.body.orders : [];
+    const summaries = rawOrders.flatMap((value) => {
+      const parsed = orderSummary(value);
+      return parsed ? [parsed] : [];
+    });
+    const firstPageIds = new Set(summaries.map((item) => item.orderId));
+    const entryUnmatchedSampleMatchesFirstPage = ENTRY_UNMATCHED_SAMPLE.filter((id) => firstPageIds.has(id));
+    const statusCountsFirstPage: Record<string, number> = {};
     for (const item of summaries) {
       const status = item.status ?? "(missing)";
-      statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+      statusCountsFirstPage[status] = (statusCountsFirstPage[status] ?? 0) + 1;
     }
 
     const detailChecks = [] as Array<{
@@ -229,13 +212,12 @@ export async function inventoryFlowActivePurchaseOrders(): Promise<{
       ok: true,
       authenticated: true,
       flowSelected: true,
-      capturedOpenParam,
-      declaredTotal,
-      collected: summaries.length,
-      uniqueOrderIds: orderIds.size,
-      entryUnmatchedSampleMatches,
-      entryUnmatchedSampleMissing,
-      statusCounts,
+      capturedStatus: transport.status,
+      capturedQuery,
+      declaredTotal: numeric(transport.body.ordersAmount) ?? 0,
+      collectedFirstPage: summaries.length,
+      entryUnmatchedSampleMatchesFirstPage,
+      statusCountsFirstPage,
       samples: summaries.slice(0, 15),
       detailChecks,
       blockedWrites,
