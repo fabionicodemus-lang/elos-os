@@ -31,6 +31,8 @@ export type KoperEngineeringDiagnostic = {
   fullServiceRecords?: Array<Record<string, unknown>>;
   fullConstructionBudget?: Record<string, unknown>;
   fullBudgetItems?: Array<Record<string, unknown>>;
+  fullBudgetCompositions?: Array<Record<string, unknown>>;
+  fullBudgetInputs?: Array<Record<string, unknown>>;
   message: string | null;
   checkedAt: string;
 };
@@ -332,6 +334,65 @@ async function fetchAllBudgetItems(
   return records;
 }
 
+async function fetchAllBudgetCollection(
+  page: Page,
+  requestHeaders: Record<string, string>,
+  endpoint: "budget_composition" | "budget_input",
+  listKeys: string[],
+  orderby: string,
+  engBudgetId: number,
+): Promise<Array<Record<string, unknown>>> {
+  const records: Array<Record<string, unknown>> = [];
+  const limit = 40;
+
+  for (let offset = 0; ; offset += limit) {
+    const query = new URLSearchParams({
+      engBudgetId: String(engBudgetId),
+      limit: String(limit),
+      offset: String(offset),
+      orderFlag: "asc",
+      orderby,
+    });
+    const response = await page.request.get(
+      `https://api.koper.com.br/engineering/v1/${endpoint}?${query.toString()}`,
+      { headers: requestHeaders, timeout: 30_000 },
+    );
+
+    if (!response.ok()) {
+      throw new Error(
+        `Koper ${endpoint} request failed (HTTP ${response.status()})`,
+      );
+    }
+
+    const body: unknown = await response.json();
+    const object =
+      typeof body === "object" && body !== null
+        ? (body as Record<string, unknown>)
+        : null;
+    const items =
+      listKeys
+        .map((key) => object?.[key])
+        .find((value): value is unknown[] => Array.isArray(value)) ?? [];
+    const total =
+      typeof object?.itemsAmount === "number"
+        ? object.itemsAmount
+        : typeof object?.total === "number"
+          ? object.total
+          : null;
+
+    records.push(
+      ...items.filter(
+        (item): item is Record<string, unknown> =>
+          typeof item === "object" && item !== null,
+      ),
+    );
+
+    if (items.length < limit || (total !== null && records.length >= total)) break;
+  }
+
+  return records;
+}
+
 export async function inspectKoperEngineering(
   options: { collectFullServices?: boolean; collectFullBudget?: boolean } = {},
 ): Promise<KoperEngineeringDiagnostic> {
@@ -364,6 +425,8 @@ export async function inspectKoperEngineering(
     let fullServiceRecords: Array<Record<string, unknown>> | undefined;
     let fullConstructionBudget: Record<string, unknown> | undefined;
     let fullBudgetItems: Array<Record<string, unknown>> | undefined;
+    let fullBudgetCompositions: Array<Record<string, unknown>> | undefined;
+    let fullBudgetInputs: Array<Record<string, unknown>> | undefined;
     const activeCompanyBefore = await readActiveCompanyLabel(page).catch(() => null);
 
     await page.route("**/*", async (route) => {
@@ -562,6 +625,22 @@ export async function inspectKoperEngineering(
             budgetRequestHeaders,
             100,
           );
+          fullBudgetCompositions = await fetchAllBudgetCollection(
+            page,
+            budgetRequestHeaders,
+            "budget_composition",
+            ["items", "compositions"],
+            "compositionName",
+            100,
+          );
+          fullBudgetInputs = await fetchAllBudgetCollection(
+            page,
+            budgetRequestHeaders,
+            "budget_input",
+            ["items", "inputs"],
+            "inputName",
+            100,
+          );
         }
       } catch (error) {
         message =
@@ -586,6 +665,8 @@ export async function inspectKoperEngineering(
       ...(fullServiceRecords ? { fullServiceRecords } : {}),
       ...(fullConstructionBudget ? { fullConstructionBudget } : {}),
       ...(fullBudgetItems ? { fullBudgetItems } : {}),
+      ...(fullBudgetCompositions ? { fullBudgetCompositions } : {}),
+      ...(fullBudgetInputs ? { fullBudgetInputs } : {}),
       message,
       checkedAt: new Date().toISOString(),
     };
