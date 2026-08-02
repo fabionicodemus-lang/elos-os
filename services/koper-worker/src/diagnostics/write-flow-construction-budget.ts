@@ -64,12 +64,45 @@ export function buildBudgetItemStagingRecords(
   });
 }
 
+export function buildBudgetChildStagingRecords(
+  entity: "budget_composition" | "budget_input",
+  idField: "compositionId" | "inputId",
+  records: Array<Record<string, unknown>>,
+): KoperStagingRecord[] {
+  const unique = new Map<string, Record<string, unknown>>();
+
+  for (const record of records) {
+    const koperId = identifier(record[idField]);
+    if (koperId === null) continue;
+    unique.set(String(koperId), record);
+  }
+
+  return [...unique.entries()].map(([key, record]) =>
+    createKoperStagingRecord({
+      companyId: env.BOSSA_COMPANY_ID,
+      entity,
+      koperId: key,
+      koperParentId: FLOW_BUDGET_ID,
+      sanitizedPayload: {
+        enterpriseId: FLOW_ENTERPRISE_ID,
+        engBudgetId: FLOW_BUDGET_ID,
+        ...record,
+      },
+      mappingVersion: 1,
+    }),
+  );
+}
+
 export async function writeFlowConstructionBudget(): Promise<{
   ok: true;
   budgetId: number;
   extractedItems: number;
   budget: { inserted: number; unchanged: number; updated: number };
   items: { inserted: number; unchanged: number; updated: number };
+  extractedCompositions: number;
+  compositions: { inserted: number; unchanged: number; updated: number };
+  extractedInputs: number;
+  inputs: { inserted: number; unchanged: number; updated: number };
 }> {
   if (
     process.env.KOPER_STAGING_WRITE_ENABLED !== "true" ||
@@ -86,7 +119,12 @@ export async function writeFlowConstructionBudget(): Promise<{
   if (!diagnostic.authenticated || !diagnostic.flowSelected) {
     throw new Error("Flow context was not established");
   }
-  if (!diagnostic.fullConstructionBudget || !diagnostic.fullBudgetItems) {
+  if (
+    !diagnostic.fullConstructionBudget ||
+    !diagnostic.fullBudgetItems ||
+    !diagnostic.fullBudgetCompositions ||
+    !diagnostic.fullBudgetInputs
+  ) {
     throw new Error("Full Koper construction budget was not captured");
   }
 
@@ -96,9 +134,21 @@ export async function writeFlowConstructionBudget(): Promise<{
   const itemRecords = buildBudgetItemStagingRecords(
     diagnostic.fullBudgetItems,
   );
+  const compositionRecords = buildBudgetChildStagingRecords(
+    "budget_composition",
+    "compositionId",
+    diagnostic.fullBudgetCompositions,
+  );
+  const inputRecords = buildBudgetChildStagingRecords(
+    "budget_input",
+    "inputId",
+    diagnostic.fullBudgetInputs,
+  );
 
   const budget = await saveKoperStagingBatch([budgetRecord]);
   const items = await saveKoperStagingBatch(itemRecords);
+  const compositions = await saveKoperStagingBatch(compositionRecords);
+  const inputs = await saveKoperStagingBatch(inputRecords);
 
   return {
     ok: true,
@@ -106,5 +156,9 @@ export async function writeFlowConstructionBudget(): Promise<{
     extractedItems: itemRecords.length,
     budget,
     items,
+    extractedCompositions: compositionRecords.length,
+    compositions,
+    extractedInputs: inputRecords.length,
+    inputs,
   };
 }
