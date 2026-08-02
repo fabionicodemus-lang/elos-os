@@ -15,6 +15,7 @@ import { writeFlowStagingSample } from "./diagnostics/write-flow-staging-sample.
 import { writeFlowProductSample } from "./diagnostics/write-flow-product-sample.js";
 import { writeFlowProductCatalog } from "./diagnostics/write-flow-product-catalog.js";
 import { writeFlowServiceCatalog } from "./diagnostics/write-flow-service-catalog.js";
+import { writeFlowConstructionBudget } from "./diagnostics/write-flow-construction-budget.js";
 import { promoteKoperProducts } from "./diagnostics/promote-koper-products.js";
 import { testBrowserlessConnection } from "./diagnostics/test-browserless.js";
 import { checkKoperStagingReadiness } from "./elos/supabase.js";
@@ -261,8 +262,10 @@ server.listen(env.PORT, "0.0.0.0", () => {
                         ? writeFlowProductSample
                         : startupDiagnostic === "product-staging-write-full"
                           ? writeFlowProductCatalog
-                          : startupDiagnostic === "service-staging-write-full"
-                            ? writeFlowServiceCatalog
+                          : startupDiagnostic === "budget-staging-write-full"
+                            ? writeFlowConstructionBudget
+                            : startupDiagnostic === "service-staging-write-full"
+                              ? writeFlowServiceCatalog
                             : startupDiagnostic === "product-promote-full"
                               ? promoteKoperProducts
                   : null;
