@@ -90,6 +90,13 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
   }>;
   serviceLinkResolution: Record<string, number>;
   unresolvedServiceLinks: number;
+  serviceQuantityMismatches: Array<{
+    productRequestId: string;
+    requestId: string | null;
+    productAmount: number | null;
+    allocatedAmount: number;
+    links: number;
+  }>;
   flowProjects: number;
   flowBudgets: number;
   flowBudgetStatuses: Record<string, number>;
@@ -149,6 +156,13 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
   let serviceLinks = 0;
   let unresolvedServiceLinks = 0;
   const serviceLinkResolution: Record<string, number> = {};
+  const serviceQuantityMismatches: Array<{
+    productRequestId: string;
+    requestId: string | null;
+    productAmount: number | null;
+    allocatedAmount: number;
+    links: number;
+  }> = [];
   const budgetItemIds = new Set(budgetItems.map((row) => row.koper_id));
   const budgetInputIds = new Set(budgetItems.flatMap((row) => {
     const id = identifier(objectValue(row.payload).inputId);
@@ -182,6 +196,21 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     const links = Array.isArray(payload.services) ? payload.services : [];
     if (links.length > 0) itemsWithServiceLinks += 1;
     serviceLinks += links.length;
+    if (links.length > 0) {
+      const allocatedAmount = links.reduce(
+        (sum, value) => sum + (numberValue(objectValue(value).inputAmount) ?? 0),
+        0,
+      );
+      if (quantity === null || Math.abs(allocatedAmount - quantity) > 0.00001) {
+        serviceQuantityMismatches.push({
+          productRequestId: row.koper_id,
+          requestId: row.koper_parent_id,
+          productAmount: quantity,
+          allocatedAmount,
+          links: links.length,
+        });
+      }
+    }
     for (const value of links) {
       const link = objectValue(value);
       const itemMonitInputId = identifier(link.itemMonitInputId);
@@ -223,7 +252,8 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     && budgets.length === 1
     && memberships.length > 0
     && unresolvedServiceLinks === 0
-    && itemsWithServiceLinks === items.length;
+    && itemsWithServiceLinks === items.length
+    && serviceQuantityMismatches.length === 0;
 
   return {
     ok: true,
@@ -240,6 +270,7 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     serviceLinkSamples,
     serviceLinkResolution,
     unresolvedServiceLinks,
+    serviceQuantityMismatches,
     flowProjects: projects.length,
     flowBudgets: budgets.length,
     flowBudgetStatuses: budgets.reduce<Record<string, number>>((counts, budget) => {
