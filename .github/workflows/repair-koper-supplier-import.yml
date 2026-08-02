@@ -1,5 +1,6 @@
 name: Repair Koper supplier import
 
+# Triggered after workflow registration on the default branch.
 on:
   push:
     branches: [main]
