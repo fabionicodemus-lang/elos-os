@@ -1,28 +1,40 @@
 name: Apply budget base UI V0.71.6
 
 on:
-  push:
-    branches:
-      - feat/budget-base-ui-v0716
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   apply:
-    if: ${{ !contains(github.event.head_commit.message, 'feat: orçamento base V0.71.6') }}
+    if: ${{ github.event.pull_request.head.ref == 'feat/budget-base-ui-v0716' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout da branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
+      - name: Verificar se já foi aplicado
+        id: guard
+        run: |
+          if git log -1 --pretty=%s | grep -Fq 'feat: orçamento base V0.71.6'; then
+            echo 'skip=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'skip=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: Aplicar alterações
+        if: steps.guard.outputs.skip != 'true'
         run: python .github/scripts/apply-budget-base-ui-v0716.py
       - name: Commit
+        if: steps.guard.outputs.skip != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add components/app-shell.tsx components/project-switcher.tsx app/engenharia/orcamentos app/execucao/solicitacoes-materiais/page.tsx app/engenharia/orcamento-analitico/page.tsx app/budgets.css
           git commit -m "feat: orçamento base V0.71.6"
-          git push origin HEAD:feat/budget-base-ui-v0716
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
