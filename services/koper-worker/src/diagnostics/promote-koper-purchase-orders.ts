@@ -155,6 +155,53 @@ export async function checkPurchaseOrderPromotionReadiness(): Promise<{
   return { ok: true, orders: data.orderRows.length, sourceItems: data.itemRows.length, suppliers: data.supplierRows.length, requestLinks, mappedInputs, missingInputs, mappedRequestLinks, missingRequestLinks, unlinkedItems, statuses };
 }
 
+export async function promotePurchaseOrderInputs(): Promise<{
+  ok: true; sourceItems: number; historicalInputs: number; promoted: number; verifiedCatalogInputs: number;
+}> {
+  if (process.env.KOPER_ENGINEERING_INPUTS_WRITE_ENABLED !== "true"
+    || process.env.KOPER_PURCHASE_ORDER_INPUT_PROMOTION_ENABLED !== "true") {
+    throw new Error("Koper purchase order input promotion is not explicitly enabled");
+  }
+  const data = await context();
+  const existing = new Set(data.inputs.map((row) => row.source_id).filter(Boolean));
+  const missing = new Map<string, Record<string, unknown>>();
+  for (const row of data.itemRows) {
+    const payload = objectValue(row.payload);
+    const candidates = [identifier(payload.productId), identifier(payload.mainProductId), identifier(payload.inputId)].filter((value): value is string => Boolean(value));
+    if (candidates.some((id) => existing.has(id))) continue;
+    const sourceId = candidates[0];
+    if (!sourceId) throw new Error(`Purchase item ${row.koper_id} has no source input identity`);
+    missing.set(sourceId, payload);
+  }
+  const now = new Date().toISOString();
+  const payloads = [...missing.entries()].map(([sourceId, payload]) => ({
+    company_id: env.BOSSA_COMPANY_ID,
+    code: `KOPER-${sourceId}`,
+    description: textValue(payload.productFullName) ?? textValue(payload.productName) ?? textValue(payload.inputName) ?? `Produto histórico Koper ${sourceId}`,
+    unit: (textValue(payload.symbol) ?? textValue(payload.inputUnit) ?? "un").toLocaleLowerCase("pt-BR"),
+    category: "material",
+    family_code: "KOPER-PURCHASE-HISTORY",
+    family_label: "Produtos históricos dos pedidos Koper",
+    source_system: "koper",
+    source_code: sourceId,
+    source_id: sourceId,
+    notes: "Produto histórico referenciado por pedido de compra do Flow Aptos.",
+    status: "active",
+    updated_at: now,
+  }));
+  let promoted = 0;
+  for (const batch of chunks(payloads, 100)) {
+    const rows = await requestSupabase<Array<{ id: string }>>("engineering_inputs", {
+      method: "POST", body: batch, prefer: "resolution=merge-duplicates,return=representation",
+      query: new URLSearchParams({ on_conflict: "company_id,source_system,source_id", select: "id" }),
+    });
+    promoted += rows.length;
+  }
+  const verifiedCatalogInputs = (await readAll<{ id: string }>("engineering_inputs", { select: "id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper" })).length;
+  if (verifiedCatalogInputs !== data.inputs.length + payloads.length) throw new Error("Historical purchase order input verification failed");
+  return { ok: true, sourceItems: data.itemRows.length, historicalInputs: payloads.length, promoted, verifiedCatalogInputs };
+}
+
 type OrderStatus = "draft" | "confirmed" | "partially_received" | "received" | "closed" | "cancelled";
 
 function orderStatus(payload: Record<string, unknown>, products: Record<string, unknown>[]): OrderStatus {

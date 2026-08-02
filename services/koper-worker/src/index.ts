@@ -14,6 +14,7 @@ import { inspectFlowPurchaseOrders } from "./diagnostics/inspect-flow-purchase-o
 import { writeFlowPurchaseOrderBatch } from "./diagnostics/write-flow-purchase-orders.js";
 import {
   checkPurchaseOrderPromotionReadiness,
+  promotePurchaseOrderInputs,
   promoteKoperPurchaseOrders,
 } from "./diagnostics/promote-koper-purchase-orders.js";
 import { runLiveRecording } from "./diagnostics/live-recording.js";
@@ -319,6 +320,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
                               ? writeFlowPurchaseOrderBatch
                             : startupDiagnostic === "purchase-order-promotion-readiness"
                               ? checkPurchaseOrderPromotionReadiness
+                            : startupDiagnostic === "purchase-order-input-promote"
+                              ? promotePurchaseOrderInputs
                             : startupDiagnostic === "purchase-order-promote-full"
                               ? promoteKoperPurchaseOrders
                             : startupDiagnostic === "product-promote-full"
