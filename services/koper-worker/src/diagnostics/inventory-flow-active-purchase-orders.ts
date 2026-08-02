@@ -71,7 +71,6 @@ async function captureTransport(page: Page): Promise<{ url: string; headers: Rec
 function listUrl(template: string, offset: number, limit: number): string {
   const url = new URL(template);
   url.searchParams.set("orderId", "all");
-  url.searchParams.set("open", "yes");
   url.searchParams.set("offset", String(offset));
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("cb", String(Date.now()));
@@ -105,6 +104,7 @@ export async function inventoryFlowActivePurchaseOrders(): Promise<{
   ok: true;
   authenticated: boolean;
   flowSelected: boolean;
+  capturedOpenParam: string | null;
   declaredTotal: number;
   collected: number;
   uniqueOrderIds: number;
@@ -122,6 +122,7 @@ export async function inventoryFlowActivePurchaseOrders(): Promise<{
       ok: true,
       authenticated: false,
       flowSelected: false,
+      capturedOpenParam: null,
       declaredTotal: 0,
       collected: 0,
       uniqueOrderIds: 0,
@@ -160,6 +161,7 @@ export async function inventoryFlowActivePurchaseOrders(): Promise<{
       ok: true,
       authenticated: true,
       flowSelected: false,
+      capturedOpenParam: null,
       declaredTotal: 0,
       collected: 0,
       uniqueOrderIds: 0,
@@ -173,10 +175,12 @@ export async function inventoryFlowActivePurchaseOrders(): Promise<{
     };
 
     const transport = await captureTransport(page);
+    const capturedOpenParam = new URL(transport.url).searchParams.get("open");
     const summaries: OrderSummary[] = [];
     let declaredTotal = 0;
-    for (let offset = 0; offset < 10_000; offset += 1_000) {
-      const response = await page.request.get(listUrl(transport.url, offset, 1_000), {
+    const pageSize = 100;
+    for (let offset = 0; offset < 10_000; offset += pageSize) {
+      const response = await page.request.get(listUrl(transport.url, offset, pageSize), {
         headers: transport.headers,
         timeout: 15_000,
       });
@@ -188,7 +192,7 @@ export async function inventoryFlowActivePurchaseOrders(): Promise<{
         const parsed = orderSummary(value);
         if (parsed) summaries.push(parsed);
       }
-      if (orders.length < 1_000 || (declaredTotal > 0 && summaries.length >= declaredTotal)) break;
+      if (orders.length < pageSize || (declaredTotal > 0 && summaries.length >= declaredTotal)) break;
     }
 
     const orderIds = new Set(summaries.map((item) => item.orderId));
@@ -225,6 +229,7 @@ export async function inventoryFlowActivePurchaseOrders(): Promise<{
       ok: true,
       authenticated: true,
       flowSelected: true,
+      capturedOpenParam,
       declaredTotal,
       collected: summaries.length,
       uniqueOrderIds: orderIds.size,
