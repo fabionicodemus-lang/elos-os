@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 const COMPANY_OVERVIEW_COOKIE = "__company_overview__";
+const COMPANY_OVERVIEW_QUERY = "workspace";
 
 function safeReturnPath(value: FormDataEntryValue | null) {
   const raw = String(value ?? "").trim();
@@ -67,7 +68,14 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const response = redirectTo(request, returnTo);
+  const targetUrl = new URL(returnTo, request.nextUrl.origin);
+  if (projectId) {
+    targetUrl.searchParams.delete(COMPANY_OVERVIEW_QUERY);
+  } else {
+    targetUrl.searchParams.set(COMPANY_OVERVIEW_QUERY, "company");
+  }
+
+  const response = NextResponse.redirect(targetUrl, 303);
   const cookieOptions = {
     httpOnly: true,
     sameSite: "lax" as const,
