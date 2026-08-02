@@ -1,0 +1,28 @@
+name: Apply budget base UI V0.71.6
+
+on:
+  push:
+    branches:
+      - feat/budget-base-ui-v0716
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, 'feat: orçamento base V0.71.6') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar alterações
+        run: python .github/scripts/apply-budget-base-ui-v0716.py
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/app-shell.tsx components/project-switcher.tsx app/engenharia/orcamentos app/execucao/solicitacoes-materiais/page.tsx app/engenharia/orcamento-analitico/page.tsx app/budgets.css
+          git commit -m "feat: orçamento base V0.71.6"
+          git push origin HEAD:feat/budget-base-ui-v0716
