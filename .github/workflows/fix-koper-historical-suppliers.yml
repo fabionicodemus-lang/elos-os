@@ -1,0 +1,76 @@
+name: Fix Koper historical suppliers
+
+on:
+  push:
+    branches: [feature/koper-connector-bootstrap]
+    paths: [.github/workflows/fix-koper-historical-suppliers.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/koper-connector-bootstrap
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Patch supplier reconstruction
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('services/koper-worker/src/diagnostics/promote-koper-purchase-orders.ts')
+          text = path.read_text()
+          old = '''  const supplierPayloads = data.supplierRows.map((row) => {
+    const payload = objectValue(row.payload);
+    const legalName = textValue(payload.companyName) ?? textValue(payload.supplierName) ?? `Fornecedor Koper ${row.koper_id}`;
+    return {
+      company_id: env.BOSSA_COMPANY_ID, person_type: textValue(payload.supplierCpf) ? "individual" : "company",
+      legal_name: legalName, trade_name: textValue(payload.supplierName), tax_id: supplierTaxId(payload),
+      phone: textValue(payload.supCellphone) ?? textValue(payload.supPhone), email: textValue(payload.email),
+      address: addressText(payload.addressSupplier), status: "active", notes: `Importado do Koper · supplierId=${row.koper_id}`,
+      source_system: "koper", source_id: row.koper_id, created_by: data.actor.user_id, updated_at: now,
+    };
+  });'''
+          new = '''  const supplierPayloadBySource = new Map<string, Record<string, unknown>>();
+  for (const row of data.supplierRows) {
+    supplierPayloadBySource.set(row.koper_id, objectValue(row.payload));
+  }
+  for (const row of data.orderRows) {
+    const payload = objectValue(row.payload);
+    const sourceSupplier = identifier(payload.supplierId);
+    if (sourceSupplier && !supplierPayloadBySource.has(sourceSupplier)) {
+      supplierPayloadBySource.set(sourceSupplier, payload);
+    }
+  }
+  const supplierPayloads = [...supplierPayloadBySource.entries()].map(([sourceId, payload]) => {
+    const legalName = textValue(payload.companyName) ?? textValue(payload.supplierName) ?? `Fornecedor histórico Koper ${sourceId}`;
+    return {
+      company_id: env.BOSSA_COMPANY_ID, person_type: textValue(payload.supplierCpf) ? "individual" : "company",
+      legal_name: legalName, trade_name: textValue(payload.supplierName), tax_id: supplierTaxId(payload),
+      phone: textValue(payload.supCellphone) ?? textValue(payload.supPhone), email: textValue(payload.email),
+      address: addressText(payload.addressSupplier), status: "active", notes: `Importado do Koper · supplierId=${sourceId}${data.supplierRows.some((row) => row.koper_id === sourceId) ? "" : " · reconstruído do pedido histórico"}`,
+      source_system: "koper", source_id: sourceId, created_by: data.actor.user_id, updated_at: now,
+    };
+  });'''
+          if old not in text:
+              raise SystemExit('target supplier block not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Validate koper-worker
+        working-directory: services/koper-worker
+        run: |
+          npm install
+          npm run build
+      - name: Commit fix and remove workflow
+        run: |
+          rm .github/workflows/fix-koper-historical-suppliers.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add services/koper-worker/src/diagnostics/promote-koper-purchase-orders.ts .github/workflows/fix-koper-historical-suppliers.yml
+          git commit -m "fix(koper): reconstruct missing historical suppliers"
+          git push origin HEAD:feature/koper-connector-bootstrap
