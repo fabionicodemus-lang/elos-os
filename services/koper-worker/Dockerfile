@@ -22,4 +22,4 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 8080
 
-CMD ["node", "dist/pilot-native-material-receipt.js"]
+CMD ["node", "dist/pilot-native-material-receipt-direct-v2.js"]
