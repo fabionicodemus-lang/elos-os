@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - ".phase4-parts/cashflow.*"
+      - ".phase4-parts/gzip.*"
       - ".github/workflows/assemble-phase4-cashflow.yml"
 
 permissions:
@@ -22,8 +22,8 @@ jobs:
           fetch-depth: 0
       - name: Montar arquivo
         run: |
-          test -f .phase4-parts/cashflow.00
-          cat .phase4-parts/cashflow.* | tr -d '\n' | base64 -d > app/financeiro/fluxo-de-caixa/page.tsx
+          test -f .phase4-parts/gzip.00
+          cat .phase4-parts/gzip.* | tr -d '\n' | base64 -d | gzip -d > app/financeiro/fluxo-de-caixa/page.tsx
           rm -rf .phase4-parts
           rm .github/workflows/assemble-phase4-cashflow.yml
       - name: Gravar resultado
