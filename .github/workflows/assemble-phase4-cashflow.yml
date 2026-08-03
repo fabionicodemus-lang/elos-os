@@ -1,9 +1,9 @@
 name: Montar fluxo da Fase 4
 
 on:
-  push:
+  pull_request:
     branches:
-      - fase-4-motor-unificado
+      - main
     paths:
       - ".phase4-parts/cashflow.*"
       - ".github/workflows/assemble-phase4-cashflow.yml"
