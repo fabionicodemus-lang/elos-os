@@ -23,7 +23,14 @@ jobs:
       - name: Restaurar páginas
         run: |
           test -f .phase4-fix/payload.00
-          cat .phase4-fix/payload.* | tr -d '\n' | base64 -d > /tmp/pages.tar.gz
+          test -f .phase4-fix/payload03/part.06
+          {
+            cat .phase4-fix/payload.00
+            cat .phase4-fix/payload.01
+            cat .phase4-fix/payload.02
+            cat .phase4-fix/payload03/part.*
+          } | tr -d '\n' | base64 -d > /tmp/pages.tar.gz
+          gzip -t /tmp/pages.tar.gz
           tar -xzf /tmp/pages.tar.gz
           rm -rf .phase4-fix
           rm .github/workflows/apply-phase4-page-fix.yml
