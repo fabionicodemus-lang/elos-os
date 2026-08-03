@@ -1,0 +1,57 @@
+name: Verificar Fase 4 da previsão
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "lib/forecast/**"
+      - "app/engenharia/previsao-financeira/**"
+      - "app/engenharia/curvas/page.tsx"
+      - "app/financeiro/fluxo-de-caixa/page.tsx"
+      - "app/forecast.css"
+      - "supabase/migrations/20260803_0076_project_forecast_settings.sql"
+      - "docs/previsao-financeira/04-fase-4.md"
+      - "package.json"
+      - ".github/workflows/verify-phase4.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: phase4_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d phase4_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund
+      - name: Testes unitários
+        run: npm test
+      - name: Validar migration 0076
+        run: |
+          psql -h localhost -U postgres -d phase4_test -c "create schema auth; create table public.projects(id uuid primary key, updated_at timestamptz);"
+          psql -h localhost -U postgres -d phase4_test -f supabase/migrations/20260803_0076_project_forecast_settings.sql
+          psql -h localhost -U postgres -d phase4_test -c "insert into projects(id) values ('11111111-1111-1111-1111-111111111111'); select forecast_default_payment_days from projects;"
+      - name: Lint dos arquivos da Fase 4
+        run: npx eslint lib/forecast/server.ts app/engenharia/previsao-financeira/actions.ts app/engenharia/previsao-financeira/page.tsx app/engenharia/previsao-financeira/layout.tsx app/engenharia/curvas/page.tsx app/financeiro/fluxo-de-caixa/page.tsx
+      - name: Build completo
+        run: npm run build
