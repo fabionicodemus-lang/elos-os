@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { loadProjectForecast } from "@/lib/forecast/server";
 import { requireCompanyPermission } from "@/lib/workspace";
-import { updateForecastSettings } from "./actions";
+import { createForecastSnapshot, updateForecastSettings } from "./actions";
 
 function todayIso() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -69,9 +69,15 @@ export default async function ForecastByServicePage({
       description={`${company.name} · ${projectLabel} · realizado, comprometido e a comprometer sem dupla contagem.`}
       actions={
         <>
+          <Link className="elos-button" href="/engenharia/previsao-financeira/historico">Histórico de previsões</Link>
           <Link className="elos-button" href="/engenharia/curvas">Curvas</Link>
           <Link className="elos-button" href="/financeiro/fluxo-de-caixa">Fluxo de Caixa</Link>
-          <Link className="elos-button elos-button-primary" href="/engenharia/contratos">Contratos</Link>
+          {context.baseline && forecast ? (
+            <form action={createForecastSnapshot} style={{ display: "inline-flex" }}>
+              <input type="hidden" name="baseline_id" value={context.baseline.id} />
+              <button className="elos-button elos-button-primary" type="submit">Congelar previsão do mês</button>
+            </form>
+          ) : null}
         </>
       }
     >
