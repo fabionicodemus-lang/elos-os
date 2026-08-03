@@ -24,6 +24,19 @@ export type CurveService = {
   description: string;
 };
 
+export type CurveMeasurement = {
+  id?: string;
+  activity_id: string;
+  measurement_date: string;
+  progress_percent: number | string;
+  actual_cost: number | string;
+  current_start: string;
+  current_finish: string;
+  actual_start: string | null;
+  actual_finish: string | null;
+  created_at?: string;
+};
+
 export type CurveRow = {
   key: string;
   label: string;
@@ -32,12 +45,38 @@ export type CurveRow = {
   financialMonth: number;
   financialAccumulated: number;
   financialPercent: number;
+  currentPhysicalMonth?: number;
+  currentPhysicalAccumulated?: number;
+  actualPhysicalMonth?: number;
+  actualPhysicalAccumulated?: number;
+  currentFinancialMonth?: number;
+  currentFinancialAccumulated?: number;
+  currentFinancialPercent?: number;
+  actualFinancialMonth?: number;
+  actualFinancialAccumulated?: number;
+  actualFinancialPercent?: number;
 };
 
 export type BuildCurvesResult = {
   rows: CurveRow[];
   usesEqualPhysicalWeights: boolean;
   zeroWorkdayActivityIds: string[];
+};
+
+export type BuildLiveCurvesResult = BuildCurvesResult & {
+  hasExecutionData: boolean;
+  lateActualCostWarnings: Array<{
+    activityId: string;
+    measurementDate: string;
+  }>;
+};
+
+export type CurveDeviations = {
+  delayAt50Months: number | null;
+  finishDelayMonths: number | null;
+  baselineFinancialToDate: number;
+  actualFinancialToDate: number;
+  financialDeviationToDate: number;
 };
 
 export type IntegrityAlerts = {
@@ -77,6 +116,20 @@ export function buildCurves(
   budgetTotal: number,
   workOnSaturday: boolean,
 ): BuildCurvesResult;
+
+export function buildLiveCurves(
+  activities: CurveActivity[],
+  assignedCosts: Map<string, number>,
+  budgetTotal: number,
+  workOnSaturday: boolean,
+  measurements: CurveMeasurement[],
+  asOfDate: string,
+): BuildLiveCurvesResult;
+
+export function calculateCurveDeviations(
+  rows: CurveRow[],
+  currentMonthKey: string,
+): CurveDeviations;
 
 export function detectIntegrityAlerts(
   activities: CurveActivity[],
