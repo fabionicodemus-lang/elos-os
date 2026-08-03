@@ -60,6 +60,7 @@ select public.create_forecast_snapshot(
     jsonb_build_object('service_id','11111111-1111-1111-1111-111111111104','service_key','11111111-1111-1111-1111-111111111104','service_code','01','service_name','Estrutura','service_budget_amount',1000,'month',date_trunc('month',(now() at time zone 'America/Sao_Paulo'))::date,'layer','to_commit','amount',600)
   )
 ) as snapshot_a \gset
+select set_config('app.snapshot_a', :'snapshot_a', false);
 
 select set_config('app.allowed_company_id','22222222-2222-2222-2222-222222222222',false);
 select public.create_forecast_snapshot(
@@ -76,6 +77,7 @@ select public.create_forecast_snapshot(
     jsonb_build_object('service_id','22222222-2222-2222-2222-222222222205','service_key','22222222-2222-2222-2222-222222222205','service_code','02','service_name','Acabamentos','service_budget_amount',2000,'month',date_trunc('month',(now() at time zone 'America/Sao_Paulo'))::date,'layer','to_commit','amount',1300)
   )
 ) as snapshot_b \gset
+select set_config('app.snapshot_b', :'snapshot_b', false);
 
 select set_config('app.allowed_company_id','11111111-1111-1111-1111-111111111111',false);
 set role authenticated;
@@ -84,6 +86,7 @@ do $$
 declare
   visible_headers integer;
   visible_rows integer;
+  snapshot_b uuid := current_setting('app.snapshot_b')::uuid;
 begin
   select count(*) into visible_headers from public.forecast_snapshots;
   select count(*) into visible_rows from public.forecast_snapshot_rows;
@@ -93,7 +96,7 @@ begin
 
   begin
     insert into public.forecast_snapshot_rows(company_id,project_id,snapshot_id,service_key,service_name,service_budget_amount,month,layer,amount)
-    values ('22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222202',:'snapshot_b','x','Inválido',1,date_trunc('month',now())::date,'actual',1);
+    values ('22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222202',snapshot_b,'x','Inválido',1,date_trunc('month',now())::date,'actual',1);
     raise exception 'Falha: escrita direta em snapshot da Empresa B foi permitida.';
   exception when insufficient_privilege then
     null;
@@ -105,43 +108,45 @@ reset role;
 
 do $$
 declare
+  snapshot_a uuid := current_setting('app.snapshot_a')::uuid;
+  snapshot_b uuid := current_setting('app.snapshot_b')::uuid;
   frozen_total numeric;
   row_total numeric;
 begin
   update public.projects set company_id=company_id where id='11111111-1111-1111-1111-111111111101';
-  select projected_cost_total into frozen_total from public.forecast_snapshots where id=:'snapshot_a';
-  select sum(amount) into row_total from public.forecast_snapshot_rows where snapshot_id=:'snapshot_a';
+  select projected_cost_total into frozen_total from public.forecast_snapshots where id=snapshot_a;
+  select sum(amount) into row_total from public.forecast_snapshot_rows where snapshot_id=snapshot_a;
   if frozen_total <> 1000 or row_total <> 1000 then
     raise exception 'Snapshot mudou após alteração posterior ou suas linhas não fecham com o total.';
   end if;
 
-  if not exists(select 1 from public.forecast_snapshots where id=:'snapshot_a' and archived_at is not null and archived_by is not null) then
+  if not exists(select 1 from public.forecast_snapshots where id=snapshot_a and archived_at is not null and archived_by is not null) then
     raise exception 'Arquivamento não foi registrado.';
   end if;
 
   begin
-    update public.forecast_snapshots set projected_cost_total=999 where id=:'snapshot_a';
+    update public.forecast_snapshots set projected_cost_total=999 where id=snapshot_a;
     raise exception 'Falha: alteração de total do snapshot foi permitida.';
   exception when object_not_in_prerequisite_state then
     null;
   end;
 
   begin
-    update public.forecast_snapshots set archived_at=null,archived_by=null where id=:'snapshot_a';
+    update public.forecast_snapshots set archived_at=null,archived_by=null where id=snapshot_a;
     raise exception 'Falha: restauração de snapshot arquivado foi permitida.';
   exception when object_not_in_prerequisite_state then
     null;
   end;
 
   begin
-    delete from public.forecast_snapshots where id=:'snapshot_a';
+    delete from public.forecast_snapshots where id=snapshot_a;
     raise exception 'Falha: exclusão de snapshot foi permitida.';
   exception when object_not_in_prerequisite_state then
     null;
   end;
 
   begin
-    update public.forecast_snapshot_rows set amount=999 where snapshot_id=:'snapshot_a';
+    update public.forecast_snapshot_rows set amount=999 where snapshot_id=snapshot_a;
     raise exception 'Falha: alteração de linha congelada foi permitida.';
   exception when object_not_in_prerequisite_state then
     null;
@@ -149,7 +154,7 @@ begin
 
   begin
     insert into public.forecast_snapshot_rows(company_id,project_id,snapshot_id,service_id,service_key,service_name,service_budget_amount,month,layer,amount)
-    values ('11111111-1111-1111-1111-111111111111','11111111-1111-1111-1111-111111111101',:'snapshot_b','11111111-1111-1111-1111-111111111104','cross','Cruzado',1,date_trunc('month',now())::date,'actual',1);
+    values ('11111111-1111-1111-1111-111111111111','11111111-1111-1111-1111-111111111101',snapshot_b,'11111111-1111-1111-1111-111111111104','cross','Cruzado',1,date_trunc('month',now())::date,'actual',1);
     raise exception 'Falha: relação cruzada entre empresas foi permitida.';
   exception when check_violation then
     null;
