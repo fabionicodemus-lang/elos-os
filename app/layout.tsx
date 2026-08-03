@@ -48,6 +48,7 @@ import "./brokers.css";
 import "./sefaz-nfe.css";
 import "./financial-installments.css";
 import "./elos-theme.css";
+import "./version-marker.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
   variable: "--font-ibm-plex",
@@ -62,7 +63,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Elos OS",
+  title: "Elos OS · V0.71.1",
   description: "Sistema integrado de gestão para construtoras e incorporadoras.",
 };
 
