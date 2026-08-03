@@ -22,6 +22,31 @@ function safeStage(input: RequestInfo | URL): string {
   }
 }
 
+async function readResponseBody(response: Response, timeoutMs: number): Promise<ArrayBuffer> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      response.arrayBuffer(),
+      new Promise<ArrayBuffer>((_resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error("response_body_timeout")), timeoutMs);
+      }),
+    ]);
+  } catch (error: unknown) {
+    await response.body?.cancel().catch(() => undefined);
+    throw error;
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
+function bufferedResponse(response: Response, body: ArrayBuffer): Response {
+  return new Response(body.byteLength > 0 ? body : null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const stage = safeStage(input);
   let lastError: unknown = null;
@@ -32,13 +57,18 @@ globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise
         ...init,
         signal: AbortSignal.timeout(45_000),
       });
-      if (!retryableStatus(response.status) || attempt === 3) return response;
+      const body = await readResponseBody(response, 45_000);
+      const completeResponse = bufferedResponse(response, body);
+      if (!retryableStatus(response.status) || attempt === 3) return completeResponse;
       console.warn("KOPER_HTTP_RETRY", JSON.stringify({ stage, attempt, status: response.status }));
     } catch (error: unknown) {
       lastError = error;
-      const reason = error instanceof Error && /timeout|abort/i.test(error.message)
-        ? "timeout"
-        : "network";
+      const message = error instanceof Error ? error.message : "unknown";
+      const reason = /response_body_timeout/i.test(message)
+        ? "body_timeout"
+        : /timeout|abort/i.test(message)
+          ? "timeout"
+          : "network";
       console.warn("KOPER_HTTP_RETRY", JSON.stringify({ stage, attempt, reason }));
       if (attempt === 3) throw new Error(`KOPER_HTTP_FAILED:${stage}:${reason}`);
     }
