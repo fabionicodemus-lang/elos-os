@@ -1,0 +1,36 @@
+name: Verificar Fase 2 das curvas
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "app/engenharia/curvas/**"
+      - "app/curves.css"
+      - "docs/previsao-financeira/**"
+      - "package.json"
+      - ".github/workflows/verify-fase-2.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Testes
+        run: npm test
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
