@@ -116,13 +116,21 @@ export async function createScheduleBaseline(formData: FormData) {
 
   const { data: budget } = await supabase
     .from("engineering_budgets")
-    .select("id, status")
+    .select("id, status, is_base")
     .eq("id", budgetId)
     .eq("company_id", companyId)
     .eq("project_id", projectId)
     .maybeSingle();
 
-  if (!budget || budget.status === "archived") redirect(resultUrl("A revisão do orçamento não está disponível."));
+  if (!budget || budget.status === "archived") {
+    redirect(resultUrl("A revisão do orçamento não está disponível."));
+  }
+  if (budget.status !== "approved") {
+    redirect(resultUrl("A linha de base exige uma revisão de orçamento aprovada."));
+  }
+  if (budget.is_base !== true) {
+    redirect(resultUrl("A linha de base deve usar o orçamento base aprovado da obra."));
+  }
 
   const { data, error } = await supabase
     .from("engineering_schedule_baselines")
