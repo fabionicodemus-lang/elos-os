@@ -58,6 +58,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const takeoffsHref = can("takeoffs.view") ? "/engenharia/levantamento" : undefined;
   const scheduleHref = can("schedule.view") ? "/engenharia/cronograma" : undefined;
   const curvesHref = can("schedule.view") ? "/engenharia/curvas" : undefined;
+  const engineeringContractsHref = can("execution.contracts.view") ? "/engenharia/contratos" : undefined;
   const contractPlanHref = can("schedule.view") ? "/engenharia/plano-contratacoes" : undefined;
   const supplyPlanHref = can("supply_plan.view") ? "/engenharia/planejamento-suprimentos" : undefined;
   const executionScheduleHref = can("execution.schedule.view") || can("schedule.view") ? "/execucao/cronograma" : undefined;
@@ -114,6 +115,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Planejamento da obra", sectionLabel: "Planejamento da obra" },
       { label: "Cronograma Físico · Linha Base", href: scheduleHref, active: activeItem === "schedule", disabled: !scheduleHref },
       { label: "Curvas Física e Financeira", href: curvesHref, active: activeItem === "curves", disabled: !curvesHref },
+      { label: "Contratos e Medições", href: engineeringContractsHref, active: activeItem === "contracts", disabled: !engineeringContractsHref },
       { label: "Plano de Contratações", href: contractPlanHref, active: activeItem === "contract-plan", disabled: !contractPlanHref },
       { label: "Planejamento de Suprimentos", href: supplyPlanHref, active: activeItem === "supply-plan", disabled: !supplyPlanHref },
     ]},
