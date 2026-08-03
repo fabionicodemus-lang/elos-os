@@ -58,10 +58,10 @@ begin
     raise exception 'A medição ultrapassa o valor vigente. Confirme explicitamente o estouro.';
   end if;
 
-  period_start:=date_trunc('month',p_competence)::date;
-  period_end:=(date_trunc('month',p_competence)+interval '1 month - 1 day')::date;
-  if period_start<c.start_date or period_end>c.end_date then
-    raise exception 'A competência precisa estar dentro da vigência atual do contrato.';
+  period_start:=greatest(date_trunc('month',p_competence)::date,c.start_date);
+  period_end:=least((date_trunc('month',p_competence)+interval '1 month - 1 day')::date,c.end_date);
+  if period_end<period_start then
+    raise exception 'A competência não possui dias cobertos pela vigência atual do contrato.';
   end if;
 
   select count(*),
