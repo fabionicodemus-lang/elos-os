@@ -16,6 +16,12 @@ test("limita datas extremas sem criar milhares de competências", () => {
   assert.equal(result.keys[0], "2024-08");
 });
 
+test("prioriza os meses mais recentes quando a data atual está fora do intervalo", () => {
+  const result = buildSafeMonthWindow(["1800-01", "1900-01"], "2026-08");
+  assert.equal(result.keys.length, MAX_CURVE_MONTHS);
+  assert.equal(result.keys.at(-1), "1900-01");
+});
+
 test("ignora competências inválidas", () => {
   const result = buildSafeMonthWindow(["x", "2026-00", "2026-01", "2026-13"], "2026-01");
   assert.deepEqual(result.keys, ["2026-01"]);
