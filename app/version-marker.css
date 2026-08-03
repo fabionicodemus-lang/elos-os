@@ -1,0 +1,9 @@
+.elos-module-version {
+  font-size: 0 !important;
+}
+
+.elos-module-version::after {
+  content: "V0.71.1 · 03/08 15:59 · HOTFIX 500";
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
