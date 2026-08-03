@@ -10,8 +10,8 @@ on:
       - "components/app-shell.tsx"
       - "docs/previsao-financeira/03-fase-3.md"
       - "supabase/migrations/20260803_007*.sql"
+      - "supabase/tests/20260803_0071_contract_rls.sql"
       - "package.json"
-      - ".github/scripts/verify-phase3-rls.sql"
       - ".github/workflows/verify-fase-3.yml"
 
 permissions:
@@ -48,7 +48,7 @@ jobs:
       - name: Testes
         run: npm test
       - name: Teste real de RLS multiempresa
-        run: psql -h localhost -U postgres -d phase3_test -f .github/scripts/verify-phase3-rls.sql
+        run: psql -h localhost -U postgres -d phase3_test -f supabase/tests/20260803_0071_contract_rls.sql
       - name: Lint dos arquivos alterados
         run: npx eslint app/engenharia/contratos/actions.ts app/engenharia/contratos/page.tsx components/app-shell.tsx
       - name: Build completo
