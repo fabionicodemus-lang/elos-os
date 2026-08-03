@@ -22,4 +22,4 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 8080
 
-CMD ["node", "dist/inspect-finance-invoice-schema.js"]
+CMD ["node", "dist/check-electronic-invoice-promotion-readiness.js"]
