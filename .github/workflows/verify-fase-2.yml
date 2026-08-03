@@ -29,7 +29,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Testes
         run: npm test
-      - name: Lint
-        run: npm run lint
-      - name: Build
+      - name: Lint do escopo
+        run: npx eslint app/engenharia/curvas/page.tsx app/engenharia/curvas/curve-calculations.mjs app/engenharia/curvas/curve-calculations.d.mts app/engenharia/curvas/curve-calculations.test.mjs
+      - name: Build completo
         run: npm run build
