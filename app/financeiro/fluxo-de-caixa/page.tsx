@@ -155,14 +155,19 @@ export default async function CashFlowPage({
     bucketMap.set(key, bucket);
   });
 
-  let accumulatedBalance = 0;
-  let accumulatedCompleteBalance = 0;
-  const buckets: Bucket[] = [...bucketMap.values()].sort((a, b) => a.key.localeCompare(b.key)).map((bucket) => {
-    const periodBalance = bucket.received + bucket.receivable - bucket.realized - bucket.payable;
-    accumulatedBalance += periodBalance;
-    accumulatedCompleteBalance += periodBalance - bucket.engineeringProjected;
-    return { ...bucket, periodBalance, accumulatedBalance, accumulatedCompleteBalance };
-  });
+  const bucketAccumulation = [...bucketMap.values()]
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .reduce<{ rows: Bucket[]; accumulatedBalance: number; accumulatedCompleteBalance: number }>((state, bucket) => {
+      const periodBalance = bucket.received + bucket.receivable - bucket.realized - bucket.payable;
+      const accumulatedBalance = state.accumulatedBalance + periodBalance;
+      const accumulatedCompleteBalance = state.accumulatedCompleteBalance + periodBalance - bucket.engineeringProjected;
+      return {
+        rows: [...state.rows, { ...bucket, periodBalance, accumulatedBalance, accumulatedCompleteBalance }],
+        accumulatedBalance,
+        accumulatedCompleteBalance,
+      };
+    }, { rows: [], accumulatedBalance: 0, accumulatedCompleteBalance: 0 });
+  const buckets = bucketAccumulation.rows;
   const maxBarValue = Math.max(1, ...buckets.flatMap((bucket) => [bucket.received, bucket.receivable, bucket.realized, bucket.payable, bucket.engineeringProjected]));
 
   const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));

@@ -182,7 +182,7 @@ export default async function EngineeringCurvesPage({
       physicalAccumulated: Number(liveRow?.physicalAccumulated ?? 0),
       financialMonth: Number(liveRow?.financialMonth ?? 0),
       financialAccumulated: Number(liveRow?.financialAccumulated ?? 0),
-      financialPercent: number(budgetTotal > 0 ? Number(liveRow?.financialAccumulated ?? 0) / budgetTotal * 100 : 0),
+      financialPercent: budgetTotal > 0 ? Number(liveRow?.financialAccumulated ?? 0) / budgetTotal * 100 : 0,
       currentPhysicalMonth: Number(liveRow?.currentPhysicalMonth ?? liveRow?.physicalMonth ?? 0),
       currentPhysicalAccumulated: Number(liveRow?.currentPhysicalAccumulated ?? liveRow?.physicalAccumulated ?? 0),
       actualPhysicalMonth: Number(liveRow?.actualPhysicalMonth ?? 0),
@@ -198,9 +198,11 @@ export default async function EngineeringCurvesPage({
 
   const deviations = calculateCurveDeviations(rows, asOfDate.slice(0, 7));
   const coverage = budgetTotal > 0 ? scheduledValue / budgetTotal * 100 : 0;
-  const finalCurrentForecast = forecast?.totals.projectedCost ?? 0;
-  const forecastDeviation = forecast?.totals.deviation ?? 0;
-  const maxComposition = Math.max(1, ...(forecast?.months.map((month) => month.projected) ?? [1]));
+  const finalCurrentForecast = forecast?.totals.projectedCost ?? scheduledValue;
+  const forecastDeviation = forecast?.totals.deviation ?? finalCurrentForecast - budgetTotal;
+  const startDate = activities.length ? activities.reduce((value, activity) => activity.planned_start < value ? activity.planned_start : value, activities[0].planned_start) : null;
+  const finishDate = activities.length ? activities.reduce((value, activity) => activity.planned_finish > value ? activity.planned_finish : value, activities[0].planned_finish) : null;
+  const currentFinishRow = live.hasExecutionData ? rows.find((row) => Number(row.currentPhysicalAccumulated ?? 0) >= 99.999) ?? null : null;
   const physicalSeries: CurveSeries[] = live.hasExecutionData
     ? [
         { label: "Baseline", field: "physicalAccumulated", className: "baseline" },
@@ -208,53 +210,64 @@ export default async function EngineeringCurvesPage({
         { label: "Realizado", field: "actualPhysicalAccumulated", className: "actual" },
       ]
     : [{ label: "Baseline", field: "physicalAccumulated", className: "baseline" }];
-  const financialSeries: CurveSeries[] = [
-    { label: "Baseline", field: "financialPercent", className: "baseline" },
-    { label: "Previsão atual", field: "currentFinancialPercent", className: "current" },
-    { label: "Realizado pago", field: "actualFinancialPercent", className: "actual" },
-  ];
-
-  const integrityAlerts = detectIntegrityAlerts(activities, budgetItems, services);
-  const integrityAlertCount = integrityAlerts.servicesWithoutActivities.length
-    + integrityAlerts.overprogrammedServices.length
-    + integrityAlerts.activitiesWithoutBudgetService.length
-    + integrityAlerts.budgetItemsWithoutService.length;
-  const structureError = context.errors.length > 0;
-  const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
+  const financialSeries: CurveSeries[] = forecast
+    ? [
+        { label: "Baseline", field: "financialPercent", className: "baseline" },
+        { label: "Previsão atual", field: "currentFinancialPercent", className: "current" },
+        { label: "Realizado pago", field: "actualFinancialPercent", className: "actual" },
+      ]
+    : [{ label: "Baseline", field: "financialPercent", className: "baseline" }];
+  const contextLabel = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
+  const maxComposition = Math.max(1, ...(forecast?.months.map((month) => month.projected) ?? [1]));
 
   return (
     <AppShell
       activeGroup="engineering"
-      activeItem="curves"
+      activeItem="schedule"
       eyebrow="Engenharia · Planejamento da Obra"
       title="Curvas Física e Financeira"
-      description={`${company.name} · ${context} · baseline física e previsão financeira unificada.`}
+      description={`${company.name} · ${contextLabel} · curva física viva e previsão financeira unificada.`}
       actions={
         <>
-          <Link className="elos-button" href="/engenharia/previsao-financeira">Previsão por serviço</Link>
           <Link className="elos-button" href={baseline ? `/engenharia/cronograma?baseline=${baseline.id}` : "/engenharia/cronograma"}>Voltar ao cronograma</Link>
-          <Link className="elos-button elos-button-primary" href="/engenharia/orcamento-analitico">Abrir orçamento</Link>
+          <Link className="elos-button" href="/engenharia/previsao-financeira">Previsão por serviço</Link>
+          <Link className="elos-button elos-button-primary" href="/engenharia/contratos">Contratos</Link>
         </>
       }
     >
-      {structureError ? <div className="auth-message error workspace-message">Não foi possível carregar toda a base da previsão financeira.</div> : null}
+      {context.errors.length ? <div className="auth-message error workspace-message">Não foi possível carregar toda a base: {context.errors.join(" · ")}</div> : null}
       {!projectId ? <div className="curves-empty">Selecione uma obra no topo para acessar as curvas.</div> : null}
+      {projectId && !baseline ? <div className="curves-empty curves-empty-large"><strong>Nenhuma linha de base encontrada.</strong><span>Crie uma linha de base vinculada ao orçamento base aprovado.</span></div> : null}
 
-      {projectId ? (
+      {projectId && baseline ? (
         <>
           <section className="curves-baseline-card">
-            <div><span>Linha de base</span><strong>{baseline ? `${baseline.code} · ${baseline.version} · ${baseline.name}` : "Nenhuma linha criada"}</strong><small>{budget ? `Orçamento ${budget.code} · ${budget.version} · ${budget.name}` : "Sem revisão vinculada"}</small></div>
-            {baselines.length ? <form method="get"><select name="baseline" defaultValue={baseline?.id ?? ""}>{baselines.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.version} · {item.name}</option>)}</select><button type="submit">Abrir</button></form> : null}
+            <div>
+              <span>Linha de base</span>
+              <strong>{baseline.code} · {baseline.version} · {baseline.name}</strong>
+              <div className="curves-budget-reference">
+                <small>{budget ? `Orçamento ${budget.code} · ${budget.version} · ${budget.name}` : "Sem orçamento vinculado"}</small>
+                {budget && budget.status !== "approved" ? <span className="curves-status-badge warning">Orçamento não aprovado</span> : null}
+                <span className="curves-status-badge live">Motor unificado · corte em {dateBR(asOfDate)}</span>
+              </div>
+            </div>
+            {baselines.length ? <form method="get"><select name="baseline" defaultValue={baseline.id}>{baselines.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.version} · {item.name}</option>)}</select><button type="submit">Abrir</button></form> : null}
           </section>
 
-          {!baseline || activities.length === 0 ? <div className="curves-empty curves-empty-large"><strong>O cronograma ainda nao possui atividades.</strong><span>Importe ou cadastre as atividades para formar as curvas.</span></div> : (
+          {!activities.length ? <div className="curves-empty curves-empty-large"><strong>O cronograma ainda não possui atividades.</strong><span>Cadastre atividades para distribuir as camadas financeiras no tempo.</span></div> : (
             <>
               <section className="curves-kpis">
-                <article><span>Cobertura da baseline</span><strong>{decimal(coverage)}%</strong><small>{money(scheduledValue)} distribuído no cronograma</small></article>
-                <article><span>Custo do orçamento</span><strong>{money(budgetTotal)}</strong><small>{budget?.area_m2 ? `${money(budgetTotal / Number(budget.area_m2))}/m̲` : "revisão vinculada"}</small></article>
-                <article><span>Previsão atual total</span><strong>{money(finalCurrentForecast)}</strong><small className={forecastDeviation > 0 ? "negative" : ""}>{forecastDeviation > 0 ? `${money(forecastDeviation)} acima do orçamento` : "sem desvio projetado"}</small></article>
-                <article><span>Realizado pago</span><strong>{money(forecast?.totals.actual)}</strong><small>baixas de contas a pagar</small></article>
-                <article className={forecastDeviation > 0 ? "danger" : "ok"}><span>Desvio financeiro projetado</span><strong>{forecastDeviation >= 0 ? "+" : ""}{money(forecastDeviation)}</strong><small>custo final contra orçamento</small></article>
+                <article><span>Período da baseline</span><strong>{dateBR(startDate)} — {dateBR(finishDate)}</strong><small>{rows.length} competência(s)</small></article>
+                <article><span>Orçamento</span><strong>{money(budgetTotal)}</strong><small>{decimal(coverage)}% distribuído no cronograma</small></article>
+                <article><span>Custo final projetado</span><strong>{money(finalCurrentForecast)}</strong><small className={forecastDeviation > 0 ? "negative" : ""}>{forecastDeviation > 0 ? `${money(forecastDeviation)} de estouro projetado` : "sem estouro projetado"}</small></article>
+                <article><span>Camada comprometida</span><strong>{money(forecast?.totals.committed)}</strong><small>{money(forecast?.totals.committedPayable)} em payables abertas</small></article>
+              </section>
+
+              {live.hasExecutionData ? (
+                <section className="curves-deviation-cards">
+                  <article className={Number(deviations.delayAt50Months ?? 0) > 0 ? "danger" : "ok"}><span>Desvio no marco de 50%</span><strong>{monthDeviation(deviations.delayAt50Months)}</strong><small>baseline versus cronograma atualizado</small></article>
+                  <article className={Number(deviations.finishDelayMonths ?? 0) > 0 ? "danger" : "ok"}><span>Desvio no término</span><strong>{monthDeviation(deviations.finishDelayMonths)}</strong><small>{currentFinishRow ? `conclusão atual em ${currentFinishRow.label}` : "sem conclusão calculável"}</small></article>
+                  <article className={forecastDeviation > 0 ? "danger" : "ok"}><span>Desvio financeiro projetado</span><strong>{forecastDeviation >= 0 ? "+" : ""}{money(forecastDeviation)}</strong><small>custo final contra orçamento</small></article>
                 </section>
               ) : <div className="curves-execution-empty"><strong>Sem medições físicas — cronograma atualizado igual à baseline.</strong><span>A previsão financeira já considera contratos, payables e o saldo a comprometer.</span></div>}
 
@@ -295,7 +308,7 @@ export default async function EngineeringCurvesPage({
 
               <section className="registry-table-panel curves-memory-panel">
                 <div className="section-heading"><div><span>Memória mensal</span><h2>Baseline e três camadas</h2></div><p>Valores em regime de caixa para a previsão atual.</p></div>
-                <div className="registry-table-wrap"><table className="registry-table"><thead><tr><th>Competência</th><th>Baseline</th><th>Realizado</th><th>Payables abertas</th><d�>Comprometido futuro</th><th>A comprometer</th><th>Previsão atual</th></tr></thead><tbody>{rows.map((row) => { const month = forecastByKey.get(row.key); return <tr key={row.key}><td><strong>{row.label}</strong></td><td>{money(row.financialMonth)}</td><td>{money(month?.actual)}</td><td>{money(month?.committedPayable)}</td><td>{money(month?.committedFuture)}</td><td>{money(month?.toCommit)}</td><td><strong>{money(month?.projected)}</strong></td></tr>; })}</tbody></table></div>
+                <div className="registry-table-wrap"><table className="registry-table"><thead><tr><th>Competência</th><th>Baseline</th><th>Realizado</th><th>Payables abertas</th><th>Comprometido futuro</th><th>A comprometer</th><th>Previsão atual</th></tr></thead><tbody>{rows.map((row) => { const month = forecastByKey.get(row.key); return <tr key={row.key}><td><strong>{row.label}</strong></td><td>{money(row.financialMonth)}</td><td>{money(month?.actual)}</td><td>{money(month?.committedPayable)}</td><td>{money(month?.committedFuture)}</td><td>{money(month?.toCommit)}</td><td><strong>{money(month?.projected)}</strong></td></tr>; })}</tbody></table></div>
               </section>
             </>
           )}
