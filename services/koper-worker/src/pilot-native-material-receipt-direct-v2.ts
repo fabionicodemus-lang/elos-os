@@ -97,7 +97,7 @@ try {
   if (process.env.KOPER_MATERIAL_RECEIPT_DIRECT_PILOT_WRITE_ENABLED !== "true") {
     console.log("KOPER_MATERIAL_RECEIPT_DIRECT_V2_SKIPPED", JSON.stringify({ reason: "WRITE_DISABLED" }));
   } else {
-    const entryId = "13372";
+    const entryId = "13373";
     const [entries, entryItems, actors] = await Promise.all([
       requestSupabase<StagingRow[]>("koper_staging_records", { query: new URLSearchParams({
         select: "koper_id,koper_parent_id,payload", company_id: `eq.${env.BOSSA_COMPANY_ID}`,
