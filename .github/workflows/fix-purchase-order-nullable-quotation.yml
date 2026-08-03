@@ -1,0 +1,38 @@
+name: Fix nullable purchase-order quotation
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/fix-purchase-order-nullable-quotation.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Fix nullable quotation map key
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('app/suprimentos/pedidos-compras/page.tsx')
+          text = path.read_text()
+          old = '  const quoteMap=new Map(quotesResult.data.map(q=>[q.id,q]));'
+          new = '  const quoteMap=new Map<string|null,Quotation>(quotesResult.data.map(q=>[q.id,q]));'
+          if old not in text:
+              raise SystemExit('quoteMap line not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit fix and remove temporary workflow
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/fix-purchase-order-nullable-quotation.yml
+          git add app/suprimentos/pedidos-compras/page.tsx
+          git commit -m "fix(procurement): accept nullable quotation references"
+          git push origin HEAD:main
