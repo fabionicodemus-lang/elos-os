@@ -23,6 +23,46 @@ create index if not exists execution_service_contract_amendment_items_contract_i
 create index if not exists execution_service_contract_amendment_items_service_idx
   on public.execution_service_contract_amendment_items(project_id, service_id);
 
+create or replace function public.validate_execution_service_contract_amendment_item_tenant()
+returns trigger
+language plpgsql security definer set search_path=public as $$
+begin
+  if not exists (
+    select 1 from public.execution_service_contracts c
+    where c.id=new.contract_id and c.company_id=new.company_id and c.project_id=new.project_id
+  ) then
+    raise exception 'O contrato não pertence à empresa e obra informadas.' using errcode='23514';
+  end if;
+  if not exists (
+    select 1 from public.execution_service_contract_amendments a
+    where a.id=new.amendment_id and a.contract_id=new.contract_id
+      and a.company_id=new.company_id and a.project_id=new.project_id
+  ) then
+    raise exception 'O aditivo não pertence ao contrato, empresa e obra informados.' using errcode='23514';
+  end if;
+  if not exists (
+    select 1 from public.execution_service_contract_items i
+    where i.id=new.contract_item_id and i.contract_id=new.contract_id and i.service_id=new.service_id
+      and i.company_id=new.company_id and i.project_id=new.project_id
+  ) then
+    raise exception 'O item e o serviço não pertencem ao contrato, empresa e obra informados.' using errcode='23514';
+  end if;
+  if not exists (
+    select 1 from public.engineering_services s
+    where s.id=new.service_id and s.company_id=new.company_id
+  ) then
+    raise exception 'O serviço não pertence à empresa informada.' using errcode='23514';
+  end if;
+  return new;
+end; $$;
+
+drop trigger if exists validate_execution_service_contract_amendment_item_tenant_trigger
+  on public.execution_service_contract_amendment_items;
+create trigger validate_execution_service_contract_amendment_item_tenant_trigger
+before insert or update of company_id,project_id,contract_id,amendment_id,contract_item_id,service_id
+on public.execution_service_contract_amendment_items
+for each row execute function public.validate_execution_service_contract_amendment_item_tenant();
+
 alter table public.execution_service_contract_amendment_items enable row level security;
 
 drop policy if exists execution_service_contract_amendment_items_select on public.execution_service_contract_amendment_items;
