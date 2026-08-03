@@ -1,0 +1,36 @@
+name: Aplicar correção das páginas da Fase 4
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".phase4-fix/**"
+      - ".github/workflows/apply-phase4-page-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fase-4-motor-unificado
+          fetch-depth: 0
+      - name: Restaurar páginas
+        run: |
+          test -f .phase4-fix/payload.00
+          cat .phase4-fix/payload.* | tr -d '\n' | base64 -d > /tmp/pages.tar.gz
+          tar -xzf /tmp/pages.tar.gz
+          rm -rf .phase4-fix
+          rm .github/workflows/apply-phase4-page-fix.yml
+      - name: Gravar correção
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/engenharia/curvas/page.tsx app/financeiro/fluxo-de-caixa/page.tsx .phase4-fix .github/workflows/apply-phase4-page-fix.yml
+          git commit -m "fix(forecast): restaurar páginas unificadas"
+          git push origin HEAD:fase-4-motor-unificado
