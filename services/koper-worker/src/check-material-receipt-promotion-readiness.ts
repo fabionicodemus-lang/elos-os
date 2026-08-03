@@ -13,6 +13,12 @@ type NativeOrderItem = {
 };
 type InputRow = { id: string; source_id: string | null };
 
+type ResolvedGroup = {
+  order: NativeOrder;
+  sourceItemId: string;
+  items: NativeOrderItem[];
+};
+
 function objectValue(value: unknown): UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as UnknownRecord
@@ -39,6 +45,11 @@ function identifierArray(value: unknown): string[] {
   }))];
 }
 
+function baseSourceId(value: string | null): string | null {
+  const normalized = identifier(value);
+  return normalized?.split(":")[0] ?? null;
+}
+
 async function readAll<T>(resource: string, query: Record<string, string>): Promise<T[]> {
   const result: T[] = [];
   for (let offset = 0; ; offset += 1_000) {
@@ -58,6 +69,14 @@ function entryInputSourceIds(payload: UnknownRecord): string[] {
     identifier(payload.inputId),
     identifier(payload.genericProdSeq),
   ].filter((value): value is string => Boolean(value)))];
+}
+
+function sum(values: number[]): number {
+  return values.reduce((total, value) => total + value, 0);
+}
+
+function approximatelyEqual(left: number, right: number): boolean {
+  return Math.abs(left - right) <= Math.max(0.000001, Math.abs(right) * 0.000001);
 }
 
 await import("./index.js");
@@ -114,18 +133,21 @@ try {
   for (const item of orderItems) itemsByOrder.set(item.order_id, [...(itemsByOrder.get(item.order_id) ?? []), item]);
   const inputBySource = new Map(inputs.flatMap((input) => input.source_id ? [[input.source_id, input] as const] : []));
 
-  let uniqueMapped = 0;
+  let directlyResolved = 0;
+  let resolvedAllocationSplit = 0;
+  let resolvedNativeRows = 0;
   let missingOrderCandidate = 0;
   let missingNativeOrder = 0;
   let missingInput = 0;
   let missingOrderItem = 0;
-  let ambiguousOrderItem = 0;
+  let ambiguousSourceItem = 0;
   let zeroOrInvalidQuantity = 0;
-  let overOrderQuantity = 0;
-  const mappedGroups = new Set<string>();
-  const fullyMappedEntryItems = new Map<string, number>();
+
+  const receiptGroups = new Set<string>();
+  const mappedEntryItems = new Map<string, number>();
   const totalEntryItems = new Map<string, number>();
   const orderIdsPerEntry = new Map<string, Set<string>>();
+  const entryQuantityBySourceGroup = new Map<string, number>();
   const unresolvedExamples: Array<{ entryId: string; itemId: string; reason: string }> = [];
 
   for (const row of programmedItems) {
@@ -133,8 +155,7 @@ try {
     totalEntryItems.set(entryId, (totalEntryItems.get(entryId) ?? 0) + 1);
     const payload = objectValue(row.payload);
     const candidateOrderSourceIds = identifierArray(payload.candidatePurchaseOrderIds);
-    const sourceInputIds = entryInputSourceIds(payload);
-    const mappedInputIds = new Set(sourceInputIds.flatMap((sourceId) => {
+    const mappedInputIds = new Set(entryInputSourceIds(payload).flatMap((sourceId) => {
       const input = inputBySource.get(sourceId);
       return input ? [input.id] : [];
     }));
@@ -162,15 +183,29 @@ try {
     const candidates = nativeOrders.flatMap((order) =>
       (itemsByOrder.get(order.id) ?? [])
         .filter((item) => mappedInputIds.has(item.input_id))
-        .map((item) => ({ order, item })),
+        .map((item) => ({ order, item, sourceItemId: baseSourceId(item.source_id) })),
     );
 
     if (!reason && candidates.length === 0) {
       missingOrderItem += 1;
       reason = "missing_order_item";
-    } else if (!reason && candidates.length > 1) {
-      ambiguousOrderItem += 1;
-      reason = "ambiguous_order_item";
+    }
+
+    const sourceGroups = new Map<string, ResolvedGroup>();
+    for (const candidate of candidates) {
+      if (!candidate.sourceItemId) continue;
+      const key = `${candidate.order.id}:${candidate.sourceItemId}`;
+      const existing = sourceGroups.get(key);
+      if (existing) existing.items.push(candidate.item);
+      else sourceGroups.set(key, { order: candidate.order, sourceItemId: candidate.sourceItemId, items: [candidate.item] });
+    }
+
+    if (!reason && sourceGroups.size === 0) {
+      missingOrderItem += 1;
+      reason = "missing_order_item_source_identity";
+    } else if (!reason && sourceGroups.size > 1) {
+      ambiguousSourceItem += 1;
+      reason = "ambiguous_source_purchase_item";
     }
     if (!reason && quantity <= 0) {
       zeroOrInvalidQuantity += 1;
@@ -178,18 +213,47 @@ try {
     }
 
     if (!reason) {
-      const resolved = candidates[0]!;
-      uniqueMapped += 1;
-      fullyMappedEntryItems.set(entryId, (fullyMappedEntryItems.get(entryId) ?? 0) + 1);
-      mappedGroups.add(`${entryId}:${resolved.order.id}`);
+      const resolved = [...sourceGroups.values()][0]!;
+      if (resolved.items.length === 1) directlyResolved += 1;
+      else resolvedAllocationSplit += 1;
+      resolvedNativeRows += resolved.items.length;
+      mappedEntryItems.set(entryId, (mappedEntryItems.get(entryId) ?? 0) + 1);
+      receiptGroups.add(`${entryId}:${resolved.order.id}`);
       const orderSet = orderIdsPerEntry.get(entryId) ?? new Set<string>();
       orderSet.add(resolved.order.id);
       orderIdsPerEntry.set(entryId, orderSet);
-      const remaining = Number(resolved.item.ordered_quantity) - Number(resolved.item.accepted_quantity ?? 0);
-      if (quantity > remaining + 0.000001) overOrderQuantity += 1;
-    } else if (unresolvedExamples.length < 20) {
+      const sourceGroupKey = `${resolved.order.id}:${resolved.sourceItemId}`;
+      entryQuantityBySourceGroup.set(sourceGroupKey, (entryQuantityBySourceGroup.get(sourceGroupKey) ?? 0) + quantity);
+    } else if (unresolvedExamples.length < 30) {
       unresolvedExamples.push({ entryId, itemId: row.koper_id, reason });
     }
+  }
+
+  const nativeAcceptedBySourceGroup = new Map<string, number>();
+  const nativeReceivedBySourceGroup = new Map<string, number>();
+  for (const item of orderItems) {
+    const sourceItemId = baseSourceId(item.source_id);
+    if (!sourceItemId) continue;
+    const key = `${item.order_id}:${sourceItemId}`;
+    nativeAcceptedBySourceGroup.set(key, (nativeAcceptedBySourceGroup.get(key) ?? 0) + Number(item.accepted_quantity ?? 0));
+    nativeReceivedBySourceGroup.set(key, (nativeReceivedBySourceGroup.get(key) ?? 0) + Number(item.received_quantity ?? 0));
+  }
+
+  let quantityGroupsExactAccepted = 0;
+  let quantityGroupsEntryAboveAccepted = 0;
+  let quantityGroupsEntryBelowAccepted = 0;
+  let quantityGroupsExactReceived = 0;
+  let entryQuantityResolved = 0;
+  let nativeAcceptedCompared = 0;
+  for (const [key, entryQuantity] of entryQuantityBySourceGroup) {
+    const accepted = nativeAcceptedBySourceGroup.get(key) ?? 0;
+    const received = nativeReceivedBySourceGroup.get(key) ?? 0;
+    entryQuantityResolved += entryQuantity;
+    nativeAcceptedCompared += accepted;
+    if (approximatelyEqual(entryQuantity, accepted)) quantityGroupsExactAccepted += 1;
+    else if (entryQuantity > accepted) quantityGroupsEntryAboveAccepted += 1;
+    else quantityGroupsEntryBelowAccepted += 1;
+    if (approximatelyEqual(entryQuantity, received)) quantityGroupsExactReceived += 1;
   }
 
   let fullyMappedEntries = 0;
@@ -197,7 +261,7 @@ try {
   let unmappedEntries = 0;
   for (const entry of programmedEntries) {
     const total = totalEntryItems.get(entry.koper_id) ?? 0;
-    const mapped = fullyMappedEntryItems.get(entry.koper_id) ?? 0;
+    const mapped = mappedEntryItems.get(entry.koper_id) ?? 0;
     if (total > 0 && mapped === total) fullyMappedEntries += 1;
     else if (mapped > 0) partiallyMappedEntries += 1;
     else unmappedEntries += 1;
@@ -216,19 +280,32 @@ try {
       inputs: inputs.length,
     },
     resolution: {
-      uniqueMapped,
+      resolvedEntryItems: directlyResolved + resolvedAllocationSplit,
+      directlyResolved,
+      resolvedAllocationSplit,
+      resolvedNativeRows,
       missingOrderCandidate,
       missingNativeOrder,
       missingInput,
       missingOrderItem,
-      ambiguousOrderItem,
+      ambiguousSourceItem,
       zeroOrInvalidQuantity,
-      overOrderQuantity,
       fullyMappedEntries,
       partiallyMappedEntries,
       unmappedEntries,
-      receiptGroups: mappedGroups.size,
+      receiptGroups: receiptGroups.size,
       multiOrderEntries,
+    },
+    quantityReconciliation: {
+      comparedSourceGroups: entryQuantityBySourceGroup.size,
+      quantityGroupsExactAccepted,
+      quantityGroupsEntryAboveAccepted,
+      quantityGroupsEntryBelowAccepted,
+      quantityGroupsExactReceived,
+      entryQuantityResolved,
+      nativeAcceptedCompared,
+      totalNativeAccepted: sum(orderItems.map((item) => Number(item.accepted_quantity ?? 0))),
+      totalNativeReceived: sum(orderItems.map((item) => Number(item.received_quantity ?? 0))),
     },
     idempotency: {
       existingNativeReceipts: existingReceipts.length,
