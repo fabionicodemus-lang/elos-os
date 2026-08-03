@@ -48,6 +48,55 @@ function serviceDisplay(serviceId, services) {
   return service.code ? `${service.code} · ${service.description}` : service.description;
 }
 
+function clampPercent(value) {
+  return Math.min(100, Math.max(0, Number(value ?? 0)));
+}
+
+function addToMap(map, key, value) {
+  if (!Number.isFinite(value) || Math.abs(value) < 1e-10) return;
+  map.set(key, (map.get(key) ?? 0) + value);
+}
+
+function buildPhysicalWeights(activities, assignedCosts) {
+  const assignedTotal = activities.reduce(
+    (sum, activity) => sum + Math.max(0, Number(assignedCosts.get(activity.id) ?? 0)),
+    0,
+  );
+  const usesEqualPhysicalWeights = assignedTotal <= 0;
+  const physicalWeights = new Map();
+  activities.forEach((activity) => {
+    const cost = Math.max(0, Number(assignedCosts.get(activity.id) ?? 0));
+    physicalWeights.set(
+      activity.id,
+      usesEqualPhysicalWeights ? 100 / Math.max(1, activities.length) : cost / assignedTotal * 100,
+    );
+  });
+  return { physicalWeights, usesEqualPhysicalWeights };
+}
+
+function distributeAmountByWorkdays({ startValue, finishValue, financialValue, physicalValue, workOnSaturday, financialMap, physicalMap, zeroWorkdayActivityIds, activityId }) {
+  const start = parseDate(startValue);
+  const finishCandidate = parseDate(finishValue);
+  const finish = finishCandidate < start ? start : finishCandidate;
+  const totalWorkdays = countWorkdays(start, finish, workOnSaturday);
+  if (totalWorkdays === 0) {
+    zeroWorkdayActivityIds.add(activityId);
+    addToMap(financialMap, monthKey(start), financialValue);
+    addToMap(physicalMap, monthKey(start), physicalValue);
+    return;
+  }
+  for (let period = monthStart(start); period <= monthStart(finish); period = addMonths(period, 1)) {
+    const overlapStart = start > period ? start : period;
+    const periodFinish = monthEnd(period);
+    const overlapFinish = finish < periodFinish ? finish : periodFinish;
+    const workdays = countWorkdays(overlapStart, overlapFinish, workOnSaturday);
+    if (workdays <= 0) continue;
+    const fraction = workdays / totalWorkdays;
+    addToMap(financialMap, monthKey(period), financialValue * fraction);
+    addToMap(physicalMap, monthKey(period), physicalValue * fraction);
+  }
+}
+
 export function assignActivityCosts(activities, items) {
   const assigned = new Map();
   const serviceTotals = new Map();
@@ -110,20 +159,7 @@ export function buildCurves(activities, assignedCosts, budgetTotal, workOnSaturd
     periods.push(current);
   }
 
-  const assignedTotal = activities.reduce(
-    (sum, activity) => sum + Math.max(0, Number(assignedCosts.get(activity.id) ?? 0)),
-    0,
-  );
-  const usesEqualPhysicalWeights = assignedTotal <= 0;
-  const physicalWeights = new Map();
-  activities.forEach((activity) => {
-    const cost = Math.max(0, Number(assignedCosts.get(activity.id) ?? 0));
-    physicalWeights.set(
-      activity.id,
-      usesEqualPhysicalWeights ? 100 / activities.length : cost / assignedTotal * 100,
-    );
-  });
-
+  const { physicalWeights, usesEqualPhysicalWeights } = buildPhysicalWeights(activities, assignedCosts);
   const zeroWorkdayActivityIds = new Set();
   let physicalAccumulated = 0;
   let financialAccumulated = 0;
@@ -172,6 +208,226 @@ export function buildCurves(activities, assignedCosts, budgetTotal, workOnSaturd
     rows,
     usesEqualPhysicalWeights,
     zeroWorkdayActivityIds: [...zeroWorkdayActivityIds],
+  };
+}
+
+export function buildLiveCurves(activities, assignedCosts, budgetTotal, workOnSaturday, measurements, asOfDate) {
+  const baseline = buildCurves(activities, assignedCosts, budgetTotal, workOnSaturday);
+  const activityIds = new Set(activities.map((activity) => activity.id));
+  const executionMeasurements = measurements
+    .filter((measurement) => activityIds.has(measurement.activity_id) && measurement.measurement_date <= asOfDate)
+    .sort((a, b) => a.measurement_date.localeCompare(b.measurement_date) || String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")) || String(a.id ?? "").localeCompare(String(b.id ?? "")));
+
+  if (executionMeasurements.length === 0) {
+    return {
+      ...baseline,
+      hasExecutionData: false,
+      lateActualCostWarnings: [],
+    };
+  }
+
+  const { physicalWeights, usesEqualPhysicalWeights } = buildPhysicalWeights(activities, assignedCosts);
+  const measurementsByActivity = new Map();
+  executionMeasurements.forEach((measurement) => {
+    const group = measurementsByActivity.get(measurement.activity_id) ?? [];
+    group.push(measurement);
+    measurementsByActivity.set(measurement.activity_id, group);
+  });
+
+  const currentFinancial = new Map();
+  const actualFinancial = new Map();
+  const currentPhysical = new Map();
+  const actualPhysical = new Map();
+  const zeroWorkdayActivityIds = new Set(baseline.zeroWorkdayActivityIds);
+  const lateActualCostWarnings = [];
+  const asOf = parseDate(asOfDate);
+
+  activities.forEach((activity) => {
+    const activityCost = Math.max(0, Number(assignedCosts.get(activity.id) ?? 0));
+    const activityPhysicalWeight = Math.max(0, Number(physicalWeights.get(activity.id) ?? 0));
+    const history = measurementsByActivity.get(activity.id) ?? [];
+    let previousProgress = 0;
+    let previousActualCost = 0;
+    let recognizedFinancial = 0;
+    let actualCostTracking = false;
+    let progressWithoutActualCost = false;
+
+    history.forEach((measurement) => {
+      const progress = clampPercent(measurement.progress_percent);
+      const deltaProgress = progress - previousProgress;
+      const key = measurement.measurement_date.slice(0, 7);
+      const physicalDelta = activityPhysicalWeight * deltaProgress / 100;
+      addToMap(actualPhysical, key, physicalDelta);
+      addToMap(currentPhysical, key, physicalDelta);
+
+      const cumulativeActualCost = Math.max(0, Number(measurement.actual_cost ?? 0));
+      const startsActualCostTracking = !actualCostTracking && cumulativeActualCost > 0;
+      if (startsActualCostTracking && progressWithoutActualCost) {
+        lateActualCostWarnings.push({ activityId: activity.id, measurementDate: measurement.measurement_date });
+      }
+
+      let financialDelta = 0;
+      if (startsActualCostTracking) {
+        actualCostTracking = true;
+        financialDelta = cumulativeActualCost - recognizedFinancial;
+      } else if (actualCostTracking) {
+        financialDelta = cumulativeActualCost - previousActualCost;
+      } else {
+        financialDelta = activityCost * deltaProgress / 100;
+      }
+
+      addToMap(actualFinancial, key, financialDelta);
+      addToMap(currentFinancial, key, financialDelta);
+      recognizedFinancial += financialDelta;
+      if (!actualCostTracking && progress > 0) progressWithoutActualCost = true;
+      previousProgress = progress;
+      if (actualCostTracking) previousActualCost = cumulativeActualCost;
+    });
+
+    const latest = history.at(-1) ?? null;
+    const completed = Boolean(latest && (clampPercent(latest.progress_percent) >= 100 || latest.actual_finish));
+    if (completed && previousProgress < 100 && latest) {
+      const completionDelta = 100 - previousProgress;
+      const key = latest.measurement_date.slice(0, 7);
+      const physicalDelta = activityPhysicalWeight * completionDelta / 100;
+      addToMap(actualPhysical, key, physicalDelta);
+      addToMap(currentPhysical, key, physicalDelta);
+      if (!actualCostTracking) {
+        const financialDelta = activityCost * completionDelta / 100;
+        addToMap(actualFinancial, key, financialDelta);
+        addToMap(currentFinancial, key, financialDelta);
+        recognizedFinancial += financialDelta;
+      }
+      previousProgress = 100;
+    }
+
+    if (completed) return;
+
+    const remainingFraction = Math.max(0, 1 - previousProgress / 100);
+    if (remainingFraction <= 0) return;
+    const currentStartValue = latest?.current_start || latest?.actual_start || activity.planned_start;
+    const currentFinishValue = latest?.current_finish || activity.planned_finish;
+    const currentStart = parseDate(currentStartValue);
+    const currentFinish = parseDate(currentFinishValue);
+    const futureStart = currentStart > asOf && previousProgress <= 0 ? currentStart : asOf;
+    const futureFinish = currentFinish > futureStart ? currentFinish : futureStart;
+
+    distributeAmountByWorkdays({
+      startValue: futureStart.toISOString().slice(0, 10),
+      finishValue: futureFinish.toISOString().slice(0, 10),
+      financialValue: activityCost * remainingFraction,
+      physicalValue: activityPhysicalWeight * remainingFraction,
+      workOnSaturday,
+      financialMap: currentFinancial,
+      physicalMap: currentPhysical,
+      zeroWorkdayActivityIds,
+      activityId: activity.id,
+    });
+  });
+
+  const baselineByKey = new Map(baseline.rows.map((row) => [row.key, row]));
+  const allKeys = new Set(baseline.rows.map((row) => row.key));
+  for (const map of [currentFinancial, actualFinancial, currentPhysical, actualPhysical]) {
+    for (const key of map.keys()) allKeys.add(key);
+  }
+  allKeys.add(asOfDate.slice(0, 7));
+  const sortedKeys = [...allKeys].sort();
+  if (sortedKeys.length === 0) {
+    return {
+      ...baseline,
+      hasExecutionData: true,
+      lateActualCostWarnings,
+    };
+  }
+  const periods = [];
+  for (let current = parseDate(`${sortedKeys[0]}-01`); current <= parseDate(`${sortedKeys.at(-1)}-01`); current = addMonths(current, 1)) {
+    periods.push(current);
+  }
+
+  let baselinePhysicalAccumulated = 0;
+  let baselineFinancialAccumulated = 0;
+  let currentPhysicalAccumulated = 0;
+  let actualPhysicalAccumulated = 0;
+  let currentFinancialAccumulated = 0;
+  let actualFinancialAccumulated = 0;
+
+  const rows = periods.map((period) => {
+    const key = monthKey(period);
+    const baselineRow = baselineByKey.get(key);
+    const physicalMonth = baselineRow?.physicalMonth ?? 0;
+    const financialMonth = baselineRow?.financialMonth ?? 0;
+    baselinePhysicalAccumulated = Math.min(100, Math.max(0, baselinePhysicalAccumulated + physicalMonth));
+    baselineFinancialAccumulated += financialMonth;
+
+    const currentPhysicalMonth = currentPhysical.get(key) ?? 0;
+    const actualPhysicalMonth = actualPhysical.get(key) ?? 0;
+    const currentFinancialMonth = currentFinancial.get(key) ?? 0;
+    const actualFinancialMonth = actualFinancial.get(key) ?? 0;
+    currentPhysicalAccumulated = Math.min(100, Math.max(0, currentPhysicalAccumulated + currentPhysicalMonth));
+    actualPhysicalAccumulated = Math.min(100, Math.max(0, actualPhysicalAccumulated + actualPhysicalMonth));
+    currentFinancialAccumulated += currentFinancialMonth;
+    actualFinancialAccumulated += actualFinancialMonth;
+
+    return {
+      key,
+      label: monthLabel(period),
+      physicalMonth,
+      physicalAccumulated: baselinePhysicalAccumulated,
+      financialMonth,
+      financialAccumulated: baselineFinancialAccumulated,
+      financialPercent: budgetTotal > 0 ? baselineFinancialAccumulated / budgetTotal * 100 : 0,
+      currentPhysicalMonth,
+      currentPhysicalAccumulated,
+      actualPhysicalMonth,
+      actualPhysicalAccumulated,
+      currentFinancialMonth,
+      currentFinancialAccumulated,
+      currentFinancialPercent: budgetTotal > 0 ? currentFinancialAccumulated / budgetTotal * 100 : 0,
+      actualFinancialMonth,
+      actualFinancialAccumulated,
+      actualFinancialPercent: budgetTotal > 0 ? actualFinancialAccumulated / budgetTotal * 100 : 0,
+    };
+  });
+
+  return {
+    rows,
+    hasExecutionData: true,
+    usesEqualPhysicalWeights,
+    zeroWorkdayActivityIds: [...zeroWorkdayActivityIds],
+    lateActualCostWarnings,
+  };
+}
+
+export function calculateCurveDeviations(rows, currentMonthKey) {
+  if (!rows.length || !rows.some((row) => row.currentPhysicalAccumulated !== undefined)) {
+    return {
+      delayAt50Months: null,
+      finishDelayMonths: null,
+      baselineFinancialToDate: 0,
+      actualFinancialToDate: 0,
+      financialDeviationToDate: 0,
+    };
+  }
+  const monthDifference = (fromKey, toKey) => {
+    if (!fromKey || !toKey) return null;
+    const [fromYear, fromMonth] = fromKey.split("-").map(Number);
+    const [toYear, toMonth] = toKey.split("-").map(Number);
+    return (toYear - fromYear) * 12 + toMonth - fromMonth;
+  };
+  const firstAt = (field, threshold) => rows.find((row) => Number(row[field] ?? 0) >= threshold)?.key ?? null;
+  const rowToDate = [...rows].reverse().find((row) => row.key <= currentMonthKey) ?? null;
+  const baseline50 = firstAt("physicalAccumulated", 50);
+  const current50 = firstAt("currentPhysicalAccumulated", 50);
+  const baselineFinish = firstAt("physicalAccumulated", 99.999);
+  const currentFinish = firstAt("currentPhysicalAccumulated", 99.999);
+  const baselineFinancialToDate = Number(rowToDate?.financialAccumulated ?? 0);
+  const actualFinancialToDate = Number(rowToDate?.actualFinancialAccumulated ?? 0);
+  return {
+    delayAt50Months: monthDifference(baseline50, current50),
+    finishDelayMonths: monthDifference(baselineFinish, currentFinish),
+    baselineFinancialToDate,
+    actualFinancialToDate,
+    financialDeviationToDate: actualFinancialToDate - baselineFinancialToDate,
   };
 }
 
