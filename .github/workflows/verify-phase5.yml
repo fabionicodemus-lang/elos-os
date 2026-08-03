@@ -1,0 +1,54 @@
+name: Verificar Fase 5 de snapshots
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/forecast/snapshot-comparison.*"
+      - "app/engenharia/previsao-financeira/**"
+      - "app/forecast-snapshots.css"
+      - "supabase/migrations/20260803_0077_forecast_snapshots.sql"
+      - "supabase/tests/20260803_0077_forecast_snapshots_rls.sql"
+      - "docs/previsao-financeira/05-fase-5.md"
+      - "package.json"
+      - ".github/workflows/verify-phase5.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: phase5_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d phase5_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund
+      - name: Testes unitários
+        run: npm test
+      - name: Instalar cliente PostgreSQL
+        run: sudo timeout 60s apt-get update && sudo timeout 60s apt-get install -y postgresql-client
+      - name: Validar migration, RLS e imutabilidade
+        run: psql -h localhost -U postgres -d phase5_test -f supabase/tests/20260803_0077_forecast_snapshots_rls.sql
+      - name: Lint dos arquivos da Fase 5
+        run: npx eslint lib/forecast/snapshot-comparison.mjs lib/forecast/snapshot-comparison.test.mjs app/engenharia/previsao-financeira/actions.ts app/engenharia/previsao-financeira/page.tsx app/engenharia/previsao-financeira/historico/page.tsx app/engenharia/previsao-financeira/historico/layout.tsx
+      - name: Build completo
+        run: npm run build
