@@ -1,0 +1,138 @@
+name: Hotfix Curves Window 0712
+
+on:
+  push:
+    branches:
+      - hotfix/curves-window-0712
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hotfix/curves-window-0712
+          fetch-depth: 0
+      - name: Aplicar correção linear da tela de Curvas
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          page_path = Path('app/engenharia/curvas/page.tsx')
+          page = page_path.read_text()
+
+          import_anchor = 'import { requireCompanyPermission } from "@/lib/workspace";\n'
+          import_line = 'import { buildSafeMonthWindow } from "./month-window.mjs";\n'
+          if import_line not in page:
+              page = page.replace(import_anchor, import_anchor + import_line)
+
+          page, count = re.subn(
+              r'\nfunction contiguousMonthKeys\(keys: string\[\]\) \{.*?\n\}\n\nexport default async function',
+              '\nexport default async function',
+              page,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit('Bloco contiguousMonthKeys não encontrado')
+
+          old_keys = '  const keys = contiguousMonthKeys([...liveByKey.keys(), ...forecastByKey.keys()]);'
+          new_keys = '  const monthWindow = buildSafeMonthWindow([...liveByKey.keys(), ...forecastByKey.keys()], asOfDate.slice(0, 7));\n  const keys = monthWindow.keys;'
+          if old_keys not in page:
+              raise SystemExit('Chamada contiguousMonthKeys não encontrada')
+          page = page.replace(old_keys, new_keys)
+
+          reducer_pattern = re.compile(
+              r'  const rowState = keys\.reduce<\{.*?const rows = rowState\.rows;',
+              re.S,
+          )
+          linear_rows = '''  const rows: CurveRow[] = [];
+  let currentFinancialAccumulated = 0;
+  let actualFinancialAccumulated = 0;
+  for (const key of keys) {
+    const liveRow = liveByKey.get(key);
+    const forecastRow = forecastByKey.get(key);
+    const currentFinancialMonth = Number(forecastRow?.projected ?? 0);
+    const actualFinancialMonth = Number(forecastRow?.actual ?? 0);
+    currentFinancialAccumulated += currentFinancialMonth;
+    actualFinancialAccumulated += actualFinancialMonth;
+    rows.push({
+      key,
+      label: liveRow?.label ?? monthLabel(key),
+      physicalMonth: Number(liveRow?.physicalMonth ?? 0),
+      physicalAccumulated: Number(liveRow?.physicalAccumulated ?? 0),
+      financialMonth: Number(liveRow?.financialMonth ?? 0),
+      financialAccumulated: Number(liveRow?.financialAccumulated ?? 0),
+      financialPercent: budgetTotal > 0 ? Number(liveRow?.financialAccumulated ?? 0) / budgetTotal * 100 : 0,
+      currentPhysicalMonth: Number(liveRow?.currentPhysicalMonth ?? liveRow?.physicalMonth ?? 0),
+      currentPhysicalAccumulated: Number(liveRow?.currentPhysicalAccumulated ?? liveRow?.physicalAccumulated ?? 0),
+      actualPhysicalMonth: Number(liveRow?.actualPhysicalMonth ?? 0),
+      actualPhysicalAccumulated: Number(liveRow?.actualPhysicalAccumulated ?? 0),
+      currentFinancialMonth,
+      currentFinancialAccumulated,
+      currentFinancialPercent: budgetTotal > 0 ? currentFinancialAccumulated / budgetTotal * 100 : 0,
+      actualFinancialMonth,
+      actualFinancialAccumulated,
+      actualFinancialPercent: budgetTotal > 0 ? actualFinancialAccumulated / budgetTotal * 100 : 0,
+    });
+  }'''
+          page, count = reducer_pattern.subn(linear_rows, page, count=1)
+          if count != 1:
+              raise SystemExit('Reducer quadrático não encontrado')
+
+          zero_anchor = '  const zeroWorkdayActivities = live.zeroWorkdayActivityIds\n'
+          if zero_anchor not in page:
+              raise SystemExit('Âncora de atividades não encontrada')
+          page = page.replace(zero_anchor, '  const activityById = new Map(activities.map((activity) => [activity.id, activity]));\n' + zero_anchor)
+          page = page.replace('.map((activityId) => activities.find((activity) => activity.id === activityId))', '.map((activityId) => activityById.get(activityId))')
+          page = page.replace('activity: activities.find((activity) => activity.id === warning.activityId) ?? null,', 'activity: activityById.get(warning.activityId) ?? null,')
+
+          old_max = '  const maxComposition = Math.max(1, ...(forecast?.months.map((month) => month.projected) ?? [1]));'
+          new_max = '  const maxComposition = forecast?.months.reduce((maximum, month) => Math.max(maximum, month.projected), 1) ?? 1;'
+          if old_max not in page:
+              raise SystemExit('Cálculo maxComposition não encontrado')
+          page = page.replace(old_max, new_max)
+
+          notice_anchor = '                    {live.usesEqualPhysicalWeights ? <p><strong>Curva física sem ponderação por custo.</strong>'
+          if notice_anchor in page:
+              page = page.replace(
+                  notice_anchor,
+                  '                    {monthWindow.truncated ? <p><strong>Janela de datas protegida.</strong> O cronograma contém competências muito distantes entre si; a tela exibiu as 240 competências mais relevantes ao redor da data atual para evitar travamento.</p> : null}\n' + notice_anchor,
+              )
+              page = page.replace(
+                  'forecast?.warnings.length || live.usesEqualPhysicalWeights',
+                  'forecast?.warnings.length || monthWindow.truncated || live.usesEqualPhysicalWeights',
+              )
+
+          page_path.write_text(page)
+
+          layout_path = Path('app/layout.tsx')
+          layout = layout_path.read_text().replace('Elos OS · V0.71.1', 'Elos OS · V0.71.2')
+          layout_path.write_text(layout)
+
+          marker_path = Path('app/version-marker.css')
+          marker = marker_path.read_text().replace('V0.71.1 · 03/08 15:59 · HOTFIX 500', 'V0.71.2 · 03/08 17:27 · CURVAS SEGURAS')
+          marker_path.write_text(marker)
+
+          package_path = Path('package.json')
+          package = package_path.read_text()
+          old_test = 'app/engenharia/curvas/curve-calculations.test.mjs app/engenharia/contratos/contract-calculations.test.mjs'
+          new_test = 'app/engenharia/curvas/curve-calculations.test.mjs app/engenharia/curvas/month-window.test.mjs app/engenharia/contratos/contract-calculations.test.mjs'
+          if old_test not in package:
+              raise SystemExit('Script de testes não encontrado')
+          package_path.write_text(package.replace(old_test, new_test))
+          PY
+      - name: Validar teste da janela
+        run: node --test app/engenharia/curvas/month-window.test.mjs
+      - name: Commit da correção
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/engenharia/curvas/page.tsx app/engenharia/curvas/month-window.mjs app/engenharia/curvas/month-window.d.mts app/engenharia/curvas/month-window.test.mjs app/layout.tsx app/version-marker.css package.json
+          git commit -m "fix(curvas): limitar janela e eliminar cópias quadráticas"
+          git push origin hotfix/curves-window-0712
