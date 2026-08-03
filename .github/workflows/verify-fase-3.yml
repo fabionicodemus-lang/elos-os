@@ -11,6 +11,7 @@ on:
       - "docs/previsao-financeira/03-fase-3.md"
       - "supabase/migrations/20260803_007*.sql"
       - "package.json"
+      - ".github/scripts/verify-phase3-rls.sql"
       - ".github/workflows/verify-fase-3.yml"
 
 permissions:
@@ -20,6 +21,21 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: phase3_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d phase3_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +47,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Testes
         run: npm test
+      - name: Teste real de RLS multiempresa
+        run: psql -h localhost -U postgres -d phase3_test -f .github/scripts/verify-phase3-rls.sql
       - name: Lint dos arquivos alterados
         run: npx eslint app/engenharia/contratos/actions.ts app/engenharia/contratos/page.tsx components/app-shell.tsx
       - name: Build completo
