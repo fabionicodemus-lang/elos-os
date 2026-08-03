@@ -1,4 +1,9 @@
 const originalFetch = globalThis.fetch.bind(globalThis);
+const runnerStartedAt = Date.now();
+let totalRequests = 0;
+let activeRequests = 0;
+let lastStage = "startup";
+let lastCompletedStage: string | null = null;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -47,35 +52,70 @@ function bufferedResponse(response: Response, body: ArrayBuffer): Response {
   });
 }
 
+console.log("KOPER_STOCK_ENTRY_RUNNER_STARTED", JSON.stringify({
+  batchOffset: process.env.KOPER_STOCK_ENTRY_BATCH_OFFSET ?? null,
+  batchSize: process.env.KOPER_STOCK_ENTRY_BATCH_SIZE ?? null,
+  concurrency: process.env.KOPER_STOCK_ENTRY_HTTP_CONCURRENCY ?? null,
+  writeEnabled: process.env.KOPER_STOCK_ENTRY_DIRECT_STAGING_WRITE_ENABLED === "true",
+}));
+
+const heartbeat = setInterval(() => {
+  console.log("KOPER_STOCK_ENTRY_RUNNER_HEARTBEAT", JSON.stringify({
+    elapsedSeconds: Math.round((Date.now() - runnerStartedAt) / 1_000),
+    totalRequests,
+    activeRequests,
+    lastStage,
+    lastCompletedStage,
+  }));
+}, 30_000);
+
 globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const stage = safeStage(input);
+  totalRequests += 1;
+  activeRequests += 1;
+  lastStage = stage;
   let lastError: unknown = null;
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      const response = await originalFetch(input, {
-        ...init,
-        signal: AbortSignal.timeout(45_000),
-      });
-      const body = await readResponseBody(response, 45_000);
-      const completeResponse = bufferedResponse(response, body);
-      if (!retryableStatus(response.status) || attempt === 3) return completeResponse;
-      console.warn("KOPER_HTTP_RETRY", JSON.stringify({ stage, attempt, status: response.status }));
-    } catch (error: unknown) {
-      lastError = error;
-      const message = error instanceof Error ? error.message : "unknown";
-      const reason = /response_body_timeout/i.test(message)
-        ? "body_timeout"
-        : /timeout|abort/i.test(message)
-          ? "timeout"
-          : "network";
-      console.warn("KOPER_HTTP_RETRY", JSON.stringify({ stage, attempt, reason }));
-      if (attempt === 3) throw new Error(`KOPER_HTTP_FAILED:${stage}:${reason}`);
+  try {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await originalFetch(input, {
+          ...init,
+          signal: AbortSignal.timeout(45_000),
+        });
+        const body = await readResponseBody(response, 45_000);
+        const completeResponse = bufferedResponse(response, body);
+        if (!retryableStatus(response.status) || attempt === 3) return completeResponse;
+        console.warn("KOPER_HTTP_RETRY", JSON.stringify({ stage, attempt, status: response.status }));
+      } catch (error: unknown) {
+        lastError = error;
+        const message = error instanceof Error ? error.message : "unknown";
+        const reason = /response_body_timeout/i.test(message)
+          ? "body_timeout"
+          : /timeout|abort/i.test(message)
+            ? "timeout"
+            : "network";
+        console.warn("KOPER_HTTP_RETRY", JSON.stringify({ stage, attempt, reason }));
+        if (attempt === 3) throw new Error(`KOPER_HTTP_FAILED:${stage}:${reason}`);
+      }
+      await delay(500 * attempt);
     }
-    await delay(500 * attempt);
-  }
 
-  throw lastError instanceof Error ? lastError : new Error(`KOPER_HTTP_FAILED:${stage}:unknown`);
+    throw lastError instanceof Error ? lastError : new Error(`KOPER_HTTP_FAILED:${stage}:unknown`);
+  } finally {
+    activeRequests -= 1;
+    lastCompletedStage = stage;
+  }
 };
 
-await import("./stock-entry-direct-staging-job.js");
+try {
+  await import("./stock-entry-direct-staging-job.js");
+} finally {
+  clearInterval(heartbeat);
+  console.log("KOPER_STOCK_ENTRY_RUNNER_FINISHED", JSON.stringify({
+    elapsedSeconds: Math.round((Date.now() - runnerStartedAt) / 1_000),
+    totalRequests,
+    lastStage,
+    lastCompletedStage,
+  }));
+}
