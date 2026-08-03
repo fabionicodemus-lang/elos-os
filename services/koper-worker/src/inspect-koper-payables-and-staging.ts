@@ -61,7 +61,7 @@ try {
       order: "entity.asc,koper_id.asc",
     }),
     readAll<Record<string, unknown>>("finance_electronic_invoices", {
-      select: "id,registry_number,invoice_number,issue_date,total_amount,status,validation_status,three_way_status",
+      select: "id,registry_number,invoice_number,issue_date,invoice_total,status,validation_status,three_way_status",
       company_id: `eq.${env.BOSSA_COMPANY_ID}`,
       order: "id.asc",
     }),
