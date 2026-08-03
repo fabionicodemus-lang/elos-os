@@ -6,10 +6,10 @@ do $$ begin create role authenticated; exception when duplicate_object then null
 
 create table public.companies(id uuid primary key);
 create table public.projects(id uuid primary key);
-create table public.engineering_services(id uuid primary key);
-create table public.execution_service_contracts(id uuid primary key);
-create table public.execution_service_contract_amendments(id uuid primary key);
-create table public.execution_service_contract_items(id uuid primary key);
+create table public.engineering_services(id uuid primary key,company_id uuid not null);
+create table public.execution_service_contracts(id uuid primary key,company_id uuid not null,project_id uuid not null);
+create table public.execution_service_contract_amendments(id uuid primary key,company_id uuid not null,project_id uuid not null,contract_id uuid not null);
+create table public.execution_service_contract_items(id uuid primary key,company_id uuid not null,project_id uuid not null,contract_id uuid not null,service_id uuid not null);
 create table auth.users(id uuid primary key);
 
 create table public.execution_contract_measurements(
@@ -67,18 +67,19 @@ insert into public.companies(id) values
 insert into public.projects(id) values
   ('11111111-1111-1111-1111-111111111101'),
   ('22222222-2222-2222-2222-222222222202');
-insert into public.engineering_services(id) values
-  ('11111111-1111-1111-1111-111111111102'),
-  ('22222222-2222-2222-2222-222222222203');
-insert into public.execution_service_contracts(id) values
-  ('11111111-1111-1111-1111-111111111103'),
-  ('22222222-2222-2222-2222-222222222204');
-insert into public.execution_service_contract_amendments(id) values
-  ('11111111-1111-1111-1111-111111111104'),
-  ('22222222-2222-2222-2222-222222222205');
-insert into public.execution_service_contract_items(id) values
-  ('11111111-1111-1111-1111-111111111105'),
-  ('22222222-2222-2222-2222-222222222206');
+insert into public.engineering_services(id,company_id) values
+  ('11111111-1111-1111-1111-111111111102','11111111-1111-1111-1111-111111111111'),
+  ('22222222-2222-2222-2222-222222222203','22222222-2222-2222-2222-222222222222');
+insert into public.execution_service_contracts(id,company_id,project_id) values
+  ('11111111-1111-1111-1111-111111111103','11111111-1111-1111-1111-111111111111','11111111-1111-1111-1111-111111111101'),
+  ('22222222-2222-2222-2222-222222222204','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222202');
+insert into public.execution_service_contract_amendments(id,company_id,project_id,contract_id) values
+  ('11111111-1111-1111-1111-111111111104','11111111-1111-1111-1111-111111111111','11111111-1111-1111-1111-111111111101','11111111-1111-1111-1111-111111111103'),
+  ('22222222-2222-2222-2222-222222222205','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222202','22222222-2222-2222-2222-222222222204');
+insert into public.execution_service_contract_items(id,company_id,project_id,contract_id,service_id) values
+  ('11111111-1111-1111-1111-111111111105','11111111-1111-1111-1111-111111111111','11111111-1111-1111-1111-111111111101','11111111-1111-1111-1111-111111111103','11111111-1111-1111-1111-111111111102'),
+  ('11111111-1111-1111-1111-111111111107','11111111-1111-1111-1111-111111111111','11111111-1111-1111-1111-111111111101','11111111-1111-1111-1111-111111111103','11111111-1111-1111-1111-111111111102'),
+  ('22222222-2222-2222-2222-222222222206','22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222202','22222222-2222-2222-2222-222222222204','22222222-2222-2222-2222-222222222203');
 insert into auth.users(id) values ('11111111-1111-1111-1111-111111111106');
 
 insert into public.execution_service_contract_amendment_items(
@@ -101,7 +102,7 @@ declare visible_count integer; begin
     company_id,project_id,contract_id,amendment_id,contract_item_id,service_id,value_change,created_by
   ) values (
     '11111111-1111-1111-1111-111111111111','11111111-1111-1111-1111-111111111101','11111111-1111-1111-1111-111111111103',
-    '11111111-1111-1111-1111-111111111104','22222222-2222-2222-2222-222222222206','11111111-1111-1111-1111-111111111102',50,
+    '11111111-1111-1111-1111-111111111104','11111111-1111-1111-1111-111111111107','11111111-1111-1111-1111-111111111102',50,
     '11111111-1111-1111-1111-111111111106'
   );
 
@@ -109,8 +110,21 @@ declare visible_count integer; begin
     insert into public.execution_service_contract_amendment_items(
       company_id,project_id,contract_id,amendment_id,contract_item_id,service_id,value_change,created_by
     ) values (
+      '11111111-1111-1111-1111-111111111111','11111111-1111-1111-1111-111111111101','11111111-1111-1111-1111-111111111103',
+      '11111111-1111-1111-1111-111111111104','22222222-2222-2222-2222-222222222206','11111111-1111-1111-1111-111111111102',50,
+      '11111111-1111-1111-1111-111111111106'
+    );
+    raise exception 'Falha de integridade: referência cruzada à Empresa B foi permitida.';
+  exception when check_violation then
+    null;
+  end;
+
+  begin
+    insert into public.execution_service_contract_amendment_items(
+      company_id,project_id,contract_id,amendment_id,contract_item_id,service_id,value_change,created_by
+    ) values (
       '22222222-2222-2222-2222-222222222222','22222222-2222-2222-2222-222222222202','22222222-2222-2222-2222-222222222204',
-      '22222222-2222-2222-2222-222222222205','11111111-1111-1111-1111-111111111105','22222222-2222-2222-2222-222222222203',50,
+      '22222222-2222-2222-2222-222222222205','22222222-2222-2222-2222-222222222206','22222222-2222-2222-2222-222222222203',50,
       '11111111-1111-1111-1111-111111111106'
     );
     raise exception 'Falha RLS: escrita na Empresa B foi permitida.';
