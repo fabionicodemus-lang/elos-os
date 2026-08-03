@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test app/engenharia/curvas/curve-calculations.test.mjs"
+    "test": "node --test app/engenharia/curvas/curve-calculations.test.mjs app/engenharia/contratos/contract-calculations.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",
