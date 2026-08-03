@@ -1,0 +1,35 @@
+name: Montar fluxo da Fase 4
+
+on:
+  push:
+    branches:
+      - fase-4-motor-unificado
+    paths:
+      - ".phase4-parts/cashflow.*"
+      - ".github/workflows/assemble-phase4-cashflow.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fase-4-motor-unificado
+          fetch-depth: 0
+      - name: Montar arquivo
+        run: |
+          test -f .phase4-parts/cashflow.00
+          cat .phase4-parts/cashflow.* | tr -d '\n' | base64 -d > app/financeiro/fluxo-de-caixa/page.tsx
+          rm -rf .phase4-parts
+          rm .github/workflows/assemble-phase4-cashflow.yml
+      - name: Gravar resultado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/financeiro/fluxo-de-caixa/page.tsx .phase4-parts .github/workflows/assemble-phase4-cashflow.yml
+          git commit -m "feat(forecast): integrar motor ao fluxo de caixa"
+          git push origin HEAD:fase-4-motor-unificado
