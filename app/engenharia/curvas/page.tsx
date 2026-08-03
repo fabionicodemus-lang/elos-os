@@ -2,6 +2,12 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
+import {
+  assignActivityCosts,
+  buildCurves,
+  detectIntegrityAlerts,
+  type CurveRow,
+} from "./curve-calculations.mjs";
 
 type Project = { id: string; code: string | null; name: string };
 type Baseline = {
@@ -11,6 +17,7 @@ type Baseline = {
   name: string;
   version: string;
   start_date: string;
+  work_on_saturday: boolean;
   status: "draft" | "review" | "approved" | "archived";
 };
 type Activity = {
@@ -25,25 +32,25 @@ type Activity = {
   planned_cost: number;
   record_status: "active" | "inactive";
 };
-type Budget = { id: string; code: string; name: string; version: string; area_m2: number };
+type Budget = {
+  id: string;
+  code: string;
+  name: string;
+  version: string;
+  area_m2: number;
+  status: "draft" | "in_progress" | "review" | "approved" | "archived";
+  is_base: boolean;
+};
 type BudgetItem = {
   id: string;
   budget_id: string;
   service_id: string | null;
+  code: string | null;
+  description: string;
   total_direct_cost: number;
   status: "active" | "inactive";
 };
-type CurveRow = {
-  key: string;
-  label: string;
-  physicalMonth: number;
-  physicalAccumulated: number;
-  financialMonth: number;
-  financialAccumulated: number;
-  financialPercent: number;
-};
-
-const DAY_MS = 86_400_000;
+type Service = { id: string; code: string; description: string };
 
 function parseDate(value: string) {
   return new Date(`${value.slice(0, 10)}T12:00:00Z`);
@@ -70,134 +77,6 @@ function decimal(value: number | null | undefined, digits = 1) {
   }).format(Number(value ?? 0));
 }
 
-function monthKey(date: Date) {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-function monthLabel(date: Date) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    month: "short",
-    year: "2-digit",
-    timeZone: "UTC",
-  }).format(date).replace(" de ", "/");
-}
-
-function monthStart(date: Date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1, 12));
-}
-
-function monthEnd(date: Date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 12));
-}
-
-function addMonths(date: Date, months: number) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1, 12));
-}
-
-function calendarDays(start: Date, finish: Date) {
-  return Math.max(1, Math.round((finish.getTime() - start.getTime()) / DAY_MS) + 1);
-}
-
-function overlapDays(start: Date, finish: Date, periodStart: Date, periodFinish: Date) {
-  const overlapStart = start > periodStart ? start : periodStart;
-  const overlapFinish = finish < periodFinish ? finish : periodFinish;
-  if (overlapFinish < overlapStart) return 0;
-  return Math.round((overlapFinish.getTime() - overlapStart.getTime()) / DAY_MS) + 1;
-}
-
-function assignActivityCosts(activities: Activity[], items: BudgetItem[]) {
-  const assigned = new Map<string, number>();
-  const serviceTotals = new Map<string, number>();
-  const activitiesByService = new Map<string, Activity[]>();
-
-  items.forEach((item) => {
-    if (item.status !== "active" || !item.service_id) return;
-    serviceTotals.set(item.service_id, (serviceTotals.get(item.service_id) ?? 0) + Number(item.total_direct_cost ?? 0));
-  });
-
-  activities.forEach((activity) => {
-    if (!activity.service_id) {
-      assigned.set(activity.id, Math.max(0, Number(activity.planned_cost ?? 0)));
-      return;
-    }
-    const group = activitiesByService.get(activity.service_id) ?? [];
-    group.push(activity);
-    activitiesByService.set(activity.service_id, group);
-  });
-
-  activitiesByService.forEach((serviceActivities, serviceId) => {
-    const serviceTotal = Math.max(0, serviceTotals.get(serviceId) ?? 0);
-    const explicit = serviceActivities.filter((activity) => Number(activity.planned_cost) > 0);
-    const fallback = serviceActivities.filter((activity) => Number(activity.planned_cost) <= 0);
-    const explicitTotal = explicit.reduce((sum, activity) => sum + Number(activity.planned_cost), 0);
-
-    explicit.forEach((activity) => assigned.set(activity.id, Number(activity.planned_cost)));
-
-    const remaining = Math.max(0, serviceTotal - explicitTotal);
-    const quantityTotal = fallback.reduce((sum, activity) => sum + Math.max(0, Number(activity.quantity_snapshot ?? 0)), 0);
-    fallback.forEach((activity) => {
-      const weight = quantityTotal > 0
-        ? Math.max(0, Number(activity.quantity_snapshot ?? 0)) / quantityTotal
-        : 1 / Math.max(1, fallback.length);
-      assigned.set(activity.id, remaining * weight);
-    });
-  });
-
-  return assigned;
-}
-
-function buildCurves(activities: Activity[], assignedCosts: Map<string, number>, budgetTotal: number) {
-  if (!activities.length) return [] as CurveRow[];
-
-  const earliest = activities.reduce((current, activity) => {
-    const value = parseDate(activity.planned_start);
-    return value < current ? value : current;
-  }, parseDate(activities[0].planned_start));
-  const latest = activities.reduce((current, activity) => {
-    const value = parseDate(activity.planned_finish);
-    return value > current ? value : current;
-  }, parseDate(activities[0].planned_finish));
-
-  const periods: Date[] = [];
-  for (let current = monthStart(earliest); current <= monthStart(latest); current = addMonths(current, 1)) {
-    periods.push(current);
-  }
-
-  let physicalAccumulated = 0;
-  let financialAccumulated = 0;
-  const physicalWeight = 100 / activities.length;
-
-  return periods.map((period) => {
-    const periodFinish = monthEnd(period);
-    let physicalMonth = 0;
-    let financialMonth = 0;
-
-    activities.forEach((activity) => {
-      const start = parseDate(activity.planned_start);
-      const finish = parseDate(activity.planned_finish);
-      const days = calendarDays(start, finish);
-      const overlap = overlapDays(start, finish, period, periodFinish);
-      if (!overlap) return;
-      const fraction = overlap / days;
-      physicalMonth += physicalWeight * fraction;
-      financialMonth += (assignedCosts.get(activity.id) ?? 0) * fraction;
-    });
-
-    physicalAccumulated = Math.min(100, physicalAccumulated + physicalMonth);
-    financialAccumulated += financialMonth;
-
-    return {
-      key: monthKey(period),
-      label: monthLabel(period),
-      physicalMonth,
-      physicalAccumulated,
-      financialMonth,
-      financialAccumulated,
-      financialPercent: budgetTotal > 0 ? financialAccumulated / budgetTotal * 100 : 0,
-    };
-  });
-}
-
 export default async function EngineeringCurvesPage({
   searchParams,
 }: {
@@ -214,7 +93,7 @@ export default async function EngineeringCurvesPage({
       ? fetchAllRows<Baseline>(async (from, to) => {
           const { data, error } = await supabase
             .from("engineering_schedule_baselines")
-            .select("id, budget_id, code, name, version, start_date, status")
+            .select("id, budget_id, code, name, version, start_date, work_on_saturday, status")
             .eq("company_id", companyId)
             .eq("project_id", projectId)
             .order("updated_at", { ascending: false })
@@ -247,34 +126,62 @@ export default async function EngineeringCurvesPage({
     ? activitiesResult.data.filter((activity) => activity.baseline_id === selectedBaseline.id && activity.record_status === "active")
     : [];
 
-  const [budgetResult, budgetItemsResult] = selectedBaseline
+  const [budgetResult, budgetItemsResult, servicesResult] = selectedBaseline
     ? await Promise.all([
         supabase
           .from("engineering_budgets")
-          .select("id, code, name, version, area_m2")
+          .select("id, code, name, version, area_m2, status, is_base")
           .eq("id", selectedBaseline.budget_id)
           .eq("company_id", companyId)
           .maybeSingle(),
         fetchAllRows<BudgetItem>(async (from, to) => {
           const { data, error } = await supabase
             .from("engineering_budget_items")
-            .select("id, budget_id, service_id, total_direct_cost, status")
+            .select("id, budget_id, service_id, code, description, total_direct_cost, status")
             .eq("company_id", companyId)
             .eq("budget_id", selectedBaseline.budget_id)
             .range(from, to);
           return { data: (data ?? []) as BudgetItem[], error };
         }),
+        fetchAllRows<Service>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("engineering_services")
+            .select("id, code, description")
+            .eq("company_id", companyId)
+            .order("code")
+            .range(from, to);
+          return { data: (data ?? []) as Service[], error };
+        }),
       ])
-    : [{ data: null, error: null }, { data: [] as BudgetItem[], error: null }];
+    : [
+        { data: null, error: null },
+        { data: [] as BudgetItem[], error: null },
+        { data: [] as Service[], error: null },
+      ];
 
   const budget = budgetResult.data as Budget | null;
-  const budgetItems = budgetItemsResult.data;
+  const budgetItems = budgetItemsResult.data as BudgetItem[];
+  const services = servicesResult.data as Service[];
   const budgetTotal = budgetItems
     .filter((item) => item.status === "active")
     .reduce((sum, item) => sum + Number(item.total_direct_cost ?? 0), 0);
   const assignedCosts = assignActivityCosts(activities, budgetItems);
   const scheduledValue = activities.reduce((sum, activity) => sum + (assignedCosts.get(activity.id) ?? 0), 0);
-  const rows = buildCurves(activities, assignedCosts, budgetTotal);
+  const curveResult = buildCurves(
+    activities,
+    assignedCosts,
+    budgetTotal,
+    selectedBaseline?.work_on_saturday ?? false,
+  );
+  const rows = curveResult.rows as CurveRow[];
+  const integrityAlerts = detectIntegrityAlerts(activities, budgetItems, services);
+  const integrityAlertCount = integrityAlerts.servicesWithoutActivities.length
+    + integrityAlerts.overprogrammedServices.length
+    + integrityAlerts.activitiesWithoutBudgetService.length
+    + integrityAlerts.budgetItemsWithoutService.length;
+  const zeroWorkdayActivities = curveResult.zeroWorkdayActivityIds
+    .map((activityId) => activities.find((activity) => activity.id === activityId))
+    .filter((activity): activity is Activity => Boolean(activity));
   const coverage = budgetTotal > 0 ? scheduledValue / budgetTotal * 100 : 0;
   const missingCostCount = activities.filter((activity) => (assignedCosts.get(activity.id) ?? 0) <= 0).length;
   const directCostCount = activities.filter((activity) => Number(activity.planned_cost) > 0).length;
@@ -283,7 +190,7 @@ export default async function EngineeringCurvesPage({
   const startDate = activities.length ? activities.reduce((value, activity) => activity.planned_start < value ? activity.planned_start : value, activities[0].planned_start) : null;
   const finishDate = activities.length ? activities.reduce((value, activity) => activity.planned_finish > value ? activity.planned_finish : value, activities[0].planned_finish) : null;
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
-  const structureError = baselinesResult.error || activitiesResult.error || budgetItemsResult.error;
+  const structureError = baselinesResult.error || activitiesResult.error || budgetItemsResult.error || servicesResult.error;
 
   const chartWidth = 1100;
   const chartHeight = 390;
@@ -323,7 +230,10 @@ export default async function EngineeringCurvesPage({
             <div>
               <span>Linha de base</span>
               <strong>{selectedBaseline ? `${selectedBaseline.code} · ${selectedBaseline.version} · ${selectedBaseline.name}` : "Nenhuma linha criada"}</strong>
-              <small>{budget ? `Orçamento ${budget.code} · ${budget.version} · ${budget.name}` : "Sem revisão de orçamento vinculada"}</small>
+              <div className="curves-budget-reference">
+                <small>{budget ? `Orçamento ${budget.code} · ${budget.version} · ${budget.name}` : "Sem revisão de orçamento vinculada"}</small>
+                {budget && budget.status !== "approved" ? <span className="curves-status-badge warning">Orçamento não aprovado</span> : null}
+              </div>
             </div>
             {baselines.length ? (
               <form method="get">
@@ -357,10 +267,79 @@ export default async function EngineeringCurvesPage({
                 <div className={coverage >= 99 ? "ok" : "warning"}><span>Cobertura financeira</span><strong>{decimal(coverage)}%</strong></div>
               </section>
 
+              <section className={`curves-integrity-panel ${integrityAlertCount === 0 ? "ok" : ""}`}>
+                <div className="curves-section-head">
+                  <div><span>Validação da curva</span><h2>Alertas de integridade</h2></div>
+                  {integrityAlertCount === 0
+                    ? <strong className="curves-integrity-badge ok">Cobertura íntegra</strong>
+                    : <strong className="curves-integrity-badge warning">{integrityAlertCount} alerta(s)</strong>}
+                </div>
+
+                {integrityAlertCount === 0 ? (
+                  <div className="curves-integrity-ok">Os serviços e atividades possuem cobertura consistente com a revisão do orçamento.</div>
+                ) : (
+                  <div className="curves-integrity-grid">
+                    {integrityAlerts.servicesWithoutActivities.length ? (
+                      <article className="warning">
+                        <h3>Serviços sem atividade</h3>
+                        <p>Custos ativos do orçamento que ainda não foram distribuídos no cronograma.</p>
+                        <ul>{integrityAlerts.servicesWithoutActivities.map((alert) => (
+                          <li key={alert.serviceId}><strong>{alert.serviceLabel}</strong><span>{money(alert.budgetValue)} não distribuído</span></li>
+                        ))}</ul>
+                      </article>
+                    ) : null}
+
+                    {integrityAlerts.overprogrammedServices.length ? (
+                      <article className="danger">
+                        <h3>Programado acima do orçamento</h3>
+                        <p>A soma dos custos explícitos das atividades supera o valor do serviço.</p>
+                        <ul>{integrityAlerts.overprogrammedServices.map((alert) => (
+                          <li key={alert.serviceId}>
+                            <strong>{alert.serviceLabel}</strong>
+                            <span>Orçado {money(alert.budgetValue)} · programado {money(alert.programmedValue)} · excedente {money(alert.excessValue)}</span>
+                          </li>
+                        ))}</ul>
+                      </article>
+                    ) : null}
+
+                    {integrityAlerts.activitiesWithoutBudgetService.length ? (
+                      <article className="danger">
+                        <h3>Atividades fora da revisão</h3>
+                        <p>Atividades vinculadas a serviços que não existem entre os itens ativos do orçamento.</p>
+                        <ul>{integrityAlerts.activitiesWithoutBudgetService.map((alert) => (
+                          <li key={alert.activityId}><strong>{alert.activityLabel}</strong><span>{alert.serviceLabel}</span></li>
+                        ))}</ul>
+                      </article>
+                    ) : null}
+
+                    {integrityAlerts.budgetItemsWithoutService.length ? (
+                      <article className="warning">
+                        <h3>Itens sem serviço vinculado</h3>
+                        <p>Itens ativos que não podem ser distribuídos automaticamente no cronograma.</p>
+                        <ul>{integrityAlerts.budgetItemsWithoutService.map((alert) => (
+                          <li key={alert.itemId}><strong>{alert.itemLabel}</strong><span>{money(alert.budgetValue)}</span></li>
+                        ))}</ul>
+                      </article>
+                    ) : null}
+                  </div>
+                )}
+
+                {curveResult.usesEqualPhysicalWeights || zeroWorkdayActivities.length ? (
+                  <div className="curves-calculation-notices">
+                    {curveResult.usesEqualPhysicalWeights ? (
+                      <p><strong>Curva física sem ponderação por custo.</strong> Todas as atividades estão com custo atribuído igual a zero; por segurança, a tela manteve peso igual entre elas.</p>
+                    ) : null}
+                    {zeroWorkdayActivities.length ? (
+                      <p><strong>Atividades sem dia útil no intervalo:</strong> {zeroWorkdayActivities.map((activity) => `${activity.code} · ${activity.name}`).join("; ")}. O custo foi alocado integralmente no mês de início.</p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </section>
+
               <section className="curves-chart-card">
                 <div className="curves-section-head">
                   <div><span>Curva S da linha de base</span><h2>Avanço físico e financeiro acumulado</h2></div>
-                  <div className="curves-legend"><span><i className="physical" />Físico por atividades</span><span><i className="financial" />Financeiro sobre o orçamento</span></div>
+                  <div className="curves-legend"><span><i className="physical" />Físico ponderado por custo</span><span><i className="financial" />Financeiro sobre o orçamento</span></div>
                 </div>
                 <div className="curves-svg-wrap">
                   <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Curvas física e financeira acumuladas">
@@ -383,7 +362,7 @@ export default async function EngineeringCurvesPage({
                     ))}
                   </svg>
                 </div>
-                <p className="curves-note">O avanço físico distribui peso igual entre as atividades da linha de base. O financeiro usa o custo informado na atividade e, quando ele não existe, distribui o custo do serviço do orçamento entre suas atividades.</p>
+                <p className="curves-note">O avanço físico é ponderado pelo custo atribuído a cada atividade. O físico e o financeiro são distribuídos pelos dias úteis do intervalo, respeitando a configuração de trabalho aos sábados da linha de base.</p>
               </section>
 
               <section className="curves-grid">
@@ -403,7 +382,7 @@ export default async function EngineeringCurvesPage({
                     <div><dt>Mês de maior desembolso</dt><dd>{peakRow?.label ?? "—"}</dd></div>
                     <div><dt>Atividades sem custo</dt><dd>{missingCostCount}</dd></div>
                   </dl>
-                  {coverage < 95 ? <p className="warning">A curva financeira ainda não cobre todo o orçamento. Verifique serviços do orçamento sem atividade ou atividades sem vínculo com o serviço.</p> : <p className="ok">A linha de base possui boa cobertura do orçamento vinculado.</p>}
+                  {coverage < 95 ? <p className="warning">A curva financeira ainda não cobre todo o orçamento. Verifique os alertas de integridade acima.</p> : <p className="ok">A linha de base possui boa cobertura do orçamento vinculado.</p>}
                 </article>
               </section>
 
