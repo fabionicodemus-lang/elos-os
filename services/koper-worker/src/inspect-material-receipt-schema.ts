@@ -27,6 +27,14 @@ async function openApi(): Promise<UnknownRecord> {
   return objectValue(await response.json());
 }
 
+function resolveSchema(schemaValue: unknown, definitions: UnknownRecord): UnknownRecord {
+  const schema = objectValue(schemaValue);
+  const ref = typeof schema.$ref === "string" ? schema.$ref : null;
+  if (!ref) return schema;
+  const name = ref.split("/").at(-1);
+  return name ? objectValue(definitions[name]) : schema;
+}
+
 await import("./index.js");
 
 try {
@@ -52,19 +60,22 @@ try {
   for (const path of rpcTargets) {
     const operation = objectValue(objectValue(allPaths[path]).post);
     const parameters = Array.isArray(operation.parameters) ? operation.parameters : [];
+    const argsParameter = parameters.map(objectValue).find((parameter) => parameter.name === "args");
+    const argsSchema = resolveSchema(argsParameter?.schema, definitions);
+    const properties = objectValue(argsSchema.properties);
     console.log("KOPER_MATERIAL_RECEIPT_RPC", JSON.stringify({
       path,
-      parameters: parameters.map((raw) => {
-        const parameter = objectValue(raw);
-        const schema = objectValue(parameter.schema);
-        return {
-          name: parameter.name ?? null,
-          required: parameter.required ?? false,
-          type: parameter.type ?? schema.type ?? null,
-          format: parameter.format ?? schema.format ?? null,
-          default: parameter.default ?? schema.default ?? null,
-        };
-      }),
+      required: stringArray(argsSchema.required),
+      properties: Object.fromEntries(Object.entries(properties).map(([key, raw]) => {
+        const property = resolveSchema(raw, definitions);
+        return [key, {
+          type: property.type ?? null,
+          format: property.format ?? null,
+          default: property.default ?? null,
+          enum: Array.isArray(property.enum) ? property.enum : null,
+        }];
+      })),
+      rawRef: objectValue(argsParameter?.schema).$ref ?? null,
       responses: Object.keys(objectValue(operation.responses)).sort(),
     }));
   }
