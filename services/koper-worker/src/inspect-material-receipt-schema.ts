@@ -32,11 +32,42 @@ await import("./index.js");
 try {
   const api = await openApi();
   const definitions = objectValue(api.definitions);
-  const paths = Object.keys(objectValue(api.paths))
+  const allPaths = objectValue(api.paths);
+  const paths = Object.keys(allPaths)
     .filter((path) => /(material_receipt|receipt|stock_movement|inventory.*movement|purchase_order)/i.test(path))
     .sort();
 
   console.log("KOPER_MATERIAL_RECEIPT_SCHEMA_PATHS", JSON.stringify(paths));
+
+  const rpcTargets = [
+    "/rpc/save_procurement_material_receipt",
+    "/rpc/submit_procurement_material_receipt",
+    "/rpc/approve_procurement_material_receipt",
+    "/rpc/reject_procurement_material_receipt",
+    "/rpc/cancel_procurement_material_receipt",
+    "/rpc/register_approved_material_receipt_in_inventory",
+    "/rpc/post_procurement_inventory_movement",
+    "/rpc/refresh_procurement_purchase_order",
+  ];
+  for (const path of rpcTargets) {
+    const operation = objectValue(objectValue(allPaths[path]).post);
+    const parameters = Array.isArray(operation.parameters) ? operation.parameters : [];
+    console.log("KOPER_MATERIAL_RECEIPT_RPC", JSON.stringify({
+      path,
+      parameters: parameters.map((raw) => {
+        const parameter = objectValue(raw);
+        const schema = objectValue(parameter.schema);
+        return {
+          name: parameter.name ?? null,
+          required: parameter.required ?? false,
+          type: parameter.type ?? schema.type ?? null,
+          format: parameter.format ?? schema.format ?? null,
+          default: parameter.default ?? schema.default ?? null,
+        };
+      }),
+      responses: Object.keys(objectValue(operation.responses)).sort(),
+    }));
+  }
 
   for (const [name, rawDefinition] of Object.entries(definitions)) {
     if (!/(material_receipt|receipt|stock_movement|inventory.*movement|purchase_order)/i.test(name)) continue;
@@ -56,10 +87,9 @@ try {
   const targetTables = [
     "procurement_material_receipts",
     "procurement_material_receipt_items",
-    "procurement_material_receipt_divergences",
+    "procurement_material_receipt_discrepancies",
     "procurement_material_receipt_documents",
-    "inventory_stock_movements",
-    "stock_movements",
+    "procurement_inventory_movements",
     "procurement_purchase_orders",
     "procurement_purchase_order_items",
   ];
