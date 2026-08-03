@@ -1,7 +1,12 @@
 const DAY_MS = 86_400_000;
+const MAX_CURVE_MONTHS = 240;
 
 function parseDate(value) {
-  return new Date(`${value.slice(0, 10)}T12:00:00Z`);
+  const clean = String(value ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) return null;
+  const date = new Date(`${clean}T12:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== clean) return null;
+  return date;
 }
 
 function monthKey(date) {
@@ -28,16 +33,36 @@ function addMonths(date, months) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1, 12));
 }
 
-function isWorkday(date, workOnSaturday) {
-  const day = date.getUTCDay();
-  return day !== 0 && (workOnSaturday || day !== 6);
+function maxDate(first, second) {
+  return first > second ? first : second;
+}
+
+function minDate(first, second) {
+  return first < second ? first : second;
+}
+
+function activityRange(startValue, finishValue) {
+  const start = parseDate(startValue);
+  if (!start) return null;
+  const finishCandidate = parseDate(finishValue);
+  const rawFinish = !finishCandidate || finishCandidate < start ? start : finishCandidate;
+  const maximumFinish = monthEnd(addMonths(monthStart(start), MAX_CURVE_MONTHS));
+  return {
+    start,
+    finish: rawFinish > maximumFinish ? maximumFinish : rawFinish,
+    clamped: rawFinish > maximumFinish,
+  };
 }
 
 function countWorkdays(start, finish, workOnSaturday) {
-  if (finish < start) return 0;
-  let total = 0;
-  for (let current = new Date(start); current <= finish; current = new Date(current.getTime() + DAY_MS)) {
-    if (isWorkday(current, workOnSaturday)) total += 1;
+  if (!start || !finish || finish < start) return 0;
+  const totalDays = Math.floor((finish.getTime() - start.getTime()) / DAY_MS) + 1;
+  const fullWeeks = Math.floor(totalDays / 7);
+  let total = fullWeeks * (workOnSaturday ? 6 : 5);
+  const remainder = totalDays % 7;
+  for (let offset = 0; offset < remainder; offset += 1) {
+    const day = (start.getUTCDay() + offset) % 7;
+    if (day !== 0 && (workOnSaturday || day !== 6)) total += 1;
   }
   return total;
 }
@@ -74,10 +99,11 @@ function buildPhysicalWeights(activities, assignedCosts) {
   return { physicalWeights, usesEqualPhysicalWeights };
 }
 
-function distributeAmountByWorkdays({ startValue, finishValue, financialValue, physicalValue, workOnSaturday, financialMap, physicalMap, zeroWorkdayActivityIds, activityId }) {
-  const start = parseDate(startValue);
-  const finishCandidate = parseDate(finishValue);
-  const finish = finishCandidate < start ? start : finishCandidate;
+function distributeAmountByWorkdays({ startValue, finishValue, financialValue, physicalValue, workOnSaturday, financialMap, physicalMap, zeroWorkdayActivityIds, clampedActivityIds, activityId }) {
+  const range = activityRange(startValue, finishValue);
+  if (!range) return;
+  const { start, finish, clamped } = range;
+  if (clamped) clampedActivityIds?.add(activityId);
   const totalWorkdays = countWorkdays(start, finish, workOnSaturday);
   if (totalWorkdays === 0) {
     zeroWorkdayActivityIds.add(activityId);
@@ -85,10 +111,9 @@ function distributeAmountByWorkdays({ startValue, finishValue, financialValue, p
     addToMap(physicalMap, monthKey(start), physicalValue);
     return;
   }
-  for (let period = monthStart(start); period <= monthStart(finish); period = addMonths(period, 1)) {
-    const overlapStart = start > period ? start : period;
-    const periodFinish = monthEnd(period);
-    const overlapFinish = finish < periodFinish ? finish : periodFinish;
+  for (let period = monthStart(start), index = 0; period <= monthStart(finish) && index <= MAX_CURVE_MONTHS; period = addMonths(period, 1), index += 1) {
+    const overlapStart = maxDate(start, period);
+    const overlapFinish = minDate(finish, monthEnd(period));
     const workdays = countWorkdays(overlapStart, overlapFinish, workOnSaturday);
     if (workdays <= 0) continue;
     const fraction = workdays / totalWorkdays;
@@ -139,62 +164,52 @@ export function assignActivityCosts(activities, items) {
 }
 
 export function buildCurves(activities, assignedCosts, budgetTotal, workOnSaturday) {
-  if (!activities.length) {
-    return { rows: [], usesEqualPhysicalWeights: false, zeroWorkdayActivityIds: [] };
+  const validActivities = activities
+    .map((activity) => ({ activity, range: activityRange(activity.planned_start, activity.planned_finish) }))
+    .filter((entry) => entry.range);
+  if (!validActivities.length) {
+    return { rows: [], usesEqualPhysicalWeights: false, zeroWorkdayActivityIds: [], clampedActivityIds: [] };
   }
 
-  const earliest = activities.reduce((current, activity) => {
-    const value = parseDate(activity.planned_start);
-    return value < current ? value : current;
-  }, parseDate(activities[0].planned_start));
-  const latest = activities.reduce((current, activity) => {
-    const start = parseDate(activity.planned_start);
-    const finish = parseDate(activity.planned_finish);
-    const value = finish > start ? finish : start;
-    return value > current ? value : current;
-  }, parseDate(activities[0].planned_start));
+  const earliest = validActivities.reduce((current, entry) => minDate(current, entry.range.start), validActivities[0].range.start);
+  const latest = validActivities.reduce((current, entry) => maxDate(current, entry.range.finish), validActivities[0].range.finish);
+  const normalizedActivities = validActivities.map((entry) => entry.activity);
+  const { physicalWeights, usesEqualPhysicalWeights } = buildPhysicalWeights(normalizedActivities, assignedCosts);
+  const zeroWorkdayActivityIds = new Set();
+  const clampedActivityIds = new Set(validActivities.filter((entry) => entry.range.clamped).map((entry) => entry.activity.id));
+  const financialMap = new Map();
+  const physicalMap = new Map();
+
+  validActivities.forEach(({ activity, range }) => {
+    distributeAmountByWorkdays({
+      startValue: range.start.toISOString().slice(0, 10),
+      finishValue: range.finish.toISOString().slice(0, 10),
+      financialValue: Math.max(0, Number(assignedCosts.get(activity.id) ?? 0)),
+      physicalValue: Math.max(0, Number(physicalWeights.get(activity.id) ?? 0)),
+      workOnSaturday,
+      financialMap,
+      physicalMap,
+      zeroWorkdayActivityIds,
+      clampedActivityIds,
+      activityId: activity.id,
+    });
+  });
 
   const periods = [];
-  for (let current = monthStart(earliest); current <= monthStart(latest); current = addMonths(current, 1)) {
+  for (let current = monthStart(earliest), index = 0; current <= monthStart(latest) && index <= MAX_CURVE_MONTHS; current = addMonths(current, 1), index += 1) {
     periods.push(current);
   }
 
-  const { physicalWeights, usesEqualPhysicalWeights } = buildPhysicalWeights(activities, assignedCosts);
-  const zeroWorkdayActivityIds = new Set();
   let physicalAccumulated = 0;
   let financialAccumulated = 0;
-
   const rows = periods.map((period) => {
-    const periodFinish = monthEnd(period);
-    let physicalMonth = 0;
-    let financialMonth = 0;
-
-    activities.forEach((activity) => {
-      const start = parseDate(activity.planned_start);
-      const finish = parseDate(activity.planned_finish);
-      const totalWorkdays = countWorkdays(start, finish, workOnSaturday);
-      let fraction = 0;
-
-      if (totalWorkdays === 0) {
-        zeroWorkdayActivityIds.add(activity.id);
-        fraction = monthKey(start) === monthKey(period) ? 1 : 0;
-      } else {
-        const overlapStart = start > period ? start : period;
-        const overlapFinish = finish < periodFinish ? finish : periodFinish;
-        const overlapWorkdays = countWorkdays(overlapStart, overlapFinish, workOnSaturday);
-        fraction = overlapWorkdays / totalWorkdays;
-      }
-
-      if (fraction <= 0) return;
-      physicalMonth += (physicalWeights.get(activity.id) ?? 0) * fraction;
-      financialMonth += Math.max(0, Number(assignedCosts.get(activity.id) ?? 0)) * fraction;
-    });
-
+    const key = monthKey(period);
+    const physicalMonth = physicalMap.get(key) ?? 0;
+    const financialMonth = financialMap.get(key) ?? 0;
     physicalAccumulated = Math.min(100, physicalAccumulated + physicalMonth);
     financialAccumulated += financialMonth;
-
     return {
-      key: monthKey(period),
+      key,
       label: monthLabel(period),
       physicalMonth,
       physicalAccumulated,
@@ -208,14 +223,20 @@ export function buildCurves(activities, assignedCosts, budgetTotal, workOnSaturd
     rows,
     usesEqualPhysicalWeights,
     zeroWorkdayActivityIds: [...zeroWorkdayActivityIds],
+    clampedActivityIds: [...clampedActivityIds],
   };
 }
 
 export function buildLiveCurves(activities, assignedCosts, budgetTotal, workOnSaturday, measurements, asOfDate) {
   const baseline = buildCurves(activities, assignedCosts, budgetTotal, workOnSaturday);
   const activityIds = new Set(activities.map((activity) => activity.id));
+  const asOf = parseDate(asOfDate) ?? new Date();
+  const historyMinimum = addMonths(monthStart(asOf), -MAX_CURVE_MONTHS);
   const executionMeasurements = measurements
-    .filter((measurement) => activityIds.has(measurement.activity_id) && measurement.measurement_date <= asOfDate)
+    .filter((measurement) => {
+      const date = parseDate(measurement.measurement_date);
+      return activityIds.has(measurement.activity_id) && date && date >= historyMinimum && date <= asOf;
+    })
     .sort((a, b) => a.measurement_date.localeCompare(b.measurement_date) || String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")) || String(a.id ?? "").localeCompare(String(b.id ?? "")));
 
   if (executionMeasurements.length === 0) {
@@ -226,7 +247,8 @@ export function buildLiveCurves(activities, assignedCosts, budgetTotal, workOnSa
     };
   }
 
-  const { physicalWeights, usesEqualPhysicalWeights } = buildPhysicalWeights(activities, assignedCosts);
+  const validActivities = activities.filter((activity) => activityRange(activity.planned_start, activity.planned_finish));
+  const { physicalWeights, usesEqualPhysicalWeights } = buildPhysicalWeights(validActivities, assignedCosts);
   const measurementsByActivity = new Map();
   executionMeasurements.forEach((measurement) => {
     const group = measurementsByActivity.get(measurement.activity_id) ?? [];
@@ -239,10 +261,10 @@ export function buildLiveCurves(activities, assignedCosts, budgetTotal, workOnSa
   const currentPhysical = new Map();
   const actualPhysical = new Map();
   const zeroWorkdayActivityIds = new Set(baseline.zeroWorkdayActivityIds);
+  const clampedActivityIds = new Set(baseline.clampedActivityIds ?? []);
   const lateActualCostWarnings = [];
-  const asOf = parseDate(asOfDate);
 
-  activities.forEach((activity) => {
+  validActivities.forEach((activity) => {
     const activityCost = Math.max(0, Number(assignedCosts.get(activity.id) ?? 0));
     const activityPhysicalWeight = Math.max(0, Number(physicalWeights.get(activity.id) ?? 0));
     const history = measurementsByActivity.get(activity.id) ?? [];
@@ -305,12 +327,14 @@ export function buildLiveCurves(activities, assignedCosts, budgetTotal, workOnSa
 
     const remainingFraction = Math.max(0, 1 - previousProgress / 100);
     if (remainingFraction <= 0) return;
-    const currentStartValue = latest?.current_start || latest?.actual_start || activity.planned_start;
-    const currentFinishValue = latest?.current_finish || activity.planned_finish;
-    const currentStart = parseDate(currentStartValue);
-    const currentFinish = parseDate(currentFinishValue);
+    const plannedRange = activityRange(activity.planned_start, activity.planned_finish);
+    const currentStart = parseDate(latest?.current_start || latest?.actual_start || activity.planned_start) ?? plannedRange?.start ?? asOf;
+    const currentFinish = parseDate(latest?.current_finish || activity.planned_finish) ?? plannedRange?.finish ?? currentStart;
     const futureStart = currentStart > asOf && previousProgress <= 0 ? currentStart : asOf;
-    const futureFinish = currentFinish > futureStart ? currentFinish : futureStart;
+    const maximumFinish = monthEnd(addMonths(monthStart(futureStart), MAX_CURVE_MONTHS));
+    const futureFinishCandidate = currentFinish > futureStart ? currentFinish : futureStart;
+    const futureFinish = futureFinishCandidate > maximumFinish ? maximumFinish : futureFinishCandidate;
+    if (futureFinishCandidate > maximumFinish) clampedActivityIds.add(activity.id);
 
     distributeAmountByWorkdays({
       startValue: futureStart.toISOString().slice(0, 10),
@@ -321,6 +345,7 @@ export function buildLiveCurves(activities, assignedCosts, budgetTotal, workOnSa
       financialMap: currentFinancial,
       physicalMap: currentPhysical,
       zeroWorkdayActivityIds,
+      clampedActivityIds,
       activityId: activity.id,
     });
   });
@@ -331,7 +356,7 @@ export function buildLiveCurves(activities, assignedCosts, budgetTotal, workOnSa
     for (const key of map.keys()) allKeys.add(key);
   }
   allKeys.add(asOfDate.slice(0, 7));
-  const sortedKeys = [...allKeys].sort();
+  const sortedKeys = [...allKeys].filter(Boolean).sort();
   if (sortedKeys.length === 0) {
     return {
       ...baseline,
@@ -339,8 +364,20 @@ export function buildLiveCurves(activities, assignedCosts, budgetTotal, workOnSa
       lateActualCostWarnings,
     };
   }
+
+  const firstPeriod = parseDate(`${sortedKeys[0]}-01`);
+  const lastCandidate = parseDate(`${sortedKeys.at(-1)}-01`);
+  if (!firstPeriod || !lastCandidate) {
+    return {
+      ...baseline,
+      hasExecutionData: true,
+      lateActualCostWarnings,
+    };
+  }
+  const maximumPeriod = addMonths(firstPeriod, MAX_CURVE_MONTHS);
+  const lastPeriod = lastCandidate > maximumPeriod ? maximumPeriod : lastCandidate;
   const periods = [];
-  for (let current = parseDate(`${sortedKeys[0]}-01`); current <= parseDate(`${sortedKeys.at(-1)}-01`); current = addMonths(current, 1)) {
+  for (let current = firstPeriod, index = 0; current <= lastPeriod && index <= MAX_CURVE_MONTHS; current = addMonths(current, 1), index += 1) {
     periods.push(current);
   }
 
@@ -394,6 +431,7 @@ export function buildLiveCurves(activities, assignedCosts, budgetTotal, workOnSa
     hasExecutionData: true,
     usesEqualPhysicalWeights,
     zeroWorkdayActivityIds: [...zeroWorkdayActivityIds],
+    clampedActivityIds: [...clampedActivityIds],
     lateActualCostWarnings,
   };
 }
