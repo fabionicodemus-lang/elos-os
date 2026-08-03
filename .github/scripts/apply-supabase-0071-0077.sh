@@ -57,13 +57,15 @@ run_migration "0073" "supabase/migrations/20260803_0073_execution_contract_measu
 state_0074="$(scalar "select case when to_regprocedure('public.create_simple_execution_contract_measurement(uuid,uuid,uuid,date,numeric,numeric,boolean,text)') is not null then 'complete' else 'absent' end")"
 run_migration "0074" "supabase/migrations/20260803_0074_execution_contract_simple_measurement.sql" "$state_0074"
 
+# A 0075 contém apenas CREATE OR REPLACE FUNCTION, então pode completar com segurança
+# um conjunto parcialmente existente de funções financeiras.
 state_0075="$(scalar "with markers as (
   select count(*)::int present from (values
     (to_regprocedure('public.approve_execution_contract_measurement(uuid,uuid,uuid,text)') is not null),
     (to_regprocedure('public.reverse_execution_contract_measurement(uuid,uuid,uuid,text)') is not null),
     (to_regprocedure('public.sync_contract_measurement_from_payable()') is not null)
   ) v(ok) where ok
-) select case when present=3 then 'complete' when present=0 then 'absent' else 'partial' end from markers")"
+) select case when present=3 then 'complete' else 'absent' end from markers")"
 run_migration "0075" "supabase/migrations/20260803_0075_execution_contract_finance.sql" "$state_0075"
 
 state_0076="$(scalar "select case when exists(select 1 from information_schema.columns where table_schema='public' and table_name='projects' and column_name='forecast_default_payment_days') then 'complete' else 'absent' end")"
