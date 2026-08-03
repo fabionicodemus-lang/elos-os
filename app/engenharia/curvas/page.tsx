@@ -166,35 +166,43 @@ export default async function EngineeringCurvesPage({
   const liveByKey = new Map(live.rows.map((row) => [row.key, row]));
   const forecastByKey = new Map(forecast?.months.map((row) => [row.key, row]) ?? []);
   const keys = contiguousMonthKeys([...liveByKey.keys(), ...forecastByKey.keys()]);
-  let currentFinancialAccumulated = 0;
-  let actualFinancialAccumulated = 0;
-  const rows: CurveRow[] = keys.map((key) => {
-    const liveRow = liveByKey.get(key);
-    const forecastRow = forecastByKey.get(key);
-    const currentFinancialMonth = Number(forecastRow?.projected ?? 0);
-    const actualFinancialMonth = Number(forecastRow?.actual ?? 0);
-    currentFinancialAccumulated += currentFinancialMonth;
-    actualFinancialAccumulated += actualFinancialMonth;
-    return {
-      key,
-      label: liveRow?.label ?? monthLabel(key),
-      physicalMonth: Number(liveRow?.physicalMonth ?? 0),
-      physicalAccumulated: Number(liveRow?.physicalAccumulated ?? 0),
-      financialMonth: Number(liveRow?.financialMonth ?? 0),
-      financialAccumulated: Number(liveRow?.financialAccumulated ?? 0),
-      financialPercent: budgetTotal > 0 ? Number(liveRow?.financialAccumulated ?? 0) / budgetTotal * 100 : 0,
-      currentPhysicalMonth: Number(liveRow?.currentPhysicalMonth ?? liveRow?.physicalMonth ?? 0),
-      currentPhysicalAccumulated: Number(liveRow?.currentPhysicalAccumulated ?? liveRow?.physicalAccumulated ?? 0),
-      actualPhysicalMonth: Number(liveRow?.actualPhysicalMonth ?? 0),
-      actualPhysicalAccumulated: Number(liveRow?.actualPhysicalAccumulated ?? 0),
-      currentFinancialMonth,
-      currentFinancialAccumulated,
-      currentFinancialPercent: budgetTotal > 0 ? currentFinancialAccumulated / budgetTotal * 100 : 0,
-      actualFinancialMonth,
-      actualFinancialAccumulated,
-      actualFinancialPercent: budgetTotal > 0 ? actualFinancialAccumulated / budgetTotal * 100 : 0,
-    };
-  });
+  const rowState = keys.reduce<{
+  rows: CurveRow[];
+  currentFinancialAccumulated: number;
+  actualFinancialAccumulated: number;
+}>((state, key) => {
+  const liveRow = liveByKey.get(key);
+  const forecastRow = forecastByKey.get(key);
+  const currentFinancialMonth = Number(forecastRow?.projected ?? 0);
+  const actualFinancialMonth = Number(forecastRow?.actual ?? 0);
+  const currentFinancialAccumulated = state.currentFinancialAccumulated + currentFinancialMonth;
+  const actualFinancialAccumulated = state.actualFinancialAccumulated + actualFinancialMonth;
+  const row: CurveRow = {
+    key,
+    label: liveRow?.label ?? monthLabel(key),
+    physicalMonth: Number(liveRow?.physicalMonth ?? 0),
+    physicalAccumulated: Number(liveRow?.physicalAccumulated ?? 0),
+    financialMonth: Number(liveRow?.financialMonth ?? 0),
+    financialAccumulated: Number(liveRow?.financialAccumulated ?? 0),
+    financialPercent: budgetTotal > 0 ? Number(liveRow?.financialAccumulated ?? 0) / budgetTotal * 100 : 0,
+    currentPhysicalMonth: Number(liveRow?.currentPhysicalMonth ?? liveRow?.physicalMonth ?? 0),
+    currentPhysicalAccumulated: Number(liveRow?.currentPhysicalAccumulated ?? liveRow?.physicalAccumulated ?? 0),
+    actualPhysicalMonth: Number(liveRow?.actualPhysicalMonth ?? 0),
+    actualPhysicalAccumulated: Number(liveRow?.actualPhysicalAccumulated ?? 0),
+    currentFinancialMonth,
+    currentFinancialAccumulated,
+    currentFinancialPercent: budgetTotal > 0 ? currentFinancialAccumulated / budgetTotal * 100 : 0,
+    actualFinancialMonth,
+    actualFinancialAccumulated,
+    actualFinancialPercent: budgetTotal > 0 ? actualFinancialAccumulated / budgetTotal * 100 : 0,
+  };
+  return {
+    rows: [...state.rows, row],
+    currentFinancialAccumulated,
+    actualFinancialAccumulated,
+  };
+}, { rows: [], currentFinancialAccumulated: 0, actualFinancialAccumulated: 0 });
+const rows = rowState.rows;
 
   const deviations = calculateCurveDeviations(rows, asOfDate.slice(0, 7));
   const coverage = budgetTotal > 0 ? scheduledValue / budgetTotal * 100 : 0;
