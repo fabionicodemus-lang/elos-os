@@ -407,7 +407,7 @@ begin
     raise exception 'O coeficiente deve ser maior que zero.';
   end if;
   if p_waste_percentage is null or p_waste_percentage < 0 or p_waste_percentage > 1000 then
-    raise exception 'A perda deve estar entre 0 e 1000%.';
+    raise exception 'A perda deve estar entre 0 e 1000 por cento.';
   end if;
   if p_unit_price is null or p_unit_price < 0 then
     raise exception 'O preço unitário não pode ser negativo.';
