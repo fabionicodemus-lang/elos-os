@@ -22,4 +22,4 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 8080
 
-CMD ["node", "dist/inspect-koper-payables-and-staging.js"]
+CMD ["node", "dist/index.js"]
