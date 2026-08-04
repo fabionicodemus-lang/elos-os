@@ -26,6 +26,14 @@ type BudgetCompositionItem = {
   inputs: CompositionInput[];
 };
 
+type PreparedBudgetRow = {
+  row: HTMLTableRowElement;
+  code: string;
+  originalDescription: string;
+  visibleDescription: string;
+  descriptionElement: HTMLElement;
+};
+
 const categoryLabels: Record<CompositionInput["category"], string> = {
   material: "Material",
   labor: "Mão de obra",
@@ -46,6 +54,20 @@ function normalize(value: string | null | undefined) {
 
 function matchKey(code: string, description: string) {
   return `${normalize(code)}::${normalize(description)}`;
+}
+
+function cleanServiceName(value: string) {
+  return value.replace(/^(?:(?:c[oó]pia)\s+de\s+)+/i, "").trim();
+}
+
+function cleanVisibleNote(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/(?:^|\s)(?:koper\s+)?(?:itembudgetid|fatheritemid|serviceid|compositionid|inputid)=/i.test(line))
+    .join("\n")
+    .trim();
 }
 
 function money(value: number | null) {
@@ -193,9 +215,67 @@ export function BudgetAnalyticalDetails() {
     const controller = new AbortController();
     const insertedDetails: HTMLTableRowElement[] = [];
     const insertedLinks: Array<{ link: HTMLAnchorElement; original: HTMLElement }> = [];
+    const restorePresentation: Array<() => void> = [];
     let toolbar: HTMLElement | null = null;
     let detailsVisible = new URLSearchParams(window.location.search).get("view") === "details";
     let matchedRows: Array<{ row: HTMLTableRowElement; item: BudgetCompositionItem; code: string; description: string }> = [];
+
+    const preparedRows = Array.from(table.querySelectorAll<HTMLTableRowElement>("tbody > tr"))
+      .map((row): PreparedBudgetRow | null => {
+        const cells = Array.from(row.children).filter((child): child is HTMLTableCellElement => child instanceof HTMLTableCellElement);
+        if (cells.length !== 12) return null;
+
+        const code = cells[0].textContent?.trim() ?? "";
+        const descriptionElement = cells[1].querySelector<HTMLElement>("strong");
+        if (!descriptionElement) return null;
+
+        const originalDescription = descriptionElement.textContent?.trim() ?? "";
+        const visibleDescription = cleanServiceName(originalDescription) || originalDescription;
+        if (visibleDescription !== originalDescription) {
+          descriptionElement.textContent = visibleDescription;
+          restorePresentation.push(() => {
+            descriptionElement.textContent = originalDescription;
+          });
+        }
+
+        const editDescriptionInput = row.querySelector<HTMLInputElement>('input[name="description"]');
+        if (editDescriptionInput && editDescriptionInput.value !== visibleDescription) {
+          const originalValue = editDescriptionInput.value;
+          const originalDefaultValue = editDescriptionInput.defaultValue;
+          editDescriptionInput.value = visibleDescription;
+          editDescriptionInput.defaultValue = visibleDescription;
+          restorePresentation.push(() => {
+            editDescriptionInput.value = originalValue;
+            editDescriptionInput.defaultValue = originalDefaultValue;
+          });
+        }
+
+        cells[1].querySelectorAll<HTMLElement>("span").forEach((noteElement) => {
+          const originalText = noteElement.textContent ?? "";
+          const originalHidden = noteElement.hidden;
+          const visibleText = cleanVisibleNote(originalText);
+          if (visibleText === originalText.trim()) return;
+
+          if (visibleText) {
+            noteElement.textContent = visibleText;
+          } else {
+            noteElement.hidden = true;
+          }
+          restorePresentation.push(() => {
+            noteElement.textContent = originalText;
+            noteElement.hidden = originalHidden;
+          });
+        });
+
+        return {
+          row,
+          code,
+          originalDescription,
+          visibleDescription,
+          descriptionElement,
+        };
+      })
+      .filter((value): value is PreparedBudgetRow => Boolean(value));
 
     const removeDetails = () => {
       insertedDetails.splice(0).forEach((row) => row.remove());
@@ -227,15 +307,9 @@ export function BudgetAnalyticalDetails() {
           itemQueues.set(item.matchKey, queue);
         });
 
-        matchedRows = Array.from(table.querySelectorAll<HTMLTableRowElement>("tbody > tr"))
-          .map((row) => {
-            const cells = Array.from(row.children).filter((child): child is HTMLTableCellElement => child instanceof HTMLTableCellElement);
-            if (cells.length !== 12) return null;
-            const code = cells[0].textContent?.trim() ?? "";
-            const descriptionElement = cells[1].querySelector<HTMLElement>("strong");
-            const description = descriptionElement?.textContent?.trim() ?? "";
-            if (!descriptionElement) return null;
-            const queue = itemQueues.get(matchKey(code, description));
+        matchedRows = preparedRows
+          .map(({ row, code, originalDescription, visibleDescription, descriptionElement }) => {
+            const queue = itemQueues.get(matchKey(code, originalDescription));
             const item = queue?.shift();
             if (!item) return null;
 
@@ -248,7 +322,7 @@ export function BudgetAnalyticalDetails() {
               insertedLinks.push({ link, original: descriptionElement });
             }
 
-            return { row, item, code, description };
+            return { row, item, code, description: visibleDescription };
           })
           .filter((value): value is { row: HTMLTableRowElement; item: BudgetCompositionItem; code: string; description: string } => Boolean(value));
 
@@ -295,6 +369,7 @@ export function BudgetAnalyticalDetails() {
       insertedLinks.forEach(({ link, original }) => {
         if (link.isConnected) link.replaceWith(original);
       });
+      restorePresentation.reverse().forEach((restore) => restore());
     };
   }, [pathname]);
 
