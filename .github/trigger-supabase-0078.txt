@@ -1,0 +1,1 @@
+Aplicar e validar a migration 20260804_0078_budget_delete_dependencies.sql no Supabase de produção.
