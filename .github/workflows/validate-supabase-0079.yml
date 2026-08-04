@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "supabase/migrations/20260804_0079_budget_item_compositions.sql"
-      - ".github/tests/budget-item-compositions-0079.sql"
+      - ".github/tests/budget-item-compositions-0079-v2.sql"
       - ".github/workflows/validate-supabase-0079.yml"
 
 permissions:
@@ -34,4 +34,4 @@ jobs:
       - name: Executar migration e cenários de isolamento
         env:
           PGPASSWORD: postgres
-        run: psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -f .github/tests/budget-item-compositions-0079.sql
+        run: psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -f .github/tests/budget-item-compositions-0079-v2.sql
