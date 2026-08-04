@@ -18,6 +18,7 @@ export type SupabaseRestOptions = {
   query?: URLSearchParams;
   body?: unknown;
   prefer?: string;
+  timeoutMs?: number;
 };
 
 function safeSupabaseErrorContext(raw: string): string {
@@ -52,10 +53,15 @@ export async function requestSupabase<T>(
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.prefer) headers.Prefer = options.prefer;
 
+  const timeoutMs = options.timeoutMs ?? 15_000;
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 120_000) {
+    throw new Error("Supabase request timeout must be between 1000 and 120000 ms");
+  }
+
   const requestInit: RequestInit = {
     method: options.method ?? "GET",
     headers,
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(timeoutMs),
   };
 
   if (options.body !== undefined) requestInit.body = JSON.stringify(options.body);
