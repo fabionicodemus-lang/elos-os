@@ -34,4 +34,6 @@ jobs:
       - name: Executar migration e cenários de regressão
         env:
           PGPASSWORD: postgres
-        run: psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -f .github/tests/budget-delete-0078.sql
+        run: |
+          psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -c "create role authenticated;"
+          psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -f .github/tests/budget-delete-0078.sql
