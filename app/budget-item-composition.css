@@ -1,0 +1,168 @@
+.budget-item-composition-context {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.6fr);
+  gap: 1px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border, #dfe9e7);
+  border-radius: 16px;
+  background: var(--border, #dfe9e7);
+}
+
+.budget-item-composition-context > div {
+  display: grid;
+  gap: 5px;
+  padding: 18px 20px;
+  background: var(--surface, #fff);
+}
+
+.budget-item-composition-context span,
+.budget-composition-item-form label > span {
+  color: #46706b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.budget-item-composition-context strong {
+  color: #102d2a;
+  font-size: 1rem;
+}
+
+.budget-item-composition-context small {
+  color: #667b78;
+  line-height: 1.45;
+}
+
+.budget-item-composition-kpis {
+  margin-bottom: 16px;
+}
+
+.budget-item-category-costs {
+  margin-bottom: 16px;
+}
+
+.budget-composition-difference {
+  margin-bottom: 16px;
+  border-color: #e4b95c;
+  background: #fff9e9;
+  color: #6a4b09;
+  line-height: 1.5;
+}
+
+.budget-composition-add-card {
+  margin-bottom: 16px;
+}
+
+.budget-composition-item-form {
+  display: grid;
+  grid-template-columns: minmax(280px, 2fr) repeat(4, minmax(130px, 1fr));
+  gap: 12px;
+  align-items: end;
+  padding-top: 14px;
+}
+
+.budget-composition-item-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.budget-composition-item-form input,
+.budget-composition-item-form select,
+.budget-composition-item-form textarea {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border, #d7e3e1);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px 11px;
+  color: #102d2a;
+}
+
+.budget-composition-input-wide {
+  grid-column: span 2;
+}
+
+.budget-composition-item-form button {
+  min-height: 42px;
+  align-self: end;
+}
+
+.budget-item-composition-table-card {
+  overflow: visible;
+}
+
+.budget-item-composition-table {
+  min-width: 1480px;
+}
+
+.budget-item-composition-table tbody td:first-child {
+  min-width: 260px;
+}
+
+.budget-item-composition-table tbody td:first-child > strong,
+.budget-item-composition-table tbody td:first-child > span,
+.budget-item-composition-table tbody td:first-child > small {
+  display: block;
+}
+
+.budget-item-composition-table tbody td:first-child > span {
+  margin-top: 3px;
+  color: #2b4744;
+  font-weight: 600;
+}
+
+.budget-item-composition-table tbody td:first-child > small {
+  margin-top: 4px;
+  color: #768986;
+  font-size: 0.72rem;
+}
+
+.budget-composition-inline-edit[open] {
+  position: relative;
+  z-index: 20;
+}
+
+.budget-composition-inline-edit > form {
+  right: 0;
+  left: auto;
+  width: min(720px, calc(100vw - 56px));
+}
+
+.budget-composition-inline-edit .budget-edit-wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1180px) {
+  .budget-composition-item-form {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+
+  .budget-composition-input-wide {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .budget-item-composition-context {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-composition-item-form {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-composition-input-wide {
+    grid-column: auto;
+  }
+
+  .budget-composition-inline-edit > form {
+    position: fixed;
+    inset: 70px 14px auto;
+    width: auto;
+    max-height: calc(100vh - 100px);
+    overflow: auto;
+  }
+}
