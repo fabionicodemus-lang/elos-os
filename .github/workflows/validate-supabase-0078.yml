@@ -1,0 +1,39 @@
+name: Validate Supabase 0078
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20260804_0078_budget_delete_dependencies.sql"
+      - ".github/tests/budget-delete-0078.sql"
+      - ".github/workflows/validate-supabase-0078.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: elos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d elos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Executar migration e cenários de regressão
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -c "create role authenticated;"
+          psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -f .github/tests/budget-delete-0078.sql
