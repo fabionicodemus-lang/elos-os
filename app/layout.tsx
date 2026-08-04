@@ -18,6 +18,7 @@ import "./date-range.css";
 import "./reports.css";
 import "./budgets.css";
 import "./budget-analytical-details.css";
+import "./budget-item-composition.css";
 import "./services.css";
 import "./inputs.css";
 import "./prices.css";
@@ -63,7 +64,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Elos OS · V0.71.8",
+  title: "Elos OS · V0.71.9",
   description: "Sistema integrado de gestão para construtoras e incorporadoras.",
 };
 
