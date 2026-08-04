@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { createClient } from "@/lib/supabase/server";
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+type Budget = {
+  id: string;
+  company_id: string;
+  project_id: string;
+};
+
 type BudgetItem = {
   id: string;
   code: string | null;
@@ -12,30 +20,37 @@ type BudgetItem = {
   sort_order: number;
 };
 
-type Service = {
-  id: string;
-  code: string;
-  description: string;
-};
-
-type Composition = {
-  id: string;
-  service_id: string;
-};
-
-type CompositionItem = {
-  id: string;
-  composition_id: string;
-  input_id: string;
-  effective_coefficient: number;
-};
-
 type Input = {
   id: string;
   code: string;
   description: string;
   unit: string;
   category: "material" | "labor" | "equipment" | "service" | "freight" | "other";
+};
+
+type BudgetComposition = {
+  id: string;
+  budget_item_id: string;
+};
+
+type BudgetCompositionRow = {
+  id: string;
+  composition_id: string;
+  input_id: string;
+  effective_coefficient: number;
+  unit_price: number;
+};
+
+type ServiceComposition = {
+  id: string;
+  service_id: string;
+};
+
+type ServiceCompositionRow = {
+  id: string;
+  composition_id: string;
+  input_id: string;
+  effective_coefficient: number;
 };
 
 type Price = {
@@ -56,6 +71,258 @@ function normalize(value: string | null | undefined) {
 
 function matchKey(code: string | null, description: string) {
   return `${normalize(code)}::${normalize(description)}`;
+}
+
+function itemHref(budgetId: string, budgetItemId: string) {
+  return `/engenharia/orcamentos/${budgetId}/itens/${budgetItemId}`;
+}
+
+async function loadInputs(
+  supabase: SupabaseClient,
+  companyId: string,
+  inputIds: string[],
+) {
+  if (inputIds.length === 0) return { data: [] as Input[], error: null };
+
+  return fetchAllRows<Input>(async (from, to) => {
+    const { data, error } = await supabase
+      .from("engineering_inputs")
+      .select("id, code, description, unit, category")
+      .eq("company_id", companyId)
+      .in("id", inputIds)
+      .range(from, to);
+    return { data: (data ?? []) as Input[], error };
+  });
+}
+
+async function loadBudgetSnapshots(
+  supabase: SupabaseClient,
+  budget: Budget,
+  budgetItems: BudgetItem[],
+  budgetId: string,
+) {
+  const headerResult = await fetchAllRows<BudgetComposition>(async (from, to) => {
+    const { data, error } = await supabase
+      .from("engineering_budget_item_compositions")
+      .select("id, budget_item_id")
+      .eq("company_id", budget.company_id)
+      .eq("budget_id", budgetId)
+      .eq("status", "active")
+      .range(from, to);
+    return { data: (data ?? []) as BudgetComposition[], error };
+  });
+
+  if (headerResult.error) {
+    return { items: null, error: headerResult.error };
+  }
+
+  const compositionIds = headerResult.data.map((composition) => composition.id);
+  const rowsResult = compositionIds.length > 0
+    ? await fetchAllRows<BudgetCompositionRow>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("engineering_budget_item_composition_items")
+          .select("id, composition_id, input_id, effective_coefficient, unit_price")
+          .eq("company_id", budget.company_id)
+          .eq("status", "active")
+          .in("composition_id", compositionIds)
+          .order("sort_order")
+          .range(from, to);
+        return { data: (data ?? []) as BudgetCompositionRow[], error };
+      })
+    : { data: [] as BudgetCompositionRow[], error: null };
+
+  if (rowsResult.error) return { items: null, error: rowsResult.error };
+
+  const inputIds = [...new Set(rowsResult.data.map((row) => row.input_id))];
+  const inputsResult = await loadInputs(supabase, budget.company_id, inputIds);
+  if (inputsResult.error) return { items: null, error: inputsResult.error };
+
+  const headerByBudgetItem = new Map(
+    headerResult.data.map((composition) => [composition.budget_item_id, composition]),
+  );
+  const rowsByComposition = new Map<string, BudgetCompositionRow[]>();
+  rowsResult.data.forEach((row) => {
+    const current = rowsByComposition.get(row.composition_id) ?? [];
+    current.push(row);
+    rowsByComposition.set(row.composition_id, current);
+  });
+  const inputMap = new Map(inputsResult.data.map((input) => [input.id, input]));
+
+  const items = budgetItems.map((budgetItem) => {
+    const composition = headerByBudgetItem.get(budgetItem.id);
+    const quantity = Number(budgetItem.quantity ?? 0);
+    const rows = composition ? rowsByComposition.get(composition.id) ?? [] : [];
+
+    return {
+      budgetItemId: budgetItem.id,
+      matchKey: matchKey(budgetItem.code, budgetItem.description),
+      serviceId: budgetItem.service_id,
+      serviceHref: itemHref(budgetId, budgetItem.id),
+      quantity,
+      unit: budgetItem.unit,
+      inputs: rows.map((row) => {
+        const input = inputMap.get(row.input_id);
+        const coefficient = Number(row.effective_coefficient ?? 0);
+        const unitPrice = Number(row.unit_price ?? 0);
+        const totalQuantity = coefficient * quantity;
+        return {
+          id: row.id,
+          code: input?.code ?? "—",
+          description: input?.description ?? "Insumo indisponível",
+          unit: input?.unit ?? "—",
+          category: input?.category ?? "other",
+          coefficient,
+          totalQuantity,
+          unitPrice,
+          serviceUnitCost: coefficient * unitPrice,
+          totalCost: totalQuantity * unitPrice,
+        };
+      }),
+    };
+  });
+
+  return { items, error: null };
+}
+
+async function loadLegacyCompositions(
+  supabase: SupabaseClient,
+  budget: Budget,
+  budgetItems: BudgetItem[],
+  budgetId: string,
+) {
+  const serviceIds = [...new Set(
+    budgetItems
+      .map((item) => item.service_id)
+      .filter((value): value is string => Boolean(value)),
+  )];
+
+  if (serviceIds.length === 0) {
+    return budgetItems.map((item) => ({
+      budgetItemId: item.id,
+      matchKey: matchKey(item.code, item.description),
+      serviceId: null,
+      serviceHref: itemHref(budgetId, item.id),
+      quantity: Number(item.quantity ?? 0),
+      unit: item.unit,
+      inputs: [],
+    }));
+  }
+
+  const compositionsResult = await fetchAllRows<ServiceComposition>(async (from, to) => {
+    const { data, error } = await supabase
+      .from("engineering_service_compositions")
+      .select("id, service_id")
+      .eq("company_id", budget.company_id)
+      .eq("status", "active")
+      .in("service_id", serviceIds)
+      .range(from, to);
+    return { data: (data ?? []) as ServiceComposition[], error };
+  });
+
+  if (compositionsResult.error) throw compositionsResult.error;
+
+  const compositionIds = compositionsResult.data.map((composition) => composition.id);
+  const rowsResult = compositionIds.length > 0
+    ? await fetchAllRows<ServiceCompositionRow>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("engineering_service_composition_items")
+          .select("id, composition_id, input_id, effective_coefficient")
+          .eq("company_id", budget.company_id)
+          .eq("status", "active")
+          .in("composition_id", compositionIds)
+          .range(from, to);
+        return { data: (data ?? []) as ServiceCompositionRow[], error };
+      })
+    : { data: [] as ServiceCompositionRow[], error: null };
+
+  if (rowsResult.error) throw rowsResult.error;
+
+  const inputIds = [...new Set(rowsResult.data.map((row) => row.input_id))];
+  const [inputsResult, pricesResult] = inputIds.length > 0
+    ? await Promise.all([
+        loadInputs(supabase, budget.company_id, inputIds),
+        fetchAllRows<Price>(async (from, to) => {
+          let query = supabase
+            .from("engineering_input_prices")
+            .select("input_id, project_id, final_unit_price, price_date")
+            .eq("company_id", budget.company_id)
+            .eq("status", "active")
+            .eq("is_adopted", true)
+            .in("input_id", inputIds)
+            .order("price_date", { ascending: false });
+
+          query = budget.project_id
+            ? query.or(`project_id.eq.${budget.project_id},project_id.is.null`)
+            : query.is("project_id", null);
+
+          const { data, error } = await query.range(from, to);
+          return { data: (data ?? []) as Price[], error };
+        }),
+      ])
+    : [
+        { data: [] as Input[], error: null },
+        { data: [] as Price[], error: null },
+      ];
+
+  if (inputsResult.error || pricesResult.error) {
+    throw inputsResult.error ?? pricesResult.error;
+  }
+
+  const compositionByService = new Map(
+    compositionsResult.data.map((composition) => [composition.service_id, composition]),
+  );
+  const rowsByComposition = new Map<string, ServiceCompositionRow[]>();
+  rowsResult.data.forEach((row) => {
+    const current = rowsByComposition.get(row.composition_id) ?? [];
+    current.push(row);
+    rowsByComposition.set(row.composition_id, current);
+  });
+  const inputMap = new Map(inputsResult.data.map((input) => [input.id, input]));
+  const corporatePrices = new Map<string, Price>();
+  const projectPrices = new Map<string, Price>();
+  pricesResult.data.forEach((price) => {
+    if (budget.project_id && price.project_id === budget.project_id) {
+      if (!projectPrices.has(price.input_id)) projectPrices.set(price.input_id, price);
+    } else if (!price.project_id && !corporatePrices.has(price.input_id)) {
+      corporatePrices.set(price.input_id, price);
+    }
+  });
+
+  return budgetItems.map((budgetItem) => {
+    const composition = budgetItem.service_id
+      ? compositionByService.get(budgetItem.service_id)
+      : undefined;
+    const quantity = Number(budgetItem.quantity ?? 0);
+    const rows = composition ? rowsByComposition.get(composition.id) ?? [] : [];
+
+    return {
+      budgetItemId: budgetItem.id,
+      matchKey: matchKey(budgetItem.code, budgetItem.description),
+      serviceId: budgetItem.service_id,
+      serviceHref: itemHref(budgetId, budgetItem.id),
+      quantity,
+      unit: budgetItem.unit,
+      inputs: rows.map((row) => {
+        const input = inputMap.get(row.input_id);
+        const coefficient = Number(row.effective_coefficient ?? 0);
+        const price = projectPrices.get(row.input_id) ?? corporatePrices.get(row.input_id);
+        const unitPrice = price ? Number(price.final_unit_price ?? 0) : null;
+        const totalQuantity = coefficient * quantity;
+        return {
+          id: row.id,
+          code: input?.code ?? "—",
+          description: input?.description ?? "Insumo indisponível",
+          unit: input?.unit ?? "—",
+          category: input?.category ?? "other",
+          coefficient,
+          totalQuantity,
+          unitPrice,
+          serviceUnitCost: unitPrice == null ? null : coefficient * unitPrice,
+          totalCost: unitPrice == null ? null : totalQuantity * unitPrice,
+        };
+      }),
+    };
+  });
 }
 
 export async function GET(
@@ -110,160 +377,34 @@ export async function GET(
     return NextResponse.json({ error: "Não foi possível carregar os serviços da revisão." }, { status: 500 });
   }
 
-  const budgetItems = budgetItemsResult.data;
-  const serviceIds = [...new Set(budgetItems.map((item) => item.service_id).filter((value): value is string => Boolean(value)))];
+  const typedBudget = budget as Budget;
+  const snapshotResult = await loadBudgetSnapshots(
+    supabase,
+    typedBudget,
+    budgetItemsResult.data,
+    budgetId,
+  );
 
-  if (serviceIds.length === 0) {
-    return NextResponse.json({ items: budgetItems.map((item) => ({
-      budgetItemId: item.id,
-      matchKey: matchKey(item.code, item.description),
-      serviceId: null,
-      serviceHref: null,
-      quantity: Number(item.quantity ?? 0),
-      unit: item.unit,
-      inputs: [],
-    })) });
+  if (!snapshotResult.error && snapshotResult.items) {
+    return NextResponse.json({ items: snapshotResult.items });
   }
 
-  const [servicesResult, compositionsResult] = await Promise.all([
-    fetchAllRows<Service>(async (from, to) => {
-      const { data, error } = await supabase
-        .from("engineering_services")
-        .select("id, code, description")
-        .eq("company_id", budget.company_id)
-        .in("id", serviceIds)
-        .range(from, to);
-      return { data: (data ?? []) as Service[], error };
-    }),
-    fetchAllRows<Composition>(async (from, to) => {
-      const { data, error } = await supabase
-        .from("engineering_service_compositions")
-        .select("id, service_id")
-        .eq("company_id", budget.company_id)
-        .eq("status", "active")
-        .in("service_id", serviceIds)
-        .range(from, to);
-      return { data: (data ?? []) as Composition[], error };
-    }),
-  ]);
+  const missingSnapshotSchema = snapshotResult.error?.code === "42P01"
+    || snapshotResult.error?.message?.includes("engineering_budget_item_composition");
 
-  if (servicesResult.error || compositionsResult.error) {
+  if (!missingSnapshotSchema) {
+    return NextResponse.json({ error: "Não foi possível carregar as composições desta revisão." }, { status: 500 });
+  }
+
+  try {
+    const items = await loadLegacyCompositions(
+      supabase,
+      typedBudget,
+      budgetItemsResult.data,
+      budgetId,
+    );
+    return NextResponse.json({ items });
+  } catch {
     return NextResponse.json({ error: "Não foi possível carregar as composições dos serviços." }, { status: 500 });
   }
-
-  const compositionIds = compositionsResult.data.map((composition) => composition.id);
-  const compositionItemsResult = compositionIds.length > 0
-    ? await fetchAllRows<CompositionItem>(async (from, to) => {
-        const { data, error } = await supabase
-          .from("engineering_service_composition_items")
-          .select("id, composition_id, input_id, effective_coefficient")
-          .eq("company_id", budget.company_id)
-          .eq("status", "active")
-          .in("composition_id", compositionIds)
-          .range(from, to);
-        return { data: (data ?? []) as CompositionItem[], error };
-      })
-    : { data: [] as CompositionItem[], error: null };
-
-  if (compositionItemsResult.error) {
-    return NextResponse.json({ error: "Não foi possível carregar os insumos das composições." }, { status: 500 });
-  }
-
-  const inputIds = [...new Set(compositionItemsResult.data.map((item) => item.input_id))];
-  const [inputsResult, pricesResult] = inputIds.length > 0
-    ? await Promise.all([
-        fetchAllRows<Input>(async (from, to) => {
-          const { data, error } = await supabase
-            .from("engineering_inputs")
-            .select("id, code, description, unit, category")
-            .eq("company_id", budget.company_id)
-            .in("id", inputIds)
-            .range(from, to);
-          return { data: (data ?? []) as Input[], error };
-        }),
-        fetchAllRows<Price>(async (from, to) => {
-          let query = supabase
-            .from("engineering_input_prices")
-            .select("input_id, project_id, final_unit_price, price_date")
-            .eq("company_id", budget.company_id)
-            .eq("status", "active")
-            .eq("is_adopted", true)
-            .in("input_id", inputIds)
-            .order("price_date", { ascending: false });
-
-          if (budget.project_id) {
-            query = query.or(`project_id.eq.${budget.project_id},project_id.is.null`);
-          } else {
-            query = query.is("project_id", null);
-          }
-
-          const { data, error } = await query.range(from, to);
-          return { data: (data ?? []) as Price[], error };
-        }),
-      ])
-    : [
-        { data: [] as Input[], error: null },
-        { data: [] as Price[], error: null },
-      ];
-
-  if (inputsResult.error || pricesResult.error) {
-    return NextResponse.json({ error: "Não foi possível carregar os preços dos insumos." }, { status: 500 });
-  }
-
-  const serviceMap = new Map(servicesResult.data.map((service) => [service.id, service]));
-  const compositionByService = new Map(compositionsResult.data.map((composition) => [composition.service_id, composition]));
-  const itemsByComposition = new Map<string, CompositionItem[]>();
-  compositionItemsResult.data.forEach((item) => {
-    const current = itemsByComposition.get(item.composition_id) ?? [];
-    current.push(item);
-    itemsByComposition.set(item.composition_id, current);
-  });
-  const inputMap = new Map(inputsResult.data.map((input) => [input.id, input]));
-  const corporatePrices = new Map<string, Price>();
-  const projectPrices = new Map<string, Price>();
-  pricesResult.data.forEach((price) => {
-    if (budget.project_id && price.project_id === budget.project_id) {
-      if (!projectPrices.has(price.input_id)) projectPrices.set(price.input_id, price);
-    } else if (!price.project_id && !corporatePrices.has(price.input_id)) {
-      corporatePrices.set(price.input_id, price);
-    }
-  });
-
-  const items = budgetItems.map((budgetItem) => {
-    const service = budgetItem.service_id ? serviceMap.get(budgetItem.service_id) ?? null : null;
-    const composition = budgetItem.service_id ? compositionByService.get(budgetItem.service_id) ?? null : null;
-    const quantity = Number(budgetItem.quantity ?? 0);
-    const compositionItems = composition ? itemsByComposition.get(composition.id) ?? [] : [];
-
-    return {
-      budgetItemId: budgetItem.id,
-      matchKey: matchKey(budgetItem.code, budgetItem.description),
-      serviceId: service?.id ?? null,
-      serviceHref: service ? `/engenharia/servicos?service=${service.id}#insumos-do-servico` : null,
-      quantity,
-      unit: budgetItem.unit,
-      inputs: compositionItems.map((compositionItem) => {
-        const input = inputMap.get(compositionItem.input_id) ?? null;
-        const coefficient = Number(compositionItem.effective_coefficient ?? 0);
-        const price = projectPrices.get(compositionItem.input_id) ?? corporatePrices.get(compositionItem.input_id) ?? null;
-        const unitPrice = price ? Number(price.final_unit_price ?? 0) : null;
-        const totalQuantity = coefficient * quantity;
-
-        return {
-          id: compositionItem.id,
-          code: input?.code ?? "—",
-          description: input?.description ?? "Insumo indisponível",
-          unit: input?.unit ?? "—",
-          category: input?.category ?? "other",
-          coefficient,
-          totalQuantity,
-          unitPrice,
-          serviceUnitCost: unitPrice == null ? null : coefficient * unitPrice,
-          totalCost: unitPrice == null ? null : totalQuantity * unitPrice,
-        };
-      }),
-    };
-  });
-
-  return NextResponse.json({ items });
 }
