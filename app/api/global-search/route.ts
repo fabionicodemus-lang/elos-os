@@ -16,8 +16,19 @@ type SearchResult = {
 };
 
 type SearchTask = () => Promise<SearchResult[]>;
-type Row = Record<string, any>;
 type RelatedProject = { id?: string; name?: string; code?: string | null };
+
+// Formato comum às tabelas `*_documents`, consultadas por nome dinâmico.
+type DocumentRow = {
+  id: string;
+  project_id: string | null;
+  file_name: string;
+  caption: string | null;
+  document_type: string | null;
+  uploaded_at: string | null;
+  projects: unknown;
+  [column: string]: unknown;
+};
 
 const RESULT_LIMIT = 6;
 const TOTAL_LIMIT = 60;
@@ -130,7 +141,7 @@ function destination(href: string, resultProjectId: string | null | undefined, a
 
 export async function GET(request: NextRequest) {
   const { supabase, companyId, projectId, role } = await resolveActiveWorkspace();
-  const db = supabase as any;
+  const db = supabase;
   const term = cleanTerm(request.nextUrl.searchParams.get("q") ?? "");
   const scope = request.nextUrl.searchParams.get("scope") === "company" ? "company" : "project";
   const scopeProjectId = scope === "project" ? projectId : null;
@@ -143,12 +154,15 @@ export async function GET(request: NextRequest) {
   const permissionRows = privileged || !role.id
     ? []
     : ((await db.from("role_permissions").select("permission_key").eq("role_id", role.id).eq("allowed", true)).data ?? []);
-  const permissions = new Set<string>(permissionRows.map((item: Row) => text(item.permission_key)));
+  const permissions = new Set<string>(permissionRows.map((item) => text(item.permission_key)));
   const can = (permission: string) => privileged || permissions.has(permission);
   const like = `%${term}%`;
   const tasks: SearchTask[] = [];
   const add = (enabled: boolean, task: SearchTask) => { if (enabled) tasks.push(task); };
-  const scoped = (query: any) => scopeProjectId ? query.eq("project_id", scopeProjectId) : query;
+  // Restringe a consulta à obra ativa. Genérico em vez de `any` para preservar
+  // o tipo do builder do Supabase ao longo do encadeamento.
+  const scoped = <T extends { eq: (column: string, value: string) => T }>(query: T): T =>
+    scopeProjectId ? query.eq("project_id", scopeProjectId) : query;
 
   const safeTask = (task: () => Promise<SearchResult[]>): SearchTask => async () => {
     try {
@@ -165,7 +179,7 @@ export async function GET(request: NextRequest) {
       .or(`name.ilike.${like},tax_id.ilike.${like},email.ilike.${like},phone.ilike.${like}`)
       .order("name").limit(RESULT_LIMIT);
     if (error) return [];
-    return (data ?? []).map((row: Row) => ({
+    return (data ?? []).map((row) => ({
       id: `client:${row.id}`, kind: "client", group: "Clientes", icon: "◇", title: row.name,
       subtitle: [row.tax_id, row.email, row.phone].filter(Boolean).join(" · ") || "Cadastro de cliente",
       meta: [row.city, row.state, statusLabel(row.status)].filter(Boolean).join(" · "),
@@ -180,7 +194,7 @@ export async function GET(request: NextRequest) {
       .or(`legal_name.ilike.${like},trade_name.ilike.${like},tax_id.ilike.${like},email.ilike.${like},phone.ilike.${like}`)
       .order("legal_name").limit(RESULT_LIMIT);
     if (error) return [];
-    return (data ?? []).map((row: Row) => {
+    return (data ?? []).map((row) => {
       const name = row.trade_name || row.legal_name;
       return {
         id: `supplier:${row.id}`, kind: "supplier", group: "Fornecedores", icon: "▦", title: name,
@@ -198,7 +212,7 @@ export async function GET(request: NextRequest) {
       .or(`name.ilike.${like},code.ilike.${like},city.ilike.${like}`)
       .neq("status", "archived").order("name").limit(RESULT_LIMIT);
     if (error) return [];
-    return (data ?? []).map((row: Row) => ({
+    return (data ?? []).map((row) => ({
       id: `project:${row.id}`, kind: "project", group: "Empreendimentos", icon: "▥",
       title: [row.code, row.name].filter(Boolean).join(" · "),
       subtitle: [row.city, row.state].filter(Boolean).join(" · ") || "Empreendimento",
@@ -214,7 +228,7 @@ export async function GET(request: NextRequest) {
       .or(`code.ilike.${like},tower.ilike.${like},type.ilike.${like},position.ilike.${like},registry.ilike.${like}`)
       .order("code").limit(RESULT_LIMIT));
     if (error) return [];
-    return (data ?? []).map((row: Row) => ({
+    return (data ?? []).map((row) => ({
       id: `unit:${row.id}`, kind: "unit", group: "Unidades", icon: "▤", title: `Unidade ${row.code}`,
       subtitle: [projectLabel(row.projects), row.tower ? `Torre ${row.tower}` : null, row.floor !== null ? `${row.floor}º pav.` : null, row.type].filter(Boolean).join(" · "),
       meta: [row.position, row.registry, statusLabel(row.status)].filter(Boolean).join(" · "),
@@ -230,7 +244,7 @@ export async function GET(request: NextRequest) {
       .or(`code.ilike.${like},description.ilike.${like},group_code.ilike.${like}`)
       .order("code").limit(RESULT_LIMIT);
     if (error) return [];
-    return (data ?? []).map((row: Row) => ({
+    return (data ?? []).map((row) => ({
       id: `service:${row.id}`, kind: "service", group: "Serviços de engenharia", icon: "♙",
       title: `${row.code} · ${row.description}`, subtitle: [row.group_code, row.unit].filter(Boolean).join(" · ") || "Serviço",
       meta: statusLabel(row.status), href: `/engenharia/servicos?service=${encodeURIComponent(row.id)}`,
@@ -244,7 +258,7 @@ export async function GET(request: NextRequest) {
       .or(`code.ilike.${like},description.ilike.${like},family_label.ilike.${like}`)
       .order("code").limit(RESULT_LIMIT);
     if (error) return [];
-    return (data ?? []).map((row: Row) => ({
+    return (data ?? []).map((row) => ({
       id: `input:${row.id}`, kind: "input", group: "Insumos", icon: "□",
       title: `${row.code} · ${row.description}`, subtitle: [row.family_label, row.category, row.unit].filter(Boolean).join(" · "),
       meta: statusLabel(row.status), href: `/engenharia/insumos?q=${encodeURIComponent(row.code)}`,
@@ -258,7 +272,7 @@ export async function GET(request: NextRequest) {
       .or(`name.ilike.${like},legal_name.ilike.${like},tax_id.ilike.${like},creci_number.ilike.${like},agency_name.ilike.${like},email.ilike.${like},phone.ilike.${like}`)
       .order("name").limit(RESULT_LIMIT);
     if (error) return [];
-    return (data ?? []).map((row: Row) => ({
+    return (data ?? []).map((row) => ({
       id: `broker:${row.id}`, kind: "broker", group: "Corretores e parceiros", icon: "◇", title: row.name,
       subtitle: [row.agency_name, row.creci_number ? `${row.creci_number}${row.creci_state ? `-${row.creci_state}` : ""}` : null, row.tax_id].filter(Boolean).join(" · ") || row.kind,
       meta: [row.email, row.phone, statusLabel(row.status)].filter(Boolean).join(" · "),
@@ -273,9 +287,9 @@ export async function GET(request: NextRequest) {
       .or(`number.ilike.${like},broker_name.ilike.${like},source_channel.ilike.${like},notes.ilike.${like}`)
       .order("proposal_date", { ascending: false }).limit(RESULT_LIMIT));
     if (error) return [];
-    return (data ?? []).map((row: Row) => {
-      const client = one(row.clients as Row | Row[] | null);
-      const unit = one(row.units as Row | Row[] | null);
+    return (data ?? []).map((row) => {
+      const client = one(row.clients);
+      const unit = one(row.units);
       return {
         id: `proposal:${row.id}`, kind: "proposal", group: "Propostas", icon: "◇", title: row.number,
         subtitle: [client?.name, unit?.code ? `Unidade ${unit.code}` : null, money(row.proposed_amount)].filter(Boolean).join(" · "),
@@ -292,9 +306,9 @@ export async function GET(request: NextRequest) {
       .or(`number.ilike.${like},contract_number.ilike.${like},broker_name.ilike.${like},source_code.ilike.${like}`)
       .order("sale_date", { ascending: false }).limit(RESULT_LIMIT));
     if (error) return [];
-    return (data ?? []).map((row: Row) => {
-      const client = one(row.clients as Row | Row[] | null);
-      const unit = one(row.units as Row | Row[] | null);
+    return (data ?? []).map((row) => {
+      const client = one(row.clients);
+      const unit = one(row.units);
       return {
         id: `sale:${row.id}`, kind: "sale", group: "Vendas", icon: "$", title: row.number,
         subtitle: [client?.name, unit?.code ? `Unidade ${unit.code}` : null, money(row.total_amount)].filter(Boolean).join(" · "),
@@ -311,7 +325,7 @@ export async function GET(request: NextRequest) {
       .or(`contract_number.ilike.${like},title.ilike.${like},scope_summary.ilike.${like},responsible_name.ilike.${like}`)
       .order("created_at", { ascending: false }).limit(RESULT_LIMIT));
     if (error) return [];
-    return (data ?? []).map((row: Row) => ({
+    return (data ?? []).map((row) => ({
       id: `contract:${row.id}`, kind: "contract", group: "Contratos de serviços", icon: "▣",
       title: `${row.contract_number} · ${row.title}`, subtitle: [row.scope_summary, money(row.current_value)].filter(Boolean).join(" · "),
       meta: [projectLabel(row.projects), row.responsible_name, statusLabel(row.status)].filter(Boolean).join(" · "),
@@ -327,7 +341,7 @@ export async function GET(request: NextRequest) {
       .or(`work_order_number.ilike.${like},title.ilike.${like},scope_summary.ilike.${like},responsible_name.ilike.${like}`)
       .order("created_at", { ascending: false }).limit(RESULT_LIMIT));
     if (error) return [];
-    return (data ?? []).map((row: Row) => ({
+    return (data ?? []).map((row) => ({
       id: `work-order:${row.id}`, kind: "work_order", group: "Ordens de serviço", icon: "✓",
       title: `${row.work_order_number} · ${row.title}`, subtitle: [row.scope_summary, money(row.authorized_value)].filter(Boolean).join(" · "),
       meta: [projectLabel(row.projects), row.responsible_name, statusLabel(row.status)].filter(Boolean).join(" · "),
@@ -343,8 +357,8 @@ export async function GET(request: NextRequest) {
       .or(`order_number.ilike.${like},buyer_name.ilike.${like},supplier_confirmation_reference.ilike.${like},notes.ilike.${like}`)
       .order("created_at", { ascending: false }).limit(RESULT_LIMIT));
     if (error) return [];
-    return (data ?? []).map((row: Row) => {
-      const supplier = one(row.suppliers as Row | Row[] | null);
+    return (data ?? []).map((row) => {
+      const supplier = one(row.suppliers);
       return {
         id: `purchase-order:${row.id}`, kind: "purchase_order", group: "Pedidos de compra", icon: "🛒", title: row.order_number,
         subtitle: [supplier?.trade_name || supplier?.legal_name, money(row.total_amount)].filter(Boolean).join(" · "),
@@ -362,8 +376,8 @@ export async function GET(request: NextRequest) {
       .or(`document.ilike.${like},installment_label.ilike.${like},notes.ilike.${like},source_system.ilike.${like}`)
       .order("due_date", { ascending: false }).limit(RESULT_LIMIT));
     if (error) return [];
-    return (data ?? []).map((row: Row) => {
-      const supplier = one(row.suppliers as Row | Row[] | null);
+    return (data ?? []).map((row) => {
+      const supplier = one(row.suppliers);
       const searchText = row.document || row.installment_label || row.notes || row.id;
       return {
         id: `payable:${row.id}`, kind: "payable", group: "Contas a pagar", icon: "$",
@@ -383,10 +397,10 @@ export async function GET(request: NextRequest) {
       .or(`description.ilike.${like},adjustment_index.ilike.${like}`)
       .order("due_date").limit(RESULT_LIMIT));
     if (error) return [];
-    return (data ?? []).map((row: Row) => {
-      const client = one(row.clients as Row | Row[] | null);
-      const unit = one(row.units as Row | Row[] | null);
-      const sale = one(row.sales as Row | Row[] | null);
+    return (data ?? []).map((row) => {
+      const client = one(row.clients);
+      const unit = one(row.units);
+      const sale = one(row.sales);
       return {
         id: `receivable:${row.id}`, kind: "receivable", group: "Contas a receber", icon: "$", title: row.description,
         subtitle: [client?.name, unit?.code ? `Unidade ${unit.code}` : null, money(row.adjusted_amount), row.due_date ? `vence ${dateBR(row.due_date)}` : null].filter(Boolean).join(" · "),
@@ -404,9 +418,9 @@ export async function GET(request: NextRequest) {
       .or(`number.ilike.${like},title.ilike.${like},description.ilike.${like},location_detail.ilike.${like},contact_name.ilike.${like}`)
       .order("opened_at", { ascending: false }).limit(RESULT_LIMIT));
     if (error) return [];
-    return (data ?? []).map((row: Row) => {
-      const client = one(row.clients as Row | Row[] | null);
-      const unit = one(row.units as Row | Row[] | null);
+    return (data ?? []).map((row) => {
+      const client = one(row.clients);
+      const unit = one(row.units);
       return {
         id: `assistance:${row.id}`, kind: "assistance", group: "Assistências técnicas", icon: "⌁",
         title: `${row.number} · ${row.title}`,
@@ -425,8 +439,8 @@ export async function GET(request: NextRequest) {
       .or(`asset_code.ilike.${like},item_name.ilike.${like},location_detail.ilike.${like},brand.ilike.${like},model.ilike.${like},serial_number.ilike.${like},invoice_number.ilike.${like}`)
       .order("end_date").limit(RESULT_LIMIT));
     if (error) return [];
-    return (data ?? []).map((row: Row) => {
-      const unit = one(row.units as Row | Row[] | null);
+    return (data ?? []).map((row) => {
+      const unit = one(row.units);
       return {
         id: `warranty:${row.id}`, kind: "warranty", group: "Garantias", icon: "⌁",
         title: `${row.asset_code} · ${row.item_name}`,
@@ -446,13 +460,17 @@ export async function GET(request: NextRequest) {
     href: (parentId: string) => string,
   ) => add(enabled && (scope === "company" || Boolean(scopeProjectId)), safeTask(async () => {
     const select = `id,project_id,${parentColumn},file_name,caption,document_type,uploaded_at,projects(id,name,code)`;
+    // As tabelas de documentos compartilham o mesmo formato e são escolhidas em
+    // tempo de execução, o que o cliente não consegue resolver estaticamente.
+    // Este é o único ponto do arquivo que precisa afrouxar o tipo da linha.
     const { data, error } = await scoped(db.from(table)
       .select(select)
       .eq("company_id", companyId)
       .or(`file_name.ilike.${like},caption.ilike.${like}`)
       .order("uploaded_at", { ascending: false }).limit(3));
     if (error) return [];
-    return (data ?? []).map((row: Row) => {
+    const rows = (data ?? []) as unknown as DocumentRow[];
+    return rows.map((row) => {
       const parentId = text(row[parentColumn]);
       return {
         id: `document:${table}:${row.id}`, kind: "document", group, icon: "▧", title: row.file_name,

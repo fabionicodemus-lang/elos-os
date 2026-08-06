@@ -16,8 +16,14 @@ export function MaterialReceiptDialog({orders,orderItems,receipt,items=[],autoOp
   const ref=useRef<HTMLDialogElement>(null);
   const [orderId,setOrderId]=useState(receipt?.order_id??orders[0]?.id??"");
   const orderMap=useMemo(()=>new Map(orders.map(order=>[order.id,order])),[orders]);
-  const [rows,setRows]=useState<Row[]>([]);
-  useEffect(()=>{const source=orderItems.filter(item=>item.order_id===orderId);setRows(source.map(item=>{const saved=items.find(row=>row.order_item_id===item.id);const available=Math.max(0,Number(item.ordered_quantity)-Number(item.accepted_quantity));return{order_item_id:item.id,input_code:item.input_code,input_name:item.input_name,unit_snapshot:item.unit_snapshot,cost_center_name:item.cost_center_name,ordered_quantity:Number(item.ordered_quantity),previously_accepted:Number(item.accepted_quantity),available,delivered_quantity:Number(saved?.delivered_quantity??0),accepted_quantity:Number(saved?.accepted_quantity??0),rejected_quantity:Number(saved?.rejected_quantity??0),batch_number:saved?.batch_number??null,expiration_date:saved?.expiration_date??null,condition:saved?.condition??"good",rejection_reason:saved?.rejection_reason??null,destination_location:saved?.destination_location??null,notes:saved?.notes??null};}));},[orderId,orderItems,items]);
+  // Base derivada do pedido selecionado; as edições do usuário ficam por cima.
+  // Trocar de pedido reinicia a base no próprio render, sem efeito.
+  const baseRows=useMemo<Row[]>(()=>orderItems.filter(item=>item.order_id===orderId).map(item=>{const saved=items.find(row=>row.order_item_id===item.id);const available=Math.max(0,Number(item.ordered_quantity)-Number(item.accepted_quantity));return{order_item_id:item.id,input_code:item.input_code,input_name:item.input_name,unit_snapshot:item.unit_snapshot,cost_center_name:item.cost_center_name,ordered_quantity:Number(item.ordered_quantity),previously_accepted:Number(item.accepted_quantity),available,delivered_quantity:Number(saved?.delivered_quantity??0),accepted_quantity:Number(saved?.accepted_quantity??0),rejected_quantity:Number(saved?.rejected_quantity??0),batch_number:saved?.batch_number??null,expiration_date:saved?.expiration_date??null,condition:saved?.condition??"good",rejection_reason:saved?.rejection_reason??null,destination_location:saved?.destination_location??null,notes:saved?.notes??null};}),[orderId,orderItems,items]);
+  const [rows,setRows]=useState<Row[]>(baseRows);
+  const [syncedRows,setSyncedRows]=useState(baseRows);
+
+  if(syncedRows!==baseRows){setSyncedRows(baseRows);setRows(baseRows);}
+
   useEffect(()=>{if(autoOpen)ref.current?.showModal();},[autoOpen]);
   const selectedOrder=orderMap.get(orderId);
   const update=(index:number,patch:Partial<Row>)=>setRows(current=>current.map((row,i)=>i===index?{...row,...patch}:row));

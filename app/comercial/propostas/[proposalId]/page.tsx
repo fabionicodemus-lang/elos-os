@@ -129,9 +129,12 @@ export default async function ProposalDetailPage({ params, searchParams }: {
   const plannedAmount = items.reduce((sum, item) => sum + Number(item.total_amount), 0);
   const difference = Math.round((proposal.proposed_amount - plannedAmount) * 100) / 100;
   const planClosed = Math.abs(difference) <= 0.01 && plannedAmount > 0;
-  const today = new Date().toISOString().slice(0, 10);
+  // Uma única leitura do relógio: "hoje" e a revisão padrão sempre derivam do
+  // mesmo instante, mesmo que o render atravesse a virada do dia.
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
   const overdue = proposal.valid_until < today && !["rejected", "expired", "cancelled", "converted"].includes(proposal.status);
-  const revisionDefault = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const revisionDefault = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
 
   return <AppShell
     activeGroup="commercial" activeItem="proposals" eyebrow="Comercial · Negociação"

@@ -36,24 +36,33 @@ export function ContractMeasurementDialog({ contracts, contractItems, measuremen
   measurementItems?: MeasurementItemRecord[]; autoOpen?: boolean; label?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const range = useMemo(monthRange, []);
+  const range = useMemo(() => monthRange(), []);
   const initialContractId = measurement?.contract_id ?? contracts[0]?.id ?? "";
   const [contractId, setContractId] = useState(initialContractId);
-  const [rows, setRows] = useState<Row[]>([]);
   const [tax, setTax] = useState(Number(measurement?.tax_withholding_amount ?? 0));
   const [advance, setAdvance] = useState(Number(measurement?.advance_deduction_amount ?? 0));
   const [other, setOther] = useState(Number(measurement?.other_discount_amount ?? 0));
   const editMap = useMemo(() => new Map(measurementItems.map((item) => [item.contract_item_id, item])), [measurementItems]);
   const selectedContract = contracts.find((contract) => contract.id === contractId) ?? null;
 
-  useEffect(() => {
-    const selected = contractItems.filter((item) => item.contract_id === contractId).map((item) => ({
+  // As linhas partem do contrato selecionado e recebem as edições do usuário por
+  // cima. Trocar de contrato reinicia a base no próprio render, sem efeito.
+  const baseRows = useMemo<Row[]>(
+    () => contractItems.filter((item) => item.contract_id === contractId).map((item) => ({
       ...item,
       current_quantity: Number(editMap.get(item.id)?.current_quantity ?? 0),
       notes: editMap.get(item.id)?.notes ?? "",
-    }));
-    setRows(selected);
-  }, [contractId, contractItems, editMap]);
+    })),
+    [contractId, contractItems, editMap],
+  );
+  const [rows, setRows] = useState<Row[]>(baseRows);
+  const [syncedRows, setSyncedRows] = useState(baseRows);
+
+  if (syncedRows !== baseRows) {
+    setSyncedRows(baseRows);
+    setRows(baseRows);
+  }
+
   useEffect(() => { if (autoOpen) dialog.current?.showModal(); }, [autoOpen]);
 
   const gross = rows.reduce((sum, row) => sum + Number(row.current_quantity || 0) * Number(row.unit_price || 0), 0);

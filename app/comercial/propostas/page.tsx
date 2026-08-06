@@ -122,8 +122,11 @@ export default async function ProposalsPage({ searchParams }: {
   const canManage = manageResult.data === true || privileged;
   const totalPages = Math.max(1, Math.ceil((proposalsResult.count ?? 0) / PAGE_SIZE));
   const project = projectResult.data;
-  const today = new Date().toISOString().slice(0, 10);
-  const validDefault = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  // Uma única leitura do relógio: "hoje" e o vencimento padrão sempre derivam
+  // do mesmo instante, mesmo que o render atravesse a virada do dia.
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const validDefault = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
   const paginationQuery = `q=${encodeURIComponent(queryText)}&status=${status}&client=${clientId}&period=${dateRange.preset}&from=${dateRange.from}&to=${dateRange.to}`;
 
   return <AppShell
