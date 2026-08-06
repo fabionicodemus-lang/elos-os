@@ -1,0 +1,37 @@
+name: Validate Supabase 0080
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20260806_0080_owner_full_access.sql"
+      - ".github/tests/owner-full-access-0080.sql"
+      - ".github/workflows/validate-supabase-0080.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: elos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d elos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Executar migration e cenários de acesso do proprietário
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -f .github/tests/owner-full-access-0080.sql
