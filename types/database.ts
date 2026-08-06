@@ -18662,6 +18662,10 @@ export type Database = {
         }
         Returns: string
       }
+      execution_daily_log_indicators: {
+        Args: { p_company_id: string | null; p_project_id: string | null }
+        Returns: Json
+      }
       finance_adjust_weekend: {
         Args: { p_date: string | null; p_mode: string | null }
         Returns: string
