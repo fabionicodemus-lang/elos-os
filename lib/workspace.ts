@@ -66,6 +66,43 @@ export async function resolveActiveWorkspace() {
     redirect("/dashboard?error=Você%20não%20possui%20uma%20empresa%20ativa.");
   }
 
+  // Autorreparo imediato: empresas antigas podem não ter recebido permissões
+  // adicionadas depois da criação. O owner sempre deve possuir todas elas.
+  if (role.key === "owner" && role.id) {
+    const [permissionResult, mappingResult] = await Promise.all([
+      supabase.from("permissions").select("key"),
+      supabase
+        .from("role_permissions")
+        .select("permission_key, allowed")
+        .eq("role_id", role.id),
+    ]);
+
+    if (!permissionResult.error && !mappingResult.error) {
+      const enabled = new Set(
+        ((mappingResult.data ?? []) as { permission_key: string; allowed: boolean }[])
+          .filter((mapping) => mapping.allowed)
+          .map((mapping) => mapping.permission_key),
+      );
+      const missing = ((permissionResult.data ?? []) as { key: string }[])
+        .filter((permission) => !enabled.has(permission.key))
+        .map((permission) => ({
+          role_id: role.id as string,
+          permission_key: permission.key,
+          allowed: true,
+        }));
+
+      if (missing.length) {
+        const { error: syncError } = await supabase
+          .from("role_permissions")
+          .upsert(missing, { onConflict: "role_id,permission_key" });
+
+        if (syncError) {
+          console.error("[workspace] Falha ao completar permissões do proprietário:", syncError.message);
+        }
+      }
+    }
+  }
+
   const { data: projectData } = await supabase
     .from("projects")
     .select("id, company_id")
