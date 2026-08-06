@@ -80,7 +80,13 @@ async function context(form: FormData) {
     .eq("project_id", workspace.projectId)
     .maybeSingle();
   if (!baseline || baseline.status === "archived") redirect(url("Linha de base indisponível.", "error"));
-  return { ...workspace, baseline: baseline as { id: string; budget_id: string; status: string } };
+  // A obra já foi validada acima; devolver o contexto com projectId não-nulo
+  // evita espalhar `!` por cada consulta e gravação daqui para baixo.
+  return {
+    ...workspace,
+    projectId: workspace.projectId,
+    baseline: baseline as { id: string; budget_id: string; status: string },
+  };
 }
 
 export async function generateContractPlanFromSchedule(form: FormData) {

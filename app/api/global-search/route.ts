@@ -18,6 +18,15 @@ type SearchResult = {
 type SearchTask = () => Promise<SearchResult[]>;
 type RelatedProject = { id?: string; name?: string; code?: string | null };
 
+// Tabelas de anexos com o mesmo formato, varridas pela mesma consulta. A união
+// literal deixa o build recusar um nome de tabela que não exista no schema.
+type DocumentTable =
+  | "execution_service_contract_documents"
+  | "execution_work_order_documents"
+  | "procurement_purchase_order_documents"
+  | "postwork_assistance_documents"
+  | "postwork_warranty_documents";
+
 // Formato comum às tabelas `*_documents`, consultadas por nome dinâmico.
 type DocumentRow = {
   id: string;
@@ -454,7 +463,7 @@ export async function GET(request: NextRequest) {
 
   const documentTask = (
     enabled: boolean,
-    table: string,
+    table: DocumentTable,
     parentColumn: string,
     group: string,
     href: (parentId: string) => string,

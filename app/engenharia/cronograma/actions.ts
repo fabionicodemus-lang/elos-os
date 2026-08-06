@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { fetchAllRows } from "@/lib/supabase-pagination";
+import type { Update } from "@/lib/supabase/types";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { planScheduleFromBudget } from "./schedule-generation.mjs";
 import { extractSchedulePayload } from "./schedule-portable.mjs";
@@ -476,18 +477,23 @@ export async function generateScheduleFromTakeoffs(formData: FormData) {
   if (insertError || !inserted) redirect(resultUrl(insertError?.message ?? "Não foi possível gerar as atividades.", "error", baseline.id));
 
   const activityIdByCode = new Map(inserted.map((activity) => [activity.code, activity.id]));
-  const dependencies = plan.dependencies
-    .map((dependency) => ({
+  // Monta apenas as dependências cujos dois lados existem, em vez de montar
+  // tudo e filtrar depois — assim o tipo da linha já nasce sem `undefined`.
+  const dependencies = plan.dependencies.flatMap((dependency) => {
+    const predecessorId = activityIdByCode.get(dependency.predecessorCode);
+    const successorId = activityIdByCode.get(dependency.successorCode);
+    if (!predecessorId || !successorId) return [];
+    return [{
       company_id: companyId,
       project_id: projectId,
       baseline_id: baseline.id,
-      predecessor_id: activityIdByCode.get(dependency.predecessorCode),
-      successor_id: activityIdByCode.get(dependency.successorCode),
+      predecessor_id: predecessorId,
+      successor_id: successorId,
       relation_type: "FS",
       lag_days: 0,
       created_by: userId,
-    }))
-    .filter((dependency) => dependency.predecessor_id && dependency.successor_id);
+    }];
+  });
 
   if (dependencies.length > 0) {
     const { error: dependencyError } = await supabase.from("engineering_schedule_dependencies").insert(dependencies);
@@ -551,7 +557,9 @@ export async function importScheduleFromHtml(formData: FormData) {
   const activityByCode = new Map(currentActivities.data.map((activity) => [activity.code, activity]));
   const saturday = baseline.work_on_saturday;
 
-  const updates: { id: string; changes: Record<string, unknown> }[] = [];
+  // Tipar as alterações contra a própria tabela faz o build recusar uma coluna
+  // que não exista — o arquivo reimportado é montado fora do Elos OS.
+  const updates: { id: string; changes: Update<"engineering_schedule_activities"> }[] = [];
   let unmatched = 0;
   payload.activities.forEach((incoming) => {
     const current = activityByCode.get(incoming.code);

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { financialInstallmentSummary, type FinancialInstallmentDraft } from "@/lib/financial-installments";
+import type { Json } from "@/lib/supabase/types";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const PATH = "/financeiro/notas-manuais";
@@ -33,13 +34,19 @@ function integer(formData: FormData, key: string, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function parseArray(formData: FormData, key: string): Array<Record<string, unknown>> {
+// O retorno é JSON de verdade — vindo de JSON.parse e seguindo direto para uma
+// RPC. Tipar como Json[] permite entregá-lo à função sem conversão inventada.
+function parseArray(formData: FormData, key: string): Json[] {
   try {
-    const parsed = JSON.parse(value(formData, key) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(value(formData, key) || "[]");
+    return Array.isArray(parsed) ? (parsed as Json[]) : [];
   } catch {
     return [];
   }
+}
+
+function jsonObject(value: Json): Record<string, Json | undefined> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
 
 function parseRetentions(formData: FormData) {
@@ -47,8 +54,10 @@ function parseRetentions(formData: FormData) {
   return Object.fromEntries(keys.map((key) => [key, Number(value(formData, `retention_${key}`) || 0)]));
 }
 
-function manualInvoiceNet(items: Array<Record<string, unknown>>, retentions: Record<string, number>) {
-  const itemNet = items.reduce((sum, item) => {
+function manualInvoiceNet(items: Json[], retentions: Record<string, number>) {
+  const itemNet = items.reduce<number>((sum, entry) => {
+    const item = jsonObject(entry);
+    if (!item) return sum;
     const quantity = Number(item.quantity ?? 0);
     const unitPrice = Number(item.unit_price ?? 0);
     const discount = Number(item.discount_amount ?? 0);
@@ -57,14 +66,17 @@ function manualInvoiceNet(items: Array<Record<string, unknown>>, retentions: Rec
   return itemNet - Object.values(retentions).reduce((sum, amount) => sum + Number(amount || 0), 0);
 }
 
-function installmentDrafts(rows: Array<Record<string, unknown>>): FinancialInstallmentDraft[] {
-  return rows.map((row, index) => ({
-    id: `server-${index + 1}`,
-    label: String(row.label ?? row.number ?? index + 1),
-    due_date: String(row.due_date ?? ""),
-    amount: Number(row.amount ?? 0),
-    payment_method: String(row.payment_method ?? "Boleto"),
-  }));
+function installmentDrafts(rows: Json[]): FinancialInstallmentDraft[] {
+  return rows.map((entry, index) => {
+    const row = jsonObject(entry) ?? {};
+    return {
+      id: `server-${index + 1}`,
+      label: String(row.label ?? row.number ?? index + 1),
+      due_date: String(row.due_date ?? ""),
+      amount: Number(row.amount ?? 0),
+      payment_method: String(row.payment_method ?? "Boleto"),
+    };
+  });
 }
 
 function pageUrl(message: string, type: "success" | "error", invoiceId?: string) {
