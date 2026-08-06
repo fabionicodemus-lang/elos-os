@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
+import { planScheduleFromBudget } from "./schedule-generation.mjs";
+import { extractSchedulePayload } from "./schedule-portable.mjs";
+import { rescheduleFromMove } from "./schedule-cascade.mjs";
 
 const LIST_PATH = "/engenharia/cronograma";
 const baselineStatuses = new Set(["draft", "review", "approved", "archived"]);
@@ -19,9 +22,7 @@ type Takeoff = {
 };
 type Service = { id: string; code: string; description: string; unit: string };
 type Location = { id: string; code: string; name: string; sort_order: number };
-type Composition = { id: string; service_id: string };
-type CompositionItem = { composition_id: string; input_id: string; effective_coefficient: number };
-type Price = { input_id: string; project_id: string | null; final_unit_price: number };
+type BudgetItem = { service_id: string | null; total_direct_cost: number; status: "active" | "inactive" };
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -361,7 +362,7 @@ export async function generateScheduleFromTakeoffs(formData: FormData) {
     redirect(resultUrl("Esta linha de base já possui atividades. Use outra revisão para gerar novamente.", "error", baseline.id));
   }
 
-  const [takeoffsResult, servicesResult, locationsResult, compositionsResult, itemsResult, pricesResult] = await Promise.all([
+  const [takeoffsResult, servicesResult, locationsResult, budgetItemsResult] = await Promise.all([
     fetchAllRows<Takeoff>(async (from, to) => {
       const { data, error } = await supabase
         .from("engineering_takeoffs")
@@ -396,138 +397,77 @@ export async function generateScheduleFromTakeoffs(formData: FormData) {
         .range(from, to);
       return { data: (data ?? []) as Location[], error };
     }),
-    fetchAllRows<Composition>(async (from, to) => {
+    fetchAllRows<BudgetItem>(async (from, to) => {
       const { data, error } = await supabase
-        .from("engineering_service_compositions")
-        .select("id, service_id")
+        .from("engineering_budget_items")
+        .select("service_id, total_direct_cost, status")
         .eq("company_id", companyId)
-        .eq("status", "active")
+        .eq("project_id", projectId)
+        .eq("budget_id", baseline.budget_id)
         .range(from, to);
-      return { data: (data ?? []) as Composition[], error };
-    }),
-    fetchAllRows<CompositionItem>(async (from, to) => {
-      const { data, error } = await supabase
-        .from("engineering_service_composition_items")
-        .select("composition_id, input_id, effective_coefficient")
-        .eq("company_id", companyId)
-        .eq("status", "active")
-        .range(from, to);
-      return { data: (data ?? []) as CompositionItem[], error };
-    }),
-    fetchAllRows<Price>(async (from, to) => {
-      const { data, error } = await supabase
-        .from("engineering_input_prices")
-        .select("input_id, project_id, final_unit_price")
-        .eq("company_id", companyId)
-        .eq("status", "active")
-        .eq("is_adopted", true)
-        .range(from, to);
-      return { data: (data ?? []) as Price[], error };
+      return { data: (data ?? []) as BudgetItem[], error };
     }),
   ]);
 
-  if (takeoffsResult.error || servicesResult.error || locationsResult.error || compositionsResult.error || itemsResult.error || pricesResult.error) {
+  if (takeoffsResult.error || servicesResult.error || locationsResult.error || budgetItemsResult.error) {
     redirect(resultUrl("Não foi possível carregar os dados necessários para gerar o cronograma.", "error", baseline.id));
   }
-  if (takeoffsResult.data.length === 0) {
-    redirect(resultUrl("A revisão não possui levantamentos aprovados para gerar atividades.", "error", baseline.id));
+
+  const budgetHasService = budgetItemsResult.data.some((item) => item.service_id && item.status === "active" && Number(item.total_direct_cost) > 0);
+  if (!budgetHasService && takeoffsResult.data.length === 0) {
+    redirect(resultUrl("A revisão do orçamento não possui serviços com valor para gerar o cronograma.", "error", baseline.id));
   }
 
-  const serviceMap = new Map(servicesResult.data.map((service) => [service.id, service]));
-  const locationMap = new Map(locationsResult.data.map((location) => [location.id, location]));
-  const compositionMap = new Map(compositionsResult.data.map((composition) => [composition.service_id, composition.id]));
-  const itemsByComposition = new Map<string, CompositionItem[]>();
-  itemsResult.data.forEach((item) => {
-    const values = itemsByComposition.get(item.composition_id) ?? [];
-    values.push(item);
-    itemsByComposition.set(item.composition_id, values);
-  });
-  const corporatePriceMap = new Map<string, number>();
-  const projectPriceMap = new Map<string, number>();
-  pricesResult.data.forEach((price) => {
-    if (price.project_id === projectId) projectPriceMap.set(price.input_id, Number(price.final_unit_price));
-    else if (!price.project_id) corporatePriceMap.set(price.input_id, Number(price.final_unit_price));
+  // Fundação: todo serviço do orçamento vira atividade e a soma das partes de um
+  // serviço sempre iguala o valor daquele serviço no orçamento (rateio por quantidade).
+  const plan = planScheduleFromBudget({
+    services: servicesResult.data,
+    budgetItems: budgetItemsResult.data,
+    takeoffCells: takeoffsResult.data.map((takeoff) => ({
+      service_id: takeoff.service_id,
+      location_id: takeoff.location_id,
+      total_quantity: Number(takeoff.total_quantity),
+      unit_snapshot: takeoff.unit_snapshot,
+    })),
+    locations: locationsResult.data,
   });
 
-  const serviceUnitCost = new Map<string, number>();
-  servicesResult.data.forEach((service) => {
-    const compositionId = compositionMap.get(service.id);
-    const items = compositionId ? itemsByComposition.get(compositionId) ?? [] : [];
-    const total = items.reduce((sum, item) => {
-      const price = projectPriceMap.get(item.input_id) ?? corporatePriceMap.get(item.input_id) ?? 0;
-      return sum + Number(item.effective_coefficient) * price;
-    }, 0);
-    serviceUnitCost.set(service.id, total);
-  });
+  if (plan.activities.length === 0) redirect(resultUrl("Nenhuma atividade pôde ser gerada.", "error", baseline.id));
 
-  const grouped = new Map<string, Takeoff>();
-  takeoffsResult.data.forEach((takeoff) => {
-    const key = `${takeoff.service_id}:${takeoff.location_id ?? "none"}`;
-    const current = grouped.get(key);
-    if (current) current.total_quantity = Number(current.total_quantity) + Number(takeoff.total_quantity);
-    else grouped.set(key, { ...takeoff, total_quantity: Number(takeoff.total_quantity) });
-  });
-
-  const rows = [...grouped.values()].sort((a, b) => {
-    const serviceCompare = (serviceMap.get(a.service_id)?.code ?? "").localeCompare(serviceMap.get(b.service_id)?.code ?? "", "pt-BR");
-    if (serviceCompare !== 0) return serviceCompare;
-    return Number(locationMap.get(a.location_id ?? "")?.sort_order ?? 0) - Number(locationMap.get(b.location_id ?? "")?.sort_order ?? 0);
-  });
-
+  // Datas: 5 dias úteis com 1 equipe como premissa; cada serviço encadeia seus locais no tempo.
+  const duration = 5;
   const currentByService = new Map<string, Date>();
-  const previousCodeByService = new Map<string, string>();
-  const generatedActivities: Record<string, unknown>[] = [];
-  const predecessorCodes: { successorCode: string; predecessorCode: string }[] = [];
-  const codeOccurrences = new Map<string, number>();
-
-  rows.forEach((takeoff, index) => {
-    const service = serviceMap.get(takeoff.service_id);
-    if (!service) return;
-    const location = takeoff.location_id ? locationMap.get(takeoff.location_id) : null;
-    const baseCode = `${service.code}-${location?.code ?? "GERAL"}`.toUpperCase().replace(/[^A-Z0-9_-]+/g, "-").slice(0, 54);
-    const occurrence = (codeOccurrences.get(baseCode) ?? 0) + 1;
-    codeOccurrences.set(baseCode, occurrence);
-    const code = occurrence === 1 ? baseCode : `${baseCode}-${occurrence}`;
-    const quantity = Math.max(0, Number(takeoff.total_quantity));
-    const duration = 5;
-    const productivity = quantity > 0 ? quantity / duration : 1;
-    const start = currentByService.get(service.id) ?? normalizeStartDate(parseIsoDate(baseline.start_date)!, baseline.work_on_saturday);
+  const generatedActivities = plan.activities.map((activity, index) => {
+    const start = currentByService.get(activity.serviceId) ?? normalizeStartDate(parseIsoDate(baseline.start_date)!, baseline.work_on_saturday);
     const finish = addWorkdays(start, duration, baseline.work_on_saturday);
-    const plannedCost = quantity * (serviceUnitCost.get(service.id) ?? 0);
-
-    generatedActivities.push({
+    const nextStart = new Date(finish);
+    nextStart.setUTCDate(nextStart.getUTCDate() + 1);
+    currentByService.set(activity.serviceId, normalizeStartDate(nextStart, baseline.work_on_saturday));
+    const quantity = Math.max(0, Number(activity.quantity));
+    return {
       company_id: companyId,
       project_id: projectId,
       baseline_id: baseline.id,
-      service_id: service.id,
-      location_id: location?.id ?? null,
-      code,
-      name: `${service.description}${location ? ` · ${location.name}` : ""}`,
-      unit_snapshot: takeoff.unit_snapshot || service.unit,
+      service_id: activity.serviceId,
+      location_id: activity.locationId,
+      code: activity.code,
+      name: activity.name,
+      unit_snapshot: activity.unit,
       quantity_snapshot: quantity,
-      productivity_per_team_day: productivity,
+      productivity_per_team_day: quantity > 0 ? quantity / duration : 1,
       team_count: 1,
       duration_days: duration,
       planned_start: toIsoDate(start),
       planned_finish: toIsoDate(finish),
-      planned_cost: plannedCost,
+      planned_cost: activity.plannedCost,
       sort_order: index + 1,
       planning_status: "draft",
       source: "takeoff",
-      notes: "Premissa inicial: 5 dias úteis com 1 equipe. Revisar produtividade, equipe e predecessora.",
+      notes: "Premissa inicial: 5 dias úteis com 1 equipe. Valor ancorado no orçamento. Revisar produtividade, equipe e predecessora.",
       record_status: "active",
       created_by: userId,
-    });
-
-    const previousCode = previousCodeByService.get(service.id);
-    if (previousCode) predecessorCodes.push({ successorCode: code, predecessorCode: previousCode });
-    previousCodeByService.set(service.id, code);
-    const nextStart = new Date(finish);
-    nextStart.setUTCDate(nextStart.getUTCDate() + 1);
-    currentByService.set(service.id, normalizeStartDate(nextStart, baseline.work_on_saturday));
+    };
   });
-
-  if (generatedActivities.length === 0) redirect(resultUrl("Nenhuma atividade pôde ser gerada.", "error", baseline.id));
 
   const { data: inserted, error: insertError } = await supabase
     .from("engineering_schedule_activities")
@@ -536,7 +476,7 @@ export async function generateScheduleFromTakeoffs(formData: FormData) {
   if (insertError || !inserted) redirect(resultUrl(insertError?.message ?? "Não foi possível gerar as atividades.", "error", baseline.id));
 
   const activityIdByCode = new Map(inserted.map((activity) => [activity.code, activity.id]));
-  const dependencies = predecessorCodes
+  const dependencies = plan.dependencies
     .map((dependency) => ({
       company_id: companyId,
       project_id: projectId,
@@ -555,5 +495,219 @@ export async function generateScheduleFromTakeoffs(formData: FormData) {
   }
 
   revalidatePath(LIST_PATH);
-  redirect(resultUrl(`${generatedActivities.length} atividade(s) gerada(s) a partir do levantamento aprovado. Revise as premissas de produtividade.`, "success", baseline.id));
+  const budgetValueLabel = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(plan.totals.budgetValue);
+  redirect(resultUrl(`${plan.activities.length} atividade(s) gerada(s) para ${plan.totals.serviceCount} serviço(s) do orçamento (${budgetValueLabel}). Valores ancorados no orçamento; revise as premissas de produtividade.`, "success", baseline.id));
+}
+
+type ScheduleActivityRow = {
+  id: string;
+  code: string;
+  planned_start: string;
+  planned_finish: string;
+  duration_days: number;
+  team_count: number;
+  productivity_per_team_day: number;
+  quantity_snapshot: number;
+  planning_status: string;
+};
+
+// Reimporta o cronograma a partir do HTML exportado (editado por IA). Aplica
+// SOMENTE planejamento no tempo (datas, durações, equipes/produtividade) e as
+// amarrações. Valores, serviço, local e quantidade ficam travados no orçamento.
+export async function importScheduleFromHtml(formData: FormData) {
+  const references = await loadBaseline(formData);
+  const { supabase, companyId, projectId, userId, baseline } = references;
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect(resultUrl("Selecione o arquivo HTML do cronograma exportado.", "error", baseline.id));
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    redirect(resultUrl("Arquivo muito grande. Use o HTML exportado pelo próprio sistema.", "error", baseline.id));
+  }
+
+  const html = await file.text();
+  const extracted = extractSchedulePayload(html);
+  if (!extracted.ok) redirect(resultUrl(extracted.error, "error", baseline.id));
+  const payload = extracted.payload;
+
+  if (payload.meta.baselineId && payload.meta.baselineId !== baseline.id) {
+    redirect(resultUrl("Este arquivo pertence a outra linha de base. Selecione a linha de base correspondente.", "error", baseline.id));
+  }
+
+  const currentActivities = await fetchAllRows<ScheduleActivityRow>(async (from, to) => {
+    const { data, error } = await supabase
+      .from("engineering_schedule_activities")
+      .select("id, code, planned_start, planned_finish, duration_days, team_count, productivity_per_team_day, quantity_snapshot, planning_status")
+      .eq("company_id", companyId)
+      .eq("project_id", projectId)
+      .eq("baseline_id", baseline.id)
+      .eq("record_status", "active")
+      .range(from, to);
+    return { data: (data ?? []) as ScheduleActivityRow[], error };
+  });
+  if (currentActivities.error) redirect(resultUrl("Não foi possível carregar as atividades atuais.", "error", baseline.id));
+
+  const activityByCode = new Map(currentActivities.data.map((activity) => [activity.code, activity]));
+  const saturday = baseline.work_on_saturday;
+
+  const updates: { id: string; changes: Record<string, unknown> }[] = [];
+  let unmatched = 0;
+  payload.activities.forEach((incoming) => {
+    const current = activityByCode.get(incoming.code);
+    if (!current) { unmatched += 1; return; }
+
+    const startDate = parseIsoDate(String(incoming.plannedStart ?? "").slice(0, 10));
+    if (!startDate) { unmatched += 1; return; }
+    const duration = Math.max(1, Math.trunc(Number(incoming.durationDays) || current.duration_days || 1));
+    const normalizedStart = normalizeStartDate(startDate, saturday);
+    const finish = addWorkdays(normalizedStart, duration, saturday);
+
+    const teamCount = Number(incoming.teamCount);
+    const productivity = Number(incoming.productivity);
+    const status = String(incoming.planningStatus ?? "");
+
+    updates.push({
+      id: current.id,
+      changes: {
+        planned_start: toIsoDate(normalizedStart),
+        planned_finish: toIsoDate(finish),
+        duration_days: duration,
+        team_count: Number.isFinite(teamCount) && teamCount > 0 ? teamCount : current.team_count,
+        productivity_per_team_day: Number.isFinite(productivity) && productivity > 0 ? productivity : current.productivity_per_team_day,
+        planning_status: planningStatuses.has(status) ? status : current.planning_status,
+        updated_at: new Date().toISOString(),
+      },
+    });
+  });
+
+  if (updates.length === 0) {
+    redirect(resultUrl("Nenhuma atividade do arquivo corresponde a esta linha de base (confira os códigos).", "error", baseline.id));
+  }
+
+  for (const update of updates) {
+    const { error } = await supabase
+      .from("engineering_schedule_activities")
+      .update(update.changes)
+      .eq("id", update.id)
+      .eq("baseline_id", baseline.id)
+      .eq("company_id", companyId)
+      .eq("project_id", projectId);
+    if (error) redirect(resultUrl(`Falha ao atualizar atividade: ${error.message}`, "error", baseline.id));
+  }
+
+  // Reconstrói as amarrações a partir do arquivo (por código).
+  const { error: deleteError } = await supabase
+    .from("engineering_schedule_dependencies")
+    .delete()
+    .eq("baseline_id", baseline.id)
+    .eq("company_id", companyId);
+  if (deleteError) redirect(resultUrl(deleteError.message, "error", baseline.id));
+
+  const seen = new Set<string>();
+  const newDependencies = (payload.dependencies ?? [])
+    .map((dependency) => {
+      const predecessor = activityByCode.get(dependency.predecessorCode);
+      const successor = activityByCode.get(dependency.successorCode);
+      const relation = String(dependency.relationType ?? "FS");
+      if (!predecessor || !successor || predecessor.id === successor.id || !relationTypes.has(relation)) return null;
+      const key = `${predecessor.id}:${successor.id}`;
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return {
+        company_id: companyId,
+        project_id: projectId,
+        baseline_id: baseline.id,
+        predecessor_id: predecessor.id,
+        successor_id: successor.id,
+        relation_type: relation,
+        lag_days: Math.trunc(Number(dependency.lagDays) || 0),
+        created_by: userId,
+      };
+    })
+    .filter((dependency): dependency is NonNullable<typeof dependency> => dependency !== null);
+
+  if (newDependencies.length > 0) {
+    const { error: dependencyError } = await supabase.from("engineering_schedule_dependencies").insert(newDependencies);
+    if (dependencyError) redirect(resultUrl(dependencyError.message, "error", baseline.id));
+  }
+
+  revalidatePath(LIST_PATH);
+  const unmatchedNote = unmatched > 0 ? ` ${unmatched} atividade(s) do arquivo sem correspondência foram ignoradas.` : "";
+  redirect(resultUrl(`Cronograma reimportado: ${updates.length} atividade(s) e ${newDependencies.length} amarração(ões) atualizadas. Valores mantidos travados no orçamento.${unmatchedNote}`, "success", baseline.id));
+}
+
+type CascadeActivityRow = { id: string; planned_start: string; planned_finish: string; duration_days: number };
+type CascadeDependencyRow = { predecessor_id: string; successor_id: string; relation_type: "FS" | "SS" | "FF" | "SF"; lag_days: number };
+
+// Move uma atividade no tempo (arrastar) e reprograma as sucessoras em cascata,
+// respeitando as amarrações (FS/SS/FF/SF + defasagem). Persiste apenas o
+// planejamento no tempo; valores permanecem intactos.
+export async function moveScheduleActivity(formData: FormData) {
+  const references = await loadBaseline(formData);
+  const { supabase, companyId, projectId, baseline } = references;
+
+  const activityId = text(formData, "activity_id");
+  const newStart = text(formData, "new_start").slice(0, 10);
+  const cascade = formData.get("cascade") !== "off";
+  if (!activityId || !parseIsoDate(newStart)) {
+    redirect(`${LIST_PATH}?baseline=${baseline.id}`);
+  }
+
+  const [activitiesResult, dependenciesResult] = await Promise.all([
+    fetchAllRows<CascadeActivityRow>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("engineering_schedule_activities")
+        .select("id, planned_start, planned_finish, duration_days")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .eq("baseline_id", baseline.id)
+        .eq("record_status", "active")
+        .range(from, to);
+      return { data: (data ?? []) as CascadeActivityRow[], error };
+    }),
+    fetchAllRows<CascadeDependencyRow>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("engineering_schedule_dependencies")
+        .select("predecessor_id, successor_id, relation_type, lag_days")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .eq("baseline_id", baseline.id)
+        .range(from, to);
+      return { data: (data ?? []) as CascadeDependencyRow[], error };
+    }),
+  ]);
+
+  if (activitiesResult.error || dependenciesResult.error) {
+    redirect(resultUrl("Não foi possível carregar o cronograma para mover a atividade.", "error", baseline.id));
+  }
+  if (!activitiesResult.data.some((activity) => activity.id === activityId)) {
+    redirect(`${LIST_PATH}?baseline=${baseline.id}`);
+  }
+
+  const reschedule = rescheduleFromMove({
+    activities: activitiesResult.data,
+    dependencies: dependenciesResult.data,
+    movedId: activityId,
+    newStart,
+    workOnSaturday: baseline.work_on_saturday,
+    cascade,
+  });
+
+  const changed = new Set(reschedule.changed);
+  const updates = reschedule.activities.filter((activity) => changed.has(activity.id));
+  const timestamp = new Date().toISOString();
+  for (const update of updates) {
+    const { error } = await supabase
+      .from("engineering_schedule_activities")
+      .update({ planned_start: update.plannedStart, planned_finish: update.plannedFinish, updated_at: timestamp })
+      .eq("id", update.id)
+      .eq("baseline_id", baseline.id)
+      .eq("company_id", companyId)
+      .eq("project_id", projectId);
+    if (error) redirect(resultUrl(`Falha ao mover atividade: ${error.message}`, "error", baseline.id));
+  }
+
+  revalidatePath(LIST_PATH);
+  redirect(`${LIST_PATH}?baseline=${baseline.id}`);
 }
