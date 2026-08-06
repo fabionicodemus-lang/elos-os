@@ -127,7 +127,7 @@ function scheduleViewerScript() {
   var dataEl = document.getElementById("elos-cronograma");
   if (!host || !dataEl) return;
   var model;
-  try { model = JSON.parse(dataEl.textContent); } catch (error) { host.textContent = "Dados inválidos."; return; }
+  try { model = JSON.parse(dataEl.textContent); } catch { host.textContent = "Dados inválidos."; return; }
 
   function parseDate(value) { return new Date(String(value).slice(0, 10) + "T12:00:00Z"); }
   function addDays(date, days) { var r = new Date(date); r.setUTCDate(r.getUTCDate() + days); return r; }
@@ -135,7 +135,7 @@ function scheduleViewerScript() {
   function daysBetween(a, b) { return Math.round((b.getTime() - a.getTime()) / 86400000); }
   function two(n) { return (n < 10 ? "0" : "") + n; }
   function fmt(date) { return two(date.getUTCDate()) + "/" + two(date.getUTCMonth() + 1); }
-  function money(value) { try { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value || 0); } catch (e) { return "R$ " + (value || 0); } }
+  function money(value) { try { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value || 0); } catch { return "R$ " + (value || 0); } }
   var months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
   var acts = (model.activities || []).filter(function (a) { return a.plannedStart && a.plannedFinish; });

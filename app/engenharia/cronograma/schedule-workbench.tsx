@@ -240,7 +240,11 @@ function FinanceView({ activities }: { activities: ScheduleWorkbenchActivity[] }
   const rows = [...monthly.entries()].sort(([a], [b]) => a.localeCompare(b));
   const total = rows.reduce((sum, [, value]) => sum + value, 0);
   const peak = Math.max(0, ...rows.map(([, value]) => value));
-  let accumulated = 0;
+  const cumulativeRows = rows.reduce<{ key: string; value: number; accumulated: number }[]>((acc, [key, value]) => {
+    const previous = acc.length ? acc[acc.length - 1].accumulated : 0;
+    acc.push({ key, value, accumulated: previous + value });
+    return acc;
+  }, []);
 
   return (
     <div className="prevision-panel-page">
@@ -260,7 +264,7 @@ function FinanceView({ activities }: { activities: ScheduleWorkbenchActivity[] }
               <div key={key}><span style={{ height: `${peak ? Math.max(3, value / peak * 100) : 0}%` }} /><small>{key.slice(5)}/{key.slice(2, 4)}</small></div>
             ))}</div>
             <table className="prevision-table"><thead><tr><th>Mês</th><th>Previsto</th><th>Acumulado</th><th>% acumulado</th></tr></thead><tbody>
-              {rows.map(([key, value]) => { accumulated += value; return <tr key={key}><td>{key}</td><td>{money(value)}</td><td>{money(accumulated)}</td><td>{total ? (accumulated / total * 100).toFixed(1) : "0"}%</td></tr>; })}
+              {cumulativeRows.map((row) => <tr key={row.key}><td>{row.key}</td><td>{money(row.value)}</td><td>{money(row.accumulated)}</td><td>{total ? (row.accumulated / total * 100).toFixed(1) : "0"}%</td></tr>)}
             </tbody></table>
           </div>
         )}

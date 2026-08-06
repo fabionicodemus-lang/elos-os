@@ -6,8 +6,6 @@
 // propósito); as demais nunca recuam antes de onde já estavam (piso), apenas são
 // empurradas para frente pelas amarrações. Sem cascata, só a movida muda.
 
-const DAY_MS = 86_400_000;
-
 function parseDate(value) {
   return new Date(String(value).slice(0, 10) + "T12:00:00Z");
 }
