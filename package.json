@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test app/engenharia/curvas/curve-calculations.test.mjs app/engenharia/curvas/month-window.test.mjs app/engenharia/contratos/contract-calculations.test.mjs app/engenharia/cronograma/schedule-generation.test.mjs app/engenharia/cronograma/schedule-portable.test.mjs lib/forecast/engine.test.mjs lib/forecast/snapshot-comparison.test.mjs",
+    "test": "node --test app/engenharia/curvas/curve-calculations.test.mjs app/engenharia/curvas/month-window.test.mjs app/engenharia/contratos/contract-calculations.test.mjs app/engenharia/cronograma/schedule-generation.test.mjs app/engenharia/cronograma/schedule-portable.test.mjs app/engenharia/cronograma/schedule-cascade.test.mjs lib/forecast/engine.test.mjs lib/forecast/snapshot-comparison.test.mjs",
     "test:performance": "node --test --test-concurrency=1 tests/performance/forecast-load-scenarios.test.mjs"
   },
   "dependencies": {

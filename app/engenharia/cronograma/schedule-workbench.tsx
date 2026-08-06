@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, useTransition, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import {
   generateScheduleFromTakeoffs,
+  moveScheduleActivity,
   updateScheduleBaselineStatus,
 } from "./actions";
+import { rescheduleFromMove } from "./schedule-cascade.mjs";
 import {
   ScheduleActivityCreateDialog,
   ScheduleActivityEditDialog,
@@ -370,6 +372,8 @@ export function SchedulePrevisionWorkbench({
   const [weekWidth, setWeekWidth] = useState(34);
   const [cascade, setCascade] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [drag, setDrag] = useState<{ id: string; startX: number; deltaDays: number } | null>(null);
+  const [isMoving, startMove] = useTransition();
 
   const activeActivities = useMemo(() => activities.filter((activity) => activity.record_status === "active"), [activities]);
   const serviceMap = useMemo(() => new Map(services.map((service) => [service.id, service])), [services]);
@@ -397,12 +401,70 @@ export function SchedulePrevisionWorkbench({
 
   const activityVisual = (activity: ScheduleWorkbenchActivity) => serviceVisual(serviceMap.get(activity.service_id ?? ""), `${activity.code} ${activity.name}`);
 
-  const barStyle = (activity: ScheduleWorkbenchActivity): CSSProperties => {
-    const left = Math.max(0, daysBetween(timeline.start, parseDate(activity.planned_start)) / totalDays * timelineWidth);
-    const width = Math.max(7, (daysBetween(parseDate(activity.planned_start), parseDate(activity.planned_finish)) + 1) / totalDays * timelineWidth);
+  const pxPerDay = timelineWidth / totalDays;
+
+  // Preview em cascata enquanto arrasta: recalcula datas localmente (mesmo motor do servidor).
+  const preview = useMemo(() => {
+    if (!drag) return null;
+    const moved = activeActivities.find((activity) => activity.id === drag.id);
+    if (!moved) return null;
+    const newStart = isoDate(addDays(parseDate(moved.planned_start), drag.deltaDays));
+    const result = rescheduleFromMove({
+      activities: activeActivities.map((activity) => ({ id: activity.id, planned_start: activity.planned_start, planned_finish: activity.planned_finish, duration_days: activity.duration_days })),
+      dependencies: dependencies.map((dependency) => ({ predecessor_id: dependency.predecessor_id, successor_id: dependency.successor_id, relation_type: dependency.relation_type, lag_days: dependency.lag_days })),
+      movedId: drag.id,
+      newStart,
+      workOnSaturday: selectedBaseline?.work_on_saturday ?? false,
+      cascade,
+    });
+    return new Map(result.activities.map((activity) => [activity.id, { start: activity.plannedStart, finish: activity.plannedFinish }]));
+  }, [drag, activeActivities, dependencies, cascade, selectedBaseline]);
+
+  const barStyleAt = (activity: ScheduleWorkbenchActivity, startStr: string, finishStr: string): CSSProperties => {
+    const left = Math.max(0, daysBetween(timeline.start, parseDate(startStr)) / totalDays * timelineWidth);
+    const width = Math.max(7, (daysBetween(parseDate(startStr), parseDate(finishStr)) + 1) / totalDays * timelineWidth);
     const visual = activityVisual(activity);
     return { left, width, "--bar": visual.color, color: visual.textColor } as CSSProperties;
   };
+
+  // Barra "viva" (com preview do arrasto); a barra de linha de base fica na posição original.
+  const barStyle = (activity: ScheduleWorkbenchActivity): CSSProperties => {
+    const override = preview?.get(activity.id);
+    return barStyleAt(activity, override?.start ?? activity.planned_start, override?.finish ?? activity.planned_finish);
+  };
+  const baselineBarStyle = (activity: ScheduleWorkbenchActivity): CSSProperties => barStyleAt(activity, activity.planned_start, activity.planned_finish);
+
+  function commitMove(activity: ScheduleWorkbenchActivity, deltaDays: number) {
+    if (!selectedBaseline || !canManage || deltaDays === 0) return;
+    const newStart = isoDate(addDays(parseDate(activity.planned_start), deltaDays));
+    const formData = new FormData();
+    formData.set("baseline_id", selectedBaseline.id);
+    formData.set("activity_id", activity.id);
+    formData.set("new_start", newStart);
+    formData.set("cascade", cascade ? "on" : "off");
+    startMove(() => { void moveScheduleActivity(formData); });
+  }
+
+  function onBarPointerDown(activity: ScheduleWorkbenchActivity, event: ReactPointerEvent<HTMLDivElement>) {
+    if (!canManage || !selectedBaseline || event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDrag({ id: activity.id, startX: event.clientX, deltaDays: 0 });
+  }
+
+  function onBarPointerMove(activity: ScheduleWorkbenchActivity, event: ReactPointerEvent<HTMLDivElement>) {
+    if (!drag || drag.id !== activity.id) return;
+    const deltaDays = Math.round((event.clientX - drag.startX) / pxPerDay);
+    if (deltaDays !== drag.deltaDays) setDrag({ ...drag, deltaDays });
+  }
+
+  function onBarPointerUp(activity: ScheduleWorkbenchActivity, event: ReactPointerEvent<HTMLDivElement>) {
+    if (!drag || drag.id !== activity.id) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    const deltaDays = drag.deltaDays;
+    setDrag(null);
+    commitMove(activity, deltaDays);
+  }
 
   const summaryBars = (items: ScheduleWorkbenchActivity[]) => items.map((activity) => activity.duration_days <= 0 ? (
     <button type="button" className="prevision-summary-milestone" key={activity.id} style={barStyle(activity)} title={`${activity.name} · ${dateBR(activity.planned_start)}`} />
@@ -511,6 +573,7 @@ export function SchedulePrevisionWorkbench({
             <span className="prevision-divider" />
             <label><span>Linha de base</span><select value={selectedBaseline?.id ?? ""} onChange={(event) => { window.location.href = `?baseline=${event.target.value}`; }}>{baselines.map((baseline) => <option key={baseline.id} value={baseline.id}>{baseline.code} · {baseline.version}</option>)}</select></label>
             <label className="prevision-switch"><input type="checkbox" checked={cascade} onChange={(event) => setCascade(event.target.checked)} /> mover cadeia dependente</label>
+            {canManage ? <span className="prevision-hint" style={{ fontSize: 11, color: isMoving ? "#008780" : "#94a3b8" }}>{isMoving ? "Salvando…" : "Arraste as barras para reprogramar"}</span> : null}
             <label><span>Zoom</span><input type="range" min="24" max="52" step="2" value={weekWidth} onChange={(event) => setWeekWidth(Number(event.target.value))} /></label>
             <div className="prevision-toolbar-spacer" />
             <div className="prevision-kpi-mini"><span>Atividades</span><strong>{filtered.length}</strong></div>
@@ -550,7 +613,7 @@ export function SchedulePrevisionWorkbench({
                     const visual = activityVisual(activity);
                     return <div className="prevision-gantt-row" key={activity.id}>
                       <div className="prevision-task-meta"><div>{activity.code}</div><div title={location?.name}>{location?.name ?? "Geral da obra"}</div><div title={activity.name}><strong>{activity.name}</strong>{canManage && selectedBaseline ? <ScheduleActivityEditDialog baselineId={selectedBaseline.id} activity={activity} services={services} locations={locations} activities={activities} dependency={dependency} /> : null}</div><div>{dateBR(activity.planned_start)}</div><div>{activity.duration_days}d</div><div>{money(activity.planned_cost)}</div></div>
-                      <div className="prevision-timeline-row" style={{ width: timelineWidth }}><div className="prevision-baseline-bar" style={barStyle(activity)} /><div className={`prevision-task-bar ${activity.planning_status}`} style={barStyle(activity)} title={`${visual.abbreviation} · ${service?.description ?? activity.name}`}><span>{visual.abbreviation}</span></div>{todayX >= 0 && todayX <= timelineWidth ? <div className="prevision-today-line" style={{ left: todayX }} /> : null}</div>
+                      <div className="prevision-timeline-row" style={{ width: timelineWidth }}><div className="prevision-baseline-bar" style={baselineBarStyle(activity)} /><div className={`prevision-task-bar ${activity.planning_status}${canManage ? " draggable" : ""}${drag?.id === activity.id ? " dragging" : ""}`} style={{ ...barStyle(activity), cursor: canManage ? (drag?.id === activity.id ? "grabbing" : "grab") : undefined, touchAction: canManage ? "none" : undefined }} title={canManage ? `${visual.abbreviation} · arraste para reprogramar` : `${visual.abbreviation} · ${service?.description ?? activity.name}`} onPointerDown={canManage ? (event) => onBarPointerDown(activity, event) : undefined} onPointerMove={canManage ? (event) => onBarPointerMove(activity, event) : undefined} onPointerUp={canManage ? (event) => onBarPointerUp(activity, event) : undefined}><span>{visual.abbreviation}</span></div>{todayX >= 0 && todayX <= timelineWidth ? <div className="prevision-today-line" style={{ left: todayX }} /> : null}</div>
                     </div>;
                   }) : null}
                 </div>;

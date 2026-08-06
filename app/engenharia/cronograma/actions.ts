@@ -6,6 +6,7 @@ import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { planScheduleFromBudget } from "./schedule-generation.mjs";
 import { extractSchedulePayload } from "./schedule-portable.mjs";
+import { rescheduleFromMove } from "./schedule-cascade.mjs";
 
 const LIST_PATH = "/engenharia/cronograma";
 const baselineStatuses = new Set(["draft", "review", "approved", "archived"]);
@@ -634,4 +635,79 @@ export async function importScheduleFromHtml(formData: FormData) {
   revalidatePath(LIST_PATH);
   const unmatchedNote = unmatched > 0 ? ` ${unmatched} atividade(s) do arquivo sem correspondência foram ignoradas.` : "";
   redirect(resultUrl(`Cronograma reimportado: ${updates.length} atividade(s) e ${newDependencies.length} amarração(ões) atualizadas. Valores mantidos travados no orçamento.${unmatchedNote}`, "success", baseline.id));
+}
+
+type CascadeActivityRow = { id: string; planned_start: string; planned_finish: string; duration_days: number };
+type CascadeDependencyRow = { predecessor_id: string; successor_id: string; relation_type: "FS" | "SS" | "FF" | "SF"; lag_days: number };
+
+// Move uma atividade no tempo (arrastar) e reprograma as sucessoras em cascata,
+// respeitando as amarrações (FS/SS/FF/SF + defasagem). Persiste apenas o
+// planejamento no tempo; valores permanecem intactos.
+export async function moveScheduleActivity(formData: FormData) {
+  const references = await loadBaseline(formData);
+  const { supabase, companyId, projectId, baseline } = references;
+
+  const activityId = text(formData, "activity_id");
+  const newStart = text(formData, "new_start").slice(0, 10);
+  const cascade = formData.get("cascade") !== "off";
+  if (!activityId || !parseIsoDate(newStart)) {
+    redirect(`${LIST_PATH}?baseline=${baseline.id}`);
+  }
+
+  const [activitiesResult, dependenciesResult] = await Promise.all([
+    fetchAllRows<CascadeActivityRow>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("engineering_schedule_activities")
+        .select("id, planned_start, planned_finish, duration_days")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .eq("baseline_id", baseline.id)
+        .eq("record_status", "active")
+        .range(from, to);
+      return { data: (data ?? []) as CascadeActivityRow[], error };
+    }),
+    fetchAllRows<CascadeDependencyRow>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("engineering_schedule_dependencies")
+        .select("predecessor_id, successor_id, relation_type, lag_days")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .eq("baseline_id", baseline.id)
+        .range(from, to);
+      return { data: (data ?? []) as CascadeDependencyRow[], error };
+    }),
+  ]);
+
+  if (activitiesResult.error || dependenciesResult.error) {
+    redirect(resultUrl("Não foi possível carregar o cronograma para mover a atividade.", "error", baseline.id));
+  }
+  if (!activitiesResult.data.some((activity) => activity.id === activityId)) {
+    redirect(`${LIST_PATH}?baseline=${baseline.id}`);
+  }
+
+  const reschedule = rescheduleFromMove({
+    activities: activitiesResult.data,
+    dependencies: dependenciesResult.data,
+    movedId: activityId,
+    newStart,
+    workOnSaturday: baseline.work_on_saturday,
+    cascade,
+  });
+
+  const changed = new Set(reschedule.changed);
+  const updates = reschedule.activities.filter((activity) => changed.has(activity.id));
+  const timestamp = new Date().toISOString();
+  for (const update of updates) {
+    const { error } = await supabase
+      .from("engineering_schedule_activities")
+      .update({ planned_start: update.plannedStart, planned_finish: update.plannedFinish, updated_at: timestamp })
+      .eq("id", update.id)
+      .eq("baseline_id", baseline.id)
+      .eq("company_id", companyId)
+      .eq("project_id", projectId);
+    if (error) redirect(resultUrl(`Falha ao mover atividade: ${error.message}`, "error", baseline.id));
+  }
+
+  revalidatePath(LIST_PATH);
+  redirect(`${LIST_PATH}?baseline=${baseline.id}`);
 }
