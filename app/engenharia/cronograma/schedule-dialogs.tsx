@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import {
   createScheduleActivity,
   createScheduleBaseline,
+  importScheduleFromHtml,
   updateScheduleActivity,
 } from "./actions";
 
@@ -204,6 +205,35 @@ export function ScheduleActivityCreateDialog({ baselineId, services, locations, 
           <footer className="budget-modal-foot">
             <button className="budget-secondary-button" type="button" onClick={() => dialogRef.current?.close()}>Cancelar</button>
             <SubmitButton label="Adicionar atividade" />
+          </footer>
+        </form>
+      </dialog>
+    </>
+  );
+}
+
+export function ScheduleImportHtmlDialog({ baselineId }: { baselineId: string }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  return (
+    <>
+      <button className="prevision-button" type="button" onClick={() => dialogRef.current?.showModal()}>Reimportar HTML</button>
+      <dialog ref={dialogRef} className="budget-modal schedule-modal">
+        <form action={importScheduleFromHtml} className="budget-modal-form">
+          <DialogHeader eyebrow="Planejamento · Cronograma físico" title="Reimportar cronograma (HTML)" onClose={() => dialogRef.current?.close()} />
+          <div className="budget-modal-body schedule-form-grid">
+            <input type="hidden" name="baseline_id" value={baselineId} />
+            <p className="schedule-span-2" style={{ margin: 0, color: "#475569", fontSize: 13, lineHeight: 1.5 }}>
+              Envie o arquivo <strong>HTML exportado</strong> por este cronograma, já editado (por você ou por IA).
+              O sistema aplica apenas <strong>datas, durações, equipes e amarrações</strong>.
+              Os <strong>valores continuam travados no orçamento</strong> e não são alterados.
+            </p>
+            <label className="schedule-span-2"><span>Arquivo do cronograma (.html)</span>
+              <input name="file" type="file" accept=".html,text/html" required />
+            </label>
+          </div>
+          <footer className="budget-modal-foot">
+            <button className="budget-secondary-button" type="button" onClick={() => dialogRef.current?.close()}>Cancelar</button>
+            <SubmitButton label="Reimportar cronograma" />
           </footer>
         </form>
       </dialog>

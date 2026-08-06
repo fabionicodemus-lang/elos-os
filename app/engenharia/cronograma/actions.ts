@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { planScheduleFromBudget } from "./schedule-generation.mjs";
+import { extractSchedulePayload } from "./schedule-portable.mjs";
 
 const LIST_PATH = "/engenharia/cronograma";
 const baselineStatuses = new Set(["draft", "review", "approved", "archived"]);
@@ -495,4 +496,142 @@ export async function generateScheduleFromTakeoffs(formData: FormData) {
   revalidatePath(LIST_PATH);
   const budgetValueLabel = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(plan.totals.budgetValue);
   redirect(resultUrl(`${plan.activities.length} atividade(s) gerada(s) para ${plan.totals.serviceCount} serviço(s) do orçamento (${budgetValueLabel}). Valores ancorados no orçamento; revise as premissas de produtividade.`, "success", baseline.id));
+}
+
+type ScheduleActivityRow = {
+  id: string;
+  code: string;
+  planned_start: string;
+  planned_finish: string;
+  duration_days: number;
+  team_count: number;
+  productivity_per_team_day: number;
+  quantity_snapshot: number;
+  planning_status: string;
+};
+
+// Reimporta o cronograma a partir do HTML exportado (editado por IA). Aplica
+// SOMENTE planejamento no tempo (datas, durações, equipes/produtividade) e as
+// amarrações. Valores, serviço, local e quantidade ficam travados no orçamento.
+export async function importScheduleFromHtml(formData: FormData) {
+  const references = await loadBaseline(formData);
+  const { supabase, companyId, projectId, userId, baseline } = references;
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect(resultUrl("Selecione o arquivo HTML do cronograma exportado.", "error", baseline.id));
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    redirect(resultUrl("Arquivo muito grande. Use o HTML exportado pelo próprio sistema.", "error", baseline.id));
+  }
+
+  const html = await file.text();
+  const extracted = extractSchedulePayload(html);
+  if (!extracted.ok) redirect(resultUrl(extracted.error, "error", baseline.id));
+  const payload = extracted.payload;
+
+  if (payload.meta.baselineId && payload.meta.baselineId !== baseline.id) {
+    redirect(resultUrl("Este arquivo pertence a outra linha de base. Selecione a linha de base correspondente.", "error", baseline.id));
+  }
+
+  const currentActivities = await fetchAllRows<ScheduleActivityRow>(async (from, to) => {
+    const { data, error } = await supabase
+      .from("engineering_schedule_activities")
+      .select("id, code, planned_start, planned_finish, duration_days, team_count, productivity_per_team_day, quantity_snapshot, planning_status")
+      .eq("company_id", companyId)
+      .eq("project_id", projectId)
+      .eq("baseline_id", baseline.id)
+      .eq("record_status", "active")
+      .range(from, to);
+    return { data: (data ?? []) as ScheduleActivityRow[], error };
+  });
+  if (currentActivities.error) redirect(resultUrl("Não foi possível carregar as atividades atuais.", "error", baseline.id));
+
+  const activityByCode = new Map(currentActivities.data.map((activity) => [activity.code, activity]));
+  const saturday = baseline.work_on_saturday;
+
+  const updates: { id: string; changes: Record<string, unknown> }[] = [];
+  let unmatched = 0;
+  payload.activities.forEach((incoming) => {
+    const current = activityByCode.get(incoming.code);
+    if (!current) { unmatched += 1; return; }
+
+    const startDate = parseIsoDate(String(incoming.plannedStart ?? "").slice(0, 10));
+    if (!startDate) { unmatched += 1; return; }
+    const duration = Math.max(1, Math.trunc(Number(incoming.durationDays) || current.duration_days || 1));
+    const normalizedStart = normalizeStartDate(startDate, saturday);
+    const finish = addWorkdays(normalizedStart, duration, saturday);
+
+    const teamCount = Number(incoming.teamCount);
+    const productivity = Number(incoming.productivity);
+    const status = String(incoming.planningStatus ?? "");
+
+    updates.push({
+      id: current.id,
+      changes: {
+        planned_start: toIsoDate(normalizedStart),
+        planned_finish: toIsoDate(finish),
+        duration_days: duration,
+        team_count: Number.isFinite(teamCount) && teamCount > 0 ? teamCount : current.team_count,
+        productivity_per_team_day: Number.isFinite(productivity) && productivity > 0 ? productivity : current.productivity_per_team_day,
+        planning_status: planningStatuses.has(status) ? status : current.planning_status,
+        updated_at: new Date().toISOString(),
+      },
+    });
+  });
+
+  if (updates.length === 0) {
+    redirect(resultUrl("Nenhuma atividade do arquivo corresponde a esta linha de base (confira os códigos).", "error", baseline.id));
+  }
+
+  for (const update of updates) {
+    const { error } = await supabase
+      .from("engineering_schedule_activities")
+      .update(update.changes)
+      .eq("id", update.id)
+      .eq("baseline_id", baseline.id)
+      .eq("company_id", companyId)
+      .eq("project_id", projectId);
+    if (error) redirect(resultUrl(`Falha ao atualizar atividade: ${error.message}`, "error", baseline.id));
+  }
+
+  // Reconstrói as amarrações a partir do arquivo (por código).
+  const { error: deleteError } = await supabase
+    .from("engineering_schedule_dependencies")
+    .delete()
+    .eq("baseline_id", baseline.id)
+    .eq("company_id", companyId);
+  if (deleteError) redirect(resultUrl(deleteError.message, "error", baseline.id));
+
+  const seen = new Set<string>();
+  const newDependencies = (payload.dependencies ?? [])
+    .map((dependency) => {
+      const predecessor = activityByCode.get(dependency.predecessorCode);
+      const successor = activityByCode.get(dependency.successorCode);
+      const relation = String(dependency.relationType ?? "FS");
+      if (!predecessor || !successor || predecessor.id === successor.id || !relationTypes.has(relation)) return null;
+      const key = `${predecessor.id}:${successor.id}`;
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return {
+        company_id: companyId,
+        project_id: projectId,
+        baseline_id: baseline.id,
+        predecessor_id: predecessor.id,
+        successor_id: successor.id,
+        relation_type: relation,
+        lag_days: Math.trunc(Number(dependency.lagDays) || 0),
+        created_by: userId,
+      };
+    })
+    .filter((dependency): dependency is NonNullable<typeof dependency> => dependency !== null);
+
+  if (newDependencies.length > 0) {
+    const { error: dependencyError } = await supabase.from("engineering_schedule_dependencies").insert(newDependencies);
+    if (dependencyError) redirect(resultUrl(dependencyError.message, "error", baseline.id));
+  }
+
+  revalidatePath(LIST_PATH);
+  const unmatchedNote = unmatched > 0 ? ` ${unmatched} atividade(s) do arquivo sem correspondência foram ignoradas.` : "";
+  redirect(resultUrl(`Cronograma reimportado: ${updates.length} atividade(s) e ${newDependencies.length} amarração(ões) atualizadas. Valores mantidos travados no orçamento.${unmatchedNote}`, "success", baseline.id));
 }

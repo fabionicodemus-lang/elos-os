@@ -10,12 +10,14 @@ import {
   ScheduleActivityCreateDialog,
   ScheduleActivityEditDialog,
   ScheduleBaselineCreateDialog,
+  ScheduleImportHtmlDialog,
   type ScheduleActivityData,
   type ScheduleBudgetOption,
   type ScheduleDependencyData,
   type ScheduleLocationOption,
   type ScheduleServiceOption,
 } from "./schedule-dialogs";
+import { buildScheduleHtml } from "./schedule-portable.mjs";
 
 export type ScheduleWorkbenchBaseline = {
   id: string;
@@ -137,14 +139,17 @@ function money(value: number | null | undefined) {
   }).format(Number(value ?? 0));
 }
 
-function downloadJson(filename: string, payload: unknown) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+function downloadBlob(filename: string, blob: Blob) {
   const href = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = href;
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(href);
+}
+
+function downloadJson(filename: string, payload: unknown) {
+  downloadBlob(filename, new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" }));
 }
 
 function buildTimeline(activities: ScheduleWorkbenchActivity[], baseline: ScheduleWorkbenchBaseline | null) {
@@ -423,6 +428,54 @@ export function SchedulePrevisionWorkbench({
     window.setTimeout(() => document.body.classList.remove("printing-prevision-gantt"), 500);
   }
 
+  const activityCodeById = useMemo(() => new Map(activities.map((activity) => [activity.id, activity.code])), [activities]);
+
+  function exportHtml() {
+    const model = {
+      meta: {
+        baselineId: selectedBaseline?.id ?? null,
+        baselineCode: selectedBaseline?.code ?? null,
+        baselineVersion: selectedBaseline?.version ?? null,
+        budgetId: selectedBaseline?.budget_id ?? null,
+        projectName,
+        workOnSaturday: selectedBaseline?.work_on_saturday ?? false,
+        startDate: selectedBaseline?.start_date ?? null,
+        exportedAt: new Date().toISOString(),
+      },
+      locations: locations.map((location) => ({ id: location.id, code: location.code, name: location.name })),
+      services: services.map((service) => ({ id: service.id, code: service.code, description: service.description })),
+      activities: activeActivities.map((activity) => {
+        const visual = activityVisual(activity);
+        return {
+          code: activity.code,
+          name: activity.name,
+          serviceId: activity.service_id,
+          locationId: activity.location_id,
+          plannedStart: activity.planned_start,
+          plannedFinish: activity.planned_finish,
+          durationDays: activity.duration_days,
+          teamCount: activity.team_count,
+          productivity: activity.productivity_per_team_day,
+          quantity: activity.quantity_snapshot,
+          plannedCost: activity.planned_cost,
+          planningStatus: activity.planning_status,
+          color: visual.color,
+          textColor: visual.textColor,
+          abbr: visual.abbreviation,
+        };
+      }),
+      dependencies: dependencies
+        .map((dependency) => ({
+          predecessorCode: activityCodeById.get(dependency.predecessor_id) ?? "",
+          successorCode: activityCodeById.get(dependency.successor_id) ?? "",
+          relationType: dependency.relation_type,
+          lagDays: dependency.lag_days,
+        }))
+        .filter((dependency) => dependency.predecessorCode && dependency.successorCode),
+    };
+    downloadBlob(`cronograma-${selectedBaseline?.code ?? "elos"}.html`, new Blob([buildScheduleHtml(model)], { type: "text/html;charset=utf-8" }));
+  }
+
   return (
     <section className="prevision-workbench">
       <div className="prevision-modebar">
@@ -436,8 +489,10 @@ export function SchedulePrevisionWorkbench({
           <button key={item} type="button" className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item === "gantt" ? "Cronograma" : item === "lob" ? "Linha de Balanço" : item === "teams" ? "Equipes" : item === "finance" ? "Financeiro" : "Calendário"}</button>
         ))}</nav>
         <div className="prevision-top-actions">
-          {canManage && selectedBaseline ? <form action={generateScheduleFromTakeoffs}><input type="hidden" name="baseline_id" value={selectedBaseline.id} /><button type="submit">Importar</button></form> : null}
-          <button type="button" onClick={() => downloadJson(`cronograma-${selectedBaseline?.code ?? "elos"}.json`, { baseline: selectedBaseline, activities, dependencies, locations, services })}>Exportar</button>
+          {canManage && selectedBaseline ? <form action={generateScheduleFromTakeoffs}><input type="hidden" name="baseline_id" value={selectedBaseline.id} /><button type="submit">Gerar do orçamento</button></form> : null}
+          <button type="button" onClick={exportHtml} disabled={!selectedBaseline}>Exportar HTML</button>
+          {canManage && selectedBaseline ? <ScheduleImportHtmlDialog baselineId={selectedBaseline.id} /> : null}
+          <button type="button" onClick={() => downloadJson(`cronograma-${selectedBaseline?.code ?? "elos"}.json`, { baseline: selectedBaseline, activities, dependencies, locations, services })}>Exportar JSON</button>
           {canManage && selectedBaseline && selectedBaseline.status !== "approved" ? <form action={updateScheduleBaselineStatus}><input type="hidden" name="baseline_id" value={selectedBaseline.id} /><input type="hidden" name="status" value="approved" /><button type="submit">Salvar linha de base</button></form> : null}
           <Link href={selectedBaseline ? `?baseline=${selectedBaseline.id}` : "/engenharia/cronograma"}>Restaurar linha de base</Link>
         </div>
