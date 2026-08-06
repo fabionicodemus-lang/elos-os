@@ -555,6 +555,7 @@ export function SchedulePrevisionWorkbench({
           <button key={item} type="button" className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item === "gantt" ? "Cronograma" : item === "lob" ? "Linha de Balanço" : item === "teams" ? "Equipes" : item === "finance" ? "Financeiro" : "Calendário"}</button>
         ))}</nav>
         <div className="prevision-top-actions">
+          {canManage && !selectedBaseline ? <ScheduleBaselineCreateDialog budgets={budgets} /> : null}
           {canManage && selectedBaseline ? <form action={generateScheduleFromTakeoffs}><input type="hidden" name="baseline_id" value={selectedBaseline.id} /><button type="submit">Gerar do orçamento</button></form> : null}
           <button type="button" onClick={exportHtml} disabled={!selectedBaseline}>Exportar HTML</button>
           {canManage && selectedBaseline ? <ScheduleImportHtmlDialog baselineId={selectedBaseline.id} /> : null}
