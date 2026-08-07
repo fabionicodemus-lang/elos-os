@@ -21,6 +21,14 @@ import {
 import "../../execution-contract-measurements.css";
 
 type Project = { id: string; code: string | null; name: string };
+type MeasurementIndicators = {
+  measurement_count: number;
+  submitted_count: number;
+  gross_approved: number;
+  net_approved: number;
+  in_finance: number;
+  paid_total: number;
+};
 type Supplier = { id: string; legal_name: string; trade_name: string | null; tax_id: string | null };
 type ContractRow = {
   id: string; contract_number: string; title: string; supplier_id: string; start_date: string; end_date: string; status: string;
@@ -132,12 +140,20 @@ export default async function ContractMeasurementsPage({ searchParams }: {
     return !query || [measurement.measurement_number, contract?.contract_number, contract?.title, supplierName(supplierMap.get(measurement.supplier_id)), measurement.requester_name].join(" ").toLocaleLowerCase("pt-BR").includes(query);
   });
 
-  const approvedStatuses = new Set(["approved", "invoiced", "paid"]);
-  const submittedCount = measurements.filter((measurement) => measurement.status === "submitted").length;
-  const grossApproved = measurements.filter((measurement) => approvedStatuses.has(measurement.status)).reduce((sum, measurement) => sum + Number(measurement.gross_amount), 0);
-  const netApproved = measurements.filter((measurement) => approvedStatuses.has(measurement.status)).reduce((sum, measurement) => sum + Number(measurement.net_amount), 0);
-  const inFinance = measurements.filter((measurement) => ["invoiced", "paid"].includes(measurement.status)).reduce((sum, measurement) => sum + Number(measurement.net_amount), 0);
-  const paid = measurements.filter((measurement) => measurement.status === "paid").reduce((sum, measurement) => sum + Number(measurement.paid_amount), 0);
+  // Indicadores agregados no banco, cobrindo toda a obra sem depender das linhas
+  // carregadas nesta página. Equivalência coberta por
+  // supabase/tests/20260806_0081_measurement_indicators.sql.
+  const indicatorsResult = projectId
+    ? await supabase.rpc("execution_measurement_indicators", { p_company_id: companyId, p_project_id: projectId })
+    : { data: null, error: null };
+  const indicators = (indicatorsResult.data as MeasurementIndicators | null) ?? {
+    measurement_count: 0, submitted_count: 0, gross_approved: 0, net_approved: 0, in_finance: 0, paid_total: 0,
+  };
+  const submittedCount = indicators.submitted_count;
+  const grossApproved = Number(indicators.gross_approved);
+  const netApproved = Number(indicators.net_approved);
+  const inFinance = Number(indicators.in_finance);
+  const paid = Number(indicators.paid_total);
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
 
   return <AppShell
@@ -156,7 +172,7 @@ export default async function ContractMeasurementsPage({ searchParams }: {
       canManage={canManage} canSubmit={canSubmit} canApprove={canApprove} canFinance={canFinance} canCancel={canCancel} autoEdit={params.edit === "1"}
     /> : projectId ? <>
       <section className="measurement-kpis">
-        <article><span>Medições cadastradas</span><strong>{measurements.length}</strong><small>incluindo elaboração e histórico</small></article>
+        <article><span>Medições cadastradas</span><strong>{indicators.measurement_count}</strong><small>incluindo elaboração e histórico</small></article>
         <article><span>Aguardando aprovação</span><strong>{submittedCount}</strong><small>pendentes de análise técnica</small></article>
         <article><span>Bruto aprovado</span><strong>{money(grossApproved)}</strong><small>produção reconhecida</small></article>
         <article><span>Líquido aprovado</span><strong>{money(netApproved)}</strong><small>após retenções e descontos</small></article>

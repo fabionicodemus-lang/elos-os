@@ -18666,6 +18666,10 @@ export type Database = {
         Args: { p_company_id: string | null; p_project_id: string | null }
         Returns: Json
       }
+      execution_measurement_indicators: {
+        Args: { p_company_id: string | null; p_project_id: string | null }
+        Returns: Json
+      }
       execution_work_order_indicators: {
         Args: { p_company_id: string | null; p_project_id: string | null }
         Returns: Json
@@ -18953,6 +18957,14 @@ export type Database = {
       }
       postwork_warranties_summary: {
         Args: { p_company_id: string | null; p_project_id?: string | null }
+        Returns: Json
+      }
+      procurement_inventory_indicators: {
+        Args: {
+          p_company_id: string | null
+          p_expiry_days?: number | null
+          p_project_id: string | null
+        }
         Returns: Json
       }
       quality_indicators: {

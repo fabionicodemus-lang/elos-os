@@ -20,6 +20,14 @@ import {
 import "../../procurement-inventory.css";
 
 type Project = { id: string; code: string | null; name: string };
+type InventoryIndicators = {
+  stock_value: number;
+  active_count: number;
+  active_quantity: number;
+  low_count: number;
+  expiring_count: number;
+  active_location_count: number;
+};
 type Movement = {
   id: string;
   movement_number: string;
@@ -277,17 +285,20 @@ export default async function InventoryPage({ searchParams }: {
       movement.cost_center_name ?? "",
     ].join(" ").toLocaleLowerCase("pt-BR").includes(query));
 
-  const stockValue = balances.reduce((sum, balance) => sum + Number(balance.total_value), 0);
-  const activeBalances = balances.filter((balance) => Number(balance.quantity_on_hand) > 0);
-  const lowBalances = activeBalances.filter((balance) => (
-    Number(balance.minimum_quantity) > 0 && Number(balance.available_quantity) <= Number(balance.minimum_quantity)
-  ));
-  const expiryLimit = new Date();
-  expiryLimit.setDate(expiryLimit.getDate() + 60);
-  const expiring = activeBalances.filter((balance) => (
-    balance.expiration_date.slice(0, 10) !== "9999-12-31"
-    && new Date(`${balance.expiration_date.slice(0, 10)}T12:00:00`) <= expiryLimit
-  ));
+  // Indicadores agregados no banco, cobrindo toda a obra sem depender dos saldos
+  // carregados nesta página. Equivalência coberta por
+  // supabase/tests/20260806_0081_inventory_indicators.sql.
+  const indicatorsResult = projectId
+    ? await supabase.rpc("procurement_inventory_indicators", {
+        p_company_id: companyId, p_project_id: projectId, p_expiry_days: 60,
+      })
+    : { data: null, error: null };
+  const indicators = (indicatorsResult.data as InventoryIndicators | null) ?? {
+    stock_value: 0, active_count: 0, active_quantity: 0,
+    low_count: 0, expiring_count: 0, active_location_count: 0,
+  };
+  const stockValue = Number(indicators.stock_value);
+
   const selectedCount = params.count
     ? countsResult.data.find((count) => count.id === params.count) ?? null
     : null;
@@ -325,10 +336,10 @@ export default async function InventoryPage({ searchParams }: {
       {!projectId ? <div className="inventory-empty">Selecione uma obra no topo.</div> : <>
         <section className="inventory-kpis">
           <article><span>Valor em estoque</span><strong>{money(stockValue)}</strong><small>custo médio dos saldos atuais</small></article>
-          <article><span>Materiais com saldo</span><strong>{activeBalances.length}</strong><small>{quantity(activeBalances.reduce((sum, balance) => sum + Number(balance.quantity_on_hand), 0))} unidades consolidadas</small></article>
-          <article className={lowBalances.length ? "warning" : ""}><span>Abaixo do mínimo</span><strong>{lowBalances.length}</strong><small>necessitam reposição ou revisão</small></article>
-          <article className={expiring.length ? "warning" : ""}><span>Validade em 60 dias</span><strong>{expiring.length}</strong><small>lotes para consumo prioritário</small></article>
-          <article><span>Locais ativos</span><strong>{locations.filter((location) => location.status === "active").length}</strong><small>almoxarifados e frentes</small></article>
+          <article><span>Materiais com saldo</span><strong>{indicators.active_count}</strong><small>{quantity(Number(indicators.active_quantity))} unidades consolidadas</small></article>
+          <article className={indicators.low_count ? "warning" : ""}><span>Abaixo do mínimo</span><strong>{indicators.low_count}</strong><small>necessitam reposição ou revisão</small></article>
+          <article className={indicators.expiring_count ? "warning" : ""}><span>Validade em 60 dias</span><strong>{indicators.expiring_count}</strong><small>lotes para consumo prioritário</small></article>
+          <article><span>Locais ativos</span><strong>{indicators.active_location_count}</strong><small>almoxarifados e frentes</small></article>
         </section>
 
         <nav className="inventory-tabs">

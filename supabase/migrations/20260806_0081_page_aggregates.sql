@@ -228,4 +228,93 @@ $$;
 
 grant execute on function public.quality_indicators(uuid, uuid) to authenticated;
 
+-- ---------------------------------------------------------------------------
+-- Execução · Medições Contratuais
+-- ---------------------------------------------------------------------------
+-- Reproduz o bloco measurement-kpis. "Aprovado" cobre também as medições que já
+-- seguiram para o financeiro, porque aprovar é pré-requisito de faturar.
+create or replace function public.execution_measurement_indicators(
+  p_company_id uuid,
+  p_project_id uuid
+)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'measurement_count', count(*),
+    'submitted_count', count(*) filter (where m.status = 'submitted'),
+    'gross_approved', coalesce(sum(m.gross_amount) filter (where m.status in ('approved', 'invoiced', 'paid')), 0),
+    'net_approved', coalesce(sum(m.net_amount) filter (where m.status in ('approved', 'invoiced', 'paid')), 0),
+    'in_finance', coalesce(sum(m.net_amount) filter (where m.status in ('invoiced', 'paid')), 0),
+    'paid_total', coalesce(sum(m.paid_amount) filter (where m.status = 'paid'), 0)
+  )
+  from public.execution_contract_measurements m
+  where m.company_id = p_company_id
+    and m.project_id = p_project_id
+    and (
+      public.has_company_permission(m.company_id, 'execution.measurements.view')
+      or public.has_company_permission(m.company_id, 'execution.measurements.manage')
+    );
+$$;
+
+grant execute on function public.execution_measurement_indicators(uuid, uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Suprimentos · Estoque
+-- ---------------------------------------------------------------------------
+-- Reproduz o bloco inventory-kpis. O valor em estoque considera todos os saldos;
+-- os demais indicadores olham apenas os que ainda têm quantidade em mãos.
+--
+-- p_expiry_days mantém a janela de validade como parâmetro, em vez de fixar 60
+-- dias no banco. A data-base é a do servidor, como já era na tela.
+create or replace function public.procurement_inventory_indicators(
+  p_company_id uuid,
+  p_project_id uuid,
+  p_expiry_days integer default 60
+)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with balances as (
+    select b.*
+    from public.procurement_inventory_balances b
+    where b.company_id = p_company_id
+      and b.project_id = p_project_id
+      and (
+        public.has_company_permission(b.company_id, 'procurement.inventory.view')
+        or public.has_company_permission(b.company_id, 'procurement.inventory.manage')
+      )
+  ),
+  active as (
+    select * from balances where quantity_on_hand > 0
+  )
+  select jsonb_build_object(
+    'stock_value', (select coalesce(sum(total_value), 0) from balances),
+    'active_count', (select count(*) from active),
+    'active_quantity', (select coalesce(sum(quantity_on_hand), 0) from active),
+    'low_count', (select count(*) from active where minimum_quantity > 0 and available_quantity <= minimum_quantity),
+    -- 9999-12-31 é o marcador de "sem validade" usado pelo cadastro.
+    'expiring_count', (
+      select count(*) from active
+      where expiration_date <> date '9999-12-31'
+        and expiration_date <= current_date + p_expiry_days
+    ),
+    'active_location_count', (
+      select count(*)
+      from public.procurement_inventory_locations l
+      where l.company_id = p_company_id
+        and l.project_id = p_project_id
+        and l.status = 'active'
+    )
+  );
+$$;
+
+grant execute on function public.procurement_inventory_indicators(uuid, uuid, integer) to authenticated;
+
 commit;
