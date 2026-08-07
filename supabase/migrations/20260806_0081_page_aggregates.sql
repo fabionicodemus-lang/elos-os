@@ -317,4 +317,75 @@ $$;
 
 grant execute on function public.procurement_inventory_indicators(uuid, uuid, integer) to authenticated;
 
+-- ---------------------------------------------------------------------------
+-- Suprimentos · Pedidos de Compras
+-- ---------------------------------------------------------------------------
+-- Reproduz o bloco purchase-order-kpis. "Comprometido" exclui rascunhos, porque
+-- só o pedido emitido compromete valor; "recebido" soma todos, inclusive os já
+-- encerrados.
+create or replace function public.procurement_purchase_order_indicators(
+  p_company_id uuid,
+  p_project_id uuid
+)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'open_count', count(*) filter (where o.status not in ('closed', 'cancelled')),
+    'committed_total', coalesce(sum(o.total_amount) filter (where o.status not in ('draft', 'cancelled')), 0),
+    'received_total', coalesce(sum(o.received_amount), 0),
+    'delayed_count', count(*) filter (
+      where o.status not in ('received', 'closed', 'cancelled')
+        and o.expected_delivery_date is not null
+        and o.expected_delivery_date < current_date
+    )
+  )
+  from public.procurement_purchase_orders o
+  where o.company_id = p_company_id
+    and o.project_id = p_project_id
+    and (
+      public.has_company_permission(o.company_id, 'procurement.orders.view')
+      or public.has_company_permission(o.company_id, 'procurement.orders.manage')
+    );
+$$;
+
+grant execute on function public.procurement_purchase_order_indicators(uuid, uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Financeiro · Notas Manuais
+-- ---------------------------------------------------------------------------
+-- Reproduz o bloco de indicadores da tela. Os valores somam apenas as notas já
+-- lançadas (status approved), enquanto as contagens olham as não canceladas.
+create or replace function public.finance_manual_invoice_indicators(
+  p_company_id uuid,
+  p_project_id uuid
+)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'invoice_count', count(*),
+    'active_count', count(*) filter (where i.status <> 'cancelled'),
+    'posted_count', count(*) filter (where i.status = 'approved'),
+    'net_total', coalesce(sum(i.net_amount) filter (where i.status = 'approved'), 0),
+    'retention_total', coalesce(sum(i.total_retention_amount) filter (where i.status = 'approved'), 0),
+    'with_receipt_count', count(*) filter (where i.status <> 'cancelled' and i.material_receipt_id is not null)
+  )
+  from public.finance_manual_invoices i
+  where i.company_id = p_company_id
+    and i.project_id = p_project_id
+    and (
+      public.has_company_permission(i.company_id, 'finance.manual_invoices.view')
+      or public.has_company_permission(i.company_id, 'finance.manual_invoices.manage')
+    );
+$$;
+
+grant execute on function public.finance_manual_invoice_indicators(uuid, uuid) to authenticated;
+
 commit;

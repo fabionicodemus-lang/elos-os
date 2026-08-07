@@ -18699,6 +18699,10 @@ export type Database = {
         Args: { p_obligation_id: string | null }
         Returns: string
       }
+      finance_manual_invoice_indicators: {
+        Args: { p_company_id: string | null; p_project_id: string | null }
+        Returns: Json
+      }
       finance_register_three_way_divergence: {
         Args: {
           p_actual_value: string | null
@@ -18965,6 +18969,10 @@ export type Database = {
           p_expiry_days?: number | null
           p_project_id: string | null
         }
+        Returns: Json
+      }
+      procurement_purchase_order_indicators: {
+        Args: { p_company_id: string | null; p_project_id: string | null }
         Returns: Json
       }
       quality_indicators: {
