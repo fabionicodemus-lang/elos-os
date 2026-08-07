@@ -18955,6 +18955,10 @@ export type Database = {
         Args: { p_company_id: string | null; p_project_id?: string | null }
         Returns: Json
       }
+      quality_indicators: {
+        Args: { p_company_id: string | null; p_project_id: string | null }
+        Returns: Json
+      }
       quality_next_number: {
         Args: { p_prefix: string | null; p_project_id: string | null; p_table: string | null }
         Returns: string

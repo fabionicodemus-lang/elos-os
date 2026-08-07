@@ -146,4 +146,86 @@ $$;
 
 grant execute on function public.execution_work_order_indicators(uuid, uuid) to authenticated;
 
+-- ---------------------------------------------------------------------------
+-- Execução · Qualidade
+-- ---------------------------------------------------------------------------
+-- Reproduz a aba Indicadores: nota acumulada, aprovação na primeira inspeção,
+-- correções no prazo, não conformidades e cobertura, mais as duas quebras
+-- exibidas em barra (nota por serviço e NCs por gravidade).
+--
+-- "Concluída" é a inspeção que já recebeu nota na primeira vistoria, que é o
+-- critério usado na tela (first_inspection_score não nulo).
+create or replace function public.quality_indicators(
+  p_company_id uuid,
+  p_project_id uuid
+)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with allowed as (
+    select
+      public.has_company_permission(p_company_id, 'execution.quality.indicators')
+      or public.has_company_permission(p_company_id, 'execution.quality.view') as ok
+  ),
+  inspections as (
+    select i.*
+    from public.quality_inspections i, allowed a
+    where a.ok
+      and i.company_id = p_company_id
+      and i.project_id = p_project_id
+  ),
+  completed as (
+    select * from inspections where first_inspection_score is not null
+  ),
+  ncs as (
+    select n.*
+    from public.quality_nonconformities n, allowed a
+    where a.ok
+      and n.company_id = p_company_id
+      and n.project_id = p_project_id
+  ),
+  closed as (
+    select * from ncs where status = 'closed'
+  ),
+  by_service as (
+    select coalesce(jsonb_agg(jsonb_build_object(
+      'service_id', service_id, 'average', average, 'count', total
+    ) order by average desc, total desc), '[]'::jsonb) as items
+    from (
+      select service_id,
+             round(avg(first_inspection_score), 4) as average,
+             count(*) as total
+      from completed
+      group by service_id
+    ) grouped
+  ),
+  by_severity as (
+    select coalesce(jsonb_object_agg(severity, jsonb_build_object('total', total, 'open', open_total)), '{}'::jsonb) as items
+    from (
+      select severity,
+             count(*) as total,
+             count(*) filter (where status <> 'closed') as open_total
+      from ncs
+      group by severity
+    ) grouped
+  )
+  select jsonb_build_object(
+    'inspection_count', (select count(*) from inspections),
+    'completed_count', (select count(*) from completed),
+    'average_score', coalesce((select round(avg(first_inspection_score), 4) from completed), 0),
+    'first_pass_count', (select count(*) from completed where first_inspection_score >= 80),
+    'open_nc_count', (select count(*) from ncs where status <> 'closed'),
+    'closed_nc_count', (select count(*) from closed),
+    'on_time_nc_count', (select count(*) from closed where closed_at is not null and closed_at <= due_at),
+    'blocked_count', (select count(*) from inspections where release_status = 'blocked'),
+    'score_by_service', (select items from by_service),
+    'nc_by_severity', (select items from by_severity)
+  );
+$$;
+
+grant execute on function public.quality_indicators(uuid, uuid) to authenticated;
+
 commit;
