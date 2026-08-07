@@ -113,4 +113,37 @@ $$;
 
 grant execute on function public.execution_daily_log_indicators(uuid, uuid) to authenticated;
 
+-- ---------------------------------------------------------------------------
+-- Execução · Ordens de Serviço
+-- ---------------------------------------------------------------------------
+-- Reproduz o bloco work-order-kpis: totais de toda a obra, com os valores
+-- financeiros ignorando ordens canceladas.
+create or replace function public.execution_work_order_indicators(
+  p_company_id uuid,
+  p_project_id uuid
+)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'order_count', count(*),
+    'active_count', count(*) filter (where o.status in ('released', 'in_progress', 'paused', 'pending_acceptance')),
+    'pending_acceptance_count', count(*) filter (where o.status = 'pending_acceptance'),
+    'authorized_total', coalesce(sum(o.authorized_value) filter (where o.status <> 'cancelled'), 0),
+    'executed_total', coalesce(sum(o.executed_value) filter (where o.status <> 'cancelled'), 0)
+  )
+  from public.execution_work_orders o
+  where o.company_id = p_company_id
+    and o.project_id = p_project_id
+    and (
+      public.has_company_permission(o.company_id, 'execution.work_orders.view')
+      or public.has_company_permission(o.company_id, 'execution.work_orders.manage')
+    );
+$$;
+
+grant execute on function public.execution_work_order_indicators(uuid, uuid) to authenticated;
+
 commit;

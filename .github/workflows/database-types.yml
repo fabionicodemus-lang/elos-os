@@ -63,5 +63,13 @@ jobs:
           PGPASSWORD: shadow
         run: ops/check-database-types.sh
 
+      - name: Testes SQL
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: shadow
+        run: ops/run-sql-tests.sh elos_shadow
+
       - name: Typecheck
         run: npm run typecheck

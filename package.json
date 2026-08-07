@@ -11,6 +11,7 @@
     "db:shadow": "ops/build-shadow-db.sh",
     "db:types": "node ops/generate-database-types.mjs \"postgresql://postgres:shadow@127.0.0.1:5432/elos_shadow\" types/database.ts",
     "db:types:check": "ops/check-database-types.sh",
+    "db:test": "ops/run-sql-tests.sh",
     "test": "node --test app/engenharia/curvas/curve-calculations.test.mjs app/engenharia/curvas/month-window.test.mjs app/engenharia/contratos/contract-calculations.test.mjs app/engenharia/cronograma/schedule-generation.test.mjs app/engenharia/cronograma/schedule-portable.test.mjs app/engenharia/cronograma/schedule-cascade.test.mjs lib/forecast/engine.test.mjs lib/forecast/snapshot-comparison.test.mjs",
     "test:performance": "node --test --test-concurrency=1 tests/performance/forecast-load-scenarios.test.mjs"
   },

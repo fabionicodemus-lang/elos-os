@@ -1,3 +1,4 @@
+-- requires: shadow
 -- Prova que execution_daily_log_indicators devolve os mesmos números que o
 -- painel calculava em memória (DailyLogIndicators, daily-log-views.tsx).
 --
