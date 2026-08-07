@@ -43,7 +43,11 @@ if (!entryIds.length) {
       const childPort = 18_100 + index;
       const child = spawn(
         process.execPath,
-        [new URL("./promote-financial-receipt-material-pilot.js", import.meta.url).pathname],
+        [
+          "--import",
+          new URL("./financial-receipt-write-guard.js", import.meta.url).pathname,
+          new URL("./promote-financial-receipt-material-pilot.js", import.meta.url).pathname,
+        ],
         {
           env: {
             ...process.env,
