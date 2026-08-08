@@ -270,14 +270,14 @@ export default async function FinancialReportsPage({
     bucketMap.set(key, bucket);
   });
 
+  const sortedBuckets = [...bucketMap.values()].sort((a, b) => a.key.localeCompare(b.key));
+  const buckets: PeriodBucket[] = [];
   let accumulated = 0;
-  const buckets: PeriodBucket[] = [...bucketMap.values()]
-    .sort((a, b) => a.key.localeCompare(b.key))
-    .map((bucket) => {
-      const balance = bucket.revenueRealized + bucket.revenueForecast - bucket.expenseRealized - bucket.expenseForecast;
-      accumulated += balance;
-      return { ...bucket, balance, accumulated };
-    });
+  for (const bucket of sortedBuckets) {
+    const balance = bucket.revenueRealized + bucket.revenueForecast - bucket.expenseRealized - bucket.expenseForecast;
+    accumulated += balance;
+    buckets.push({ ...bucket, balance, accumulated });
+  }
 
   const aging = [
     { label: "1 a 30 dias", from: 1, to: 30, amount: 0, count: 0 },
