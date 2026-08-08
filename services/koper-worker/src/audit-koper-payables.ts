@@ -171,6 +171,21 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (target === "origin-fallback-plan") {
+    await import("./plan-origin-fallback-material-receipts.js");
+    return;
+  }
+
+  if (target === "raw-item-fallback-plan") {
+    await import("./plan-raw-order-item-fallback-material-receipts.js");
+    return;
+  }
+
+  if (target === "resolve-receipt-orders") {
+    await import("./resolve-all-financial-receipt-orders.js");
+    return;
+  }
+
   throw new Error(`Unsupported KOPER_AUDIT_TARGET: ${target}`);
 }
 
