@@ -16,6 +16,7 @@ type SearchResult = {
 };
 
 type SearchTask = () => Promise<SearchResult[]>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- linha genérica de resultado do Supabase
 type Row = Record<string, any>;
 type RelatedProject = { id?: string; name?: string; code?: string | null };
 
@@ -130,6 +131,7 @@ function destination(href: string, resultProjectId: string | null | undefined, a
 
 export async function GET(request: NextRequest) {
   const { supabase, companyId, projectId, role } = await resolveActiveWorkspace();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- consultas dinâmicas por tabela sobre o cliente tipado do Supabase
   const db = supabase as any;
   const term = cleanTerm(request.nextUrl.searchParams.get("q") ?? "");
   const scope = request.nextUrl.searchParams.get("scope") === "company" ? "company" : "project";
@@ -148,6 +150,7 @@ export async function GET(request: NextRequest) {
   const like = `%${term}%`;
   const tasks: SearchTask[] = [];
   const add = (enabled: boolean, task: SearchTask) => { if (enabled) tasks.push(task); };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- encadeamento genérico do query builder do Supabase
   const scoped = (query: any) => scopeProjectId ? query.eq("project_id", scopeProjectId) : query;
 
   const safeTask = (task: () => Promise<SearchResult[]>): SearchTask => async () => {
