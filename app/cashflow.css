@@ -23,7 +23,7 @@
 .cashflow-filter button {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #d7e0df;
+  border: 1px solid var(--line);
   border-radius: 11px;
   padding: 0 11px;
   color: var(--foreground);
@@ -107,16 +107,16 @@
 .cashflow-chart {
   min-height: 300px;
   padding: 12px 14px 0;
-  border: 1px solid #e5eceb;
+  border: 1px solid var(--line);
   border-radius: 14px;
   display: flex;
   align-items: flex-end;
   gap: 10px;
   background:
-    linear-gradient(to top, transparent 24%, #edf2f1 25%, transparent 26%),
-    linear-gradient(to top, transparent 49%, #edf2f1 50%, transparent 51%),
-    linear-gradient(to top, transparent 74%, #edf2f1 75%, transparent 76%),
-    #fbfdfc;
+    linear-gradient(to top, transparent 24%, var(--background) 25%, transparent 26%),
+    linear-gradient(to top, transparent 49%, var(--background) 50%, transparent 51%),
+    linear-gradient(to top, transparent 74%, var(--background) 75%, transparent 76%),
+    var(--background);
 }
 
 .cashflow-period {
@@ -130,7 +130,7 @@
 .cashflow-bars {
   height: 222px;
   padding: 0 5px;
-  border-bottom: 1px solid #b9c8c6;
+  border-bottom: 1px solid var(--line);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -150,7 +150,7 @@
 
 .cashflow-period strong {
   font-size: 10px;
-  color: #435153;
+  color: var(--muted);
 }
 
 .cashflow-period small {

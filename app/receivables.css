@@ -7,7 +7,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 22px;
-  background: linear-gradient(135deg, #ffffff, #f1faf9);
+  background: linear-gradient(135deg, var(--card), var(--brand-soft));
   box-shadow: 0 10px 30px rgba(30, 51, 50, 0.05);
 }
 
@@ -63,7 +63,7 @@
 .receivable-filter button {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #d7e0df;
+  border: 1px solid var(--line);
   border-radius: 11px;
   padding: 0 11px;
   color: var(--foreground);
@@ -106,7 +106,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 24px;
-  background: linear-gradient(135deg, #ffffff 0%, #edf9f7 100%);
+  background: linear-gradient(135deg, var(--card) 0%, var(--brand-soft) 100%);
   box-shadow: 0 12px 32px rgba(27, 54, 52, 0.06);
 }
 
