@@ -449,7 +449,7 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
   const proposalSummary = (proposalSummaryResult.data ?? {}) as Partial<ProposalSummary>;
   const salesSummary = (salesSummaryResult.data ?? {}) as Partial<SalesSummary>;
   const payablesSummary = (payablesSummaryResult.data ?? {}) as Partial<PayablesSummary>;
-  const receivablesSummary = (receivablesSummaryResult.data ?? {}) as Partial<ReceivablesSummary>;
+  const _receivablesSummary = (receivablesSummaryResult.data ?? {}) as Partial<ReceivablesSummary>;
   const assistanceSummary = (assistanceSummaryResult.data ?? {}) as Partial<AssistanceSummary>;
 
   const selectedBaseline = baselines.find((item) => item.status === "approved") ?? baselines[0] ?? null;

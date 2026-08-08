@@ -68,7 +68,6 @@ const MODULES = [
   ["other", "Outros dados"],
 ] as const;
 
-const MODULE_LABELS = Object.fromEntries(MODULES) as Record<string, string>;
 const STATUS_LABELS: Record<string, string> = {
   processing: "Gerando",
   ready: "Disponível",

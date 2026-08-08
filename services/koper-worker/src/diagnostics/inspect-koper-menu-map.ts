@@ -55,19 +55,6 @@ function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function sanitizeHref(rawHref: string | null): string | null {
-  if (!rawHref) return null;
-
-  try {
-    const parsed = new URL(rawHref, window.location.href);
-    parsed.search = "";
-    parsed.hash = "";
-    return parsed.toString();
-  } catch {
-    return rawHref.slice(0, 500);
-  }
-}
-
 async function collectInteractive(page: Page): Promise<InteractiveEntry[]> {
   return page.evaluate(() => {
     const normalize = (value: string): string => value.replace(/\s+/g, " ").trim();

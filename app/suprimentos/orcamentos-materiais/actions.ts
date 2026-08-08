@@ -8,7 +8,6 @@ const PATH = "/suprimentos/orcamentos-materiais";
 
 function text(formData: FormData, key: string) { return String(formData.get(key) ?? "").trim(); }
 function optional(formData: FormData, key: string) { return text(formData, key) || null; }
-function numberValue(formData: FormData, key: string, fallback = 0) { const value = Number(text(formData, key).replace(",", ".")); return Number.isFinite(value) ? value : fallback; }
 function integerValue(formData: FormData, key: string) { const value = Number.parseInt(text(formData, key), 10); return Number.isFinite(value) ? value : null; }
 function jsonArray(formData: FormData, key: string) { try { const value = JSON.parse(text(formData, key) || "[]"); return Array.isArray(value) ? value : []; } catch { return []; } }
 function safeName(name: string) {

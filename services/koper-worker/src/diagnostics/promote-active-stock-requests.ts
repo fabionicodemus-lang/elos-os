@@ -4,7 +4,6 @@ import { requestSupabase } from "../elos/supabase.js";
 type StagingRow = { koper_id: string; koper_parent_id: string | null; payload: unknown };
 type InputRow = { id: string; source_id: string | null; code: string; description: string; unit: string; category: string };
 type ServiceRow = { id: string; source_id: string | null; code: string; description: string };
-type BudgetItemRow = { koper_id: string; payload: unknown };
 
 function objectValue(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
