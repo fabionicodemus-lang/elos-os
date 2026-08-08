@@ -21,10 +21,10 @@
   bottom: 1px;
   width: 36px;
   border: 0;
-  border-left: 1px solid #d7e1df;
+  border-left:1px solid var(--line);
   border-radius: 0 9px 9px 0;
-  color: #46615d;
-  background: #f7faf9;
+  color:var(--foreground);
+  background:#f7faf9;
   cursor: pointer;
   font-size: 13px;
 }
@@ -32,7 +32,7 @@
 .creatable-combobox-toggle:hover,
 .creatable-combobox-toggle:focus-visible {
   color: var(--brand);
-  background: #edf7f5;
+  background:var(--brand-soft);
   outline: none;
 }
 
@@ -45,9 +45,9 @@
   max-height: 250px;
   overflow-y: auto;
   padding: 6px;
-  border: 1px solid #cddbd8;
+  border:1px solid var(--line);
   border-radius: 11px;
-  background: #fff;
+  background:#fff;
   box-shadow: 0 16px 34px rgba(15, 43, 39, 0.16);
 }
 
@@ -61,7 +61,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: #273936;
+  color:var(--foreground);
   background: transparent;
   cursor: pointer;
   font: inherit;
@@ -70,7 +70,7 @@
 
 .creatable-combobox-option:hover,
 .creatable-combobox-option.active {
-  background: #edf7f5;
+  background:var(--brand-soft);
 }
 
 .creatable-combobox-option b {
@@ -84,7 +84,7 @@
   align-items: flex-start;
   flex-direction: column;
   gap: 2px;
-  border-top: 1px solid #e1e9e7;
+  border-top:1px solid var(--line);
   color: var(--brand);
 }
 
@@ -93,13 +93,13 @@
 }
 
 .creatable-combobox-option.create span {
-  color: #5f726f;
+  color:var(--muted);
   font-size: 10px;
 }
 
 .creatable-combobox-empty {
   padding: 12px;
-  color: #748582;
+  color:var(--muted);
   font-size: 11px;
   text-align: center;
 }

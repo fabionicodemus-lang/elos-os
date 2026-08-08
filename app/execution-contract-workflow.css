@@ -35,7 +35,7 @@
 /* Compatibilidade com o tema atual do Elos OS e correção do posicionamento nativo do dialog. */
 :root{
   --surface:var(--card,#fff);
-  --border:var(--line,#e5eae8);
+  --border:var(--line,var(--line));
   --text:var(--foreground,#16211f);
 }
 .contract-workflow-dialog{
@@ -43,19 +43,19 @@
   inset:0!important;
   margin:auto!important;
   background:#fff!important;
-  color:var(--foreground,#16211f)!important;
-  border:1px solid var(--line,#e5eae8)!important;
+  color:var(--foreground,var(--foreground))!important;
+  border:1px solid var(--line,var(--line))!important;
   overflow:hidden;
   isolation:isolate;
 }
 .contract-workflow-dialog>form{
   background:#fff;
-  color:var(--foreground,#16211f);
+  color:var(--foreground,var(--foreground));
 }
 .contract-workflow-dialog>form>header,
 .contract-workflow-dialog>form>footer{
   background:#fff;
-  border-color:var(--line,#e5eae8);
+  border-color:var(--line,var(--line));
 }
 .contract-workflow-dialog .workflow-dialog-body{
   background:#fff;
@@ -64,8 +64,8 @@
 .contract-workflow-dialog select,
 .contract-workflow-dialog textarea{
   background:#fff!important;
-  color:var(--foreground,#16211f)!important;
-  border-color:var(--line,#d7e0df)!important;
+  color:var(--foreground,var(--foreground))!important;
+  border-color:var(--line,var(--line))!important;
 }
 .contract-workflow-dialog::backdrop{
   background:rgba(7,26,24,.62);
@@ -80,6 +80,6 @@
 .competition-context,
 .competition-approval{
   background:#fff;
-  border-color:var(--line,#e5eae8);
-  color:var(--foreground,#16211f);
+  border-color:var(--line,var(--line));
+  color:var(--foreground,var(--foreground));
 }
