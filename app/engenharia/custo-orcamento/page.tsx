@@ -68,10 +68,15 @@ export default async function CostVsBudgetPage({
   const query = (params.q ?? "").trim().toLowerCase();
   const status = Object.keys(statusLabels).includes(params.status ?? "") ? params.status! : "";
   const rows = context.rows.filter((row) => matchesFilter(row, query, status));
+  const comparableRows = context.rows.filter((row) => row.status !== "unallocated");
   const projectLabel = context.project
     ? `${context.project.code ? `${context.project.code} · ` : ""}${context.project.name}`
     : "Selecione uma obra";
   const balanceIsNegative = context.totals.balance < -0.01;
+  const purchaseOrderTotal = comparableRows.reduce((sum, row) => sum + row.purchaseOrderCost, 0);
+  const materialTotal = comparableRows.reduce((sum, row) => sum + row.materialCost, 0);
+  const serviceTotal = comparableRows.reduce((sum, row) => sum + row.serviceCost, 0);
+  const directTotal = comparableRows.reduce((sum, row) => sum + row.directCost, 0);
 
   return (
     <AppShell
@@ -79,7 +84,7 @@ export default async function CostVsBudgetPage({
       activeItem="cost-vs-budget"
       eyebrow="Engenharia · Gestão de Custos"
       title="Custo x Orçamento"
-      description={`${company.name} · ${projectLabel} · comparação do orçamento com o custo apropriado em cada serviço.`}
+      description={`${company.name} · ${projectLabel} · orçamento, custo realizado e compromissos por serviço.`}
       actions={
         <>
           <Link className="elos-button" href="/engenharia/orcamentos">Abrir orçamentos</Link>
@@ -114,7 +119,7 @@ export default async function CostVsBudgetPage({
               <span>Orçamento comparado</span>
               <strong>{context.budget.code} · {context.budget.version} · {context.budget.name}</strong>
               <small>
-                {context.budget.is_base ? "Orçamento base da obra" : "Revisão selecionada"} · {statusLabels.ok.toLowerCase()} até 89,9%
+                {context.budget.is_base ? "Orçamento base da obra" : "Revisão selecionada"} · situação calculada pelo custo total previsto
               </small>
             </div>
             {context.budgets.length > 1 ? (
@@ -138,42 +143,44 @@ export default async function CostVsBudgetPage({
               <small>total da revisão selecionada</small>
             </article>
             <article className="actual">
-              <span>Custo alocado</span>
+              <span>Custo realizado</span>
               <strong>{money(context.totals.allocated)}</strong>
-              <small>materiais, medições e despesas diretas</small>
+              <small>consumos, medições e despesas diretas</small>
+            </article>
+            <article className="committed">
+              <span>Comprometido pendente</span>
+              <strong>{money(context.totals.committed)}</strong>
+              <small>saldo dos pedidos ainda não realizado</small>
+            </article>
+            <article className={context.totals.consumptionPercent > 100 ? "danger" : "committed"}>
+              <span>Custo total previsto</span>
+              <strong>{money(context.totals.forecast)}</strong>
+              <small>{percent(context.totals.consumptionPercent)} do orçamento</small>
             </article>
             <article className={balanceIsNegative ? "danger" : "ok"}>
               <span>Saldo do orçamento</span>
               <strong>{money(context.totals.balance)}</strong>
-              <small>{balanceIsNegative ? "custo acima do orçamento" : "valor ainda disponível"}</small>
-            </article>
-            <article className={context.totals.consumptionPercent > 100 ? "danger" : "committed"}>
-              <span>Orçamento consumido</span>
-              <strong>{percent(context.totals.consumptionPercent)}</strong>
-              <small>custo alocado ÷ orçamento</small>
+              <small>{balanceIsNegative ? "previsão acima do orçamento" : "valor ainda disponível"}</small>
             </article>
             <article className={context.totals.unallocated > 0 ? "danger" : "ok"}>
-              <span>Custo sem apropriação</span>
+              <span>Sem apropriação</span>
               <strong>{money(context.totals.unallocated)}</strong>
-              <small>precisa ser vinculado a um serviço</small>
-            </article>
-            <article className={context.totals.overBudgetCount + context.totals.withoutBudgetCount > 0 ? "danger" : "ok"}>
-              <span>Centros críticos</span>
-              <strong>{context.totals.overBudgetCount + context.totals.withoutBudgetCount}</strong>
-              <small>{context.totals.overBudgetCount} estourado(s) · {context.totals.withoutBudgetCount} sem orçamento</small>
+              <small>
+                {context.totals.overBudgetCount + context.totals.withoutBudgetCount} centro(s) crítico(s)
+              </small>
             </article>
           </section>
 
           <section className="forecast-formula-panel">
             <div>
-              <span>Critério de apropriação</span>
-              <h2>O custo entra no serviço somente quando está efetivamente apropriado</h2>
+              <span>Critério de comparação</span>
+              <h2>Os pedidos importados do Koper entram no mesmo serviço do orçamento</h2>
             </div>
             <div className="forecast-formula">
-              <span>Materiais consumidos</span><b>+</b><span>Medições aprovadas</span><b>+</b><span>Despesas diretas</span><b>=</b><strong>Custo alocado</strong>
+              <span>Custo realizado</span><b>+</b><span>Comprometido pendente</span><b>=</b><strong>Custo total previsto</strong>
             </div>
             <p>
-              Materiais são reconhecidos pelas saídas do estoque e devoluções reduzem o custo. Serviços entram pelas medições aprovadas, faturadas ou pagas. Notas diretas entram somente quando não estão ligadas a medição, pedido ou recebimento, evitando dupla contagem.
+              Os pedidos confirmados, recebidos ou encerrados são agrupados pelo serviço gravado no item da compra. Quando já existe consumo de material no mesmo serviço, esse valor reduz o saldo comprometido do pedido para evitar dupla contagem. Pedidos cancelados e quantidades canceladas não entram na previsão.
             </p>
           </section>
 
@@ -209,15 +216,17 @@ export default async function CostVsBudgetPage({
               <p>{rows.length} linha(s) exibida(s)</p>
             </div>
             <div className="registry-table-wrap">
-              <table className="registry-table forecast-service-table" style={{ minWidth: 1380 }}>
+              <table className="registry-table forecast-service-table" style={{ minWidth: 1780 }}>
                 <thead>
                   <tr>
                     <th>Centro de custo · Serviço</th>
                     <th>Orçamento</th>
-                    <th>Materiais</th>
+                    <th>Materiais realizados</th>
                     <th>Serviços medidos</th>
                     <th>Despesas diretas</th>
-                    <th>Custo alocado</th>
+                    <th>Pedidos emitidos</th>
+                    <th>Comprometido pendente</th>
+                    <th>Custo previsto</th>
                     <th>Saldo</th>
                     <th>Consumo</th>
                     <th>Situação</th>
@@ -233,7 +242,9 @@ export default async function CostVsBudgetPage({
                         <td>{money(row.materialCost)}</td>
                         <td>{money(row.serviceCost)}</td>
                         <td>{money(row.directCost)}</td>
-                        <td><strong>{money(row.allocatedCost)}</strong></td>
+                        <td>{money(row.purchaseOrderCost)}</td>
+                        <td>{money(row.openCommitment)}</td>
+                        <td><strong>{money(row.forecastCost)}</strong></td>
                         <td>
                           <strong className={row.balance < 0 ? "forecast-danger" : row.balance > 0 ? "forecast-positive" : ""}>
                             {money(row.balance)}
@@ -260,17 +271,19 @@ export default async function CostVsBudgetPage({
                     );
                   })}
                   {rows.length === 0 ? (
-                    <tr><td colSpan={9} className="budget-empty-state"><strong>Nenhum centro de custo encontrado.</strong><span>Revise os filtros aplicados.</span></td></tr>
+                    <tr><td colSpan={11} className="budget-empty-state"><strong>Nenhum centro de custo encontrado.</strong><span>Revise os filtros aplicados.</span></td></tr>
                   ) : null}
                 </tbody>
                 <tfoot>
                   <tr>
                     <th>Total da obra</th>
                     <th>{money(context.totals.budget)}</th>
-                    <th>{money(context.rows.reduce((sum, row) => sum + row.materialCost, 0))}</th>
-                    <th>{money(context.rows.reduce((sum, row) => sum + row.serviceCost, 0))}</th>
-                    <th>{money(context.rows.reduce((sum, row) => sum + row.directCost, 0))}</th>
-                    <th>{money(context.totals.recognized)}</th>
+                    <th>{money(materialTotal)}</th>
+                    <th>{money(serviceTotal)}</th>
+                    <th>{money(directTotal)}</th>
+                    <th>{money(purchaseOrderTotal)}</th>
+                    <th>{money(context.totals.committed)}</th>
+                    <th>{money(context.totals.forecast)}</th>
                     <th className={balanceIsNegative ? "forecast-danger" : ""}>{money(context.totals.balance)}</th>
                     <th>{percent(context.totals.consumptionPercent)}</th>
                     <th>—</th>
