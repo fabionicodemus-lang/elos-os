@@ -33,7 +33,7 @@ export function StageMeasurementDialog({ contracts, stages, measurement, measure
   measurementItems?: StageMeasurementItemRecord[]; selectedContractId?: string; autoOpen?: boolean; label?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const range = useMemo(monthRange, []);
+  const range = useMemo(() => monthRange(), []);
   const initialContractId = measurement?.contract_id ?? selectedContractId ?? contracts[0]?.id ?? "";
   const [contractId, setContractId] = useState(initialContractId);
   const [rows, setRows] = useState<Row[]>([]);
