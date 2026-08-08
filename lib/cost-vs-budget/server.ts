@@ -42,6 +42,22 @@ type InventoryMovement = {
   total_value: number;
 };
 
+type PurchaseOrder = {
+  id: string;
+  status: "confirmed" | "partially_received" | "received" | "closed";
+};
+
+type PurchaseOrderItem = {
+  order_id: string;
+  cost_center_service_id: string | null;
+  cost_center_code: string | null;
+  cost_center_name: string | null;
+  ordered_quantity: number;
+  cancelled_quantity: number;
+  delivered_unit_cost: number;
+  total_amount: number;
+};
+
 type ContractMeasurement = {
   id: string;
   status: "approved" | "invoiced" | "paid";
@@ -92,12 +108,15 @@ type WorkingRow = {
   materialCost: number;
   serviceCost: number;
   directCost: number;
+  purchaseOrderCost: number;
 };
 
 export type CostVsBudgetStatus = "ok" | "attention" | "over" | "no_budget" | "unallocated";
 
 export type CostVsBudgetRow = WorkingRow & {
   allocatedCost: number;
+  openCommitment: number;
+  forecastCost: number;
   balance: number;
   consumptionPercent: number;
   status: CostVsBudgetStatus;
@@ -106,6 +125,8 @@ export type CostVsBudgetRow = WorkingRow & {
 export type CostVsBudgetTotals = {
   budget: number;
   allocated: number;
+  committed: number;
+  forecast: number;
   unallocated: number;
   recognized: number;
   balance: number;
@@ -130,10 +151,21 @@ function number(value: number | string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function activeOrderItemValue(item: PurchaseOrderItem) {
+  const orderedQuantity = Math.max(0, number(item.ordered_quantity));
+  const cancelledQuantity = Math.min(orderedQuantity, Math.max(0, number(item.cancelled_quantity)));
+  const activeQuantity = Math.max(0, orderedQuantity - cancelledQuantity);
+  const totalAmount = Math.max(0, number(item.total_amount));
+  if (orderedQuantity > 0 && totalAmount > 0) return totalAmount * activeQuantity / orderedQuantity;
+  return activeQuantity * Math.max(0, number(item.delivered_unit_cost));
+}
+
 function emptyTotals(): CostVsBudgetTotals {
   return {
     budget: 0,
     allocated: 0,
+    committed: 0,
+    forecast: 0,
     unallocated: 0,
     recognized: 0,
     balance: 0,
@@ -145,11 +177,11 @@ function emptyTotals(): CostVsBudgetTotals {
   };
 }
 
-function classifyRow(row: WorkingRow, allocatedCost: number): CostVsBudgetStatus {
+function classifyRow(row: WorkingRow, forecastCost: number): CostVsBudgetStatus {
   if (row.id === UNALLOCATED_COST_ID || row.id === BUDGET_WITHOUT_SERVICE_ID) return "unallocated";
-  if (row.budgetAmount <= 0 && allocatedCost > 0.01) return "no_budget";
-  if (allocatedCost > row.budgetAmount + 0.01) return "over";
-  if (row.budgetAmount > 0 && allocatedCost / row.budgetAmount >= 0.9) return "attention";
+  if (row.budgetAmount <= 0 && forecastCost > 0.01) return "no_budget";
+  if (forecastCost > row.budgetAmount + 0.01) return "over";
+  if (row.budgetAmount > 0 && forecastCost / row.budgetAmount >= 0.9) return "attention";
   return "ok";
 }
 
@@ -227,6 +259,8 @@ export async function loadCostVsBudget({
   const [
     budgetItemsResult,
     movementsResult,
+    purchaseOrdersResult,
+    purchaseOrderItemsResult,
     measurementsResult,
     measurementItemsResult,
     manualInvoicesResult,
@@ -254,6 +288,25 @@ export async function loadCostVsBudget({
         .in("movement_type", ["issue", "adjustment_out", "return_to_stock"])
         .range(from, to);
       return { data: (data ?? []) as InventoryMovement[], error };
+    }),
+    fetchAllRows<PurchaseOrder>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("procurement_purchase_orders")
+        .select("id, status")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .in("status", ["confirmed", "partially_received", "received", "closed"])
+        .range(from, to);
+      return { data: (data ?? []) as PurchaseOrder[], error };
+    }),
+    fetchAllRows<PurchaseOrderItem>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("procurement_purchase_order_items")
+        .select("order_id, cost_center_service_id, cost_center_code, cost_center_name, ordered_quantity, cancelled_quantity, delivered_unit_cost, total_amount")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .range(from, to);
+      return { data: (data ?? []) as PurchaseOrderItem[], error };
     }),
     fetchAllRows<ContractMeasurement>(async (from, to) => {
       const { data, error } = await supabase
@@ -318,6 +371,8 @@ export async function loadCostVsBudget({
     ...initialErrors,
     budgetItemsResult.error?.message,
     movementsResult.error?.message,
+    purchaseOrdersResult.error?.message,
+    purchaseOrderItemsResult.error?.message,
     measurementsResult.error?.message,
     measurementItemsResult.error?.message,
     manualInvoicesResult.error?.message,
@@ -342,6 +397,7 @@ export async function loadCostVsBudget({
       materialCost: 0,
       serviceCost: 0,
       directCost: 0,
+      purchaseOrderCost: 0,
     };
     rows.set(id, next);
     return next;
@@ -368,6 +424,19 @@ export async function loadCostVsBudget({
     );
     const sign = movement.movement_type === "return_to_stock" ? -1 : 1;
     row.materialCost += sign * number(movement.total_value);
+  }
+
+  const activePurchaseOrderIds = new Set(purchaseOrdersResult.data.map((order) => order.id));
+  for (const item of purchaseOrderItemsResult.data) {
+    if (!activePurchaseOrderIds.has(item.order_id)) continue;
+    const id = item.cost_center_service_id ?? UNALLOCATED_COST_ID;
+    const row = ensureRow(
+      id,
+      item.cost_center_service_id,
+      item.cost_center_code ?? "SEM-APROPRIAÇÃO",
+      item.cost_center_name ?? "Pedidos de compra sem centro de custo",
+    );
+    row.purchaseOrderCost += activeOrderItemValue(item);
   }
 
   const approvedMeasurementIds = new Set(measurementsResult.data.map((measurement) => measurement.id));
@@ -413,26 +482,35 @@ export async function loadCostVsBudget({
   const resultRows = [...rows.values()]
     .map<CostVsBudgetRow>((row) => {
       const allocatedCost = row.materialCost + row.serviceCost + row.directCost;
-      const balance = row.budgetAmount - allocatedCost;
+      const openCommitment = Math.max(0, row.purchaseOrderCost - Math.max(0, row.materialCost));
+      const forecastCost = allocatedCost + openCommitment;
+      const balance = row.budgetAmount - forecastCost;
       const consumptionPercent = row.budgetAmount > 0
-        ? allocatedCost / row.budgetAmount * 100
-        : allocatedCost > 0 ? 100 : 0;
+        ? forecastCost / row.budgetAmount * 100
+        : forecastCost > 0 ? 100 : 0;
       return {
         ...row,
         allocatedCost,
+        openCommitment,
+        forecastCost,
         balance,
         consumptionPercent,
-        status: classifyRow(row, allocatedCost),
+        status: classifyRow(row, forecastCost),
       };
     })
-    .filter((row) => Math.abs(row.budgetAmount) > 0.01 || Math.abs(row.allocatedCost) > 0.01)
+    .filter((row) => Math.abs(row.budgetAmount) > 0.01 || Math.abs(row.forecastCost) > 0.01)
     .sort((a, b) => statusOrder[a.status] - statusOrder[b.status]
       || a.code.localeCompare(b.code, "pt-BR", { numeric: true }));
 
   const totals = resultRows.reduce<CostVsBudgetTotals>((summary, row) => {
     summary.budget += row.budgetAmount;
-    if (row.id === UNALLOCATED_COST_ID) summary.unallocated += row.allocatedCost;
-    else summary.allocated += row.allocatedCost;
+    summary.recognized += row.allocatedCost;
+    if (row.id === UNALLOCATED_COST_ID) {
+      summary.unallocated += row.forecastCost;
+    } else {
+      summary.allocated += row.allocatedCost;
+      summary.committed += row.openCommitment;
+    }
     if (row.id === BUDGET_WITHOUT_SERVICE_ID) summary.budgetWithoutService += row.budgetAmount;
     if (row.status === "over") summary.overBudgetCount += 1;
     if (row.status === "attention") summary.attentionCount += 1;
@@ -440,9 +518,9 @@ export async function loadCostVsBudget({
     return summary;
   }, emptyTotals());
 
-  totals.recognized = totals.allocated + totals.unallocated;
-  totals.balance = totals.budget - totals.allocated;
-  totals.consumptionPercent = totals.budget > 0 ? totals.allocated / totals.budget * 100 : 0;
+  totals.forecast = totals.allocated + totals.committed;
+  totals.balance = totals.budget - totals.forecast;
+  totals.consumptionPercent = totals.budget > 0 ? totals.forecast / totals.budget * 100 : 0;
 
   return {
     project: projectResult.data as Project | null,
