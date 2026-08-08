@@ -23,9 +23,6 @@ function parseLocaleNumber(rawValue: string, fallback = Number.NaN) {
   return Number.isFinite(value) ? value : fallback;
 }
 
-function numberValue(formData: FormData, key: string, fallback = Number.NaN) {
-  return parseLocaleNumber(text(formData, key), fallback);
-}
 
 function optionalNumber(formData: FormData, key: string) {
   const raw = text(formData, key);

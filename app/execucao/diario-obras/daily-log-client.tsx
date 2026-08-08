@@ -36,7 +36,6 @@ function localToday() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 function numeric(value: string, fallback = 0) { const result = Number(value); return Number.isFinite(result) ? result : fallback; }
-function dateTimeLocal(value: string | null) { return value ? value.slice(0, 16) : ""; }
 
 export function DailyLogCreateDialog({ defaultDate, defaultShift = "day", allowComplementary = false, autoOpen = false, buttonLabel = "+ Criar novo diário" }: {
   defaultDate?: string; defaultShift?: string; allowComplementary?: boolean; autoOpen?: boolean; buttonLabel?: string;

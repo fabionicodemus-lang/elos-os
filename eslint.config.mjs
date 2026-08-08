@@ -23,6 +23,15 @@ const eslintConfig = defineConfig([
       "react-hooks/immutability": "warn",
       "react-hooks/use-memo": "warn",
       "react-hooks/set-state-in-effect": "warn",
+      // Prefixo "_" marca identificadores intencionalmente não usados
+      // (ex.: pular campos em desestruturação posicional).
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+        destructuredArrayIgnorePattern: "^_",
+        ignoreRestSiblings: true,
+      }],
     },
   },
 ]);
