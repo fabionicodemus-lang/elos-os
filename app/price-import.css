@@ -1,7 +1,7 @@
 .price-import-button {
-  border-color: #b8cfcc;
+  border-color:var(--line);
   color: var(--brand);
-  background: #f6fbfa;
+  background:var(--brand-soft);
 }
 
 .price-import-modal {
@@ -15,13 +15,13 @@
 
 .price-import-intro {
   padding: 16px;
-  border: 1px solid #cfe0dd;
+  border:1px solid var(--line);
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  background: #f2f9f7;
+  background:#f2f9f7;
 }
 
 .price-import-intro div {
@@ -60,12 +60,12 @@
 .price-import-rules > div {
   min-height: 105px;
   padding: 14px;
-  border: 1px solid #dce6e4;
+  border:1px solid var(--line);
   border-radius: 12px;
   display: grid;
   align-content: start;
   gap: 6px;
-  background: #fbfdfc;
+  background:#fbfdfc;
 }
 
 .price-import-rules span {
@@ -89,15 +89,15 @@
 
 .price-import-file-field {
   padding: 18px;
-  border: 1px dashed #9bbab5;
+  border:1px dashed var(--line);
   border-radius: 14px;
   display: grid;
   gap: 10px;
-  background: #fafdfc;
+  background:#fafdfc;
 }
 
 .price-import-file-field > span {
-  color: #314340;
+  color:var(--foreground);
   font-size: 12px;
   font-weight: 800;
 }
@@ -105,7 +105,7 @@
 .price-import-file-field input[type="file"] {
   width: 100%;
   padding: 12px;
-  border: 1px solid #d4dfdd;
+  border:1px solid var(--line);
   border-radius: 10px;
   background: white;
   font: inherit;

@@ -47,7 +47,7 @@
 .registry-create textarea {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 11px;
   padding: 0 12px;
   background: white;
@@ -84,9 +84,9 @@
 }
 
 .registry-create {
-  border: 1px solid #d9e4e3;
+  border:1px solid var(--line);
   border-radius: 14px;
-  background: #f8fbfa;
+  background:#f8fbfa;
 }
 
 .registry-create summary {
@@ -103,7 +103,7 @@
 }
 
 .registry-create[open] summary {
-  border-bottom: 1px solid #dfe8e7;
+  border-bottom:1px solid var(--line);
 }
 
 .registry-create form {
@@ -120,7 +120,7 @@
 .registry-form-grid label {
   display: grid;
   gap: 7px;
-  color: #435153;
+  color:var(--foreground);
   font-size: 12px;
   font-weight: 750;
 }
@@ -162,8 +162,8 @@
 }
 
 .registry-table th {
-  color: #667577;
-  background: #f5f8f7;
+  color:var(--muted);
+  background:var(--background);
   font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -181,7 +181,7 @@
 }
 
 .registry-table td > strong {
-  color: #223032;
+  color:var(--foreground);
   font-size: 13px;
 }
 
@@ -196,16 +196,16 @@
 }
 
 .status-badge.inactive {
-  color: #7d5b20;
-  background: #fff6db;
+  color:#7d5b20;
+  background:#fff6db;
 }
 
 .table-action {
   min-height: 34px;
   padding: 0 11px;
-  border: 1px solid #d5dfde;
+  border:1px solid var(--line);
   border-radius: 9px;
-  color: #475658;
+  color:var(--foreground);
   background: white;
   font-size: 11px;
   font-weight: 800;
@@ -243,7 +243,7 @@
 .module-link {
   min-height: 38px;
   padding: 0 13px;
-  border: 1px solid #d6e0df;
+  border:1px solid var(--line);
   border-radius: 10px;
   display: inline-flex;
   align-items: center;
