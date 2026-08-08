@@ -37,7 +37,7 @@
 
 .service-kpi-grid small {
   margin-top: 9px;
-  color: #839190;
+  color:var(--muted);
   font-size: 10px;
 }
 
@@ -91,12 +91,12 @@
   position: relative;
   min-height: 84px;
   padding: 14px;
-  border: 1px solid #dce7e5;
+  border:1px solid var(--line);
   border-radius: 13px;
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  background: #f8fbfa;
+  background:#f8fbfa;
 }
 
 .service-guidance-flow article:not(:last-child)::after {
@@ -161,7 +161,7 @@
 .service-filter button {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 11px;
   padding: 0 11px;
   color: var(--foreground);
@@ -208,18 +208,18 @@
 .service-rule-text {
   display: block;
   max-width: 360px;
-  color: #536461;
+  color:var(--muted);
   line-height: 1.5;
   white-space: normal;
 }
 
 .service-pending-text {
-  color: #a06a24 !important;
+  color:#a06a24 !important;
   font-weight: 700;
 }
 
 .service-row-incomplete {
-  background: #fffcf5;
+  background:#fffcf5;
 }
 
 .service-method-badge,
@@ -235,18 +235,18 @@
 }
 
 .service-method-badge {
-  color: #315d58;
-  background: #eaf4f2;
+  color:var(--foreground);
+  background:var(--brand-soft);
 }
 
 .service-status.active {
-  color: #176348;
-  background: #e4f3ea;
+  color:#176348;
+  background:#e4f3ea;
 }
 
 .service-status.inactive {
-  color: #687473;
-  background: #edf0ef;
+  color:var(--muted);
+  background:var(--background);
 }
 
 .service-row-actions {
@@ -272,7 +272,7 @@
 }
 
 .service-row-actions .table-action.danger {
-  color: #a33c3c;
+  color:#a33c3c;
 }
 
 .service-primary-button,
@@ -293,7 +293,7 @@
 }
 
 .service-secondary-button {
-  border: 1px solid #d8e2e0;
+  border:1px solid var(--line);
   color: var(--foreground);
   background: white;
 }
@@ -331,7 +331,7 @@
 
 .service-modal-head {
   border-bottom: 1px solid var(--line);
-  background: #f7faf9;
+  background:#f7faf9;
 }
 
 .service-modal-head span {
@@ -351,11 +351,11 @@
 .service-modal-close {
   width: 34px;
   height: 34px;
-  border: 1px solid #d7e1df;
+  border:1px solid var(--line);
   border-radius: 9px;
   display: grid;
   place-items: center;
-  color: #60706e;
+  color:var(--muted);
   background: white;
   font-size: 20px;
   cursor: pointer;
@@ -379,7 +379,7 @@
 }
 
 .service-modal-grid label > span {
-  color: #61706e;
+  color:var(--muted);
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.06em;
@@ -390,7 +390,7 @@
 .service-modal-grid select,
 .service-modal-grid textarea {
   width: 100%;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 10px;
   padding: 10px 11px;
   color: var(--foreground);
@@ -415,7 +415,7 @@
 .service-modal-foot {
   border-top: 1px solid var(--line);
   justify-content: flex-end;
-  background: #fbfcfc;
+  background:var(--background);
 }
 
 @media (max-width: 1450px) {

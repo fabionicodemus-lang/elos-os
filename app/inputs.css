@@ -72,11 +72,11 @@
 .input-guidance-flow article {
   min-width: 0;
   padding: 14px;
-  border: 1px solid #dce6e4;
+  border:1px solid var(--line);
   border-radius: 13px;
   display: flex;
   gap: 10px;
-  background: #f8fbfa;
+  background:#f8fbfa;
 }
 
 .input-guidance-flow b {
@@ -127,7 +127,7 @@
 .input-filter button {
   width: 100%;
   min-height: 43px;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 11px;
   padding: 0 11px;
   color: var(--foreground);
@@ -157,7 +157,7 @@
 }
 
 .input-row-incomplete {
-  background: #fffaf0;
+  background:#fffaf0;
 }
 
 .input-category {
@@ -169,25 +169,25 @@
   font-size: 9px;
   font-weight: 800;
   white-space: nowrap;
-  color: #245b54;
-  background: #e7f4f1;
+  color:var(--foreground);
+  background:var(--brand-soft);
 }
 
-.input-category.labor { color: #665126; background: #f6efd9; }
-.input-category.equipment { color: #4e5278; background: #eceefe; }
-.input-category.service { color: #5f4372; background: #f2eafb; }
-.input-category.freight { color: #8a4a2d; background: #fff0e8; }
-.input-category.other { color: #5d6665; background: #edf1f0; }
+.input-category.labor { color:#665126; background:#f6efd9; }
+.input-category.equipment { color:#4e5278; background:#eceefe; }
+.input-category.service { color:#5f4372; background:#f2eafb; }
+.input-category.freight { color:#8a4a2d; background:#fff0e8; }
+.input-category.other { color:var(--muted); background:var(--background); }
 
 .input-spec-text {
   display: block;
   max-width: 330px;
-  color: #455453;
+  color:var(--foreground);
   line-height: 1.45;
 }
 
 .input-pending-text {
-  color: #a05f17;
+  color:#a05f17;
   font-weight: 700;
 }
 
@@ -227,7 +227,7 @@
 .input-modal-grid select,
 .input-modal-grid textarea {
   width: 100%;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 10px;
   padding: 10px 11px;
   color: var(--foreground);

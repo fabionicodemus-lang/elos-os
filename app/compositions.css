@@ -77,12 +77,12 @@
 .composition-guidance-flow article {
   min-height: 88px;
   padding: 13px;
-  border: 1px solid #dfe8e7;
+  border:1px solid var(--line);
   border-radius: 13px;
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  background: #f8fbfa;
+  background:#f8fbfa;
 }
 
 .composition-guidance-flow b {
@@ -131,7 +131,7 @@
 .composition-filter button {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 11px;
   padding: 0 11px;
   background: white;
@@ -179,7 +179,7 @@
 }
 
 .composition-service-selected td {
-  background: #eef8f5;
+  background:#eef8f5;
 }
 
 .composition-total-value {
@@ -201,19 +201,19 @@
 }
 
 .composition-status.complete {
-  color: #176348;
-  background: #e4f5ea;
+  color:#176348;
+  background:#e4f5ea;
 }
 
 .composition-status.missing,
 .composition-price-scope.stale {
-  color: #8a5616;
-  background: #fff1d9;
+  color:#8a5616;
+  background:#fff1d9;
 }
 
 .composition-status.empty {
-  color: #6f7777;
-  background: #edf0f0;
+  color:var(--muted);
+  background:var(--background);
 }
 
 .composition-open-action {
@@ -249,17 +249,17 @@
 .composition-cost-grid article {
   min-height: 96px;
   padding: 15px;
-  border: 1px solid #dfe8e7;
+  border:1px solid var(--line);
   border-radius: 13px;
   display: grid;
   align-content: center;
   gap: 5px;
-  background: #f8fbfa;
+  background:#f8fbfa;
 }
 
 .composition-cost-grid article.total {
-  border-color: #b7d9d3;
-  background: #eaf7f3;
+  border-color:var(--line);
+  background:#eaf7f3;
 }
 
 .composition-cost-grid span {
@@ -289,7 +289,7 @@
 }
 
 .composition-item-missing td {
-  background: #fffaf0;
+  background:#fffaf0;
 }
 
 .composition-item-inactive td {
@@ -297,18 +297,18 @@
 }
 
 .composition-price-missing {
-  color: #a36a28 !important;
+  color:#a36a28 !important;
   font-style: italic;
 }
 
 .composition-price-scope.project {
-  color: #176348;
-  background: #e4f5ea;
+  color:#176348;
+  background:#e4f5ea;
 }
 
 .composition-price-scope.corporate {
-  color: #315c57;
-  background: #e8f1f0;
+  color:var(--foreground);
+  background:var(--brand-soft);
 }
 
 .composition-row-actions {
@@ -334,7 +334,7 @@
 }
 
 .composition-modal-grid label > span {
-  color: #425150;
+  color:var(--foreground);
   font-size: 11px;
   font-weight: 700;
 }
@@ -349,7 +349,7 @@
 .composition-modal-grid select,
 .composition-modal-grid textarea {
   width: 100%;
-  border: 1px solid #d5dfde;
+  border:1px solid var(--line);
   border-radius: 10px;
   padding: 10px 11px;
   background: white;
@@ -364,11 +364,11 @@
 
 .composition-service-context {
   padding: 13px 15px;
-  border: 1px solid #dce7e5;
+  border:1px solid var(--line);
   border-radius: 12px;
   display: grid;
   gap: 4px;
-  background: #f6faf9;
+  background:var(--brand-soft);
 }
 
 .composition-service-context span {
@@ -390,13 +390,13 @@
 
 .composition-formula-note {
   padding: 12px;
-  border: 1px dashed #b9ceca;
+  border:1px dashed var(--line);
   border-radius: 11px;
   display: grid;
   align-content: center;
   gap: 4px;
-  color: #47635f;
-  background: #f8fbfa;
+  color:var(--foreground);
+  background:#f8fbfa;
 }
 
 .composition-formula-note strong {

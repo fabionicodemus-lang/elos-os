@@ -47,7 +47,7 @@
 .finance-filter button {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 11px;
   padding: 0 11px;
   color: var(--foreground);
@@ -77,18 +77,18 @@
 }
 
 .status-badge.open {
-  color: #8a6111;
-  background: #fff5d8;
+  color:#8a6111;
+  background:#fff5d8;
 }
 
 .status-badge.paid {
   color: var(--success);
-  background: #e9f7ef;
+  background:#e9f7ef;
 }
 
 .status-badge.cancelled {
   color: var(--danger);
-  background: #fff0f0;
+  background:#fff0f0;
 }
 
 .payable-actions {
@@ -146,7 +146,7 @@
 .payable-actions details input,
 .payable-actions details button {
   min-height: 38px;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 9px;
   padding: 0 10px;
   font: inherit;

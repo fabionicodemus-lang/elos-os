@@ -22,7 +22,7 @@
   border-radius: 11px;
   display: flex;
   align-items: center;
-  color: #506063;
+  color:var(--muted);
   text-decoration: none;
   font-size: 13px;
   font-weight: 700;
@@ -41,7 +41,7 @@
 
 .sidebar-section {
   margin: 16px 13px 4px;
-  color: #91a09f;
+  color:var(--muted);
   font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.12em;
@@ -146,7 +146,7 @@
 .setup-panel code {
   padding: 3px 6px;
   border-radius: 6px;
-  background: #f0f4f3;
+  background:var(--background);
 }
 
 .onboarding-layout {
@@ -173,7 +173,7 @@
 .add-member-panel label {
   display: grid;
   gap: 7px;
-  color: #435153;
+  color:var(--foreground);
   font-size: 12px;
   font-weight: 750;
 }
@@ -184,7 +184,7 @@
 .role-form select {
   width: 100%;
   min-height: 46px;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 11px;
   padding: 0 12px;
   background: white;
@@ -204,21 +204,21 @@
   justify-content: space-between;
   align-items: center;
   gap: 28px;
-  background: linear-gradient(135deg, white, #eef7f6);
+  background:linear-gradient(135deg, white, var(--brand-soft));
 }
 
 .workspace-summary {
   min-width: 340px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid #d7e7e5;
+  border:1px solid var(--line);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.8);
 }
 
 .workspace-summary div {
   padding: 16px;
-  border-right: 1px solid #e1eceb;
+  border-right:1px solid var(--line);
 }
 
 .workspace-summary div:last-child {
@@ -281,7 +281,7 @@
   align-self: flex-start;
   border: 0;
   background: transparent;
-  color: #9aa6a6;
+  color:#9aa6a6;
   font-size: 12px;
   font-weight: 750;
 }
@@ -299,8 +299,8 @@
 }
 
 .company-list > article.selected {
-  border-color: #9cc9c5;
-  background: #f6fbfa;
+  border-color:var(--line);
+  background:var(--brand-soft);
 }
 
 .company-card-header {
@@ -339,9 +339,9 @@
 .back-link {
   min-height: 38px;
   padding: 0 13px;
-  border: 1px solid #d6e0df;
+  border:1px solid var(--line);
   border-radius: 10px;
-  color: #405052;
+  color:var(--foreground);
   background: white;
   font-size: 12px;
   font-weight: 750;
@@ -475,8 +475,8 @@
 }
 
 .member-head {
-  color: #718082;
-  background: #f5f8f7;
+  color:var(--muted);
+  background:var(--background);
   font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -493,7 +493,7 @@
 
 .status-badge.active {
   color: var(--success);
-  background: #eaf7f0;
+  background:#eaf7f0;
 }
 
 .role-form {
@@ -522,7 +522,7 @@
   padding: 20px;
   border: 1px solid var(--line);
   border-radius: 15px;
-  background: #fbfdfd;
+  background:var(--brand-soft);
 }
 
 .role-grid article > span {
@@ -593,7 +593,7 @@
 
   .workspace-summary div {
     border-right: 0;
-    border-bottom: 1px solid #e1eceb;
+    border-bottom:1px solid var(--line);
   }
 
   .workspace-summary div:last-child {
