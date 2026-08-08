@@ -34,6 +34,20 @@ const eslintConfig = defineConfig([
       }],
     },
   },
+  {
+    // Imagens dinâmicas (capas enviadas pelo usuário, URLs assinadas do
+    // Supabase que expiram, e blob: de preview no cliente) não se beneficiam
+    // de next/image e quebrariam com URLs expiráveis/blob. Mantemos <img>.
+    files: [
+      "app/empreendimentos/caracteristicas/page.tsx",
+      "app/empreendimentos/page.tsx",
+      "app/empreendimentos/project-dialogs.tsx",
+      "app/execucao/diario-obras/daily-log-client.tsx",
+    ],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
