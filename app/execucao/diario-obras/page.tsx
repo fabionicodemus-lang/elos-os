@@ -17,6 +17,7 @@ import {
 import {
   DailyCalendar,
   DailyLogIndicators,
+  type DailyLogIndicatorData,
   DailyLogKpis,
   DailyLogList,
   DailyLogSettings,
@@ -141,6 +142,16 @@ export default async function DailyLogsPage({ searchParams }: {
     selectedPhotos = records.map((item) => ({ id: item.id, file_name: item.file_name, caption: item.caption, signed_url: urlMap.get(item.storage_path) ?? null }));
   }
 
+  // Indicadores agregados no banco: cobrem todo o histórico do projeto sem que a
+  // página precise carregar a tabela inteira para somá-los.
+  const indicatorsResult = projectId
+    ? await supabase.rpc("execution_daily_log_indicators", { p_company_id: companyId, p_project_id: projectId })
+    : { data: null, error: null };
+  const indicators = (indicatorsResult.data as DailyLogIndicatorData | null) ?? {
+    valid_count: 0, approved_count: 0, rain_count: 0, stopped_count: 0,
+    photo_count: 0, average_workers: 0, top_services: [], top_occurrences: [],
+  };
+
   const monthLogs = current.filter((item) => item.log_date.startsWith(month) && item.diary_type === "principal" && item.status !== "cancelled");
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
 
@@ -181,7 +192,7 @@ export default async function DailyLogsPage({ searchParams }: {
         <DailyLogKpis logs={monthLogs} workforceMap={workforceMap} today={today} />
         {tab === "calendar" ? <DailyCalendar month={month} logs={monthLogs} weatherMap={weatherMap} workforceMap={workforceMap} servicesMap={servicesMap} occurrencesMap={occurrencesMap} photosMap={photosMap} today={today} canManage={canManage} /> : null}
         {tab === "list" ? <DailyLogList month={month} logs={current} weatherMap={weatherMap} workforceMap={workforceMap} servicesMap={servicesMap} occurrencesMap={occurrencesMap} photosMap={photosMap} q={params.q ?? ""} status={params.status ?? ""} /> : null}
-        {tab === "indicators" ? <DailyLogIndicators logs={current} weatherMap={weatherMap} workforceMap={workforceMap} servicesMap={servicesMap} occurrencesMap={occurrencesMap} photosMap={photosMap} /> : null}
+        {tab === "indicators" ? <DailyLogIndicators indicators={indicators} /> : null}
         {tab === "settings" ? <DailyLogSettings settings={settings} canSettings={canSettings} month={month} /> : null}
       </>}
     </> : null}

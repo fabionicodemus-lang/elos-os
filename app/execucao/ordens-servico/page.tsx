@@ -13,6 +13,13 @@ import {
 import "../../execution-work-orders.css";
 
 type Project = { id: string; code: string | null; name: string };
+type WorkOrderIndicators = {
+  order_count: number;
+  active_count: number;
+  pending_acceptance_count: number;
+  authorized_total: number;
+  executed_total: number;
+};
 type Supplier = { id: string; legal_name: string; trade_name: string | null; tax_id: string | null };
 type Contract = { id: string; contract_number: string; title: string; supplier_id: string; start_date: string; end_date: string; status: string };
 type ContractItem = { id: string; contract_id: string; service_code: string; service_name: string; location_name: string | null; unit_snapshot: string; unit_price: number; contracted_quantity: number; planned_start: string | null; planned_finish: string | null };
@@ -100,9 +107,17 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: P
   const structureError = ordersResult.error || orderItemsResult.error || prerequisitesResult.error || acceptancesResult.error || documentsResult.error;
   const query = (params.q ?? "").trim().toLocaleLowerCase("pt-BR");
   const filtered = orders.filter((order) => !params.status || order.status === params.status).filter((order) => !query || [order.work_order_number, order.title, order.scope_summary, contractMap.get(order.contract_id)?.contract_number, supplierName(supplierMap.get(order.supplier_id))].join(" ").toLocaleLowerCase("pt-BR").includes(query));
-  const activeOrders = orders.filter((order) => ["released", "in_progress", "paused", "pending_acceptance"].includes(order.status));
-  const authorizedTotal = orders.filter((order) => order.status !== "cancelled").reduce((sum, order) => sum + Number(order.authorized_value), 0);
-  const executedTotal = orders.filter((order) => order.status !== "cancelled").reduce((sum, order) => sum + Number(order.executed_value), 0);
+  // Indicadores agregados no banco, cobrindo toda a obra sem depender das linhas
+  // carregadas nesta página. Equivalência coberta por
+  // supabase/tests/20260806_0081_work_order_indicators.sql.
+  const indicatorsResult = projectId
+    ? await supabase.rpc("execution_work_order_indicators", { p_company_id: companyId, p_project_id: projectId })
+    : { data: null, error: null };
+  const indicators = (indicatorsResult.data as WorkOrderIndicators | null) ?? {
+    order_count: 0, active_count: 0, pending_acceptance_count: 0, authorized_total: 0, executed_total: 0,
+  };
+  const authorizedTotal = Number(indicators.authorized_total);
+  const executedTotal = Number(indicators.executed_total);
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
 
   return <AppShell activeGroup="execution" activeItem="work-orders" eyebrow="Execução · Serviços" title="Ordens de Serviço" description={`${company.name} · ${context} · liberação formal das frentes, execução, qualidade e aceite técnico.`}
@@ -116,7 +131,7 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: P
     {projectId && selected ? <WorkOrderDetail order={selected} contract={contractMap.get(selected.contract_id) ?? null} supplier={supplierMap.get(selected.supplier_id) ?? null}
       items={selectedItems} prerequisites={selectedPrerequisites} acceptances={selectedAcceptances} documents={signedDocuments}
       contracts={contractOptions} contractItems={contractItemOptions} canManage={canManage} canRelease={canRelease} canProgress={canProgress} canAccept={canAccept} canCancel={canCancel} autoEdit={params.edit === "1"} /> : projectId && (contractOptions.length || orders.length) ? <>
-      <section className="work-order-kpis"><article><span>Ordens cadastradas</span><strong>{orders.length}</strong><small>incluindo elaboração e histórico</small></article><article><span>Frentes ativas</span><strong>{activeOrders.length}</strong><small>liberadas ou em execução</small></article><article><span>Valor autorizado</span><strong>{money(authorizedTotal)}</strong><small>ordens não canceladas</small></article><article><span>Valor executado</span><strong>{money(executedTotal)}</strong><small>{authorizedTotal ? number(executedTotal / authorizedTotal * 100, 1) : "0"}% autorizado</small></article><article><span>Aguardando aceite</span><strong>{orders.filter((order) => order.status === "pending_acceptance").length}</strong><small>pendência da engenharia</small></article></section>
+      <section className="work-order-kpis"><article><span>Ordens cadastradas</span><strong>{indicators.order_count}</strong><small>incluindo elaboração e histórico</small></article><article><span>Frentes ativas</span><strong>{indicators.active_count}</strong><small>liberadas ou em execução</small></article><article><span>Valor autorizado</span><strong>{money(authorizedTotal)}</strong><small>ordens não canceladas</small></article><article><span>Valor executado</span><strong>{money(executedTotal)}</strong><small>{authorizedTotal ? number(executedTotal / authorizedTotal * 100, 1) : "0"}% autorizado</small></article><article><span>Aguardando aceite</span><strong>{indicators.pending_acceptance_count}</strong><small>pendência da engenharia</small></article></section>
       <section className="work-order-toolbar"><form method="get"><input name="q" defaultValue={params.q ?? ""} placeholder="Buscar O.S., contrato, fornecedor ou escopo" /><select name="status" defaultValue={params.status ?? ""}><option value="">Todos os status</option>{Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><button type="submit">Filtrar</button><Link href="/execucao/ordens-servico">Limpar</Link></form></section>
       <section className="work-order-list-card"><div className="budget-section-head"><div><span>Frentes formalizadas</span><h2>Ordens de serviço da obra</h2></div><p>{filtered.length} registro(s)</p></div><div className="registry-table-wrap"><table className="registry-table work-order-table"><thead><tr><th>O.S.</th><th>Contrato / prestador</th><th>Escopo</th><th>Período</th><th>Autorizado</th><th>Executado</th><th>Progresso</th><th>Status</th></tr></thead><tbody>{filtered.map((order) => <tr key={order.id}><td><Link href={`?work_order=${order.id}`}><strong>{order.work_order_number}</strong><span>{order.title}</span></Link></td><td><strong>{contractMap.get(order.contract_id)?.contract_number}</strong><span>{supplierName(supplierMap.get(order.supplier_id))}</span></td><td><span className="work-order-scope-preview">{order.scope_summary}</span><small>{(orderItemMap.get(order.id) ?? []).length} item(ns)</small></td><td>{dateBR(order.planned_start)}<span>até {dateBR(order.planned_finish)}</span></td><td><strong>{money(order.authorized_value)}</strong></td><td>{money(order.executed_value)}</td><td><strong>{order.authorized_value ? number(order.executed_value / order.authorized_value * 100, 1) : "0"}%</strong></td><td><span className={`work-order-status ${order.status}`}>{statusLabels[order.status]}</span></td></tr>)}{!filtered.length ? <tr><td colSpan={8} className="budget-empty-state">Nenhuma ordem de serviço encontrada.</td></tr> : null}</tbody></table></div></section>
     </> : null}

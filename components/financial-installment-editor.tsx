@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   buildFinancialInstallments,
   financialInstallmentSummary,
@@ -40,10 +40,14 @@ export function FinancialInstallmentEditor({
 }) {
   const [count, setCount] = useState(Math.max(1, installments.length || 1));
   const summary = financialInstallmentSummary(total, installments);
+  // Ajuste de estado durante o render é o padrão recomendado pelo React para
+  // acompanhar uma prop. Substitui o efeito que disparava renders em cascata.
+  const [syncedLength, setSyncedLength] = useState(installments.length);
 
-  useEffect(() => {
+  if (syncedLength !== installments.length) {
+    setSyncedLength(installments.length);
     setCount(Math.max(1, installments.length || 1));
-  }, [installments.length]);
+  }
 
   function regenerate(nextCount = count, preserveFirstDate = true) {
     const safeCount = Math.max(1, Math.min(maxInstallments, Math.trunc(Number(nextCount) || 1)));

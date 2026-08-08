@@ -64,7 +64,14 @@ export async function SefazImporter({ legalEntityId, legalEntityName, legalEntit
   const fullXml = documents.filter((item) => item.document_kind === "full_xml");
   const available = fullXml.filter((item) => item.processing_status !== "imported");
   const summaries = documents.filter((item) => item.document_kind === "summary");
-  const nearDeadline = documents.filter((item) => item.issue_datetime && Date.now() - new Date(item.issue_datetime).getTime() >= 75 * 86400000 && Date.now() - new Date(item.issue_datetime).getTime() <= 90 * 86400000).length;
+  // Uma única leitura do relógio para toda a lista: antes cada documento era
+  // comparado contra dois instantes diferentes.
+  const nowMs = new Date().getTime();
+  const nearDeadline = documents.filter((item) => {
+    if (!item.issue_datetime) return false;
+    const age = nowMs - new Date(item.issue_datetime).getTime();
+    return age >= 75 * 86400000 && age <= 90 * 86400000;
+  }).length;
 
   return <section className="sefaz-importer">
     <header className="sefaz-head">

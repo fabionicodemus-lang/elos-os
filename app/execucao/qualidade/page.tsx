@@ -515,6 +515,17 @@ export default async function QualityPage({
   const canTemplates = templatesPermission.data === true || privileged;
   const canSettings = settingsPermission.data === true || privileged;
   const canIndicators = indicatorsPermission.data === true || privileged;
+
+  // Indicadores agregados no banco, cobrindo toda a obra sem depender das linhas
+  // carregadas nesta página.
+  const qualityIndicatorsResult = projectId
+    ? await supabase.rpc("quality_indicators", { p_company_id: companyId, p_project_id: projectId })
+    : { data: null, error: null };
+  const qualityIndicators = (qualityIndicatorsResult.data as QualityIndicatorData | null) ?? {
+    inspection_count: 0, completed_count: 0, average_score: 0, first_pass_count: 0,
+    open_nc_count: 0, closed_nc_count: 0, on_time_nc_count: 0, blocked_count: 0,
+    score_by_service: [], nc_by_severity: {},
+  };
   const structureError =
     templatesResult.error ||
     inspectionsResult.error ||
@@ -730,8 +741,7 @@ export default async function QualityPage({
               ) : null}
               {tab === "indicators" && canIndicators ? (
                 <Indicators
-                  inspections={inspectionsResult.data}
-                  ncs={ncResult.data}
+                  indicators={qualityIndicators}
                   serviceMap={serviceMap}
                 />
               ) : null}
@@ -1369,94 +1379,75 @@ function QualityMap({
   );
 }
 
+// Os números vêm de quality_indicators, que agrega toda a obra no Postgres.
+// Antes eram somados aqui sobre as inspeções e NCs carregadas por inteiro.
+// Equivalência coberta por supabase/tests/20260806_0081_quality_indicators.sql.
+type QualityIndicatorData = {
+  inspection_count: number;
+  completed_count: number;
+  average_score: number;
+  first_pass_count: number;
+  open_nc_count: number;
+  closed_nc_count: number;
+  on_time_nc_count: number;
+  blocked_count: number;
+  score_by_service: { service_id: string; average: number; count: number }[];
+  nc_by_severity: Record<string, { total: number; open: number }>;
+};
+
 function Indicators({
-  inspections,
-  ncs,
+  indicators,
   serviceMap,
 }: {
-  inspections: Inspection[];
-  ncs: Nonconformity[];
+  indicators: QualityIndicatorData;
   serviceMap: Map<string, ServiceOption>;
 }) {
-  const completed = inspections.filter(
-    (row) => row.first_inspection_score !== null,
-  );
-  const open = ncs.filter((row) => row.status !== "closed");
-  const closed = ncs.filter((row) => row.status === "closed");
-  const onTime = closed.filter(
-    (row) => row.closed_at && new Date(row.closed_at) <= new Date(row.due_at),
-  );
-  const scoresByService = new Map<string, number[]>();
-  completed.forEach((row) =>
-    scoresByService.set(row.service_id, [
-      ...(scoresByService.get(row.service_id) ?? []),
-      Number(row.first_inspection_score),
-    ]),
-  );
-  const average = completed.length
-    ? completed.reduce(
-        (sum, row) => sum + Number(row.first_inspection_score),
-        0,
-      ) / completed.length
-    : 0;
+  const completed = Number(indicators.completed_count);
+  const total = Number(indicators.inspection_count);
+  const closed = Number(indicators.closed_nc_count);
+  const average = Number(indicators.average_score);
 
   return (
     <>
       <section className="quality-indicators">
         <article className={scoreClass(average)}>
           <span>Nota acumulada</span>
-          <strong>{completed.length ? decimal(average) : "—"}</strong>
-          <small>{completed.length} inspeção(ões)</small>
+          <strong>{completed ? decimal(average) : "\u2014"}</strong>
+          <small>{completed} inspeção(ões)</small>
         </article>
         <article>
           <span>Aprovação na 1ª inspeção</span>
-          <strong>
-            {completed.length
-              ? decimal(
-                  (completed.filter(
-                    (row) => Number(row.first_inspection_score) >= 80,
-                  ).length /
-                    completed.length) *
-                    100,
-                )
-              : 0}
-            %
-          </strong>
+          <strong>{completed ? decimal((Number(indicators.first_pass_count) / completed) * 100) : 0}%</strong>
         </article>
         <article>
           <span>Correções no prazo</span>
-          <strong>{closed.length ? decimal((onTime.length / closed.length) * 100) : 0}%</strong>
+          <strong>{closed ? decimal((Number(indicators.on_time_nc_count) / closed) * 100) : 0}%</strong>
         </article>
-        <article><span>NCs abertas</span><strong>{open.length}</strong></article>
+        <article><span>NCs abertas</span><strong>{indicators.open_nc_count}</strong></article>
         <article>
           <span>Bloqueios ativos</span>
-          <strong>{inspections.filter((row) => row.release_status === "blocked").length}</strong>
+          <strong>{indicators.blocked_count}</strong>
         </article>
         <article>
           <span>Cobertura</span>
-          <strong>
-            {inspections.length
-              ? decimal((completed.length / inspections.length) * 100)
-              : 0}
-            %
-          </strong>
+          <strong>{total ? decimal((completed / total) * 100) : 0}%</strong>
           <small>realizadas / previstas</small>
         </article>
       </section>
       <section className="quality-chart-card">
         <header><div><span>Desempenho</span><h2>Nota por serviço</h2></div></header>
-        {[...scoresByService.entries()].map(([serviceId, scores]) => {
-          const value = scores.reduce((a, b) => a + b, 0) / scores.length;
+        {indicators.score_by_service.map((row) => {
+          const value = Number(row.average);
           return (
-            <div className="quality-bar-row" key={serviceId}>
-              <span>{serviceMap.get(serviceId)?.description}</span>
+            <div className="quality-bar-row" key={row.service_id}>
+              <span>{serviceMap.get(row.service_id)?.description}</span>
               <i><em className={scoreClass(value)} style={{ width: `${value}%` }} /></i>
               <strong>{decimal(value)}</strong>
-              <small>{scores.length}</small>
+              <small>{row.count}</small>
             </div>
           );
         })}
-        {scoresByService.size === 0 ? (
+        {indicators.score_by_service.length === 0 ? (
           <p className="quality-empty-row">Ainda não existem vistorias concluídas.</p>
         ) : null}
       </section>
@@ -1465,11 +1456,9 @@ function Indicators({
         {["critical", "serious", "light"].map((severity) => (
           <div className="quality-severity-line" key={severity}>
             <span className={`quality-severity ${severity}`}>{severity}</span>
-            <strong>{ncs.filter((row) => row.severity === severity).length}</strong>
+            <strong>{indicators.nc_by_severity[severity]?.total ?? 0}</strong>
             <i>
-              {ncs.filter(
-                (row) => row.severity === severity && row.status !== "closed",
-              ).length}{" "}
+              {indicators.nc_by_severity[severity]?.open ?? 0}{" "}
               aberta(s)
             </i>
           </div>

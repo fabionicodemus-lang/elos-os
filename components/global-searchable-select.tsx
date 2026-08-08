@@ -23,18 +23,41 @@ function eligible(select: HTMLSelectElement) {
     && select.dataset.nativeSelect !== "true";
 }
 
+// Instantâneo serializável do <select> original. O elemento vivo fica em uma
+// ref, e não no estado, porque precisa ser mutado ao confirmar a escolha.
+type PickerSnapshot = {
+  label: string;
+  selectedValue: string;
+  options: SelectOption[];
+};
+
+function snapshotOf(select: HTMLSelectElement): PickerSnapshot {
+  return {
+    label: select.closest("label")?.querySelector("span")?.textContent || "Escolha uma opção",
+    selectedValue: select.value,
+    options: Array.from(select.options).map((option) => ({
+      value: option.value,
+      label: option.textContent?.trim() || option.label || option.value,
+      disabled: option.disabled,
+    })),
+  };
+}
+
 export function GlobalSearchableSelect() {
-  const [target, setTarget] = useState<HTMLSelectElement | null>(null);
+  const targetRef = useRef<HTMLSelectElement | null>(null);
+  const [picker, setPicker] = useState<PickerSnapshot | null>(null);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const isOpen = picker !== null;
 
   function closePicker(restoreFocus = true) {
-    const currentTarget = target;
+    const currentTarget = targetRef.current;
     const dialog = dialogRef.current;
 
     if (dialog?.open) dialog.close();
-    setTarget(null);
+    targetRef.current = null;
+    setPicker(null);
 
     if (restoreFocus && currentTarget?.isConnected) {
       window.setTimeout(() => currentTarget.focus(), 0);
@@ -43,7 +66,8 @@ export function GlobalSearchableSelect() {
 
   useEffect(() => {
     function open(select: HTMLSelectElement) {
-      setTarget(select);
+      targetRef.current = select;
+      setPicker(snapshotOf(select));
       setQuery("");
     }
 
@@ -74,7 +98,7 @@ export function GlobalSearchableSelect() {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
-    if (!target) {
+    if (!isOpen) {
       if (dialog.open) dialog.close();
       return;
     }
@@ -88,16 +112,9 @@ export function GlobalSearchableSelect() {
     }
 
     window.setTimeout(() => inputRef.current?.focus(), 0);
-  }, [target]);
+  }, [isOpen]);
 
-  const options = useMemo<SelectOption[]>(() => {
-    if (!target) return [];
-    return Array.from(target.options).map((option) => ({
-      value: option.value,
-      label: option.textContent?.trim() || option.label || option.value,
-      disabled: option.disabled,
-    }));
-  }, [target]);
+  const options = useMemo<SelectOption[]>(() => picker?.options ?? [], [picker]);
 
   const filtered = useMemo(() => {
     const term = normalize(query);
@@ -116,8 +133,8 @@ export function GlobalSearchableSelect() {
   }, [options, query]);
 
   function choose(option: SelectOption) {
-    if (!target) return;
-    const selectedTarget = target;
+    const selectedTarget = targetRef.current;
+    if (!selectedTarget) return;
     selectedTarget.value = option.value;
     selectedTarget.dispatchEvent(new Event("input", { bubbles: true }));
     selectedTarget.dispatchEvent(new Event("change", { bubbles: true }));
@@ -125,9 +142,9 @@ export function GlobalSearchableSelect() {
     window.setTimeout(() => selectedTarget.isConnected && selectedTarget.focus(), 0);
   }
 
-  const totalMatches = target
-    ? options.filter((option) => !option.disabled && normalize(`${option.label} ${option.value}`).includes(normalize(query))).length
-    : 0;
+  const totalMatches = options.filter(
+    (option) => !option.disabled && normalize(`${option.label} ${option.value}`).includes(normalize(query)),
+  ).length;
 
   return (
     <dialog
@@ -139,16 +156,19 @@ export function GlobalSearchableSelect() {
         closePicker();
       }}
       onClose={() => {
-        if (target) setTarget(null);
+        if (isOpen) {
+          targetRef.current = null;
+          setPicker(null);
+        }
       }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) closePicker();
       }}
     >
-      {target ? (
+      {picker ? (
         <section className="global-select-panel" onMouseDown={(event) => event.stopPropagation()}>
           <header>
-            <div><span>Seleção pesquisável</span><strong>{target.closest("label")?.querySelector("span")?.textContent || "Escolha uma opção"}</strong></div>
+            <div><span>Seleção pesquisável</span><strong>{picker.label}</strong></div>
             <button type="button" onClick={() => closePicker()} aria-label="Fechar">×</button>
           </header>
           <div className="global-select-search">
@@ -167,12 +187,12 @@ export function GlobalSearchableSelect() {
                 key={`${option.value}-${option.label}`}
                 type="button"
                 role="option"
-                aria-selected={option.value === target.value}
-                className={option.value === target.value ? "selected" : ""}
+                aria-selected={option.value === picker.selectedValue}
+                className={option.value === picker.selectedValue ? "selected" : ""}
                 onClick={() => choose(option)}
               >
                 <span>{option.label}</span>
-                {option.value === target.value ? <b>✓</b> : null}
+                {option.value === picker.selectedValue ? <b>✓</b> : null}
               </button>
             ))}
             {filtered.length === 0 ? <div className="global-select-empty">Nenhuma opção contém o texto digitado.</div> : null}

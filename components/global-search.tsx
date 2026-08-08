@@ -65,6 +65,22 @@ export function GlobalSearch({
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const searchTerm = query.trim();
+  const searching = open && searchTerm.length >= 2;
+  // Só há "carregando" enquanto uma busca válida está em andamento: se o termo
+  // encurtar durante a requisição, o spinner some sem depender do efeito.
+  const busy = searching && loading;
+
+  // Cada novo termo reinicia destaque e erro. Ajustar no render evita os
+  // setState síncronos dentro do efeito, que disparavam renders em cascata.
+  const searchKey = `${searching ? "on" : "off"} ${scope} ${searchTerm}`;
+  const [syncedSearchKey, setSyncedSearchKey] = useState(searchKey);
+
+  if (syncedSearchKey !== searchKey) {
+    setSyncedSearchKey(searchKey);
+    setActiveIndex(0);
+    setError("");
+  }
 
   const close = useCallback(() => {
     setOpen(false);
@@ -110,21 +126,13 @@ export function GlobalSearch({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
-    const term = query.trim();
-    setActiveIndex(0);
-    setError("");
-    if (term.length < 2) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
+    if (!searching) return;
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const params = new URLSearchParams({ q: term, scope });
+        const params = new URLSearchParams({ q: searchTerm, scope });
         const response = await fetch(`/api/global-search?${params.toString()}`, {
           signal: controller.signal,
           headers: { Accept: "application/json" },
@@ -145,9 +153,9 @@ export function GlobalSearch({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [open, query, scope]);
+  }, [searching, searchTerm, scope]);
 
-  const visibleItems = query.trim().length >= 2 ? results : recent;
+  const visibleItems = searching ? results : recent;
   const groups = useMemo(() => {
     const map = new Map<string, SearchResult[]>();
     for (const result of visibleItems) {
@@ -205,7 +213,7 @@ export function GlobalSearch({
                 autoComplete="off"
                 spellCheck={false}
               />
-              {loading ? <span className="global-search-spinner" aria-label="Buscando" /> : null}
+              {busy ? <span className="global-search-spinner" aria-label="Buscando" /> : null}
               {query ? <button type="button" className="global-search-clear" onClick={() => setQuery("")} aria-label="Limpar busca">×</button> : null}
               <button type="button" className="global-search-close" onClick={close} aria-label="Fechar busca">Esc</button>
             </header>
@@ -241,7 +249,7 @@ export function GlobalSearch({
 
               {error ? <div className="global-search-empty error"><strong>Busca indisponível</strong><p>{error}</p></div> : null}
 
-              {!loading && !error && query.trim().length >= 2 && !results.length ? (
+              {!busy && !error && searching && !results.length ? (
                 <div className="global-search-empty"><strong>Nenhum resultado encontrado</strong><p>Tente pelo número, código, nome, documento, unidade ou uma parte da descrição.</p></div>
               ) : null}
 
@@ -281,7 +289,7 @@ export function GlobalSearch({
               <span><kbd>↑</kbd><kbd>↓</kbd> navegar</span>
               <span><kbd>Enter</kbd> abrir</span>
               <span><kbd>Esc</kbd> fechar</span>
-              <strong>{query.trim().length >= 2 ? `${results.length} resultado(s)` : "Busca global"}</strong>
+              <strong>{searching ? `${results.length} resultado(s)` : "Busca global"}</strong>
             </footer>
           </section>
         </div>

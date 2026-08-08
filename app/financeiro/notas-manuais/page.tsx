@@ -22,6 +22,14 @@ import {
 import "../../finance-manual-invoices.css";
 
 type Project = { id: string; code: string | null; name: string; legal_entity_id: string | null };
+type ManualInvoiceIndicators = {
+  invoice_count: number;
+  active_count: number;
+  posted_count: number;
+  net_total: number;
+  retention_total: number;
+  with_receipt_count: number;
+};
 type SupplierRelation = { id: string; legal_name: string; trade_name: string | null; tax_id: string | null };
 type ContractRelation = { id: string; contract_number: string; title: string };
 type MeasurementRelation = { id: string; measurement_number: string };
@@ -199,8 +207,16 @@ export default async function ManualInvoicesPage({ searchParams }: { searchParam
     .filter((invoice) => !params.type || invoice.document_type === params.type)
     .filter((invoice) => !query || [invoice.registry_number, invoice.document_number, invoice.series, relatedOne(invoice.suppliers)?.legal_name, relatedOne(invoice.suppliers)?.trade_name].join(" ").toLocaleLowerCase("pt-BR").includes(query));
 
-  const activeInvoices = invoices.filter((invoice) => invoice.status !== "cancelled");
-  const postedInvoices = invoices.filter((invoice) => invoice.status === "approved");
+  // Indicadores agregados no banco, cobrindo toda a obra sem depender das linhas
+  // carregadas aqui. Equivalência coberta por
+  // supabase/tests/20260806_0081_manual_invoice_indicators.sql.
+  const indicatorsResult = projectId
+    ? await supabase.rpc("finance_manual_invoice_indicators", { p_company_id: companyId, p_project_id: projectId })
+    : { data: null, error: null };
+  const indicators = (indicatorsResult.data as ManualInvoiceIndicators | null) ?? {
+    invoice_count: 0, active_count: 0, posted_count: 0,
+    net_total: 0, retention_total: 0, with_receipt_count: 0,
+  };
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
   const commonDialogProps = {
     suppliers: suppliersResult.data,
@@ -241,11 +257,11 @@ export default async function ManualInvoicesPage({ searchParams }: { searchParam
       dialogProps={commonDialogProps}
     /> : projectId && !schemaMissing ? <>
       <section className="manual-kpis">
-        <article><span>Notas ativas</span><strong>{activeInvoices.length}</strong><small>{invoices.length} registros no histórico</small></article>
-        <article><span>Lançadas</span><strong>{postedInvoices.length}</strong><small>sem etapa de aprovação</small></article>
-        <article><span>Valor líquido</span><strong>{money(postedInvoices.reduce((sum, invoice) => sum + Number(invoice.net_amount), 0))}</strong><small>parcelas dos fornecedores</small></article>
-        <article><span>Impostos retidos</span><strong>{money(postedInvoices.reduce((sum, invoice) => sum + Number(invoice.total_retention_amount), 0))}</strong><small>obrigações tributárias geradas</small></article>
-        <article><span>Com recebimento</span><strong>{activeInvoices.filter((invoice) => invoice.material_receipt_id).length}</strong><small>edição e exclusão bloqueadas</small></article>
+        <article><span>Notas ativas</span><strong>{indicators.active_count}</strong><small>{indicators.invoice_count} registros no histórico</small></article>
+        <article><span>Lançadas</span><strong>{indicators.posted_count}</strong><small>sem etapa de aprovação</small></article>
+        <article><span>Valor líquido</span><strong>{money(Number(indicators.net_total))}</strong><small>parcelas dos fornecedores</small></article>
+        <article><span>Impostos retidos</span><strong>{money(Number(indicators.retention_total))}</strong><small>obrigações tributárias geradas</small></article>
+        <article><span>Com recebimento</span><strong>{indicators.with_receipt_count}</strong><small>edição e exclusão bloqueadas</small></article>
       </section>
 
       <section className="manual-toolbar">

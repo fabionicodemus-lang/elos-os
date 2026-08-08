@@ -474,7 +474,7 @@ from public.payables p
 join public.finance_bank_accounts a on a.id=p.bank_account_id
 left join public.suppliers s on s.id=p.supplier_id
 where p.status='paid' and p.paid_at is not null and p.bank_account_id is not null
-on conflict(company_id,source_system,source_id) do nothing;
+on conflict do nothing;
 
 insert into public.finance_bank_transactions(
   company_id,project_id,legal_entity_id,bank_account_id,transaction_date,competence_date,direction,transaction_type,
@@ -486,7 +486,7 @@ from public.receivables r
 join public.finance_bank_accounts a on a.id=r.bank_account_id
 left join public.clients c on c.id=r.client_id
 where r.status='paid' and r.paid_at is not null and r.bank_account_id is not null
-on conflict(company_id,source_system,source_id) do nothing;
+on conflict do nothing;
 
 update public.payables p set bank_transaction_id=t.id
 from public.finance_bank_transactions t where t.payable_id=p.id and p.bank_transaction_id is null and t.status<>'cancelled';

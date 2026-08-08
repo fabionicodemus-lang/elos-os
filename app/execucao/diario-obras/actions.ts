@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { RpcArgs } from "@/lib/supabase/types";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const LIST_PATH = "/execucao/diario-obras";
@@ -156,13 +157,33 @@ export async function removeDailyLogPhoto(formData: FormData) {
   redirect(resultUrl("Foto removida.", "success", { month, diary: logId }));
 }
 
-async function statusAction(formData: FormData, permission: string, rpc: string, success: string, extra: Record<string, unknown> = {}) {
+// Todas estas funções recebem empresa, obra e diário; o restante varia por ação
+// e chega em `extra`. Amarrar o nome da RPC ao seu tipo de argumentos faz o
+// build recusar um nome inexistente ou um parâmetro que a função não conhece.
+type DailyLogStatusRpc =
+  | "submit_execution_daily_log"
+  | "approve_execution_daily_log"
+  | "return_execution_daily_log"
+  | "reopen_execution_daily_log"
+  | "cancel_execution_daily_log";
+
+async function statusAction<T extends DailyLogStatusRpc>(
+  formData: FormData,
+  permission: string,
+  rpc: T,
+  success: string,
+  extra: Omit<RpcArgs<T>, "p_company_id" | "p_project_id" | "p_log_id"> = {} as Omit<
+    RpcArgs<T>,
+    "p_company_id" | "p_project_id" | "p_log_id"
+  >,
+) {
   const logId = text(formData, "daily_log_id");
   const logDate = text(formData, "log_date");
   const month = monthOf(logDate);
   const { supabase, companyId, projectId } = await requireCompanyPermission(permission);
   if (!projectId) redirect(resultUrl("Selecione uma obra.", "error", { month }));
-  const { data, error } = await supabase.rpc(rpc, { p_company_id: companyId, p_project_id: projectId, p_log_id: logId, ...extra });
+  const args = { p_company_id: companyId, p_project_id: projectId, p_log_id: logId, ...extra } as RpcArgs<T>;
+  const { data, error } = await supabase.rpc(rpc, args);
   if (error) redirect(resultUrl(error.message, "error", { month, diary: logId }));
   revalidatePath(LIST_PATH);
   return { data, month, logId, success };

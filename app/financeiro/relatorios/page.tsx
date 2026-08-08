@@ -270,14 +270,16 @@ export default async function FinancialReportsPage({
     bucketMap.set(key, bucket);
   });
 
-  let accumulated = 0;
+  // O acumulado vem sempre da linha anterior já calculada, em vez de uma
+  // variável externa mutada dentro do map — que podia acumular em dobro.
   const buckets: PeriodBucket[] = [...bucketMap.values()]
     .sort((a, b) => a.key.localeCompare(b.key))
-    .map((bucket) => {
+    .reduce<PeriodBucket[]>((rows, bucket) => {
       const balance = bucket.revenueRealized + bucket.revenueForecast - bucket.expenseRealized - bucket.expenseForecast;
-      accumulated += balance;
-      return { ...bucket, balance, accumulated };
-    });
+      const previous = rows.length ? rows[rows.length - 1].accumulated : 0;
+      rows.push({ ...bucket, balance, accumulated: previous + balance });
+      return rows;
+    }, []);
 
   const aging = [
     { label: "1 a 30 dias", from: 1, to: 30, amount: 0, count: 0 },

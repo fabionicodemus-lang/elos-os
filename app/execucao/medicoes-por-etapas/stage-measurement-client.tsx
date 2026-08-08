@@ -33,23 +33,33 @@ export function StageMeasurementDialog({ contracts, stages, measurement, measure
   measurementItems?: StageMeasurementItemRecord[]; selectedContractId?: string; autoOpen?: boolean; label?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const range = useMemo(monthRange, []);
+  const range = useMemo(() => monthRange(), []);
   const initialContractId = measurement?.contract_id ?? selectedContractId ?? contracts[0]?.id ?? "";
   const [contractId, setContractId] = useState(initialContractId);
-  const [rows, setRows] = useState<Row[]>([]);
   const [tax, setTax] = useState(Number(measurement?.tax_withholding_amount ?? 0));
   const [advance, setAdvance] = useState(Number(measurement?.advance_deduction_amount ?? 0));
   const [other, setOther] = useState(Number(measurement?.other_discount_amount ?? 0));
   const editMap = useMemo(() => new Map(measurementItems.filter((item) => item.contract_stage_id).map((item) => [item.contract_stage_id!, item])), [measurementItems]);
   const selectedContract = contracts.find((contract) => contract.id === contractId) ?? null;
 
-  useEffect(() => {
-    setRows(stages.filter((stage) => stage.contract_id === contractId).map((stage) => ({
+  // As linhas partem do contrato selecionado e recebem as edições do usuário por
+  // cima. Trocar de contrato reinicia a base no próprio render, sem efeito.
+  const baseRows = useMemo<Row[]>(
+    () => stages.filter((stage) => stage.contract_id === contractId).map((stage) => ({
       ...stage,
       current_quantity: Number(editMap.get(stage.id)?.current_quantity ?? 0),
       notes: editMap.get(stage.id)?.notes ?? "",
-    })));
-  }, [contractId, stages, editMap]);
+    })),
+    [contractId, stages, editMap],
+  );
+  const [rows, setRows] = useState<Row[]>(baseRows);
+  const [syncedRows, setSyncedRows] = useState(baseRows);
+
+  if (syncedRows !== baseRows) {
+    setSyncedRows(baseRows);
+    setRows(baseRows);
+  }
+
   useEffect(() => { if (autoOpen) dialog.current?.showModal(); }, [autoOpen]);
 
   const gross = rows.reduce((sum, row) => sum + Number(row.current_quantity || 0) * Number(row.unit_price || 0), 0);

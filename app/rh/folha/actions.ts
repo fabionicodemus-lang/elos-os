@@ -40,7 +40,9 @@ async function requireDraftRun(permission: string, runId: string) {
   if (!runResult.data) redirect(pageUrl("Folha não localizada."));
   if (runResult.data.status !== "draft") redirect(pageUrl("A folha já foi aprovada ou cancelada.", "error", runId));
 
-  return { ...workspace, run: runResult.data };
+  // O empreendimento já foi validado acima; devolvê-lo não-nulo evita espalhar
+  // `!` por cada gravação da folha.
+  return { ...workspace, projectId: workspace.projectId, run: runResult.data };
 }
 
 export async function createPayrollRun(formData: FormData) {

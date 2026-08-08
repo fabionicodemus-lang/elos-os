@@ -149,7 +149,9 @@ export default async function ForecastHistoryPage({
   const selectedIds = [...new Set([selectedA?.id, selectedB?.id].filter((value): value is string => Boolean(value)))];
 
   let selectedRows: SnapshotRow[] = [];
-  if (selectedIds.length) {
+  // Só há congelamentos selecionados quando uma obra está ativa, mas a condição
+  // precisa dizer isso para que a consulta abaixo receba um project_id válido.
+  if (projectId && selectedIds.length) {
     const rowsResult = await fetchAllRows<SnapshotRow>(async (from, to) => {
       const { data, error } = await supabase
         .from("forecast_snapshot_rows")

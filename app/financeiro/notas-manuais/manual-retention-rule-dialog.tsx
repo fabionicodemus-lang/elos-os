@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { saveManualRetentionRule } from "./actions";
 
 export type ManualTaxAuthorityOption = {
@@ -67,22 +67,24 @@ export function ManualRetentionRuleDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const missing = useMemo(() => Object.keys(retentionLabels).find((key) => !rules.some((rule) => rule.retention_key === key && rule.due_rule !== "manual" && rule.due_trigger)), [rules]);
   const [retentionKey, setRetentionKey] = useState(missing ?? "inss");
-  const [model, setModel] = useState<ManualRetentionRuleOption>(() => ({
-    id: "",
-    project_id: projectId,
-    authority_supplier_id: "",
-    ...defaults[missing ?? "inss"],
-  }));
-
-  useEffect(() => {
-    const existing = rules.find((rule) => rule.retention_key === retentionKey);
-    setModel(existing ?? {
+  // O modelo parte da regra já gravada para a retenção escolhida e recebe as
+  // edições do usuário por cima. Trocar de retenção reinicia a base no render.
+  const baseModel = useMemo<ManualRetentionRuleOption>(
+    () => rules.find((rule) => rule.retention_key === retentionKey) ?? {
       id: "",
       project_id: projectId,
       authority_supplier_id: "",
       ...defaults[retentionKey],
-    });
-  }, [projectId, retentionKey, rules]);
+    },
+    [projectId, retentionKey, rules],
+  );
+  const [model, setModel] = useState<ManualRetentionRuleOption>(baseModel);
+  const [syncedModel, setSyncedModel] = useState(baseModel);
+
+  if (syncedModel !== baseModel) {
+    setSyncedModel(baseModel);
+    setModel(baseModel);
+  }
 
   const configured = rules.filter((rule) => rule.due_rule !== "manual" && rule.due_trigger && rule.authority_supplier_id).length;
   const readyToSave = Boolean(model.authority_supplier_id && model.due_trigger && model.due_rule !== "manual");

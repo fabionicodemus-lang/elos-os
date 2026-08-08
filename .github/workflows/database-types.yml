@@ -1,0 +1,75 @@
+name: Tipos do banco
+
+# Prova, a cada PR, que supabase/migrations ainda aplica do zero e que
+# types/database.ts corresponde ao schema resultante. Sem isto, uma migration
+# pode entrar sem regenerar os tipos: o build fica verde e o erro só aparece
+# em produção, na primeira consulta à coluna renomeada.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: shadow
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Aplicar migrations no shadow database
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: shadow
+        run: ops/build-shadow-db.sh elos_shadow
+
+      - name: Conferir se os tipos estão sincronizados
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: shadow
+        run: ops/check-database-types.sh
+
+      - name: Testes SQL
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: shadow
+        run: ops/run-sql-tests.sh elos_shadow
+
+      - name: Typecheck
+        run: npm run typecheck

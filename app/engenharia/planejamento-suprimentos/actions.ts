@@ -97,7 +97,13 @@ async function context(form: FormData) {
     .maybeSingle();
 
   if (!baseline || baseline.status === "archived") redirect(target("Linha de base indisponível.", "error"));
-  return { ...workspace, baseline: baseline as { id: string; budget_id: string; status: string } };
+  // A obra já foi validada acima; devolver o contexto com projectId não-nulo
+  // evita espalhar `!` por cada consulta e gravação daqui para baixo.
+  return {
+    ...workspace,
+    projectId: workspace.projectId,
+    baseline: baseline as { id: string; budget_id: string; status: string },
+  };
 }
 
 export async function generateSupplyPlanFromSchedule(form: FormData) {

@@ -57,27 +57,38 @@ export function SearchableSelect({
   const [internalValue, setInternalValue] = useState(defaultValue?.trim() ?? "");
   const selectedValue = controlled ? value ?? "" : internalValue;
   const selectedOption = options.find((option) => option.value === selectedValue) ?? null;
-  const [query, setQuery] = useState(selectedOption?.label ?? "");
+  const selectedLabel = selectedOption?.label ?? "";
+  // O texto digitado só vale enquanto a lista está aberta. Com a lista fechada
+  // a exibição deriva da opção selecionada, em vez de ser sincronizada por efeito.
+  const [draft, setDraft] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
+  const query = open ? draft : selectedLabel;
 
-  useEffect(() => {
-    if (!open) setQuery(selectedOption?.label ?? "");
-  }, [selectedOption?.label, open]);
+  function openList() {
+    setDraft(selectedLabel);
+    setOpen(true);
+    setActiveIndex(0);
+  }
+
+  function closeList() {
+    setOpen(false);
+    setActiveIndex(0);
+  }
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
-        setQuery(selectedOption?.label ?? "");
+        setActiveIndex(0);
       }
     }
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [selectedOption?.label]);
+  }, []);
 
   useEffect(() => {
     inputRef.current?.setCustomValidity(
@@ -100,15 +111,12 @@ export function SearchableSelect({
   function commit(nextValue: string) {
     if (!controlled) setInternalValue(nextValue);
     onValueChange?.(nextValue);
-    const nextOption = options.find((option) => option.value === nextValue);
-    setQuery(nextOption?.label ?? "");
-    setOpen(false);
-    setActiveIndex(0);
+    closeList();
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   function handleChange(nextQuery: string) {
-    setQuery(nextQuery);
+    setDraft(nextQuery);
     if (selectedValue) {
       if (!controlled) setInternalValue("");
       onValueChange?.("");
@@ -131,8 +139,7 @@ export function SearchableSelect({
       commit((entries[activeIndex] ?? entries[0]).value);
     } else if (event.key === "Escape") {
       event.preventDefault();
-      setOpen(false);
-      setQuery(selectedOption?.label ?? "");
+      closeList();
     }
   }
 
@@ -154,14 +161,13 @@ export function SearchableSelect({
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={showList && entries[activeIndex] ? `${listId}-${activeIndex}` : undefined}
-          onFocus={() => setOpen(true)}
+          onFocus={openList}
           onChange={(event) => handleChange(event.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={() => {
             window.setTimeout(() => {
               if (!rootRef.current?.contains(document.activeElement)) {
-                setOpen(false);
-                setQuery(selectedOption?.label ?? "");
+                closeList();
               }
             }, 100);
           }}
@@ -171,7 +177,8 @@ export function SearchableSelect({
           className="creatable-combobox-toggle"
           aria-label={open ? "Fechar opções" : "Abrir opções"}
           onClick={() => {
-            setOpen((current) => !current);
+            if (open) closeList();
+            else openList();
             inputRef.current?.focus();
           }}
         >

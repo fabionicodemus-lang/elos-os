@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { RpcArgs } from "@/lib/supabase/types";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const PATH = "/suprimentos/recebimento-materiais";
@@ -29,21 +30,37 @@ export async function saveMaterialReceipt(formData: FormData) {
   refresh(); redirect(resultUrl(receiptId ? "Recebimento atualizado." : "Recebimento criado em elaboração.", "success", String(data)));
 }
 
-async function statusAction(formData: FormData, permission: string, rpc: string, success: string, includeReason = false) {
+// O parâmetro adicional passa a vir explícito de cada ação. Antes era deduzido
+// do nome da RPC (`rpc.includes("approve")`), o que quebraria silenciosamente se
+// alguma função fosse renomeada.
+type ReceiptStatusRpc =
+  | "submit_procurement_material_receipt"
+  | "approve_procurement_material_receipt"
+  | "reject_procurement_material_receipt"
+  | "cancel_procurement_material_receipt";
+
+async function statusAction<T extends ReceiptStatusRpc>(
+  formData: FormData,
+  permission: string,
+  rpc: T,
+  success: string,
+  extra: Omit<RpcArgs<T>, "p_company_id" | "p_project_id" | "p_receipt_id"> = {} as Omit<
+    RpcArgs<T>,
+    "p_company_id" | "p_project_id" | "p_receipt_id"
+  >,
+) {
   const receiptId = text(formData, "receipt_id");
   const { supabase, companyId, projectId } = await requireCompanyPermission(permission);
   if (!projectId) redirect(resultUrl("Selecione uma obra.", "error"));
-  const args: Record<string, unknown> = { p_company_id: companyId, p_project_id: projectId, p_receipt_id: receiptId };
-  if (includeReason) args.p_reason = text(formData, "reason");
-  else if (rpc.includes("approve")) args.p_notes = optional(formData, "notes");
+  const args = { p_company_id: companyId, p_project_id: projectId, p_receipt_id: receiptId, ...extra } as RpcArgs<T>;
   const { error } = await supabase.rpc(rpc, args);
   if (error) redirect(resultUrl(error.message, "error", receiptId));
   refresh(); redirect(resultUrl(success, "success", receiptId));
 }
 export async function submitMaterialReceipt(formData: FormData) { return statusAction(formData, "procurement.receipts.submit", "submit_procurement_material_receipt", "Recebimento enviado para aprovação."); }
-export async function approveMaterialReceipt(formData: FormData) { return statusAction(formData, "procurement.receipts.approve", "approve_procurement_material_receipt", "Recebimento aprovado e saldos do pedido atualizados."); }
-export async function rejectMaterialReceipt(formData: FormData) { return statusAction(formData, "procurement.receipts.approve", "reject_procurement_material_receipt", "Recebimento devolvido para correção.", true); }
-export async function cancelMaterialReceipt(formData: FormData) { return statusAction(formData, "procurement.receipts.cancel", "cancel_procurement_material_receipt", "Recebimento cancelado.", true); }
+export async function approveMaterialReceipt(formData: FormData) { return statusAction(formData, "procurement.receipts.approve", "approve_procurement_material_receipt", "Recebimento aprovado e saldos do pedido atualizados.", { p_notes: optional(formData, "notes") }); }
+export async function rejectMaterialReceipt(formData: FormData) { return statusAction(formData, "procurement.receipts.approve", "reject_procurement_material_receipt", "Recebimento devolvido para correção.", { p_reason: text(formData, "reason") }); }
+export async function cancelMaterialReceipt(formData: FormData) { return statusAction(formData, "procurement.receipts.cancel", "cancel_procurement_material_receipt", "Recebimento cancelado.", { p_reason: text(formData, "reason") }); }
 
 export async function uploadMaterialReceiptDocuments(formData: FormData) {
   const receiptId = text(formData, "receipt_id");

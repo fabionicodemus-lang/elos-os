@@ -10,6 +10,7 @@ import { PrintPurchaseOrderButton, PurchaseOrderHeaderDialog, type PurchaseOrder
 import "../../procurement-purchase-orders.css";
 
 type Project={id:string;code:string|null;name:string};
+type PurchaseOrderIndicators={open_count:number;committed_total:number;received_total:number;delayed_count:number};
 type Supplier={id:string;legal_name:string;trade_name:string|null;tax_id:string|null};
 type Quotation={id:string;quotation_number:string;title:string;status:string;desired_delivery_date:string|null;delivery_address:string|null;total_awarded_amount:number;approved_at:string|null};
 type Award={id:string;quotation_id:string;supplier_id:string;awarded_total_cost:number};
@@ -57,10 +58,16 @@ export default async function PurchaseOrdersPage({searchParams}:{searchParams:Pr
   const structureError=ordersResult.error||itemsResult.error||docsResult.error;
   const query=(params.q??"").trim().toLocaleLowerCase("pt-BR");
   const filtered=orders.filter(o=>!params.status||o.status===params.status).filter(o=>!query||[o.order_number,supplierName(supplierMap.get(o.supplier_id)),quoteMap.get(o.quotation_id)?.quotation_number??"",...(itemMap.get(o.id)??[]).flatMap(i=>[i.input_code,i.input_name,i.cost_center_name])].join(" ").toLocaleLowerCase("pt-BR").includes(query));
-  const open=orders.filter(o=>!["closed","cancelled"].includes(o.status));
-  const committed=orders.filter(o=>!["draft","cancelled"].includes(o.status)).reduce((s,o)=>s+Number(o.total_amount),0);
-  const received=orders.reduce((s,o)=>s+Number(o.received_amount),0);
-  const delayed=orders.filter(o=>!["received","closed","cancelled"].includes(o.status)&&o.expected_delivery_date&&o.expected_delivery_date<new Date().toISOString().slice(0,10)).length;
+  // Indicadores agregados no banco, cobrindo toda a obra sem depender das linhas
+  // carregadas aqui. Equivalência coberta por
+  // supabase/tests/20260806_0081_purchase_order_indicators.sql.
+  const indicatorsResult=projectId
+    ? await supabase.rpc("procurement_purchase_order_indicators",{p_company_id:companyId,p_project_id:projectId})
+    : {data:null,error:null};
+  const indicators=(indicatorsResult.data as PurchaseOrderIndicators|null)??{open_count:0,committed_total:0,received_total:0,delayed_count:0};
+  const committed=Number(indicators.committed_total);
+  const received=Number(indicators.received_total);
+  const delayed=indicators.delayed_count;
   const context=project?`${project.code?`${project.code} · `:""}${project.name}`:"Selecione uma obra";
 
   return <AppShell activeGroup="procurement" activeItem="purchase-orders" eyebrow="Suprimentos · Compras" title="Pedidos de Compras" description={`${company.name} · ${context} · compromissos por fornecedor, entrega, documentos e saldo a receber.`}>
@@ -69,7 +76,7 @@ export default async function PurchaseOrdersPage({searchParams}:{searchParams:Pr
     {structureError?<div className="auth-message error workspace-message">A estrutura de pedidos ainda não está instalada. Execute a migration <strong>20260729_0042_procurement_purchase_orders.sql</strong>.</div>:null}
     {!projectId?<div className="purchase-order-empty">Selecione uma obra no topo.</div>:null}
     {projectId&&selected?<OrderDetail order={selected} items={selectedItems} documents={signedDocs} supplier={supplierMap.get(selected.supplier_id)??null} quotation={quoteMap.get(selected.quotation_id)??null} canManage={canManage} canIssue={canIssue} canConfirm={canConfirm} canCancel={canCancel} autoEdit={params.edit==="1"}/>:projectId?<>
-      <section className="purchase-order-kpis"><article><span>Cotações liberadas</span><strong>{eligibleQuotes.length}</strong><small>possuem vencedores sem pedido</small></article><article><span>Pedidos em aberto</span><strong>{open.length}</strong><small>da elaboração ao recebimento</small></article><article><span>Valor comprometido</span><strong>{money(committed)}</strong><small>pedidos emitidos</small></article><article><span>Valor recebido</span><strong>{money(received)}</strong><small>materiais aceitos</small></article><article><span>Entregas atrasadas</span><strong>{delayed}</strong><small>prazo previsto vencido</small></article></section>
+      <section className="purchase-order-kpis"><article><span>Cotações liberadas</span><strong>{eligibleQuotes.length}</strong><small>possuem vencedores sem pedido</small></article><article><span>Pedidos em aberto</span><strong>{indicators.open_count}</strong><small>da elaboração ao recebimento</small></article><article><span>Valor comprometido</span><strong>{money(committed)}</strong><small>pedidos emitidos</small></article><article><span>Valor recebido</span><strong>{money(received)}</strong><small>materiais aceitos</small></article><article><span>Entregas atrasadas</span><strong>{delayed}</strong><small>prazo previsto vencido</small></article></section>
       {eligibleQuotes.length?<section className="purchase-order-release"><div><span>Prontos para conversão</span><h2>Cotações aprovadas</h2><p>Cada fornecedor vencedor gera um pedido independente.</p></div><div>{eligibleQuotes.map(q=><article key={q.id}><div><strong>{q.quotation_number} · {q.title}</strong><small>{money(q.total_awarded_amount)} · entrega desejada {dateBR(q.desired_delivery_date)}</small></div>{canManage?<form action={generatePurchaseOrders}><input type="hidden" name="quotation_id" value={q.id}/><button type="submit">Gerar pedidos</button></form>:null}</article>)}</div></section>:null}
       <section className="purchase-order-toolbar"><form method="get"><input name="q" defaultValue={params.q??""} placeholder="Buscar pedido, fornecedor, material ou serviço"/><select name="status" defaultValue={params.status??""}><option value="">Todos os status</option>{Object.entries(statusLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select><button type="submit">Filtrar</button><Link href="/suprimentos/pedidos-compras">Limpar</Link></form></section>
       <section className="purchase-order-list"><div className="budget-section-head"><div><span>Pedidos da obra</span><h2>Compras emitidas e em elaboração</h2></div><p>{filtered.length} pedido(s)</p></div><div className="registry-table-wrap"><table className="registry-table purchase-order-table"><thead><tr><th>Pedido</th><th>Fornecedor</th><th>Cotação</th><th>Entrega</th><th>Itens</th><th>Total</th><th>Recebido</th><th>Saldo</th><th>Status</th></tr></thead><tbody>{filtered.map(o=><tr key={o.id}><td><Link href={`?order=${o.id}`}><strong>{o.order_number}</strong><span>{o.issue_date?`Emitido em ${dateBR(o.issue_date)}`:"Ainda não emitido"}</span></Link></td><td><strong>{supplierName(supplierMap.get(o.supplier_id))}</strong><span>{supplierMap.get(o.supplier_id)?.tax_id??""}</span></td><td>{quoteMap.get(o.quotation_id)?.quotation_number??"—"}<span>{quoteMap.get(o.quotation_id)?.title??""}</span></td><td className={o.expected_delivery_date&&o.expected_delivery_date<new Date().toISOString().slice(0,10)&&!["received","closed","cancelled"].includes(o.status)?"late":""}>{dateBR(o.expected_delivery_date)}</td><td>{(itemMap.get(o.id)??[]).length}</td><td><strong>{money(o.total_amount)}</strong></td><td>{money(o.received_amount)}</td><td>{money(Math.max(0,o.total_amount-o.received_amount))}</td><td><span className={`purchase-order-status ${o.status}`}>{statusLabels[o.status]}</span></td></tr>)}{!filtered.length?<tr><td colSpan={9} className="budget-empty-state">Nenhum pedido encontrado.</td></tr>:null}</tbody></table></div></section>
