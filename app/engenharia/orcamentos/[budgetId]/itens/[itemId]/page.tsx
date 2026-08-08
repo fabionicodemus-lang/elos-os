@@ -223,14 +223,33 @@ export default async function BudgetItemCompositionPage({
         .limit(30000)
     : Promise.resolve({ data: [], error: null });
 
-  const inputsPromise = supabase
-    .from("engineering_inputs")
-    .select("id, code, description, unit, category")
-    .eq("company_id", companyId)
-    .eq("status", "active")
-    .order("category")
-    .order("code")
-    .limit(10000);
+  const inputsPromise = (async () => {
+    const pageSize = 1000;
+    const data: EngineeringInput[] = [];
+    let from = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const result = await supabase
+        .from("engineering_inputs")
+        .select("id, code, description, unit, category")
+        .eq("company_id", companyId)
+        .eq("status", "active")
+        .order("category")
+        .order("code")
+        .order("id")
+        .range(from, from + pageSize - 1);
+
+      if (result.error) return { data: null, error: result.error };
+
+      const page = (result.data ?? []) as EngineeringInput[];
+      data.push(...page);
+      hasMore = page.length === pageSize;
+      from += pageSize;
+    }
+
+    return { data, error: null };
+  })();
 
   const pricesPromise = supabase
     .from("engineering_input_prices")
