@@ -63,7 +63,7 @@ async function readAll<T>(
   throw new Error(`Audit pagination exceeded ${MAX_PAGES} pages for ${label}`);
 }
 
-async function run(): Promise<void> {
+async function runPayableAudit(): Promise<void> {
   console.log("KOPER_PAYABLE_FINAL_AUDIT_START", JSON.stringify({
     companyId: env.BOSSA_COMPANY_ID,
     startedAt: new Date().toISOString(),
@@ -152,9 +152,31 @@ async function run(): Promise<void> {
   }));
 }
 
-run().catch((error: unknown) => {
+async function main(): Promise<void> {
+  const target = process.env.KOPER_AUDIT_TARGET?.trim() || "payables";
+  console.log("KOPER_FINAL_AUDIT_TARGET", JSON.stringify({ target }));
+
+  if (target === "payables") {
+    await runPayableAudit();
+    return;
+  }
+
+  if (target === "material-receipts") {
+    await import("./diagnose-unpromoted-stock-entries.js");
+    return;
+  }
+
+  if (target === "electronic-invoices") {
+    await import("./audit-native-electronic-invoices.js");
+    return;
+  }
+
+  throw new Error(`Unsupported KOPER_AUDIT_TARGET: ${target}`);
+}
+
+main().catch((error: unknown) => {
   console.error(
-    "KOPER_PAYABLE_FINAL_AUDIT_ERROR",
+    "KOPER_FINAL_AUDIT_ERROR",
     error instanceof Error ? error.message : String(error),
   );
   process.exitCode = 1;
