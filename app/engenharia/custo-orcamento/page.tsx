@@ -6,6 +6,7 @@ import {
   type CostVsBudgetStatus,
 } from "@/lib/cost-vs-budget/server";
 import { requireCompanyPermission } from "@/lib/workspace";
+import { TraceabilityPanel } from "./traceability-panel";
 
 const statusLabels: Record<CostVsBudgetStatus, string> = {
   ok: "Dentro do orçamento",
@@ -183,6 +184,8 @@ export default async function CostVsBudgetPage({
               Os pedidos confirmados, recebidos ou encerrados são agrupados pelo serviço gravado no item da compra. Quando já existe consumo de material no mesmo serviço, esse valor reduz o saldo comprometido do pedido para evitar dupla contagem. Pedidos cancelados e quantidades canceladas não entram na previsão.
             </p>
           </section>
+
+          <TraceabilityPanel />
 
           <section className="registry-toolbar cashflow-toolbar">
             <form
