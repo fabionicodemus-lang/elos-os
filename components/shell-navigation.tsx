@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 export type ShellNavigationItem = {
@@ -42,10 +43,28 @@ export function ShellNavigation({
   groups: ShellNavigationGroup[];
   homeActive?: boolean;
 }) {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Set<string>>(
     () => new Set(groups.filter((group) => group.active).map((group) => group.key)),
   );
+  const navigationGroups = groups.map((group) => {
+    if (group.key !== "engineering") return group;
+    if (group.items.some((item) => item.href === "/engenharia/custo-orcamento")) return group;
+
+    const budgetIndex = group.items.findIndex(
+      (item) => item.href === "/engenharia/orcamentos" && !item.disabled,
+    );
+    if (budgetIndex < 0) return group;
+
+    const items = [...group.items];
+    items.splice(budgetIndex + 1, 0, {
+      label: "Custo x Orçamento",
+      href: "/engenharia/custo-orcamento",
+      active: pathname.startsWith("/engenharia/custo-orcamento"),
+    });
+    return { ...group, items };
+  });
 
   function toggleGroup(key: string) {
     setOpenGroups((current) => {
@@ -88,7 +107,7 @@ export function ShellNavigation({
             <span>Início</span>
           </Link>
 
-          {groups.map((group) => {
+          {navigationGroups.map((group) => {
             const open = openGroups.has(group.key);
             return (
               <div className={`elos-module-group ${open ? "open" : ""}`} key={group.key}>
