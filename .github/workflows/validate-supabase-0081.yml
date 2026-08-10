@@ -1,0 +1,28 @@
+name: Validate Supabase 0081
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20260810_0081_owner_admin_full_access.sql"
+      - ".github/tests/owner-admin-full-access-0081.sql"
+      - ".github/workflows/validate-supabase-0081.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Instalar PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql
+      - name: Iniciar PostgreSQL
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres createdb elos_test
+      - name: Validar migration 0081
+        run: sudo -u postgres psql -d elos_test -X -v ON_ERROR_STOP=1 -f .github/tests/owner-admin-full-access-0081.sql
