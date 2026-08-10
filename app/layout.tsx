@@ -64,7 +64,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Elos OS · V0.72.2",
+  title: "Elos OS · V0.72.3",
   description: "Sistema integrado de gestão para construtoras e incorporadoras.",
 };
 
