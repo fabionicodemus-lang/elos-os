@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test app/engenharia/curvas/curve-calculations.test.mjs app/engenharia/curvas/month-window.test.mjs app/engenharia/contratos/contract-calculations.test.mjs app/engenharia/cronograma/schedule-generation.test.mjs app/engenharia/cronograma/schedule-portable.test.mjs app/engenharia/cronograma/schedule-cascade.test.mjs lib/forecast/engine.test.mjs lib/forecast/snapshot-comparison.test.mjs",
-    "test:performance": "node --test --test-concurrency=1 tests/performance/forecast-load-scenarios.test.mjs"
+    "test:performance": "node --test --test-concurrency=1 tests/performance/forecast-load-scenarios.test.mjs",
+    "test:components": "node --import tsx --import global-jsdom/register --test \"**/*.ui.test.tsx\""
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",
@@ -21,12 +22,18 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.3",
     "@types/node": "20.16.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "9.39.5",
     "eslint-config-next": "16.2.11",
+    "global-jsdom": "^29.0.0",
+    "jsdom": "^29.1.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   },
   "overrides": {
