@@ -26,14 +26,30 @@ const child = spawn(process.execPath, [new URL("./run-promotion-plan-v3-divergen
   env: { ...process.env, PORT: "19431" },
   stdio:["ignore","pipe","pipe"],
 });
-let stdout=""; let stderr="";
+let stdout=""; let stderr=""; let buffer="";
 child.stdout.setEncoding("utf8"); child.stderr.setEncoding("utf8");
-child.stdout.on("data",(chunk:string)=>{ stdout+=chunk; process.stdout.write(chunk); });
-child.stderr.on("data",(chunk:string)=>{ stderr+=chunk; process.stderr.write(chunk); });
-const exitCode:number = await new Promise((resolve)=>child.on("close",(code)=>resolve(code ?? 1)));
-if (exitCode !== 0) throw new Error(`KOPER_FINALIZE_RECEIPTS_PLANNER_FAILED exit=${exitCode} stderr=${stderr.slice(-2000)}`);
-const doneLine = stdout.split(/\r?\n/).filter(Boolean).reverse().find((line)=>line.startsWith("KOPER_FINANCIAL_RECEIPT_PROMOTION_PLAN_V3_DONE "));
-if (!doneLine) throw new Error("KOPER_FINALIZE_RECEIPTS_DONE_NOT_FOUND");
+const doneLine:string = await new Promise((resolve,reject)=>{
+  const timer = setTimeout(()=>reject(new Error(`KOPER_FINALIZE_RECEIPTS_TIMEOUT stderr=${stderr.slice(-2000)}`)), 10 * 60 * 1000);
+  child.stdout.on("data",(chunk:string)=>{
+    stdout+=chunk; buffer+=chunk; process.stdout.write(chunk);
+    const lines = buffer.split(/\r?\n/); buffer = lines.pop() ?? "";
+    const found = lines.find((line)=>line.startsWith("KOPER_FINANCIAL_RECEIPT_PROMOTION_PLAN_V3_DONE "));
+    if (found) {
+      clearTimeout(timer);
+      resolve(found);
+      child.kill("SIGTERM");
+    }
+  });
+  child.stderr.on("data",(chunk:string)=>{ stderr+=chunk; process.stderr.write(chunk); });
+  child.on("error",(error)=>{ clearTimeout(timer); reject(error); });
+  child.on("close",(code)=>{
+    if (!stdout.includes("KOPER_FINANCIAL_RECEIPT_PROMOTION_PLAN_V3_DONE ")) {
+      clearTimeout(timer);
+      reject(new Error(`KOPER_FINALIZE_RECEIPTS_PLANNER_FAILED exit=${code ?? 1} stderr=${stderr.slice(-2000)}`));
+    }
+  });
+});
+
 const done = JSON.parse(doneLine.slice("KOPER_FINANCIAL_RECEIPT_PROMOTION_PLAN_V3_DONE ".length));
 const result = done?.result ?? {};
 const excluded = result.excluded ?? {};
