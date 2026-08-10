@@ -36,6 +36,80 @@ function Logo() {
   );
 }
 
+function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string) {
+  const engineering = groups.find((group) => group.key === "engineering");
+  const execution = groups.find((group) => group.key === "execution");
+  const budgetAccess = engineering?.items.find(
+    (item) => !item.sectionLabel && (item.href === "/engenharia/orcamentos" || item.label === "Orçamentos"),
+  );
+  const scheduleItem = execution?.items.find((item) => item.href === "/execucao/cronograma");
+  const contractsItem = engineering?.items.find((item) => item.href === "/engenharia/contratos");
+
+  const controlItems: ShellNavigationItem[] = [
+    {
+      label: "Custos x Orçamento",
+      href: "/engenharia/custo-orcamento",
+      disabled: budgetAccess ? Boolean(budgetAccess.disabled) : true,
+      active: pathname.startsWith("/engenharia/custo-orcamento"),
+    },
+    scheduleItem
+      ? {
+          ...scheduleItem,
+          label: "Controle do Cronograma",
+          active: pathname.startsWith("/execucao/cronograma"),
+        }
+      : {
+          label: "Controle do Cronograma",
+          disabled: true,
+        },
+    contractsItem
+      ? {
+          ...contractsItem,
+          label: "Controle de Contratos",
+          active: pathname.startsWith("/engenharia/contratos"),
+        }
+      : {
+          label: "Controle de Contratos",
+          disabled: true,
+        },
+  ];
+
+  const controlActive = controlItems.some((item) => item.active);
+  const navigationGroups: ShellNavigationGroup[] = [];
+
+  for (const group of groups) {
+    if (group.key === "engineering") {
+      navigationGroups.push({
+        ...group,
+        label: "Pré-Obra",
+        active: controlActive ? false : group.active,
+        items: group.items.filter((item) => item.href !== "/engenharia/contratos"),
+      });
+      navigationGroups.push({
+        key: "control",
+        label: "Controle",
+        icon: "◎",
+        active: controlActive,
+        items: controlItems,
+      });
+      continue;
+    }
+
+    if (group.key === "execution") {
+      navigationGroups.push({
+        ...group,
+        active: controlActive ? false : group.active,
+        items: group.items.filter((item) => item.href !== "/execucao/cronograma"),
+      });
+      continue;
+    }
+
+    navigationGroups.push(group);
+  }
+
+  return navigationGroups;
+}
+
 export function ShellNavigation({
   groups,
   homeActive,
@@ -44,27 +118,11 @@ export function ShellNavigation({
   homeActive?: boolean;
 }) {
   const pathname = usePathname();
+  const navigationGroups = buildNavigationGroups(groups, pathname);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Set<string>>(
-    () => new Set(groups.filter((group) => group.active).map((group) => group.key)),
+    () => new Set(navigationGroups.filter((group) => group.active).map((group) => group.key)),
   );
-  const navigationGroups = groups.map((group) => {
-    if (group.key !== "engineering") return group;
-    if (group.items.some((item) => item.href === "/engenharia/custo-orcamento")) return group;
-
-    const budgetIndex = group.items.findIndex(
-      (item) => item.href === "/engenharia/orcamentos" && !item.disabled,
-    );
-    if (budgetIndex < 0) return group;
-
-    const items = [...group.items];
-    items.splice(budgetIndex + 1, 0, {
-      label: "Custo x Orçamento",
-      href: "/engenharia/custo-orcamento",
-      active: pathname.startsWith("/engenharia/custo-orcamento"),
-    });
-    return { ...group, items };
-  });
 
   function toggleGroup(key: string) {
     setOpenGroups((current) => {
@@ -108,7 +166,7 @@ export function ShellNavigation({
           </Link>
 
           {navigationGroups.map((group) => {
-            const open = openGroups.has(group.key);
+            const open = openGroups.has(group.key) || Boolean(group.active);
             return (
               <div className={`elos-module-group ${open ? "open" : ""}`} key={group.key}>
                 <button
