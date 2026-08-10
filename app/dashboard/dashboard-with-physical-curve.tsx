@@ -31,6 +31,18 @@ type WeightRow = {
   distribution_method: "quantity" | "cost" | "duration" | "equal";
 };
 
+type PhysicalCurveInput = {
+  activities: ActivityRow[];
+  measurements: MeasurementRow[];
+  serviceWeights: WeightRow[];
+  today: string;
+  maxMonths?: number;
+};
+
+const buildPhysicalMonths = buildDashboardPhysicalMonths as unknown as (
+  input: PhysicalCurveInput,
+) => PhysicalMonth[];
+
 function localDateIso(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
@@ -129,12 +141,12 @@ async function loadPhysicalMonths(): Promise<PhysicalMonth[] | null> {
 
   if (activitiesResult.error || measurementsResult.error || weightsResult.error) return null;
 
-  return buildDashboardPhysicalMonths({
+  return buildPhysicalMonths({
     activities: activitiesResult.data,
     measurements: measurementsResult.data,
     serviceWeights: weightsResult.data,
     today: localDateIso(),
-  }) as PhysicalMonth[];
+  });
 }
 
 function replacePhysicalCurve(node: ReactNode, rows: PhysicalMonth[]): ReactNode {
