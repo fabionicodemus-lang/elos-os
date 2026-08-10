@@ -67,8 +67,8 @@ export async function resolveActiveWorkspace() {
   }
 
   // Autorreparo imediato: empresas antigas podem não ter recebido permissões
-  // adicionadas depois da criação. O owner sempre deve possuir todas elas.
-  if (role.key === "owner" && role.id) {
+  // adicionadas depois da criação. Owner e admin sempre possuem todas elas.
+  if ((role.key === "owner" || role.key === "admin") && role.id) {
     const [permissionResult, mappingResult] = await Promise.all([
       supabase.from("permissions").select("key"),
       supabase
@@ -97,7 +97,7 @@ export async function resolveActiveWorkspace() {
           .upsert(missing, { onConflict: "role_id,permission_key" });
 
         if (syncError) {
-          console.error("[workspace] Falha ao completar permissões do proprietário:", syncError.message);
+          console.error("[workspace] Falha ao completar permissões do papel privilegiado:", syncError.message);
         }
       }
     }
