@@ -1,0 +1,1 @@
+Dashboard executiva V0.72.3: restauração do modelo gerencial aprovado, com KPIs de qualidade e navegação atualizada.
