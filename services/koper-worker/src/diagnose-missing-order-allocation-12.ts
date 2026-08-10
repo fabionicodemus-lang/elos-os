@@ -4,7 +4,7 @@ import { requestSupabase } from "./elos/supabase.js";
 import { performKoperLogin } from "./auth/koper-auto-login.js";
 import { withBrowserless } from "./browser/browserless.js";
 import { isAllowedFlowSwitch } from "./diagnostics/inspect-koper-engineering.js";
-import { selectFlow } from "./diagnostics/collect-koper-purchase-orders.js";
+import { selectFlow } from "./diagnostics/collect-flow-stock-requests.js";
 
 type Json = Record<string, unknown>;
 type StagingRow = { koper_id: string; koper_parent_id: string | null; payload: unknown };
@@ -19,17 +19,17 @@ const targets = [
 ] as const;
 
 const objectValue = (value: unknown): Json => value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
-const str = (value: unknown): string | null => typeof value === "string" || typeof value === "number" ? String(value) : null;
-const num = (value: unknown): number | null => { const n = Number(value); return Number.isFinite(n) ? n : null; };
-const quotedIn = (values: string[]): string => `in.(${values.map((v) => `"${v.replaceAll('"','\\"')}"`).join(",")})`;
+const str = (value: unknown): string | null => (typeof value === "string" || typeof value === "number") && String(value).trim() ? String(value).trim() : null;
+const num = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : typeof value === "string" && value.trim() && Number.isFinite(Number(value)) ? Number(value) : null;
+const quotedIn = (values: string[]): string => `in.(${values.map((v) => `\"${v}\"`).join(",")})`;
 
 await import("./index.js");
 
 const entryIds = targets.map((t) => t[0]);
 const itemIds = targets.map((t) => t[1]);
 const [entries, items, nativeItems] = await Promise.all([
-  requestSupabase<StagingRow[]>("koper_staging_records", { query: new URLSearchParams({ select: "koper_id,koper_parent_id,payload", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source: "eq.koper", entity: "eq.stock_entry", koper_id: quotedIn(entryIds), limit: "100" }) }),
-  requestSupabase<StagingRow[]>("koper_staging_records", { query: new URLSearchParams({ select: "koper_id,koper_parent_id,payload", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source: "eq.koper", entity: "eq.stock_entry_item", koper_id: quotedIn(itemIds), limit: "100" }) }),
+  requestSupabase<StagingRow[]>("koper_staging_records", { query: new URLSearchParams({ select: "koper_id,koper_parent_id,payload", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source: "eq.koper", entity: "eq.stock_entry", sync_state: "eq.present", koper_id: quotedIn(entryIds), limit: "100" }) }),
+  requestSupabase<StagingRow[]>("koper_staging_records", { query: new URLSearchParams({ select: "koper_id,koper_parent_id,payload", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source: "eq.koper", entity: "eq.stock_entry_item", sync_state: "eq.present", koper_id: quotedIn(itemIds), limit: "100" }) }),
   requestSupabase<OrderItem[]>("procurement_purchase_order_items", { query: new URLSearchParams({ select: "id,order_id,source_id,input_code,input_name,ordered_quantity,received_quantity,accepted_quantity,rejected_quantity,unit_price,delivered_unit_cost", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", limit: "5000" }) }),
 ]);
 const entriesById = new Map(entries.map((r) => [r.koper_id, r]));
@@ -38,53 +38,54 @@ const orderIds = [...new Set(nativeItems.map((r) => r.order_id))];
 const orders = await requestSupabase<Order[]>("procurement_purchase_orders", { query: new URLSearchParams({ select: "id,source_id,supplier_id,project_id,order_number,status,received_amount", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", id: quotedIn(orderIds), limit: "5000" }) });
 const orderById = new Map(orders.map((r) => [r.id, r]));
 
-let capturedHeaders: Record<string,string> | null = null;
-const rawReceipts = new Map<string, Json>();
-let blockedWrites = 0;
-await withBrowserless(async (page) => {
-  const onResponse = (response: Response): void => {
+const live = await withBrowserless(async ({ page }) => {
+  const login = await performKoperLogin(page);
+  if (!login.authenticated) throw new Error(login.message ?? "KOPER_LOGIN_FAILED");
+  let blockedWrites = 0;
+  await page.route("**/*", async (route) => {
+    const request = route.request();
+    try {
+      const url = new URL(request.url());
+      const isKoper = url.hostname === "koper.com.br" || url.hostname.endsWith(".koper.com.br");
+      if (isKoper && !["GET", "HEAD", "OPTIONS"].includes(request.method()) && !isAllowedFlowSwitch(url, request.method(), request.postData())) {
+        blockedWrites += 1;
+        await route.abort("blockedbyclient");
+        return;
+      }
+    } catch {}
+    await route.continue();
+  });
+  if (!await selectFlow(page)) throw new Error("KOPER_FLOW_COMPANY_NOT_SELECTED");
+  let headers: Record<string,string> | null = null;
+  const capture = (response: Response): void => {
     try {
       const url = new URL(response.url());
-      if (!capturedHeaders && response.request().method() === "GET" && url.hostname === "api.koper.com.br" && url.pathname === "/financial/v1/receipt") capturedHeaders = response.request().headers();
+      if (!headers && response.request().method() === "GET" && url.hostname === "api.koper.com.br" && url.pathname === "/financial/v1/receipt") headers = response.request().headers();
     } catch {}
   };
-  page.on("response", onResponse);
-  await performKoperLogin(page);
-  await selectFlow(page, isAllowedFlowSwitch);
+  page.on("response", capture);
   await page.goto("https://app.koper.com.br/financeiro/notas_manuais/view/458", { waitUntil: "domcontentloaded", timeout: 12000 }).catch(() => undefined);
-  for (let i=0; i<12 && !capturedHeaders; i+=1) await page.waitForTimeout(350);
-  page.off("response", onResponse);
-  if (!capturedHeaders) throw new Error("KOPER_MISSING_ALLOC_RECEIPT_TRANSPORT_NOT_CAPTURED");
+  for (let i=0; i<12 && !headers; i+=1) await page.waitForTimeout(350);
+  page.off("response", capture);
+  if (!headers) throw new Error("KOPER_MISSING_ALLOC_RECEIPT_TRANSPORT_NOT_CAPTURED");
+  const receipts = [] as Array<{ receiptId:string; payload:Json }>;
   for (const receiptId of targets.map((t) => t[2])) {
-    const response = await page.request.get(`https://api.koper.com.br/financial/v1/receipt?receiptId=${encodeURIComponent(receiptId)}`, { headers: capturedHeaders, timeout: 8000 });
+    const response = await page.request.get(`https://api.koper.com.br/financial/v1/receipt?receiptId=${encodeURIComponent(receiptId)}`, { headers, timeout: 8000 });
     if (response.status() !== 200) throw new Error(`receipt_${receiptId}_status_${response.status()}`);
-    rawReceipts.set(receiptId, objectValue(await response.json()));
+    receipts.push({ receiptId, payload: objectValue(await response.json()) });
   }
-  return null;
+  return { blockedWrites, receipts };
 }, { sessionTimeoutMs: 58000 });
-
-function collectProducts(root: Json): Json[] {
-  const candidates: unknown[] = [];
-  const walk = (value: unknown, depth=0): void => {
-    if (depth > 5 || value == null) return;
-    if (Array.isArray(value)) { for (const x of value) walk(x, depth+1); return; }
-    if (typeof value !== "object") return;
-    const o = value as Json;
-    if (("receiptProductId" in o || "receipt_product_id" in o) && ("productId" in o || "product_id" in o)) candidates.push(o);
-    for (const v of Object.values(o)) walk(v, depth+1);
-  };
-  walk(root);
-  return candidates as Json[];
-}
+const receiptById = new Map(live.receipts.map((r) => [r.receiptId, r.payload]));
 
 const details = targets.map(([entryId,itemId,receiptId,receiptProductId]) => {
   const entryPayload = objectValue(entriesById.get(entryId)?.payload);
   const itemPayload = objectValue(itemsById.get(itemId)?.payload);
-  const receipt = rawReceipts.get(receiptId) ?? {};
-  const products = collectProducts(receipt);
-  const product = products.find((p) => str(p.receiptProductId ?? p.receipt_product_id) === receiptProductId) ?? null;
-  const productId = product ? str(product.productId ?? product.product_id) : str(itemPayload.productId);
-  const quantity = product ? num(product.productAmount ?? product.amount ?? product.quantity) : num(itemPayload.productAmount);
+  const receipt = receiptById.get(receiptId) ?? {};
+  const products = Array.isArray(receipt.products) ? receipt.products.map(objectValue) : [];
+  const product = products.find((p) => str(p.receiptProductId) === receiptProductId) ?? null;
+  const productId = product ? str(product.productId) : str(itemPayload.productId);
+  const quantity = product ? num(product.productAmount) : num(itemPayload.productAmount);
   const candidates = nativeItems.filter((native) => productId && native.input_code === `KOPER-${productId}`).map((native) => ({
     order: orderById.get(native.order_id) ?? null,
     item: native,
@@ -94,16 +95,11 @@ const details = targets.map(([entryId,itemId,receiptId,receiptProductId]) => {
     target: { entryId,itemId,receiptId,receiptProductId },
     entryPayload,
     itemPayload,
-    financialReceiptSummary: {
-      receiptNumber: str(receipt.receiptNumber ?? receipt.number),
-      receiptEmitDate: str(receipt.receiptEmitDate ?? receipt.emitDate ?? receipt.date),
-      totalValue: num(receipt.totalValue ?? receipt.value),
-      topLevelKeys: Object.keys(receipt).sort(),
-    },
+    financialReceiptSummary: { receiptNumber: str(receipt.receiptNumber), receiptEmitDate: str(receipt.receiptEmitDate), totalValue: num(receipt.totalValue) },
     financialProduct: product,
     productId,
     financialQuantity: quantity,
     candidateNativeOrderItems: candidates.slice(0, 25),
   };
 });
-console.log("KOPER_MISSING_ORDER_ALLOCATION_12_DIAGNOSTIC", JSON.stringify({ ok:true, readOnly:true, blockedWrites, targetCount:targets.length, details }));
+console.log("KOPER_MISSING_ORDER_ALLOCATION_12_DIAGNOSTIC", JSON.stringify({ ok:true, readOnly:true, blockedWrites:live.blockedWrites, targetCount:targets.length, details }));
