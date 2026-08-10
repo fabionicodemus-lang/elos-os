@@ -24,5 +24,11 @@ jobs:
         run: |
           sudo systemctl start postgresql
           sudo -u postgres createdb elos_test
+      - name: Preparar arquivos de teste
+        run: |
+          mkdir -p /tmp/elos-test/.github/tests /tmp/elos-test/supabase/migrations
+          cp .github/tests/owner-admin-full-access-0081.sql /tmp/elos-test/.github/tests/
+          cp supabase/migrations/20260810_0081_owner_admin_full_access.sql /tmp/elos-test/supabase/migrations/
+          chmod -R a+rX /tmp/elos-test
       - name: Validar migration 0081
-        run: sudo -u postgres psql -d elos_test -X -v ON_ERROR_STOP=1 -f .github/tests/owner-admin-full-access-0081.sql
+        run: cd /tmp/elos-test && sudo -u postgres psql -d elos_test -X -v ON_ERROR_STOP=1 -f .github/tests/owner-admin-full-access-0081.sql
