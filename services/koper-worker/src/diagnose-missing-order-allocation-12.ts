@@ -27,16 +27,12 @@ await import("./index.js");
 
 const entryIds = targets.map((t) => t[0]);
 const itemIds = targets.map((t) => t[1]);
-const [entries, items, nativeItems] = await Promise.all([
+const [entries, items] = await Promise.all([
   requestSupabase<StagingRow[]>("koper_staging_records", { query: new URLSearchParams({ select: "koper_id,koper_parent_id,payload", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source: "eq.koper", entity: "eq.stock_entry", sync_state: "eq.present", koper_id: quotedIn(entryIds), limit: "100" }) }),
   requestSupabase<StagingRow[]>("koper_staging_records", { query: new URLSearchParams({ select: "koper_id,koper_parent_id,payload", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source: "eq.koper", entity: "eq.stock_entry_item", sync_state: "eq.present", koper_id: quotedIn(itemIds), limit: "100" }) }),
-  requestSupabase<OrderItem[]>("procurement_purchase_order_items", { query: new URLSearchParams({ select: "id,order_id,source_id,input_code,input_name,ordered_quantity,received_quantity,accepted_quantity,rejected_quantity,unit_price,delivered_unit_cost", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", limit: "5000" }) }),
 ]);
 const entriesById = new Map(entries.map((r) => [r.koper_id, r]));
 const itemsById = new Map(items.map((r) => [r.koper_id, r]));
-const orderIds = [...new Set(nativeItems.map((r) => r.order_id))];
-const orders = await requestSupabase<Order[]>("procurement_purchase_orders", { query: new URLSearchParams({ select: "id,source_id,supplier_id,project_id,order_number,status,received_amount", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", id: quotedIn(orderIds), limit: "5000" }) });
-const orderById = new Map(orders.map((r) => [r.id, r]));
 
 const live = await withBrowserless(async ({ page }) => {
   const login = await performKoperLogin(page);
@@ -78,28 +74,36 @@ const live = await withBrowserless(async ({ page }) => {
 }, { sessionTimeoutMs: 58000 });
 const receiptById = new Map(live.receipts.map((r) => [r.receiptId, r.payload]));
 
-const details = targets.map(([entryId,itemId,receiptId,receiptProductId]) => {
+const seeds = targets.map(([entryId,itemId,receiptId,receiptProductId]) => {
   const entryPayload = objectValue(entriesById.get(entryId)?.payload);
   const itemPayload = objectValue(itemsById.get(itemId)?.payload);
   const receipt = receiptById.get(receiptId) ?? {};
   const products = Array.isArray(receipt.products) ? receipt.products.map(objectValue) : [];
   const product = products.find((p) => str(p.receiptProductId) === receiptProductId) ?? null;
-  const productId = product ? str(product.productId) : str(itemPayload.productId);
-  const quantity = product ? num(product.productAmount) : num(itemPayload.productAmount);
-  const candidates = nativeItems.filter((native) => productId && native.input_code === `KOPER-${productId}`).map((native) => ({
+  return { entryId,itemId,receiptId,receiptProductId,entryPayload,itemPayload,receipt,product,productId: product ? str(product.productId) : str(itemPayload.productId), quantity: product ? num(product.productAmount) : num(itemPayload.productAmount) };
+});
+const inputCodes = [...new Set(seeds.flatMap((s) => s.productId ? [`KOPER-${s.productId}`] : []))];
+const nativeItems = inputCodes.length ? await requestSupabase<OrderItem[]>("procurement_purchase_order_items", { query: new URLSearchParams({ select: "id,order_id,source_id,input_code,input_name,ordered_quantity,received_quantity,accepted_quantity,rejected_quantity,unit_price,delivered_unit_cost", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", input_code: quotedIn(inputCodes), limit: "1000" }) }) : [];
+const orderIds = [...new Set(nativeItems.map((r) => r.order_id))];
+const orders = orderIds.length ? await requestSupabase<Order[]>("procurement_purchase_orders", { query: new URLSearchParams({ select: "id,source_id,supplier_id,project_id,order_number,status,received_amount", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", id: quotedIn(orderIds), limit: "1000" }) }) : [];
+const orderById = new Map(orders.map((r) => [r.id, r]));
+
+const details = seeds.map((seed) => {
+  const candidates = nativeItems.filter((native) => seed.productId && native.input_code === `KOPER-${seed.productId}`).map((native) => ({
     order: orderById.get(native.order_id) ?? null,
     item: native,
-    quantityDelta: quantity === null ? null : Math.abs(Number(native.accepted_quantity ?? 0) - quantity),
+    quantityDelta: seed.quantity === null ? null : Math.abs(Number(native.accepted_quantity ?? 0) - seed.quantity),
+    exactAcceptedQuantity: seed.quantity !== null && Math.abs(Number(native.accepted_quantity ?? 0) - seed.quantity) < 1e-9,
   })).sort((a,b) => (a.quantityDelta ?? 1e12) - (b.quantityDelta ?? 1e12));
   return {
-    target: { entryId,itemId,receiptId,receiptProductId },
-    entryPayload,
-    itemPayload,
-    financialReceiptSummary: { receiptNumber: str(receipt.receiptNumber), receiptEmitDate: str(receipt.receiptEmitDate), totalValue: num(receipt.totalValue) },
-    financialProduct: product,
-    productId,
-    financialQuantity: quantity,
-    candidateNativeOrderItems: candidates.slice(0, 25),
+    target: { entryId:seed.entryId,itemId:seed.itemId,receiptId:seed.receiptId,receiptProductId:seed.receiptProductId },
+    entryPayload:seed.entryPayload,
+    itemPayload:seed.itemPayload,
+    financialReceiptSummary:{ receiptNumber:str(seed.receipt.receiptNumber), receiptEmitDate:str(seed.receipt.receiptEmitDate), totalValue:num(seed.receipt.totalValue) },
+    financialProduct:seed.product,
+    productId:seed.productId,
+    financialQuantity:seed.quantity,
+    candidateNativeOrderItems:candidates.slice(0,25),
   };
 });
-console.log("KOPER_MISSING_ORDER_ALLOCATION_12_DIAGNOSTIC", JSON.stringify({ ok:true, readOnly:true, blockedWrites:live.blockedWrites, targetCount:targets.length, details }));
+console.log("KOPER_MISSING_ORDER_ALLOCATION_12_DIAGNOSTIC", JSON.stringify({ ok:true, readOnly:true, blockedWrites:live.blockedWrites, targetCount:targets.length, inputCodes, nativeCandidateItems:nativeItems.length, nativeCandidateOrders:orders.length, details }));
