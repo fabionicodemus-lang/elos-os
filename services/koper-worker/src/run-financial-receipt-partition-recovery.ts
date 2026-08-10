@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 
 const targets = ["11646", "11650", "186", "208"];
 const writeEnabled = process.env.KOPER_FINANCIAL_RECEIPT_PARTITION_WRITE_ENABLED === "true";
-const childTimeoutMs = Math.max(30_000, Number(process.env.KOPER_FINANCIAL_RECEIPT_BATCH_CHILD_TIMEOUT_MS ?? "600000") || 600_000);
+const childTimeoutMs = Math.max(60_000, Math.min(600_000, Number(process.env.KOPER_FINANCIAL_RECEIPT_BATCH_CHILD_TIMEOUT_MS ?? "300000") || 300_000));
 
 const sourceUrl = new URL("./promote-financial-receipt-material-pilot.js", import.meta.url);
 const source = await readFile(sourceUrl, "utf8");
@@ -19,35 +19,105 @@ const patched = absolute.replace(marker, `const auditedPartitionMismatchAllowed 
 
 const patchedUrl = pathToFileURL(`/tmp/koper-partition-recovery-pilot-${process.pid}.mjs`);
 await writeFile(patchedUrl, patched, "utf8");
-
 const guardPath = new URL("./financial-receipt-write-guard.js", import.meta.url).pathname;
 
-console.log("KOPER_PARTITION_RECOVERY_START", JSON.stringify({ readOnlyKoper: true, writeEnabled, targets, childTimeoutMs }));
+type Result = {
+  entryId: string;
+  ok: boolean;
+  planned: boolean;
+  written: boolean;
+  timedOut: boolean;
+  finalLine: string | null;
+  error: string | null;
+};
 
-const results: Array<{ entryId: string; ok: boolean; exitCode: number | null; timedOut: boolean }> = [];
-for (const entryId of targets) {
-  const result = await new Promise<{ entryId: string; ok: boolean; exitCode: number | null; timedOut: boolean }>((resolve) => {
+console.log("KOPER_PARTITION_RECOVERY_START", JSON.stringify({ readOnlyKoper: true, writeEnabled, targets, childTimeoutMs }));
+const results: Result[] = [];
+
+for (let index = 0; index < targets.length; index += 1) {
+  const entryId = targets[index]!;
+  const result = await new Promise<Result>((resolve) => {
     const child = spawn(process.execPath, ["--import", guardPath, patchedUrl.pathname], {
       env: {
         ...process.env,
-        PORT: "0",
+        PORT: String(19_100 + index),
         KOPER_FINANCIAL_RECEIPT_PILOT_ENTRY_ID: entryId,
         KOPER_FINANCIAL_RECEIPT_PILOT_WRITE_ENABLED: writeEnabled ? "true" : "false",
       },
       stdio: ["ignore", "pipe", "pipe"],
     });
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGKILL");
-    }, childTimeoutMs);
-    child.stdout.on("data", (chunk) => process.stdout.write(chunk));
-    child.stderr.on("data", (chunk) => process.stderr.write(chunk));
-    child.on("exit", (code) => {
+
+    let stdoutBuffer = "";
+    let stderrBuffer = "";
+    let planned = false;
+    let completed = false;
+    let finalLine: string | null = null;
+
+    const finish = (value: Result): void => {
+      if (completed) return;
+      completed = true;
       clearTimeout(timer);
-      resolve({ entryId, ok: code === 0 && !timedOut, exitCode: code, timedOut });
+      child.kill("SIGTERM");
+      resolve(value);
+    };
+
+    const consumeLine = (line: string, sourceName: "stdout" | "stderr"): void => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      if (trimmed.includes("KOPER_FINANCIAL_RECEIPT_PILOT_PLAN")) {
+        planned = true;
+        console.log("KOPER_PARTITION_RECOVERY_PLAN", JSON.stringify({ entryId, line: trimmed.slice(0, 4000) }));
+      }
+      if (trimmed.includes("KOPER_FINANCIAL_RECEIPT_PILOT_RESULT")) {
+        finalLine = trimmed;
+        finish({ entryId, ok: true, planned, written: true, timedOut: false, finalLine, error: null });
+        return;
+      }
+      if (trimmed.includes("KOPER_FINANCIAL_RECEIPT_PILOT_SKIPPED")) {
+        finalLine = trimmed;
+        finish({ entryId, ok: planned, planned, written: false, timedOut: false, finalLine, error: planned ? null : "skipped_without_plan" });
+        return;
+      }
+      if (trimmed.includes("KOPER_FINANCIAL_RECEIPT_PILOT_FAILED")) {
+        finalLine = trimmed;
+        finish({ entryId, ok: false, planned, written: false, timedOut: false, finalLine, error: trimmed.slice(0, 2000) });
+        return;
+      }
+      if (sourceName === "stderr" && /error|failed/i.test(trimmed)) {
+        console.error("KOPER_PARTITION_RECOVERY_CHILD_STDERR", JSON.stringify({ entryId, line: trimmed.slice(0, 1000) }));
+      }
+    };
+
+    const consumeChunk = (chunk: Buffer, sourceName: "stdout" | "stderr"): void => {
+      if (sourceName === "stdout") {
+        stdoutBuffer += chunk.toString("utf8");
+        const lines = stdoutBuffer.split("\n");
+        stdoutBuffer = lines.pop() ?? "";
+        lines.forEach((line) => consumeLine(line, sourceName));
+      } else {
+        stderrBuffer += chunk.toString("utf8");
+        const lines = stderrBuffer.split("\n");
+        stderrBuffer = lines.pop() ?? "";
+        lines.forEach((line) => consumeLine(line, sourceName));
+      }
+    };
+
+    child.stdout.on("data", (chunk: Buffer) => consumeChunk(chunk, "stdout"));
+    child.stderr.on("data", (chunk: Buffer) => consumeChunk(chunk, "stderr"));
+    child.on("error", (error) => finish({ entryId, ok: false, planned, written: false, timedOut: false, finalLine, error: error.message }));
+    child.on("exit", (code, signal) => {
+      if (completed) return;
+      if (stdoutBuffer.trim()) consumeLine(stdoutBuffer, "stdout");
+      if (stderrBuffer.trim()) consumeLine(stderrBuffer, "stderr");
+      if (completed) return;
+      finish({ entryId, ok: false, planned, written: false, timedOut: false, finalLine, error: `child_exited_before_final_log code=${code ?? "null"} signal=${signal ?? "null"}` });
     });
+
+    const timer = setTimeout(() => {
+      finish({ entryId, ok: false, planned, written: false, timedOut: true, finalLine, error: `timeout_after_${childTimeoutMs}ms` });
+    }, childTimeoutMs);
   });
+
   results.push(result);
   console.log("KOPER_PARTITION_RECOVERY_ENTRY_RESULT", JSON.stringify(result));
   if (!result.ok) break;
