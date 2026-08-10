@@ -28,6 +28,11 @@ jobs:
         continue-on-error: true
         run: npm test
 
+      - name: Component tests
+        id: components
+        continue-on-error: true
+        run: npm run test:components
+
       - name: Synthetic performance scenarios
         id: performance
         continue-on-error: true
@@ -47,13 +52,15 @@ jobs:
         if: always()
         env:
           TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          COMPONENTS_OUTCOME: ${{ steps.components.outcome }}
           PERFORMANCE_OUTCOME: ${{ steps.performance.outcome }}
           LINT_OUTCOME: ${{ steps.lint.outcome }}
           BUILD_OUTCOME: ${{ steps.build.outcome }}
         run: |
-          printf 'tests=%s\nperformance=%s\nlint=%s\nbuild=%s\n' \
-            "$TESTS_OUTCOME" "$PERFORMANCE_OUTCOME" "$LINT_OUTCOME" "$BUILD_OUTCOME"
+          printf 'tests=%s\ncomponents=%s\nperformance=%s\nlint=%s\nbuild=%s\n' \
+            "$TESTS_OUTCOME" "$COMPONENTS_OUTCOME" "$PERFORMANCE_OUTCOME" "$LINT_OUTCOME" "$BUILD_OUTCOME"
           test "$TESTS_OUTCOME" = success
+          test "$COMPONENTS_OUTCOME" = success
           test "$PERFORMANCE_OUTCOME" = success
           test "$LINT_OUTCOME" = success
           test "$BUILD_OUTCOME" = success
