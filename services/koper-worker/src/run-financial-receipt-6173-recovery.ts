@@ -9,7 +9,7 @@ const childTimeoutMs = Math.max(60_000, Math.min(600_000, Number(process.env.KOP
 const sourceUrl = new URL("./promote-financial-receipt-material-pilot.js", import.meta.url);
 const source = await readFile(sourceUrl, "utf8");
 const quantityMarker = `const quantity = numberValue(payload.productAmount);\n        const allocationQuantity = allocation.productAmount ?? allocation.amountReceived ?? allocation.amount;\n        if (quantity === null || quantity <= 0 || product.productAmount === null || allocationQuantity === null) {\n            throw new Error(\`Entry item \${item.koper_id} has invalid quantity\`);\n        }\n        if (!approximatelyEqual(quantity, product.productAmount) || !approximatelyEqual(quantity, allocationQuantity)) {\n            throw new Error(\`Entry item \${item.koper_id} quantity mismatch\`);\n        }`;
-const afterLoopMarker = `  const orderSourceIds = unique(preliminary.map((row) => row.allocation.orderId!).filter(Boolean));`;
+const afterLoopMarker = `  const orderSourceIds = unique(preliminary.map((row) => row.allocation.orderId).filter(Boolean));`;
 const beforeEntryPayloadMarker = `  const entryPayload = objectValue(entry.payload);`;
 if (!source.includes(quantityMarker) || !source.includes(afterLoopMarker) || !source.includes(beforeEntryPayloadMarker)) throw new Error("KOPER_6173_PATCH_MARKER_NOT_FOUND");
 const absolute = source
