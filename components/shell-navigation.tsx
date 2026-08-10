@@ -39,7 +39,9 @@ function Logo() {
 function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string) {
   const engineering = groups.find((group) => group.key === "engineering");
   const execution = groups.find((group) => group.key === "execution");
-  const budgetAccess = engineering?.items.find((item) => item.href === "/engenharia/orcamentos" || item.label === "Orçamentos");
+  const budgetAccess = engineering?.items.find(
+    (item) => !item.sectionLabel && (item.href === "/engenharia/orcamentos" || item.label === "Orçamentos"),
+  );
   const scheduleItem = execution?.items.find((item) => item.href === "/execucao/cronograma");
   const contractsItem = engineering?.items.find((item) => item.href === "/engenharia/contratos");
 
