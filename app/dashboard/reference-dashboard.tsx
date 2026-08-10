@@ -2,8 +2,11 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { resolveActiveWorkspace } from "@/lib/workspace";
-import { selectWorkspace } from "./actions";
+import { ReferenceProjects, type DashboardProjectCard } from "./reference-projects";
 import "../dashboard-reference.css";
+
+const IMAGE_BUCKET = "project-images";
+const FALSE_ACCESS_MESSAGE = "Você não possui acesso ativo a esta empresa.";
 
 type Project = {
   id: string;
@@ -13,32 +16,41 @@ type Project = {
   city: string | null;
   state: string | null;
   built_area_m2: number | null;
+  total_units: number | null;
   total_floors: number | null;
+  delivery_date: string | null;
+  cover_image_path: string | null;
 };
 
-type Service = { id: string; status: string };
-type Takeoff = { id: string; project_id: string; status: string; record_status: string };
-type Permission = { key: string };
-type RolePermission = { permission_key: string };
+type Takeoff = { project_id: string; record_status: string };
+type Baseline = { id: string; project_id: string; status: string; updated_at: string };
+type Activity = { id: string; project_id: string; baseline_id: string; planned_cost: number | null; record_status: string };
+type Measurement = { activity_id: string; project_id: string; progress_percent: number; measurement_date: string; created_at: string };
 
-const projectStatusLabels: Record<string, string> = {
-  planning: "Planejamento",
-  active: "Em construção",
-  paused: "Pausado",
-  completed: "Concluído",
-  archived: "Arquivado",
-};
+function progressForProject(
+  projectId: string,
+  selectedBaselineId: string | null,
+  activities: Activity[],
+  latestMeasurementByActivity: Map<string, Measurement>,
+) {
+  if (!selectedBaselineId) return 0;
+  const projectActivities = activities.filter(
+    (activity) => activity.project_id === projectId && activity.baseline_id === selectedBaselineId && activity.record_status === "active",
+  );
+  if (!projectActivities.length) return 0;
 
-const projectStatusTone: Record<string, string> = {
-  planning: "yellow",
-  active: "green",
-  paused: "yellow",
-  completed: "blue",
-  archived: "gray",
-};
+  const totalWeight = projectActivities.reduce((sum, activity) => sum + Math.max(0, Number(activity.planned_cost ?? 0)), 0);
+  if (totalWeight > 0) {
+    return projectActivities.reduce((sum, activity) => {
+      const weight = Math.max(0, Number(activity.planned_cost ?? 0));
+      const progress = Math.max(0, Math.min(100, Number(latestMeasurementByActivity.get(activity.id)?.progress_percent ?? 0)));
+      return sum + progress * weight;
+    }, 0) / totalWeight;
+  }
 
-function decimal(value: number | null | undefined) {
-  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(Number(value ?? 0));
+  return projectActivities.reduce((sum, activity) => {
+    return sum + Math.max(0, Math.min(100, Number(latestMeasurementByActivity.get(activity.id)?.progress_percent ?? 0)));
+  }, 0) / projectActivities.length;
 }
 
 export default async function ReferenceDashboard({
@@ -50,25 +62,22 @@ export default async function ReferenceDashboard({
   const { supabase, company, companyId, projectId, role } = await resolveActiveWorkspace();
   const privileged = role.key === "owner" || role.key === "admin";
 
-  const permissionResult = privileged
-    ? await supabase.from("permissions").select("key")
-    : role.id
-      ? await supabase.from("role_permissions").select("permission_key").eq("role_id", role.id).eq("allowed", true)
-      : { data: [], error: null };
+  const [viewProjectsResult, manageProjectsResult] = privileged
+    ? [{ data: true, error: null }, { data: true, error: null }]
+    : await Promise.all([
+        supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "projects.view" }),
+        supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "projects.manage" }),
+      ]);
 
-  const permissions = new Set(
-    privileged
-      ? ((permissionResult.data ?? []) as Permission[]).map((item) => item.key)
-      : ((permissionResult.data ?? []) as RolePermission[]).map((item) => item.permission_key),
-  );
-  const can = (permission: string) => privileged || permissions.has(permission);
+  const canViewProjects = privileged || viewProjectsResult.data === true;
+  const canManageProjects = privileged || manageProjectsResult.data === true;
 
-  const [projectsResult, servicesResult, takeoffsResult] = await Promise.all([
-    can("projects.view")
+  const [projectsResult, takeoffsResult, baselinesResult, activitiesResult, measurementsResult] = await Promise.all([
+    canViewProjects
       ? fetchAllRows<Project>(async (from, to) => {
           const { data, error } = await supabase
             .from("projects")
-            .select("id,name,code,status,city,state,built_area_m2,total_floors")
+            .select("id,name,code,status,city,state,built_area_m2,total_units,total_floors,delivery_date,cover_image_path")
             .eq("company_id", companyId)
             .neq("status", "archived")
             .order("name")
@@ -76,156 +85,127 @@ export default async function ReferenceDashboard({
           return { data: (data ?? []) as Project[], error };
         })
       : Promise.resolve({ data: [] as Project[], error: null }),
-    can("services.view")
-      ? fetchAllRows<Service>(async (from, to) => {
-          const { data, error } = await supabase
-            .from("engineering_services")
-            .select("id,status")
-            .eq("company_id", companyId)
-            .range(from, to);
-          return { data: (data ?? []) as Service[], error };
-        })
-      : Promise.resolve({ data: [] as Service[], error: null }),
-    can("takeoffs.view")
+    canViewProjects
       ? fetchAllRows<Takeoff>(async (from, to) => {
           const { data, error } = await supabase
             .from("engineering_takeoffs")
-            .select("id,project_id,status,record_status")
+            .select("project_id,record_status")
             .eq("company_id", companyId)
+            .eq("record_status", "active")
             .range(from, to);
           return { data: (data ?? []) as Takeoff[], error };
         })
       : Promise.resolve({ data: [] as Takeoff[], error: null }),
+    canViewProjects
+      ? fetchAllRows<Baseline>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("engineering_schedule_baselines")
+            .select("id,project_id,status,updated_at")
+            .eq("company_id", companyId)
+            .neq("status", "archived")
+            .order("updated_at", { ascending: false })
+            .range(from, to);
+          return { data: (data ?? []) as Baseline[], error };
+        })
+      : Promise.resolve({ data: [] as Baseline[], error: null }),
+    canViewProjects
+      ? fetchAllRows<Activity>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("engineering_schedule_activities")
+            .select("id,project_id,baseline_id,planned_cost,record_status")
+            .eq("company_id", companyId)
+            .eq("record_status", "active")
+            .range(from, to);
+          return { data: (data ?? []) as Activity[], error };
+        })
+      : Promise.resolve({ data: [] as Activity[], error: null }),
+    canViewProjects
+      ? fetchAllRows<Measurement>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("engineering_schedule_progress_measurements")
+            .select("activity_id,project_id,progress_percent,measurement_date,created_at")
+            .eq("company_id", companyId)
+            .order("measurement_date", { ascending: false })
+            .order("created_at", { ascending: false })
+            .range(from, to);
+          return { data: (data ?? []) as Measurement[], error };
+        })
+      : Promise.resolve({ data: [] as Measurement[], error: null }),
   ]);
 
-  const projects = projectsResult.data;
-  const activeServices = servicesResult.data.filter((service) => service.status === "active");
-  const activeTakeoffs = takeoffsResult.data.filter((takeoff) => takeoff.record_status === "active");
-  const approvedTakeoffs = activeTakeoffs.filter((takeoff) => takeoff.status === "approved");
-  const activeProjects = projects.filter((project) => project.status === "active");
-  const memoriesByProject = new Map<string, number>();
-  activeTakeoffs.forEach((takeoff) => memoriesByProject.set(takeoff.project_id, (memoriesByProject.get(takeoff.project_id) ?? 0) + 1));
+  const memoryCountByProject = new Map<string, number>();
+  for (const takeoff of takeoffsResult.data) {
+    memoryCountByProject.set(takeoff.project_id, (memoryCountByProject.get(takeoff.project_id) ?? 0) + 1);
+  }
 
-  const moduleCards = [
-    { label: "Pré-Obra", description: "Orçamentos, levantamento e planejamento", href: can("budgets.view") ? "/engenharia/orcamentos" : undefined },
-    { label: "Controle", description: "Custos, cronograma e contratos", href: can("budgets.view") ? "/engenharia/custo-orcamento" : can("schedule.view") ? "/execucao/cronograma" : undefined },
-    { label: "Execução", description: "Produção, qualidade e rotina da obra", href: can("execution.daily_logs.view") ? "/execucao/diario-obras" : undefined },
-    { label: "Suprimentos", description: "Cotações, compras e estoque", href: can("procurement.quotations.view") ? "/suprimentos/orcamentos-materiais" : undefined },
-    { label: "Financeiro", description: "Contas, notas fiscais e impostos", href: can("payables.view") ? "/financeiro/contas-a-pagar" : undefined },
-    { label: "Comercial", description: "Clientes, propostas e vendas", href: can("commercial.proposals.view") ? "/comercial/propostas" : undefined },
-    { label: "Pós-Obra", description: "Assistências técnicas e garantias", href: can("postwork.assistance.view") ? "/pos-obra/assistencias" : undefined },
-  ];
+  const baselinesByProject = new Map<string, Baseline[]>();
+  for (const baseline of baselinesResult.data) {
+    const list = baselinesByProject.get(baseline.project_id) ?? [];
+    list.push(baseline);
+    baselinesByProject.set(baseline.project_id, list);
+  }
 
-  const kpis = [
-    { label: "Empreendimentos ativos", value: activeProjects.length, hint: "cadastros em operação" },
-    { label: "Serviços ativos", value: activeServices.length, hint: "catálogo mestre" },
-    { label: "Memórias de cálculo", value: activeTakeoffs.length, hint: "levantamentos cadastrados" },
-    {
-      label: "Memórias aprovadas",
-      value: approvedTakeoffs.length,
-      hint: activeTakeoffs.length ? `${Math.round((approvedTakeoffs.length / activeTakeoffs.length) * 100)}% do total` : "sem memórias",
-    },
-  ];
+  const selectedBaselineByProject = new Map<string, string>();
+  for (const project of projectsResult.data) {
+    const baselines = baselinesByProject.get(project.id) ?? [];
+    const selected = baselines.find((baseline) => baseline.status === "approved") ?? baselines[0] ?? null;
+    if (selected) selectedBaselineByProject.set(project.id, selected.id);
+  }
+
+  const latestMeasurementByActivity = new Map<string, Measurement>();
+  for (const measurement of measurementsResult.data) {
+    if (!latestMeasurementByActivity.has(measurement.activity_id)) {
+      latestMeasurementByActivity.set(measurement.activity_id, measurement);
+    }
+  }
+
+  const projects: DashboardProjectCard[] = projectsResult.data.map((project) => ({
+    id: project.id,
+    name: project.name,
+    code: project.code,
+    status: project.status,
+    city: project.city,
+    state: project.state,
+    coverImageUrl: project.cover_image_path
+      ? supabase.storage.from(IMAGE_BUCKET).getPublicUrl(project.cover_image_path).data.publicUrl
+      : null,
+    deliveryDate: project.delivery_date,
+    builtAreaM2: project.built_area_m2,
+    totalUnits: project.total_units,
+    totalFloors: project.total_floors,
+    progressPercent: progressForProject(
+      project.id,
+      selectedBaselineByProject.get(project.id) ?? null,
+      activitiesResult.data,
+      latestMeasurementByActivity,
+    ),
+    memoryCount: memoryCountByProject.get(project.id) ?? 0,
+    isActiveProject: project.id === projectId,
+  }));
+
+  const visibleError = privileged && params.error === FALSE_ACCESS_MESSAGE ? null : params.error;
+  const partialData = Boolean(
+    projectsResult.error || takeoffsResult.error || baselinesResult.error || activitiesResult.error || measurementsResult.error,
+  );
 
   return (
     <AppShell
       activeGroup="home"
       eyebrow="Início"
-      title="Dashboard Geral"
-      description="Visão consolidada de todos os módulos, empreendimentos e atividades do Elos OS."
+      title="Dashboard"
+      description="Acompanhe os empreendimentos e acesse rapidamente o contexto de cada obra."
+      actions={canManageProjects ? <Link className="approved-dashboard-new" href="/empreendimentos">+ Novo empreendimento</Link> : undefined}
     >
-      {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
+      {visibleError ? <div className="auth-message error workspace-message">{visibleError}</div> : null}
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
 
-      <section className="reference-dashboard">
-        <div className="reference-dashboard-welcome">
-          <div>
-            <span>VISÃO GERAL DO SISTEMA</span>
-            <h2>Gestão conectada da incorporação ao pós-obra</h2>
-            <p>Use o menu lateral para acessar os módulos. Cada módulo abre somente suas próprias divisões.</p>
+      <section className="approved-dashboard">
+        <ReferenceProjects projects={projects} companyId={companyId} />
+        {partialData ? (
+          <div className="approved-dashboard-data-note">
+            Alguns dados de cronograma ainda não estão disponíveis; os empreendimentos continuam acessíveis normalmente.
           </div>
-          <Link className="reference-dashboard-primary" href="/empreendimentos">Abrir empreendimentos</Link>
-        </div>
-
-        <div className="reference-module-grid">
-          {moduleCards.map((module) => module.href ? (
-            <Link className="reference-module-card" href={module.href} key={module.label}>
-              <b>{module.label}</b>
-              <span>{module.description}</span>
-            </Link>
-          ) : (
-            <div className="reference-module-card is-disabled" key={module.label}>
-              <b>{module.label}</b>
-              <span>{module.description}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="reference-kpi-grid">
-          {kpis.map((kpi) => (
-            <div className="reference-card reference-kpi" key={kpi.label}>
-              <div className="reference-kpi-label">{kpi.label}</div>
-              <div className="reference-kpi-value">{kpi.value}</div>
-              <div className="reference-kpi-hint">{kpi.hint}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="reference-section-heading">
-          <div>
-            <h2>Empreendimentos cadastrados</h2>
-            <div className="reference-sub">Abra um empreendimento ou cadastre um novo.</div>
-          </div>
-          {can("projects.manage") || privileged ? (
-            <Link className="reference-dashboard-primary" href="/empreendimentos">+ Novo empreendimento</Link>
-          ) : null}
-        </div>
-
-        <div className="reference-card reference-table-wrap">
-          <table className="reference-table">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Obra</th>
-                <th>Local</th>
-                <th>Área</th>
-                <th>Pavimentos</th>
-                <th>Memórias</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((project) => (
-                <tr className={project.id === projectId ? "is-active-project" : undefined} key={project.id}>
-                  <td className="reference-code">{project.code || "—"}</td>
-                  <td><b>{project.name}</b></td>
-                  <td>{[project.city, project.state].filter(Boolean).join(" • ") || "—"}</td>
-                  <td>{Number(project.built_area_m2) > 0 ? `${decimal(project.built_area_m2)} m²` : "—"}</td>
-                  <td>{project.total_floors || "—"}</td>
-                  <td>{memoriesByProject.get(project.id) ?? 0}</td>
-                  <td><span className={`reference-badge ${projectStatusTone[project.status] ?? "gray"}`}>{projectStatusLabels[project.status] ?? project.status}</span></td>
-                  <td>
-                    <form action={selectWorkspace}>
-                      <input type="hidden" name="company_id" value={companyId} />
-                      <input type="hidden" name="project_id" value={project.id} />
-                      <input type="hidden" name="return_to" value="/dashboard" />
-                      <button className="reference-open-button" type="submit">Abrir</button>
-                    </form>
-                  </td>
-                </tr>
-              ))}
-              {projects.length === 0 ? (
-                <tr><td className="reference-empty" colSpan={8}>Nenhum empreendimento cadastrado.</td></tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-
-        {(projectsResult.error || servicesResult.error || takeoffsResult.error) ? (
-          <div className="dashboard-data-note">Alguns indicadores não puderam ser carregados. Os demais dados continuam disponíveis normalmente.</div>
         ) : null}
-        <span className="dashboard-context-note">Contexto atual: {company.name}</span>
       </section>
     </AppShell>
   );
