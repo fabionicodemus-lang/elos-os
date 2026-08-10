@@ -1,0 +1,1 @@
+import { env } from "./config/env.js";import { requestSupabase } from "./elos/supabase.js";const rows=await requestSupabase<any[]>("suppliers",{query:new URLSearchParams({select:"*",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source_system:"eq.koper",source_id:"eq.617",limit:"1"})});console.log("KOPER_SUPPLIER_SHAPE",JSON.stringify({ok:true,row:rows[0]??null}));
