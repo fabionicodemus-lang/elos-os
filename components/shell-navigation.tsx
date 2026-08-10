@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export type ShellNavigationItem = {
   label: string;
@@ -122,16 +122,6 @@ export function ShellNavigation({
     () => new Set(navigationGroups.filter((group) => group.active).map((group) => group.key)),
   );
 
-  useEffect(() => {
-    const activeKeys = navigationGroups.filter((group) => group.active).map((group) => group.key);
-    if (!activeKeys.length) return;
-    setOpenGroups((current) => {
-      const next = new Set(current);
-      activeKeys.forEach((key) => next.add(key));
-      return next;
-    });
-  }, [pathname]);
-
   function toggleGroup(key: string) {
     setOpenGroups((current) => {
       const next = new Set(current);
@@ -174,7 +164,7 @@ export function ShellNavigation({
           </Link>
 
           {navigationGroups.map((group) => {
-            const open = openGroups.has(group.key);
+            const open = openGroups.has(group.key) || Boolean(group.active);
             return (
               <div className={`elos-module-group ${open ? "open" : ""}`} key={group.key}>
                 <button
