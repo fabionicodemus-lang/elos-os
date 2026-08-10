@@ -23,7 +23,7 @@ const reasons: Record<string,string> = {
 };
 
 const child = spawn(process.execPath, [new URL("./run-promotion-plan-v3-divergent.js", import.meta.url).pathname], {
-  env: process.env,
+  env: { ...process.env, PORT: "19431" },
   stdio:["ignore","pipe","pipe"],
 });
 let stdout=""; let stderr="";
