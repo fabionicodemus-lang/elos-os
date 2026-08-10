@@ -48,6 +48,20 @@ const eslintConfig = defineConfig([
       "@next/next/no-img-element": "off",
     },
   },
+  {
+    // Server components (async, com requireCompanyPermission) leem a data/hora
+    // atual no render server-side (new Date()/Date.now()) para "hoje", validade
+    // e prazos — comportamento correto e determinístico por request. A regra
+    // react-hooks/purity é voltada à memoização de client components; aqui é
+    // falso-positivo. Client components mantêm a regra como aviso.
+    files: [
+      "app/comercial/propostas/**/page.tsx",
+      "app/financeiro/notas-eletronicas/sefaz-importer.tsx",
+    ],
+    rules: {
+      "react-hooks/purity": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
