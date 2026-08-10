@@ -5,7 +5,7 @@ const sourceUrl = new URL("./plan-financial-receipt-material-promotion-v3.js", i
 const patchedUrl = pathToFileURL(`/tmp/koper-promotion-plan-v3-divergent-${process.pid}.mjs`);
 const source = await readFile(sourceUrl, "utf8");
 
-const safeMarker = "const safeEntries: Array<{ entryId: string; itemCount: number; orderIds: string[] }> = [];";
+const safeMarker = "const safeEntries = [];";
 const outputMarker = "safeEntryExamples: safeEntries.slice(0, 15),";
 if (!source.includes(safeMarker) || !source.includes(outputMarker)) {
   throw new Error("KOPER_PROMOTION_PLAN_V3_DIVERGENT_MARKER_NOT_FOUND");
@@ -23,12 +23,12 @@ let patched = source
 
 patched = patched.replace(
   safeMarker,
-  `const excludedEntryIds: Partial<Record<ExclusionReason, string[]>> = {};\n  const recordExcluded = (reason: ExclusionReason, entryId: string): void => {\n    increment(excluded, reason);\n    excludedEntryIds[reason] = [...(excludedEntryIds[reason] ?? []), entryId];\n  };\n  ${safeMarker}`,
+  `const excludedEntryIds = {};\n  const recordExcluded = (reason, entryId) => {\n    increment(excluded, reason);\n    excludedEntryIds[reason] = [...(excludedEntryIds[reason] ?? []), entryId];\n  };\n  ${safeMarker}`,
 );
 
 patched = patched.replace(
   /increment\(excluded, "([A-Za-z]+)"\);/g,
-  (_match, reason: string) => `recordExcluded("${reason}" as ExclusionReason, entryId);`,
+  (_match, reason: string) => `recordExcluded("${reason}", entryId);`,
 );
 patched = patched.replace(
   "increment(excluded, entryReason);",
