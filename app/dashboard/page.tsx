@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import ModelDashboardPage from "./model-dashboard";
+import ReferenceDashboard from "./reference-dashboard";
 import { logout } from "./actions";
 
 export default async function DashboardPage({
@@ -70,5 +70,5 @@ export default async function DashboardPage({
     );
   }
 
-  return <ModelDashboardPage searchParams={searchParams} />;
+  return <ReferenceDashboard searchParams={searchParams} />;
 }
