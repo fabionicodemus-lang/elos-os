@@ -1,0 +1,35 @@
+import { createHash } from "node:crypto";
+import { env } from "./config/env.js";
+import { requestSupabase } from "./elos/supabase.js";
+type J=Record<string,unknown>; type S={koper_id:string;koper_parent_id:string|null;payload:unknown};
+type O={id:string;source_id:string|null;supplier_id:string;project_id:string;order_number:string};
+type Sup={id:string;source_id:string|null;tax_id:string|null;legal_name:string;trade_name:string|null};
+const obj=(v:unknown):J=>typeof v==="object"&&v!==null&&!Array.isArray(v)?v as J:{};
+const id=(v:unknown):string|null=>typeof v==="string"||typeof v==="number"?(String(v).trim()||null):null;
+const arr=(v:unknown):J[]=>Array.isArray(v)?v.map(obj):[];
+const ids=(v:unknown,k:string)=>[...new Set(arr(v).flatMap(r=>{const x=id(r[k]);return x?[x]:[]}))];
+const norm=(v:string|null)=>v?.replace(/\D/g,"")||null;
+function stable(seed:string){const b=Buffer.from(createHash("sha256").update(seed).digest("hex").slice(0,32),"hex");b[6]=((b[6]??0)&15)|80;b[8]=((b[8]??0)&63)|128;const h=b.toString("hex");return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`}
+async function all<T>(t:string,q:Record<string,string>){const out:T[]=[];for(let o=0;;o+=1000){const p=await requestSupabase<T[]>(t,{query:new URLSearchParams({...q,limit:"1000",offset:String(o)})});out.push(...p);if(p.length<1000)return out}}
+function invIds(p:J){const nested=ids(p.invoices,"invoiceId");if(nested.length)return nested;return Array.isArray(p.invoiceIds)?[...new Set(p.invoiceIds.flatMap(x=>id(x)?[id(x)!]:[]))]:[]}
+function collect(v:unknown,path="",out:Array<{path:string,value:string}>=[],depth=0){if(depth>4)return out;if(Array.isArray(v)){for(let i=0;i<Math.min(v.length,20);i++)collect(v[i],`${path}[${i}]`,out,depth+1);return out}if(typeof v==="object"&&v!==null){for(const [k,x] of Object.entries(v as J))collect(x,path?`${path}.${k}`:k,out,depth+1);return out}const s=id(v);if(s)out.push({path,value:s});return out}
+await import("./index.js");
+const [invs,stockItems,orders,sups,existing,projects]=await Promise.all([
+ all<S>("koper_staging_records",{select:"koper_id,koper_parent_id,payload",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source:"eq.koper",entity:"eq.xml_invoice",sync_state:"eq.present",order:"koper_id.asc"}),
+ all<S>("koper_staging_records",{select:"koper_id,koper_parent_id,payload",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source:"eq.koper",entity:"eq.stock_entry_item",sync_state:"eq.present",order:"koper_parent_id.asc"}),
+ all<O>("procurement_purchase_orders",{select:"id,source_id,supplier_id,project_id,order_number",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source_system:"eq.koper",order:"source_id.asc"}),
+ all<Sup>("suppliers",{select:"id,source_id,tax_id,legal_name,trade_name",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source_system:"eq.koper",order:"source_id.asc"}),
+ all<{id:string}>("finance_electronic_invoices",{select:"id",company_id:`eq.${env.BOSSA_COMPANY_ID}`,order:"id.asc"}),
+ all<{id:string;name:string}>("projects",{select:"id,name",company_id:`eq.${env.BOSSA_COMPANY_ID}`,order:"name.asc"}),
+]);
+const existingIds=new Set(existing.map(x=>x.id)); const orderBySource=new Map(orders.flatMap(o=>o.source_id?[[o.source_id,o] as const]:[]));
+const supBySource=new Map(sups.flatMap(s=>s.source_id?[[s.source_id,s] as const]:[])); const supByTax=new Map(sups.flatMap(s=>norm(s.tax_id)?[[norm(s.tax_id)!,s] as const]:[]));
+const entriesByInv=new Map<string,Set<string>>(); const orderSourcesByInv=new Map<string,Set<string>>();
+for(const si of stockItems){if(!si.koper_parent_id)continue;const p=obj(si.payload);for(const iid of invIds(p)){(entriesByInv.get(iid)??entriesByInv.set(iid,new Set()).get(iid)!).add(si.koper_parent_id);const set=orderSourcesByInv.get(iid)??new Set<string>();for(const x of [...ids(p.candidatePurchaseOrderIds,"id"),...(Array.isArray(p.candidatePurchaseOrderIds)?p.candidatePurchaseOrderIds.flatMap(v=>id(v)?[id(v)!]:[]):[]),...(Array.isArray(p.purchaseOrderIds)?p.purchaseOrderIds.flatMap(v=>id(v)?[id(v)!]:[]):[])])set.add(x);orderSourcesByInv.set(iid,set)}}
+const stats:any={staged:invs.length,existing:existing.length,missing:0,uniqueProject:0,uniqueSupplier:0,both:0,uniqueOrder:0,multiOrderSameIdentity:0,identityMissing:0,supplierMatchedByTax:0,supplierMatchedBySourceLeaf:0}; const examples:any[]=[]; const keyCounts:Record<string,number>={};
+for(const inv of invs){const nativeId=stable(`elos:koper:electronic-invoice:${inv.koper_id}`);if(existingIds.has(nativeId))continue;stats.missing++;const p=obj(inv.payload);const src=new Set<string>(ids(p.purchaseOrders,"purchaseOrderId"));for(const x of orderSourcesByInv.get(inv.koper_id)??[])src.add(x);const candidates=[...new Map([...src].flatMap(x=>{const o=orderBySource.get(x);return o?[[o.id,o] as const]:[]})).values()];const projectIds=[...new Set(candidates.map(o=>o.project_id))];const supplierIds=[...new Set(candidates.map(o=>o.supplier_id))];if(candidates.length===1)stats.uniqueOrder++;if(projectIds.length===1)stats.uniqueProject++;if(supplierIds.length===1)stats.uniqueSupplier++;if(projectIds.length===1&&supplierIds.length===1)stats.both++;if(candidates.length>1&&projectIds.length===1&&supplierIds.length===1)stats.multiOrderSameIdentity++;
+let taxMatch:Sup|null=null, sourceMatch:Sup|null=null;const leaves=collect(p);for(const leaf of leaves){if(/supplier|issuer|emit|cnpj|cpf|tax/i.test(leaf.path))keyCounts[leaf.path]=(keyCounts[leaf.path]??0)+1;const n=norm(leaf.value);if(!taxMatch&&n&&supByTax.has(n))taxMatch=supByTax.get(n)!;if(!sourceMatch&&supBySource.has(leaf.value))sourceMatch=supBySource.get(leaf.value)!}if(taxMatch)stats.supplierMatchedByTax++;if(sourceMatch)stats.supplierMatchedBySourceLeaf++;
+const derivedSupplier=supplierIds.length===1?supplierIds[0]:taxMatch?.id??sourceMatch?.id??null;const derivedProject=projectIds.length===1?projectIds[0]:null;if(derivedSupplier&&derivedProject){}else stats.identityMissing++;
+if(examples.length<80&&(!derivedProject||!derivedSupplier||candidates.length!==1))examples.push({invoiceId:inv.koper_id,invoiceNumber:id(p.invoiceNumber),purchaseOrderSources:[...src],candidateOrders:candidates.map(o=>({source:o.source_id,number:o.order_number,project:o.project_id,supplier:o.supplier_id})),entryIds:[...(entriesByInv.get(inv.koper_id)??[])],derivedProject,derivedSupplier,taxMatch:taxMatch?{id:taxMatch.id,source:taxMatch.source_id,tax:taxMatch.tax_id,name:taxMatch.legal_name}:null,sourceMatch:sourceMatch?{id:sourceMatch.id,source:sourceMatch.source_id,name:sourceMatch.legal_name}:null,relevantLeaves:leaves.filter(x=>/supplier|issuer|emit|cnpj|cpf|tax|project|construction|work|obra/i.test(x.path)).slice(0,25)});
+}
+console.log("KOPER_NFE_COVERAGE_IDENTITIES",JSON.stringify({ok:true,readOnly:true,stats,projects,topRelevantKeys:Object.entries(keyCounts).sort((a,b)=>b[1]-a[1]).slice(0,40),examples}));
