@@ -75,6 +75,15 @@ async function navigationCandidates(page: import("playwright-core").Page): Promi
 }
 
 async function openPayables(page: import("playwright-core").Page): Promise<{ opened: boolean; route: string | null; candidates: Awaited<ReturnType<typeof navigationCandidates>> }> {
+  const knownRoute = "https://app.koper.com.br/financeiro/contas_pagar";
+  const response = await page.goto(knownRoute, { waitUntil: "domcontentloaded", timeout: 15_000 }).catch(() => null);
+  await page.waitForTimeout(7_000);
+  const finalUrl = page.url();
+  const opened = Boolean(response) && /financeiro\/contas_pagar/i.test(finalUrl);
+  if (opened) {
+    return { opened: true, route: finalUrl, candidates: await navigationCandidates(page) };
+  }
+
   let candidates = await navigationCandidates(page);
   const exact = candidates.find((entry) => /contas?\s+a\s+pagar/i.test(entry.text) && entry.href);
   if (exact?.href) {
@@ -93,13 +102,6 @@ async function openPayables(page: import("playwright-core").Page): Promise<{ ope
       await page.goto(afterFinance.href, { waitUntil: "domcontentloaded", timeout: 15_000 }).catch(() => undefined);
       await page.waitForTimeout(5_000);
       return { opened: true, route: page.url(), candidates };
-    }
-
-    const payableText = page.getByText(/contas?\s+a\s+pagar/i).filter({ visible: true }).first();
-    if (await payableText.count().catch(() => 0)) {
-      await payableText.click({ timeout: 5_000 }).catch(() => undefined);
-      await page.waitForTimeout(5_000);
-      return { opened: true, route: page.url(), candidates: await navigationCandidates(page) };
     }
   }
 
@@ -152,7 +154,7 @@ try {
 
     page.on("response", onResponse);
     const navigation = await openPayables(page);
-    await page.waitForTimeout(6_000);
+    await page.waitForTimeout(4_000);
     page.off("response", onResponse);
     await Promise.allSettled(pending);
 
