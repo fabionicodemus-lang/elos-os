@@ -9,6 +9,7 @@ on:
       - ".github/scripts/audit-koper-item-cost-center-backfill.sh"
       - ".github/scripts/audit-koper-order-header-cost-center.sh"
       - ".github/scripts/audit-koper-purchase-item-services.sh"
+      - ".github/scripts/audit-koper-purchase-request-coverage.sh"
       - ".github/workflows/audit-koper-item-cost-center.yml"
 
 permissions:
@@ -37,3 +38,8 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           PGSSLMODE: require
         run: bash .github/scripts/audit-koper-purchase-item-services.sh
+      - name: Auditar cobertura pedido para solicitacao Koper
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+        run: bash .github/scripts/audit-koper-purchase-request-coverage.sh
