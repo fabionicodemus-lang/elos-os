@@ -31,6 +31,10 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+      - name: Preparar roles compatíveis com Supabase
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -c "create role anon nologin; create role authenticated nologin;"
       - name: Executar migration e cenários de de-para Koper
         env:
           PGPASSWORD: postgres
