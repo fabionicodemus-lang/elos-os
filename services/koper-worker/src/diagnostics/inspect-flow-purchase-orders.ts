@@ -14,6 +14,14 @@ type ResponseShape = {
   arrays: Array<{ path: string; length: number; firstItemKeys: string[] }>;
 };
 
+type CostCenterRead = {
+  endpoint: string;
+  status: number;
+  fieldPaths: string[];
+  arrays: Array<{ path: string; length: number; firstItemKeys: string[] }>;
+  technicalSamples: Array<Record<string, unknown>>;
+};
+
 function objectValue(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -21,7 +29,7 @@ function objectValue(value: unknown): Record<string, unknown> | null {
 }
 
 function arrayShapes(value: unknown, prefix = "", depth = 0): ResponseShape["arrays"] {
-  if (depth > 4) return [];
+  if (depth > 6) return [];
   if (Array.isArray(value)) {
     const first = objectValue(value[0]);
     return [{
@@ -35,6 +43,36 @@ function arrayShapes(value: unknown, prefix = "", depth = 0): ResponseShape["arr
   return Object.entries(object).flatMap(([key, item]) =>
     arrayShapes(item, prefix ? `${prefix}.${key}` : key, depth + 1)
   );
+}
+
+function technicalObject(value: unknown): Record<string, unknown> | null {
+  const object = objectValue(value);
+  if (!object) return null;
+  const allowed = /(^id$|id$|code|name|description|cost|center|monitor|service|budget|building|enterprise|parent)/i;
+  const filtered = Object.fromEntries(
+    Object.entries(object)
+      .filter(([key, item]) => allowed.test(key) && (item === null || ["string", "number", "boolean"].includes(typeof item)))
+      .slice(0, 60),
+  );
+  return Object.keys(filtered).length ? filtered : null;
+}
+
+function collectCostCenterSamples(value: unknown, path = "", depth = 0): Array<Record<string, unknown>> {
+  if (depth > 7) return [];
+  if (Array.isArray(value)) {
+    if (/cost.*center|center.*cost/i.test(path)) {
+      return value.flatMap((item) => {
+        const sample = technicalObject(item);
+        return sample ? [sample] : [];
+      }).slice(0, 50);
+    }
+    return value.flatMap((item, index) => collectCostCenterSamples(item, `${path}[${index}]`, depth + 1)).slice(0, 50);
+  }
+  const object = objectValue(value);
+  if (!object) return [];
+  return Object.entries(object).flatMap(([key, item]) =>
+    collectCostCenterSamples(item, path ? `${path}.${key}` : key, depth + 1)
+  ).slice(0, 50);
 }
 
 async function responseShape(response: {
@@ -58,12 +96,28 @@ async function responseShape(response: {
   };
 }
 
+async function costCenterResponse(response: Response): Promise<CostCenterRead> {
+  const body: unknown = await response.json();
+  return {
+    endpoint: new URL(response.url()).pathname,
+    status: response.status(),
+    fieldPaths: collectFieldPaths(body).slice(0, 1000),
+    arrays: arrayShapes(body),
+    technicalSamples: collectCostCenterSamples(body),
+  };
+}
+
+function isCostCentersQuery(method: string, postData: string | null): boolean {
+  return method === "POST" && Boolean(postData?.includes("CostCentersQuery"));
+}
+
 export async function inspectFlowPurchaseOrders(): Promise<{
   ok: true;
   authenticated: boolean;
   flowSelected: boolean;
   visitedUrls: string[];
   reads: ResponseShape[];
+  costCenterReads: CostCenterRead[];
   blockedWrites: number;
   message: string | null;
 }> {
@@ -75,6 +129,7 @@ export async function inspectFlowPurchaseOrders(): Promise<{
       flowSelected: false,
       visitedUrls: [],
       reads: [],
+      costCenterReads: [],
       blockedWrites: 0,
       message: login.message,
     };
@@ -85,7 +140,9 @@ export async function inspectFlowPurchaseOrders(): Promise<{
       try {
         const url = new URL(request.url());
         const isKoper = url.hostname === "koper.com.br" || url.hostname.endsWith(".koper.com.br");
+        const costCentersRead = isCostCentersQuery(request.method(), request.postData());
         if (isKoper && !["GET", "HEAD", "OPTIONS"].includes(request.method())
+          && !costCentersRead
           && !isAllowedFlowSwitch(url, request.method(), request.postData())) {
           blockedWrites += 1;
           await route.abort("blockedbyclient");
@@ -97,16 +154,31 @@ export async function inspectFlowPurchaseOrders(): Promise<{
       await route.continue();
     });
 
-    const flowSelected = await selectFlow(page);
-    if (!flowSelected) return {
-      ok: true,
-      authenticated: true,
-      flowSelected: false,
-      visitedUrls: [],
-      reads: [],
-      blockedWrites,
-      message: "KOPER_FLOW_COMPANY_NOT_SELECTED",
+    const costCenterReads: CostCenterRead[] = [];
+    const costCenterPending: Promise<void>[] = [];
+    const onCostCenterResponse = (response: Response): void => {
+      const request = response.request();
+      if (!isCostCentersQuery(request.method(), request.postData())) return;
+      costCenterPending.push(costCenterResponse(response).then((read) => {
+        costCenterReads.push(read);
+      }).catch(() => undefined));
     };
+    page.on("response", onCostCenterResponse);
+
+    const flowSelected = await selectFlow(page);
+    if (!flowSelected) {
+      page.off("response", onCostCenterResponse);
+      return {
+        ok: true,
+        authenticated: true,
+        flowSelected: false,
+        visitedUrls: [],
+        reads: [],
+        costCenterReads,
+        blockedWrites,
+        message: "KOPER_FLOW_COMPANY_NOT_SELECTED",
+      };
+    }
 
     const reads: ResponseShape[] = [];
     const pending: Promise<void>[] = [];
@@ -132,6 +204,8 @@ export async function inspectFlowPurchaseOrders(): Promise<{
 
     const visitedUrls: string[] = [];
     for (const url of [
+      "https://app.koper.com.br/",
+      "https://app.koper.com.br/dashboard",
       "https://app.koper.com.br/compras/ordens_compra",
       "https://app.koper.com.br/compras/ordens_compra/finalizados",
       "https://app.koper.com.br/compras/ordens_compra/view/10455",
@@ -140,7 +214,7 @@ export async function inspectFlowPurchaseOrders(): Promise<{
       await page.waitForTimeout(5_000);
       visitedUrls.push(page.url());
     }
-    await Promise.allSettled(pending);
+    await Promise.allSettled([...pending, ...costCenterPending]);
     if (orderListUrl && orderListHeaders) {
       const finalizedUrl = new URL(orderListUrl);
       finalizedUrl.searchParams.set("open", "no");
@@ -152,6 +226,7 @@ export async function inspectFlowPurchaseOrders(): Promise<{
       reads.push(await responseShape(response));
     }
     page.off("response", onResponse);
+    page.off("response", onCostCenterResponse);
 
     return {
       ok: true,
@@ -159,8 +234,9 @@ export async function inspectFlowPurchaseOrders(): Promise<{
       flowSelected: true,
       visitedUrls,
       reads,
+      costCenterReads,
       blockedWrites,
       message: null,
     };
-  }, { sessionTimeoutMs: 60_000 });
+  }, { sessionTimeoutMs: 90_000 });
 }
