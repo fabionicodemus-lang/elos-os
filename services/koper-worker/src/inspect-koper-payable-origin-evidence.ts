@@ -36,8 +36,9 @@ try{
   const u=new URL(seed.url());for(const[k,v]of Object.entries({allBills:"yes",initialDate:"",finalDate:"",limit:"500",offset:"0",orderFlag:"asc",orderby:"dueDate",typeDate:"dueDate",cb:String(Date.now())}))u.searchParams.set(k,v);
   const listResponse=await page.request.get(u.toString(),{headers,timeout:8000});const body=obj(await listResponse.json().catch(()=>null));if(!body)return{ok:false,message:"LIST_FAILED",status:listResponse.status(),blockedWrites};
   const bills=Array.isArray(body.bills)?body.bills.map(obj).filter((v):v is Json=>Boolean(v)):[];
-  const groups:Record<string,Json[]>={invoiceOnly:[],receiptOnly:[],neither:[],recurring:[]};
-  for(const b of bills){const inv=has(b.invoiceNumber),rec=has(b.receiptNumber);if(inv&&!rec&&groups.invoiceOnly.length<3)groups.invoiceOnly.push(b);if(rec&&!inv&&groups.receiptOnly.length<4)groups.receiptOnly.push(b);if(!inv&&!rec&&groups.neither.length<5)groups.neither.push(b);if(b.hasRecurrence===true&&groups.recurring.length<3)groups.recurring.push(b);}
+  const invoiceOnly:Json[]=[];const receiptOnly:Json[]=[];const neither:Json[]=[];const recurring:Json[]=[];
+  for(const b of bills){const inv=has(b.invoiceNumber),rec=has(b.receiptNumber);if(inv&&!rec&&invoiceOnly.length<3)invoiceOnly.push(b);if(rec&&!inv&&receiptOnly.length<4)receiptOnly.push(b);if(!inv&&!rec&&neither.length<5)neither.push(b);if(b.hasRecurrence===true&&recurring.length<3)recurring.push(b);}
+  const groups={invoiceOnly,receiptOnly,neither,recurring};
   const chosen=[...new Map(Object.entries(groups).flatMap(([group,rows])=>rows.map(r=>[String(r.billId),{group,row:r}] as const))).values()];
   const details=[];
   for(const item of chosen.slice(0,12)){
