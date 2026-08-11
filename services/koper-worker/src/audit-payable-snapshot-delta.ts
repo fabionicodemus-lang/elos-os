@@ -68,10 +68,10 @@ for (let a = 0; a < searchPool.length - 4; a += 1) {
   for (let b = a + 1; b < searchPool.length - 3; b += 1) {
     for (let c = b + 1; c < searchPool.length - 2; c += 1) {
       for (let d = c + 1; d < searchPool.length - 1; d += 1) {
-        const partial = searchPool[a].cents + searchPool[b].cents + searchPool[c].cents + searchPool[d].cents;
+        const partial = searchPool[a]!.cents + searchPool[b]!.cents + searchPool[c]!.cents + searchPool[d]!.cents;
         for (let e = d + 1; e < searchPool.length; e += 1) {
-          if (partial + searchPool[e].cents === targetDeltaCents) {
-            candidates.push([searchPool[a], searchPool[b], searchPool[c], searchPool[d], searchPool[e]]);
+          if (partial + searchPool[e]!.cents === targetDeltaCents) {
+            candidates.push([searchPool[a]!, searchPool[b]!, searchPool[c]!, searchPool[d]!, searchPool[e]!]);
             if (candidates.length >= 5) break outer;
           }
         }
