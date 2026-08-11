@@ -63,9 +63,10 @@ async function navigationCandidates(page: import("playwright-core").Page): Promi
       const style = window.getComputedStyle(node);
       const text = (node.innerText || node.textContent || "").replace(/\s+/g, " ").trim();
       const rawHref = node instanceof HTMLAnchorElement ? node.href : node.getAttribute("href");
+      const href = rawHref ? String(rawHref).split("#")[0] : null;
       return {
         text: text.slice(0, 240),
-        href: rawHref ? String(rawHref).split("#")[0] : null,
+        href: href ?? null,
         tag: node.tagName.toLowerCase(),
         visible: rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden",
       };
