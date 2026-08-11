@@ -136,6 +136,121 @@ where po.cost_center_service_id is null
   and btrim(coalesce(po.cost_center_code, '')) <> ''
 order by project.code, po.cost_center_code
 limit 100;
+
+\echo '--- Orçamentos ativos do FLOW ---'
+select
+  budget.id,
+  budget.code,
+  budget.version,
+  budget.status,
+  budget.is_base,
+  budget.updated_at
+from public.engineering_budgets budget
+join public.projects project on project.id = budget.project_id
+where project.code = 'FLOW'
+  and budget.status <> 'archived'
+order by budget.is_base desc, budget.updated_at desc;
+
+\echo '--- Cobertura dos service_id dos pedidos no orçamento-base do FLOW ---'
+with flow_project as (
+  select id, company_id
+  from public.projects
+  where code = 'FLOW'
+  order by created_at
+  limit 1
+), selected_budget as (
+  select budget.id
+  from public.engineering_budgets budget
+  join flow_project project on project.id = budget.project_id
+  where budget.status <> 'archived'
+  order by budget.is_base desc, budget.updated_at desc
+  limit 1
+), flow_orders as (
+  select item.*
+  from public.procurement_purchase_order_items item
+  join flow_project project on project.id = item.project_id
+  where item.cost_center_service_id is not null
+)
+select
+  count(*) as itens_pedido_com_service_id,
+  count(*) filter (where exists (
+    select 1
+    from public.engineering_budget_items budget_item
+    join selected_budget budget on budget.id = budget_item.budget_id
+    where budget_item.status = 'active'
+      and budget_item.service_id = flow_orders.cost_center_service_id
+  )) as itens_encontrados_no_orcamento,
+  count(*) filter (where not exists (
+    select 1
+    from public.engineering_budget_items budget_item
+    join selected_budget budget on budget.id = budget_item.budget_id
+    where budget_item.status = 'active'
+      and budget_item.service_id = flow_orders.cost_center_service_id
+  )) as itens_sem_correspondencia_no_orcamento
+from flow_orders;
+
+\echo '--- Centros Koper apropriados que não encontram serviço no orçamento-base do FLOW ---'
+with flow_project as (
+  select id, company_id
+  from public.projects
+  where code = 'FLOW'
+  order by created_at
+  limit 1
+), selected_budget as (
+  select budget.id
+  from public.engineering_budgets budget
+  join flow_project project on project.id = budget.project_id
+  where budget.status <> 'archived'
+  order by budget.is_base desc, budget.updated_at desc
+  limit 1
+)
+select
+  item.cost_center_code as codigo_koper,
+  max(item.cost_center_name) as nome_koper,
+  service.code as codigo_servico_interno,
+  service.description as servico_interno,
+  count(*) as itens
+from public.procurement_purchase_order_items item
+join flow_project project on project.id = item.project_id
+join public.engineering_services service on service.id = item.cost_center_service_id
+where not exists (
+  select 1
+  from public.engineering_budget_items budget_item
+  join selected_budget budget on budget.id = budget_item.budget_id
+  where budget_item.status = 'active'
+    and budget_item.service_id = item.cost_center_service_id
+)
+group by item.cost_center_code, service.code, service.description
+order by count(*) desc, item.cost_center_code
+limit 100;
+
+\echo '--- Serviços repetidos em mais de um item do orçamento-base do FLOW ---'
+with flow_project as (
+  select id
+  from public.projects
+  where code = 'FLOW'
+  order by created_at
+  limit 1
+), selected_budget as (
+  select budget.id
+  from public.engineering_budgets budget
+  join flow_project project on project.id = budget.project_id
+  where budget.status <> 'archived'
+  order by budget.is_base desc, budget.updated_at desc
+  limit 1
+)
+select
+  service.code as codigo_servico_interno,
+  service.description,
+  count(*) as itens_orcamento,
+  array_agg(budget_item.code order by budget_item.sort_order, budget_item.code) as codigos_orcamento
+from public.engineering_budget_items budget_item
+join selected_budget budget on budget.id = budget_item.budget_id
+join public.engineering_services service on service.id = budget_item.service_id
+where budget_item.status = 'active'
+group by service.id, service.code, service.description
+having count(*) > 1
+order by count(*) desc, service.code;
 SQL
 
 echo "Supabase 0082 aplicado e validado: código Koper preservado e vínculo interno recuperado."
