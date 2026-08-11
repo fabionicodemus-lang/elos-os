@@ -1,0 +1,27 @@
+name: Audit Koper Item Cost Center
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/run/koper-item-cost-center-audit.md"
+      - ".github/scripts/audit-koper-item-cost-center-backfill.sh"
+      - ".github/workflows/audit-koper-item-cost-center.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Auditar de-para Koper por item
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+        run: bash .github/scripts/audit-koper-item-cost-center-backfill.sh
