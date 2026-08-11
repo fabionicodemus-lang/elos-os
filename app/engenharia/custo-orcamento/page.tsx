@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import {
@@ -5,6 +6,7 @@ import {
   type CostVsBudgetRow,
   type CostVsBudgetStatus,
 } from "@/lib/cost-vs-budget/server";
+import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const statusLabels: Record<CostVsBudgetStatus, string> = {
@@ -13,6 +15,47 @@ const statusLabels: Record<CostVsBudgetStatus, string> = {
   over: "Estourado",
   no_budget: "Sem orçamento",
   unallocated: "Sem apropriação",
+};
+
+type BudgetGroup = {
+  id: string;
+  code: string;
+  name: string;
+  sort_order: number;
+};
+
+type BudgetHierarchyItem = {
+  service_id: string | null;
+  group_id: string | null;
+  code: string | null;
+  description: string;
+  sort_order: number;
+};
+
+type DisplayRow = CostVsBudgetRow & {
+  displayCode: string;
+  displayName: string;
+  groupId: string | null;
+  groupCode: string | null;
+  groupName: string | null;
+  groupSortOrder: number;
+  itemSortOrder: number;
+};
+
+type GroupSummary = {
+  id: string;
+  code: string;
+  name: string;
+  budgetAmount: number;
+  materialCost: number;
+  serviceCost: number;
+  directCost: number;
+  purchaseOrderCost: number;
+  openCommitment: number;
+  forecastCost: number;
+  balance: number;
+  consumptionPercent: number;
+  status: CostVsBudgetStatus;
 };
 
 function money(value: number | null | undefined) {
@@ -46,10 +89,83 @@ function statusBadge(status: CostVsBudgetStatus) {
   );
 }
 
-function matchesFilter(row: CostVsBudgetRow, query: string, status: string) {
+function compareCodes(left: string, right: string) {
+  return left.localeCompare(right, "pt-BR", { numeric: true, sensitivity: "base" });
+}
+
+function matchesFilter(row: DisplayRow, query: string, status: string) {
   if (status && row.status !== status) return false;
   if (!query) return true;
-  return `${row.code} ${row.name}`.toLowerCase().includes(query);
+  return `${row.displayCode} ${row.displayName} ${row.groupCode ?? ""} ${row.groupName ?? ""}`
+    .toLowerCase()
+    .includes(query);
+}
+
+function classifySummary(budgetAmount: number, forecastCost: number): CostVsBudgetStatus {
+  if (budgetAmount <= 0 && forecastCost > 0.01) return "no_budget";
+  if (forecastCost > budgetAmount + 0.01) return "over";
+  if (budgetAmount > 0 && forecastCost / budgetAmount >= 0.9) return "attention";
+  return "ok";
+}
+
+function summarizeGroup(group: BudgetGroup, children: DisplayRow[]): GroupSummary {
+  const totals = children.reduce(
+    (summary, row) => {
+      summary.budgetAmount += row.budgetAmount;
+      summary.materialCost += row.materialCost;
+      summary.serviceCost += row.serviceCost;
+      summary.directCost += row.directCost;
+      summary.purchaseOrderCost += row.purchaseOrderCost;
+      summary.openCommitment += row.openCommitment;
+      summary.forecastCost += row.forecastCost;
+      return summary;
+    },
+    {
+      budgetAmount: 0,
+      materialCost: 0,
+      serviceCost: 0,
+      directCost: 0,
+      purchaseOrderCost: 0,
+      openCommitment: 0,
+      forecastCost: 0,
+    },
+  );
+  const balance = totals.budgetAmount - totals.forecastCost;
+  const consumptionPercent = totals.budgetAmount > 0
+    ? totals.forecastCost / totals.budgetAmount * 100
+    : totals.forecastCost > 0 ? 100 : 0;
+
+  return {
+    id: group.id,
+    code: group.code,
+    name: group.name,
+    ...totals,
+    balance,
+    consumptionPercent,
+    status: classifySummary(totals.budgetAmount, totals.forecastCost),
+  };
+}
+
+function consumptionBar(status: CostVsBudgetStatus, consumptionPercent: number) {
+  const progressWidth = Math.max(0, Math.min(100, consumptionPercent));
+  return (
+    <>
+      <strong>{percent(consumptionPercent)}</strong>
+      <div style={{ width: 110, height: 7, marginTop: 7, overflow: "hidden", borderRadius: 999, background: "#e7eeed" }}>
+        <span
+          style={{
+            display: "block",
+            width: `${progressWidth}%`,
+            height: "100%",
+            borderRadius: 999,
+            background: status === "over" || status === "no_budget"
+              ? "#b75d50"
+              : status === "attention" ? "#c89236" : "#087f72",
+          }}
+        />
+      </div>
+    </>
+  );
 }
 
 export default async function CostVsBudgetPage({
@@ -65,9 +181,88 @@ export default async function CostVsBudgetPage({
     projectId,
     budgetId: params.budget,
   });
+
+  let budgetGroups: BudgetGroup[] = [];
+  let budgetHierarchyItems: BudgetHierarchyItem[] = [];
+  const hierarchyErrors: string[] = [];
+
+  if (projectId && context.budget) {
+    const [groupsResult, itemsResult] = await Promise.all([
+      fetchAllRows<BudgetGroup>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("engineering_budget_groups")
+          .select("id,code,name,sort_order")
+          .eq("company_id", companyId)
+          .eq("project_id", projectId)
+          .eq("budget_id", context.budget!.id)
+          .eq("status", "active")
+          .order("sort_order")
+          .order("code")
+          .range(from, to);
+        return { data: (data ?? []) as BudgetGroup[], error };
+      }),
+      fetchAllRows<BudgetHierarchyItem>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("engineering_budget_items")
+          .select("service_id,group_id,code,description,sort_order")
+          .eq("company_id", companyId)
+          .eq("project_id", projectId)
+          .eq("budget_id", context.budget!.id)
+          .eq("status", "active")
+          .order("sort_order")
+          .order("code")
+          .range(from, to);
+        return { data: (data ?? []) as BudgetHierarchyItem[], error };
+      }),
+    ]);
+    budgetGroups = groupsResult.data;
+    budgetHierarchyItems = itemsResult.data;
+    if (groupsResult.error?.message) hierarchyErrors.push(groupsResult.error.message);
+    if (itemsResult.error?.message) hierarchyErrors.push(itemsResult.error.message);
+  }
+
+  const groupById = new Map(budgetGroups.map((group) => [group.id, group]));
+  const itemByServiceId = new Map<string, BudgetHierarchyItem>();
+  budgetHierarchyItems
+    .filter((item) => item.service_id)
+    .sort((a, b) => a.sort_order - b.sort_order || compareCodes(a.code ?? "", b.code ?? ""))
+    .forEach((item) => {
+      if (item.service_id && !itemByServiceId.has(item.service_id)) itemByServiceId.set(item.service_id, item);
+    });
+
+  const displayRows = context.rows
+    .map<DisplayRow>((row) => {
+      const rowWithService = row as CostVsBudgetRow & { serviceId: string | null };
+      const budgetItem = rowWithService.serviceId ? itemByServiceId.get(rowWithService.serviceId) : null;
+      const group = budgetItem?.group_id ? groupById.get(budgetItem.group_id) : null;
+      return {
+        ...row,
+        displayCode: budgetItem?.code?.trim() || row.code,
+        displayName: budgetItem?.description?.trim() || row.name,
+        groupId: group?.id ?? null,
+        groupCode: group?.code ?? null,
+        groupName: group?.name ?? null,
+        groupSortOrder: group?.sort_order ?? Number.MAX_SAFE_INTEGER,
+        itemSortOrder: budgetItem?.sort_order ?? Number.MAX_SAFE_INTEGER,
+      };
+    })
+    .sort((a, b) => a.groupSortOrder - b.groupSortOrder
+      || compareCodes(a.groupCode ?? "999999", b.groupCode ?? "999999")
+      || a.itemSortOrder - b.itemSortOrder
+      || compareCodes(a.displayCode, b.displayCode));
+
   const query = (params.q ?? "").trim().toLowerCase();
   const status = Object.keys(statusLabels).includes(params.status ?? "") ? params.status! : "";
-  const rows = context.rows.filter((row) => matchesFilter(row, query, status));
+  const rows = displayRows.filter((row) => matchesFilter(row, query, status));
+  const visibleGroups = budgetGroups
+    .sort((a, b) => a.sort_order - b.sort_order || compareCodes(a.code, b.code))
+    .map((group) => {
+      const children = rows.filter((row) => row.groupId === group.id);
+      return { group, children, summary: summarizeGroup(group, children) };
+    })
+    .filter((entry) => entry.children.length > 0);
+  const ungroupedRows = rows.filter((row) => !row.groupId);
+
   const comparableRows = context.rows.filter((row) => row.status !== "unallocated");
   const projectLabel = context.project
     ? `${context.project.code ? `${context.project.code} · ` : ""}${context.project.name}`
@@ -77,14 +272,15 @@ export default async function CostVsBudgetPage({
   const materialTotal = comparableRows.reduce((sum, row) => sum + row.materialCost, 0);
   const serviceTotal = comparableRows.reduce((sum, row) => sum + row.serviceCost, 0);
   const directTotal = comparableRows.reduce((sum, row) => sum + row.directCost, 0);
+  const allErrors = [...context.errors, ...hierarchyErrors];
 
   return (
     <AppShell
       activeGroup="engineering"
       activeItem="cost-vs-budget"
-      eyebrow="Engenharia · Gestão de Custos"
-      title="Custo x Orçamento"
-      description={`${company.name} · ${projectLabel} · orçamento, custo realizado e compromissos por serviço.`}
+      eyebrow="Controle · Custos"
+      title="Custos x Orçamento"
+      description={`${company.name} · ${projectLabel}`}
       actions={
         <>
           <Link className="elos-button" href="/engenharia/orcamentos">Abrir orçamentos</Link>
@@ -92,9 +288,9 @@ export default async function CostVsBudgetPage({
         </>
       }
     >
-      {context.errors.length ? (
+      {allErrors.length ? (
         <div className="auth-message error workspace-message">
-          Parte da base de custos não pôde ser carregada: {context.errors.join(" · ")}
+          Parte da base de custos não pôde ser carregada: {allErrors.join(" · ")}
         </div>
       ) : null}
 
@@ -114,28 +310,6 @@ export default async function CostVsBudgetPage({
 
       {projectId && context.budget ? (
         <>
-          <section className="forecast-reference-card">
-            <div>
-              <span>Orçamento comparado</span>
-              <strong>{context.budget.code} · {context.budget.version} · {context.budget.name}</strong>
-              <small>
-                {context.budget.is_base ? "Orçamento base da obra" : "Revisão selecionada"} · situação calculada pelo custo total previsto
-              </small>
-            </div>
-            {context.budgets.length > 1 ? (
-              <form method="get">
-                <select name="budget" defaultValue={context.budget.id}>
-                  {context.budgets.map((budget) => (
-                    <option key={budget.id} value={budget.id}>
-                      {budget.code} · {budget.version} · {budget.name}{budget.is_base ? " · BASE" : ""}
-                    </option>
-                  ))}
-                </select>
-                <button type="submit">Comparar</button>
-              </form>
-            ) : null}
-          </section>
-
           <section className="forecast-kpis">
             <article>
               <span>Orçamento</span>
@@ -171,33 +345,32 @@ export default async function CostVsBudgetPage({
             </article>
           </section>
 
-          <section className="forecast-formula-panel">
-            <div>
-              <span>Critério de comparação</span>
-              <h2>Os pedidos importados do Koper entram no mesmo serviço do orçamento</h2>
-            </div>
-            <div className="forecast-formula">
-              <span>Custo realizado</span><b>+</b><span>Comprometido pendente</span><b>=</b><strong>Custo total previsto</strong>
-            </div>
-            <p>
-              Os pedidos confirmados, recebidos ou encerrados são agrupados pelo serviço gravado no item da compra. Quando já existe consumo de material no mesmo serviço, esse valor reduz o saldo comprometido do pedido para evitar dupla contagem. Pedidos cancelados e quantidades canceladas não entram na previsão.
-            </p>
-          </section>
-
           <section className="registry-toolbar cashflow-toolbar">
             <form
               method="get"
               className="cashflow-filter"
-              style={{ gridTemplateColumns: "minmax(280px, 1fr) 220px 190px auto auto" }}
+              style={{
+                gridTemplateColumns: context.budgets.length > 1
+                  ? "250px minmax(280px, 1fr) 220px 190px auto auto"
+                  : "minmax(280px, 1fr) 220px 190px auto auto",
+              }}
             >
-              <input type="hidden" name="budget" value={context.budget.id} />
-              <input name="q" defaultValue={params.q ?? ""} placeholder="Buscar código ou nome do serviço" />
+              {context.budgets.length > 1 ? (
+                <select name="budget" defaultValue={context.budget.id} aria-label="Revisão do orçamento">
+                  {context.budgets.map((budget) => (
+                    <option key={budget.id} value={budget.id}>
+                      {budget.code} · {budget.version} · {budget.name}{budget.is_base ? " · BASE" : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : <input type="hidden" name="budget" value={context.budget.id} />}
+              <input name="q" defaultValue={params.q ?? ""} placeholder="Buscar grupo, código ou serviço" />
               <select name="status" defaultValue={status}>
                 <option value="">Todas as situações</option>
                 {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
               <div style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700 }}>
-                {rows.length} de {context.rows.length} centro(s)
+                {rows.length} serviço(s) · {visibleGroups.length} grupo(s)
               </div>
               <button type="submit">Filtrar</button>
               <Link href={`/engenharia/custo-orcamento?budget=${context.budget.id}`}>Limpar</Link>
@@ -212,14 +385,14 @@ export default async function CostVsBudgetPage({
 
           <section className="registry-table-panel forecast-service-panel">
             <div className="section-heading">
-              <div><span>Controle por centro de custo</span><h2>Serviços do orçamento</h2></div>
-              <p>{rows.length} linha(s) exibida(s)</p>
+              <div><span>Controle por grupos e centros de custo</span><h2>Estrutura do orçamento</h2></div>
+              <p>{visibleGroups.length} grupo(s) · {rows.length} serviço(s)</p>
             </div>
             <div className="registry-table-wrap">
               <table className="registry-table forecast-service-table" style={{ minWidth: 1780 }}>
                 <thead>
                   <tr>
-                    <th>Centro de custo · Serviço</th>
+                    <th>Grupo / Centro de custo · Serviço</th>
                     <th>Orçamento</th>
                     <th>Materiais realizados</th>
                     <th>Serviços medidos</th>
@@ -233,43 +406,78 @@ export default async function CostVsBudgetPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => {
-                    const progressWidth = Math.max(0, Math.min(100, row.consumptionPercent));
-                    return (
-                      <tr key={row.id} className={row.status === "over" || row.status === "no_budget" ? "danger" : ""}>
-                        <td><strong>{row.code} · {row.name}</strong></td>
-                        <td>{money(row.budgetAmount)}</td>
-                        <td>{money(row.materialCost)}</td>
-                        <td>{money(row.serviceCost)}</td>
-                        <td>{money(row.directCost)}</td>
-                        <td>{money(row.purchaseOrderCost)}</td>
-                        <td>{money(row.openCommitment)}</td>
-                        <td><strong>{money(row.forecastCost)}</strong></td>
+                  {visibleGroups.map(({ group, children, summary }) => (
+                    <Fragment key={group.id}>
+                      <tr
+                        className={summary.status === "over" || summary.status === "no_budget" ? "danger" : ""}
+                        style={{ background: "#edf6f4", borderTop: "2px solid #c9ddda" }}
+                      >
                         <td>
-                          <strong className={row.balance < 0 ? "forecast-danger" : row.balance > 0 ? "forecast-positive" : ""}>
-                            {money(row.balance)}
+                          <strong style={{ display: "block", fontSize: 13 }}>{summary.code} - {summary.name}</strong>
+                          <small style={{ color: "var(--muted)", fontWeight: 700 }}>{children.length} serviço(s)</small>
+                        </td>
+                        <td><strong>{money(summary.budgetAmount)}</strong></td>
+                        <td><strong>{money(summary.materialCost)}</strong></td>
+                        <td><strong>{money(summary.serviceCost)}</strong></td>
+                        <td><strong>{money(summary.directCost)}</strong></td>
+                        <td><strong>{money(summary.purchaseOrderCost)}</strong></td>
+                        <td><strong>{money(summary.openCommitment)}</strong></td>
+                        <td><strong>{money(summary.forecastCost)}</strong></td>
+                        <td>
+                          <strong className={summary.balance < 0 ? "forecast-danger" : summary.balance > 0 ? "forecast-positive" : ""}>
+                            {money(summary.balance)}
                           </strong>
                         </td>
-                        <td>
-                          <strong>{percent(row.consumptionPercent)}</strong>
-                          <div style={{ width: 110, height: 7, marginTop: 7, overflow: "hidden", borderRadius: 999, background: "#e7eeed" }}>
-                            <span
-                              style={{
-                                display: "block",
-                                width: `${progressWidth}%`,
-                                height: "100%",
-                                borderRadius: 999,
-                                background: row.status === "over" || row.status === "no_budget"
-                                  ? "#b75d50"
-                                  : row.status === "attention" ? "#c89236" : "#087f72",
-                              }}
-                            />
-                          </div>
-                        </td>
-                        <td>{statusBadge(row.status)}</td>
+                        <td>{consumptionBar(summary.status, summary.consumptionPercent)}</td>
+                        <td>{statusBadge(summary.status)}</td>
                       </tr>
-                    );
-                  })}
+                      {children.map((row) => (
+                        <tr key={row.id} className={row.status === "over" || row.status === "no_budget" ? "danger" : ""}>
+                          <td style={{ paddingLeft: 30 }}><strong>{row.displayCode} · {row.displayName}</strong></td>
+                          <td>{money(row.budgetAmount)}</td>
+                          <td>{money(row.materialCost)}</td>
+                          <td>{money(row.serviceCost)}</td>
+                          <td>{money(row.directCost)}</td>
+                          <td>{money(row.purchaseOrderCost)}</td>
+                          <td>{money(row.openCommitment)}</td>
+                          <td><strong>{money(row.forecastCost)}</strong></td>
+                          <td>
+                            <strong className={row.balance < 0 ? "forecast-danger" : row.balance > 0 ? "forecast-positive" : ""}>
+                              {money(row.balance)}
+                            </strong>
+                          </td>
+                          <td>{consumptionBar(row.status, row.consumptionPercent)}</td>
+                          <td>{statusBadge(row.status)}</td>
+                        </tr>
+                      ))}
+                    </Fragment>
+                  ))}
+
+                  {ungroupedRows.length > 0 ? (
+                    <tr style={{ background: "#f5f7f7", borderTop: "2px solid #dfe6e5" }}>
+                      <td colSpan={11}><strong>Sem grupo no orçamento</strong></td>
+                    </tr>
+                  ) : null}
+                  {ungroupedRows.map((row) => (
+                    <tr key={row.id} className={row.status === "over" || row.status === "no_budget" ? "danger" : ""}>
+                      <td style={{ paddingLeft: 30 }}><strong>{row.displayCode} · {row.displayName}</strong></td>
+                      <td>{money(row.budgetAmount)}</td>
+                      <td>{money(row.materialCost)}</td>
+                      <td>{money(row.serviceCost)}</td>
+                      <td>{money(row.directCost)}</td>
+                      <td>{money(row.purchaseOrderCost)}</td>
+                      <td>{money(row.openCommitment)}</td>
+                      <td><strong>{money(row.forecastCost)}</strong></td>
+                      <td>
+                        <strong className={row.balance < 0 ? "forecast-danger" : row.balance > 0 ? "forecast-positive" : ""}>
+                          {money(row.balance)}
+                        </strong>
+                      </td>
+                      <td>{consumptionBar(row.status, row.consumptionPercent)}</td>
+                      <td>{statusBadge(row.status)}</td>
+                    </tr>
+                  ))}
+
                   {rows.length === 0 ? (
                     <tr><td colSpan={11} className="budget-empty-state"><strong>Nenhum centro de custo encontrado.</strong><span>Revise os filtros aplicados.</span></td></tr>
                   ) : null}
