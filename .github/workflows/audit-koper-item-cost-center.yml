@@ -10,6 +10,7 @@ on:
       - ".github/scripts/audit-koper-order-header-cost-center.sh"
       - ".github/scripts/audit-koper-purchase-item-services.sh"
       - ".github/scripts/audit-koper-purchase-request-coverage.sh"
+      - ".github/scripts/audit-koper-stock-item-services-shape.sh"
       - ".github/workflows/audit-koper-item-cost-center.yml"
 
 permissions:
@@ -43,3 +44,8 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           PGSSLMODE: require
         run: bash .github/scripts/audit-koper-purchase-request-coverage.sh
+      - name: Auditar estrutura services das solicitacoes Koper
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+        run: bash .github/scripts/audit-koper-stock-item-services-shape.sh
