@@ -238,5 +238,5 @@ export async function inspectFlowPurchaseOrders(): Promise<{
       blockedWrites,
       message: null,
     };
-  }, { sessionTimeoutMs: 90_000 });
+  }, { sessionTimeoutMs: 60_000 });
 }
