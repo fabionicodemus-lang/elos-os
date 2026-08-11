@@ -4,82 +4,51 @@ import { collectFieldPaths } from "./discover-stock-route.js";
 import { isAllowedFlowSwitch } from "./inspect-koper-engineering.js";
 import { selectFlow } from "./collect-flow-stock-requests.js";
 
-type Probe = {
-  endpoint: string;
-  params: Record<string, string>;
-  status: number;
-  dataKeys: string[];
-  fieldPaths: string[];
-  technicalScalars: Record<string, string | number | boolean | null>;
-};
-
 type UnknownRecord = Record<string, unknown>;
+type Probe = { params: Record<string, string>; status: number; dataKeys: string[]; fieldPaths: string[]; technical: Record<string, string | number | boolean | null>; errorMessage: string | null };
 
-function objectValue(value: unknown): UnknownRecord | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? value as UnknownRecord
-    : null;
+function obj(value: unknown): UnknownRecord | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as UnknownRecord : null;
 }
 
-function safeKey(key: string): boolean {
-  const normalized = key.toLowerCase();
-  if (/name|description|comment|address|email|phone|document|cnpj|cpf|token|cookie|file|url|supplier|user/.test(normalized)) return false;
-  return /(^id$|id$|status|state|type|amount|quantity|date|at$|budget|monitor|monit|input|service|stage|cost|center|order|entry|planning|reference|value)/.test(normalized);
+function safeText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  return value.replace(/[\w.+-]+@[\w.-]+/g, "[REDACTED]").replace(/token[^\s,;]*/gi, "token[REDACTED]").slice(0, 300);
 }
 
-function technicalScalars(
-  value: unknown,
-  prefix = "",
-  output: Record<string, string | number | boolean | null> = {},
-  depth = 0,
-): Record<string, string | number | boolean | null> {
-  if (depth > 6 || Object.keys(output).length >= 250) return output;
+function collectTechnical(value: unknown, prefix = "", out: Record<string, string | number | boolean | null> = {}, depth = 0): Record<string, string | number | boolean | null> {
+  if (depth > 6 || Object.keys(out).length >= 400) return out;
   if (Array.isArray(value)) {
-    for (let i = 0; i < Math.min(value.length, 3); i += 1) {
-      technicalScalars(value[i], `${prefix}[${i}]`, output, depth + 1);
-    }
-    return output;
+    for (let i = 0; i < Math.min(value.length, 5); i += 1) collectTechnical(value[i], `${prefix}[${i}]`, out, depth + 1);
+    return out;
   }
-  const object = objectValue(value);
-  if (!object) return output;
-  for (const [key, item] of Object.entries(object)) {
-    if (Object.keys(output).length >= 250) break;
+  const record = obj(value);
+  if (!record) return out;
+  for (const [key, item] of Object.entries(record)) {
+    const lower = key.toLowerCase();
     const path = prefix ? `${prefix}.${key}` : key;
-    if (item === null || typeof item === "string" || typeof item === "number" || typeof item === "boolean") {
-      if (safeKey(key)) output[path] = item;
-    } else {
-      technicalScalars(item, path, output, depth + 1);
-    }
+    if (item === null || typeof item === "number" || typeof item === "boolean" || typeof item === "string") {
+      if (!/name|description|comment|address|email|phone|document|cnpj|cpf|token|cookie|file|url|supplier|user/.test(lower) && /id$|status|type|amount|quantity|budget|monitor|monit|input|service|stage|cost|center|planning|reference|value/.test(lower)) out[path] = item;
+    } else collectTechnical(item, path, out, depth + 1);
   }
-  return output;
+  return out;
 }
 
-const candidates: Array<{ path: string; params: Record<string, string> }> = [
-  { path: "/engineering/v1/item_monitoring_input", params: { itemMonitInputId: "449" } },
-  { path: "/engineering/v1/item_monitoring_input", params: { itemMonitoringInputId: "449" } },
-  { path: "/engineering/v1/item_monitoring_input", params: { buildMonitoringId: "67" } },
-  { path: "/engineering/v1/monitoring_input", params: { itemMonitInputId: "449" } },
-  { path: "/engineering/v1/monitoring_input", params: { monitInputPchId: "101" } },
-  { path: "/engineering/v1/input_monitoring", params: { itemMonitInputId: "449" } },
-  { path: "/engineering/v1/monitoring_input_pch", params: { monitInputPchId: "101" } },
-  { path: "/engineering/v1/item_monitoring_pch", params: { monitInputPchId: "101" } },
-  { path: "/engineering/v1/item_monitoring", params: { itemMonitoringId: "449" } },
-  { path: "/engineering/v1/item_monitoring", params: { buildMonitoringId: "67", limitY: "500", offsetY: "0", financialSchedule: "yes", scale: "month", positionDate: "2026-08-11", limitX: "1", offsetX: "0" } },
+const probes: Record<string, string>[] = [
+  { buildMonitoringId: "67" },
+  { itemMonitoringId: "134" },
+  { buildMonitoringId: "67", itemMonitoringId: "134" },
+  { buildMonitoringId: "67", itemMonitInputId: "449" },
+  { buildMonitoringId: "67", monitInputPchId: "101" },
+  { buildMonitoringId: "67", itemMonitoringId: "134", itemMonitInputId: "449" },
+  { buildMonitoringId: "67", limit: "500", offset: "0" },
+  { buildMonitoringId: "67", limitY: "500", offsetY: "0" },
 ];
 
-export async function inspectBuildMonitoringRoutes(): Promise<{
-  ok: true;
-  authenticated: boolean;
-  flowSelected: boolean;
-  probes: Probe[];
-  blockedWrites: number;
-  message: string | null;
-}> {
+export async function inspectBuildMonitoringRoutes(): Promise<{ ok: true; authenticated: boolean; flowSelected: boolean; probes: Probe[]; blockedWrites: number; message: string | null }> {
   return withBrowserless(async ({ page }) => {
     const login = await performKoperLogin(page);
-    if (!login.authenticated) {
-      return { ok: true, authenticated: false, flowSelected: false, probes: [], blockedWrites: 0, message: login.message };
-    }
+    if (!login.authenticated) return { ok: true, authenticated: false, flowSelected: false, probes: [], blockedWrites: 0, message: login.message };
 
     let blockedWrites = 0;
     await page.route("**/*", async (route) => {
@@ -92,58 +61,44 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
           await route.abort("blockedbyclient");
           return;
         }
-      } catch {
-        // Ignora URL inválida.
-      }
+      } catch {}
       await route.continue();
     });
 
     const flowSelected = await selectFlow(page);
-    if (!flowSelected) {
-      return { ok: true, authenticated: true, flowSelected: false, probes: [], blockedWrites, message: "KOPER_FLOW_COMPANY_NOT_SELECTED" };
-    }
+    if (!flowSelected) return { ok: true, authenticated: true, flowSelected: false, probes: [], blockedWrites, message: "KOPER_FLOW_COMPANY_NOT_SELECTED" };
 
     let headers: Record<string, string> | null = null;
     const capture = (request: { method(): string; url(): string; headers(): Record<string, string> }): void => {
       try {
         const url = new URL(request.url());
         if (request.method() === "GET" && url.hostname === "api.koper.com.br" && url.pathname === "/engineering/v1/item_monitoring" && headers === null) headers = request.headers();
-      } catch {
-        // Ignora URL inválida.
-      }
+      } catch {}
     };
     page.on("request", capture);
-    await page.goto("https://app.koper.com.br/engenharia/acompanhamento_obra/view/67/cronograma_financeiro", {
-      waitUntil: "domcontentloaded",
-      timeout: 25_000,
-    }).catch(() => undefined);
-    for (let attempt = 0; attempt < 10 && !headers; attempt += 1) await page.waitForTimeout(750);
+    await page.goto("https://app.koper.com.br/engenharia/acompanhamento_obra/view/67/cronograma_financeiro", { waitUntil: "domcontentloaded", timeout: 25_000 }).catch(() => undefined);
+    for (let i = 0; i < 10 && !headers; i += 1) await page.waitForTimeout(750);
     page.off("request", capture);
-    if (!headers) throw new Error("Koper item_monitoring headers were not captured");
+    if (!headers) throw new Error("Koper engineering headers not captured");
 
-    const probes: Probe[] = [];
-    for (const candidate of candidates) {
-      const query = new URLSearchParams(candidate.params);
-      const response = await page.request.get(`https://api.koper.com.br${candidate.path}?${query.toString()}`, {
-        headers,
-        timeout: 8_000,
-      }).catch(() => null);
+    const results: Probe[] = [];
+    for (const params of probes) {
+      const response = await page.request.get(`https://api.koper.com.br/engineering/v1/monitoring_input?${new URLSearchParams(params).toString()}`, { headers, timeout: 8_000 }).catch(() => null);
       if (!response) {
-        probes.push({ endpoint: candidate.path, params: candidate.params, status: 0, dataKeys: [], fieldPaths: [], technicalScalars: {} });
+        results.push({ params, status: 0, dataKeys: [], fieldPaths: [], technical: {}, errorMessage: null });
         continue;
       }
       const body: unknown = await response.json().catch(() => null);
-      const object = objectValue(body);
-      probes.push({
-        endpoint: candidate.path,
-        params: candidate.params,
+      const record = obj(body);
+      results.push({
+        params,
         status: response.status(),
-        dataKeys: object ? Object.keys(object).slice(0, 100) : [],
-        fieldPaths: body === null ? [] : collectFieldPaths(body).slice(0, 700),
-        technicalScalars: body === null ? {} : technicalScalars(body),
+        dataKeys: record ? Object.keys(record).slice(0, 100) : [],
+        fieldPaths: body === null ? [] : collectFieldPaths(body).slice(0, 800),
+        technical: body === null ? {} : collectTechnical(body),
+        errorMessage: record ? safeText(record.message) : null,
       });
     }
-
-    return { ok: true, authenticated: true, flowSelected: true, probes, blockedWrites, message: null };
+    return { ok: true, authenticated: true, flowSelected: true, probes: results, blockedWrites, message: null };
   }, { sessionTimeoutMs: 60_000 });
 }
