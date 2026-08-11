@@ -1,18 +1,15 @@
-import type { Response } from "playwright-core";
 import { performKoperLogin } from "../auth/koper-auto-login.js";
 import { withBrowserless } from "../browser/browserless.js";
 import { collectFieldPaths } from "./discover-stock-route.js";
 import { isAllowedFlowSwitch } from "./inspect-koper-engineering.js";
 import { selectFlow } from "./collect-flow-stock-requests.js";
 
-type ReadShape = {
+type Probe = {
   endpoint: string;
+  params: Record<string, string>;
   status: number;
-  queryKeys: string[];
-  queryParams: Record<string, string>;
   dataKeys: string[];
   fieldPaths: string[];
-  arrays: Array<{ path: string; length: number; firstItemKeys: string[] }>;
   technicalScalars: Record<string, string | number | boolean | null>;
 };
 
@@ -24,36 +21,13 @@ function objectValue(value: unknown): UnknownRecord | null {
     : null;
 }
 
-function arrayShapes(value: unknown, prefix = "", depth = 0): ReadShape["arrays"] {
-  if (depth > 5) return [];
-  if (Array.isArray(value)) {
-    const first = objectValue(value[0]);
-    const current = [{
-      path: prefix || "(root)",
-      length: value.length,
-      firstItemKeys: first ? Object.keys(first).slice(0, 120) : [],
-    }];
-    if (!first) return current;
-    return current.concat(
-      Object.entries(first).flatMap(([key, item]) =>
-        arrayShapes(item, prefix ? `${prefix}[0].${key}` : `[0].${key}`, depth + 1)
-      ),
-    );
-  }
-  const object = objectValue(value);
-  if (!object) return [];
-  return Object.entries(object).flatMap(([key, item]) =>
-    arrayShapes(item, prefix ? `${prefix}.${key}` : key, depth + 1)
-  );
-}
-
-function isSafeTechnicalKey(key: string): boolean {
+function safeKey(key: string): boolean {
   const normalized = key.toLowerCase();
   if (/name|description|comment|address|email|phone|document|cnpj|cpf|token|cookie|file|url|supplier|user/.test(normalized)) return false;
-  return /(^id$|id$|status|state|type|amount|quantity|date|at$|budget|monitor|monit|input|service|stage|cost|center|order|entry|planning|reference|execut|percent|value)/.test(normalized);
+  return /(^id$|id$|status|state|type|amount|quantity|date|at$|budget|monitor|monit|input|service|stage|cost|center|order|entry|planning|reference|value)/.test(normalized);
 }
 
-function collectTechnicalScalars(
+function technicalScalars(
   value: unknown,
   prefix = "",
   output: Record<string, string | number | boolean | null> = {},
@@ -61,7 +35,9 @@ function collectTechnicalScalars(
 ): Record<string, string | number | boolean | null> {
   if (depth > 6 || Object.keys(output).length >= 250) return output;
   if (Array.isArray(value)) {
-    if (value[0] !== undefined) collectTechnicalScalars(value[0], `${prefix}[0]`, output, depth + 1);
+    for (let i = 0; i < Math.min(value.length, 3); i += 1) {
+      technicalScalars(value[i], `${prefix}[${i}]`, output, depth + 1);
+    }
     return output;
   }
   const object = objectValue(value);
@@ -70,27 +46,39 @@ function collectTechnicalScalars(
     if (Object.keys(output).length >= 250) break;
     const path = prefix ? `${prefix}.${key}` : key;
     if (item === null || typeof item === "string" || typeof item === "number" || typeof item === "boolean") {
-      if (isSafeTechnicalKey(key)) output[path] = item;
+      if (safeKey(key)) output[path] = item;
     } else {
-      collectTechnicalScalars(item, path, output, depth + 1);
+      technicalScalars(item, path, output, depth + 1);
     }
   }
   return output;
 }
 
+const candidates: Array<{ path: string; params: Record<string, string> }> = [
+  { path: "/engineering/v1/item_monitoring_input", params: { itemMonitInputId: "449" } },
+  { path: "/engineering/v1/item_monitoring_input", params: { itemMonitoringInputId: "449" } },
+  { path: "/engineering/v1/item_monitoring_input", params: { buildMonitoringId: "67" } },
+  { path: "/engineering/v1/monitoring_input", params: { itemMonitInputId: "449" } },
+  { path: "/engineering/v1/monitoring_input", params: { monitInputPchId: "101" } },
+  { path: "/engineering/v1/input_monitoring", params: { itemMonitInputId: "449" } },
+  { path: "/engineering/v1/monitoring_input_pch", params: { monitInputPchId: "101" } },
+  { path: "/engineering/v1/item_monitoring_pch", params: { monitInputPchId: "101" } },
+  { path: "/engineering/v1/item_monitoring", params: { itemMonitoringId: "449" } },
+  { path: "/engineering/v1/item_monitoring", params: { buildMonitoringId: "67", limitY: "500", offsetY: "0", financialSchedule: "yes", scale: "month", positionDate: "2026-08-11", limitX: "1", offsetX: "0" } },
+];
+
 export async function inspectBuildMonitoringRoutes(): Promise<{
   ok: true;
   authenticated: boolean;
   flowSelected: boolean;
-  visitedUrl: string | null;
-  reads: ReadShape[];
+  probes: Probe[];
   blockedWrites: number;
   message: string | null;
 }> {
   return withBrowserless(async ({ page }) => {
     const login = await performKoperLogin(page);
     if (!login.authenticated) {
-      return { ok: true, authenticated: false, flowSelected: false, visitedUrl: null, reads: [], blockedWrites: 0, message: login.message };
+      return { ok: true, authenticated: false, flowSelected: false, probes: [], blockedWrites: 0, message: login.message };
     }
 
     let blockedWrites = 0;
@@ -105,73 +93,57 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
           return;
         }
       } catch {
-        // Ignora URLs inválidas.
+        // Ignora URL inválida.
       }
       await route.continue();
     });
 
     const flowSelected = await selectFlow(page);
     if (!flowSelected) {
-      return { ok: true, authenticated: true, flowSelected: false, visitedUrl: null, reads: [], blockedWrites, message: "KOPER_FLOW_COMPANY_NOT_SELECTED" };
+      return { ok: true, authenticated: true, flowSelected: false, probes: [], blockedWrites, message: "KOPER_FLOW_COMPANY_NOT_SELECTED" };
     }
 
-    const reads = new Map<string, ReadShape>();
-    const pending: Promise<void>[] = [];
-    const onResponse = (response: Response): void => {
+    let headers: Record<string, string> | null = null;
+    const capture = (request: { method(): string; url(): string; headers(): Record<string, string> }): void => {
       try {
-        const request = response.request();
-        const url = new URL(response.url());
-        if (request.method() !== "GET" || url.hostname !== "api.koper.com.br") return;
-        if (!/(engineering|monitor|planning|construction|build)/i.test(url.pathname + url.search)) return;
-
-        const queryKeys = [...new Set(url.searchParams.keys())].sort().slice(0, 30);
-        const key = `${url.pathname}|${response.status()}|${queryKeys.join(",")}`;
-        if (reads.has(key)) return;
-        const task = response.json().then((body: unknown) => {
-          const object = objectValue(body);
-          reads.set(key, {
-            endpoint: url.origin + url.pathname,
-            status: response.status(),
-            queryKeys,
-            queryParams: Object.fromEntries([...url.searchParams.entries()].filter(([k]) => !/token|access|cb/i.test(k)).slice(0, 30)),
-            dataKeys: object ? Object.keys(object).slice(0, 100) : [],
-            fieldPaths: collectFieldPaths(body).slice(0, 700),
-            arrays: arrayShapes(body).slice(0, 100),
-            technicalScalars: collectTechnicalScalars(body),
-          });
-        }).catch(() => {
-          reads.set(key, {
-            endpoint: url.origin + url.pathname,
-            status: response.status(),
-            queryKeys,
-            queryParams: Object.fromEntries([...url.searchParams.entries()].filter(([k]) => !/token|access|cb/i.test(k)).slice(0, 30)),
-            dataKeys: [], fieldPaths: [], arrays: [], technicalScalars: {},
-          });
-        });
-        pending.push(task);
+        const url = new URL(request.url());
+        if (request.method() === "GET" && url.hostname === "api.koper.com.br" && url.pathname === "/engineering/v1/item_monitoring" && headers === null) headers = request.headers();
       } catch {
-        // Ignora respostas não sanitizáveis.
+        // Ignora URL inválida.
       }
     };
-    page.on("response", onResponse);
-
+    page.on("request", capture);
     await page.goto("https://app.koper.com.br/engenharia/acompanhamento_obra/view/67/cronograma_financeiro", {
       waitUntil: "domcontentloaded",
       timeout: 25_000,
     }).catch(() => undefined);
-    await page.waitForTimeout(10_000);
-    const visitedUrl = page.url();
-    await Promise.allSettled(pending);
-    page.off("response", onResponse);
+    for (let attempt = 0; attempt < 10 && !headers; attempt += 1) await page.waitForTimeout(750);
+    page.off("request", capture);
+    if (!headers) throw new Error("Koper item_monitoring headers were not captured");
 
-    return {
-      ok: true,
-      authenticated: true,
-      flowSelected: true,
-      visitedUrl,
-      reads: [...reads.values()],
-      blockedWrites,
-      message: reads.size > 0 ? null : "KOPER_BUILD_MONITORING_READS_NOT_CAPTURED",
-    };
+    const probes: Probe[] = [];
+    for (const candidate of candidates) {
+      const query = new URLSearchParams(candidate.params);
+      const response = await page.request.get(`https://api.koper.com.br${candidate.path}?${query.toString()}`, {
+        headers,
+        timeout: 8_000,
+      }).catch(() => null);
+      if (!response) {
+        probes.push({ endpoint: candidate.path, params: candidate.params, status: 0, dataKeys: [], fieldPaths: [], technicalScalars: {} });
+        continue;
+      }
+      const body: unknown = await response.json().catch(() => null);
+      const object = objectValue(body);
+      probes.push({
+        endpoint: candidate.path,
+        params: candidate.params,
+        status: response.status(),
+        dataKeys: object ? Object.keys(object).slice(0, 100) : [],
+        fieldPaths: body === null ? [] : collectFieldPaths(body).slice(0, 700),
+        technicalScalars: body === null ? {} : technicalScalars(body),
+      });
+    }
+
+    return { ok: true, authenticated: true, flowSelected: true, probes, blockedWrites, message: null };
   }, { sessionTimeoutMs: 60_000 });
 }
