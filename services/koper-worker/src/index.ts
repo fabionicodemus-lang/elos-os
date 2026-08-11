@@ -9,6 +9,7 @@ import { inspectFlowEngineeringStaging } from "./diagnostics/inspect-flow-engine
 import { inspectKoperMenuMap } from "./diagnostics/inspect-koper-menu-map.js";
 import { inspectKoperNavigation } from "./diagnostics/inspect-koper-navigation.js";
 import { inspectStockRequestDetail } from "./diagnostics/inspect-stock-request-detail.js";
+import { inspectStockRequestHistoryBridge } from "./diagnostics/inspect-stock-request-history.js";
 import { inspectStockRequests } from "./diagnostics/inspect-stock-requests.js";
 import { inspectFlowPurchaseOrders } from "./diagnostics/inspect-flow-purchase-orders.js";
 import { writeFlowPurchaseOrderBatch } from "./diagnostics/write-flow-purchase-orders.js";
@@ -110,128 +111,70 @@ async function handleRequest(
   }
 
   if (method === "POST" && url.pathname === "/diagnostics/browserless") {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
+    if (!requireAuthorization(request, response)) return;
     const result = await testBrowserlessConnection();
     sendJson(response, 200, result);
     return;
   }
 
   if (method === "POST" && url.pathname === "/auth/koper/login") {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
+    if (!requireAuthorization(request, response)) return;
     const result = await loginKoperAutomatically();
     sendJson(response, result.authenticated ? 200 : 422, result);
     return;
   }
 
-  if (
-    method === "POST" &&
-    url.pathname === "/diagnostics/koper/navigation"
-  ) {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
+  if (method === "POST" && url.pathname === "/diagnostics/koper/navigation") {
+    if (!requireAuthorization(request, response)) return;
     const result = await inspectKoperNavigation();
     sendJson(response, result.authenticated ? 200 : 422, result);
     return;
   }
 
-  if (
-    method === "POST" &&
-    url.pathname === "/diagnostics/koper/menu-map"
-  ) {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
+  if (method === "POST" && url.pathname === "/diagnostics/koper/menu-map") {
+    if (!requireAuthorization(request, response)) return;
     const result = await inspectKoperMenuMap();
     sendJson(response, result.authenticated ? 200 : 422, result);
     return;
   }
 
-  if (
-    method === "POST" &&
-    url.pathname === "/diagnostics/koper/stock-requests"
-  ) {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
+  if (method === "POST" && url.pathname === "/diagnostics/koper/stock-requests") {
+    if (!requireAuthorization(request, response)) return;
     const result = await inspectStockRequests();
     sendJson(response, result.authenticated && result.clicked ? 200 : 422, result);
     return;
   }
 
-  if (
-    method === "POST" &&
-    url.pathname === "/diagnostics/koper/stock-route"
-  ) {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
+  if (method === "POST" && url.pathname === "/diagnostics/koper/stock-route") {
+    if (!requireAuthorization(request, response)) return;
     const result = await discoverStockRoute();
     sendJson(response, result.authenticated ? 200 : 422, result);
     return;
   }
 
-  if (
-    method === "POST" &&
-    url.pathname === "/diagnostics/koper/stock-request-detail"
-  ) {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
+  if (method === "POST" && url.pathname === "/diagnostics/koper/stock-request-detail") {
+    if (!requireAuthorization(request, response)) return;
     const result = await inspectStockRequestDetail();
     sendJson(response, result.authenticated && result.rowClicked ? 200 : 422, result);
     return;
   }
 
-  if (
-    method === "POST" &&
-    url.pathname === "/diagnostics/koper/companies"
-  ) {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
+  if (method === "POST" && url.pathname === "/diagnostics/koper/companies") {
+    if (!requireAuthorization(request, response)) return;
     const result = await inspectKoperCompanies();
     sendJson(response, result.authenticated ? 200 : 422, result);
     return;
   }
 
-  if (
-    method === "POST" &&
-    url.pathname === "/diagnostics/koper/flow-context"
-  ) {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
+  if (method === "POST" && url.pathname === "/diagnostics/koper/flow-context") {
+    if (!requireAuthorization(request, response)) return;
     const result = await inspectKoperFlowContext();
-    sendJson(
-      response,
-      result.authenticated && result.flowSelected ? 200 : 422,
-      result,
-    );
+    sendJson(response, result.authenticated && result.flowSelected ? 200 : 422, result);
     return;
   }
 
-  if (
-    method === "POST" &&
-    url.pathname === "/diagnostics/koper/live-recording"
-  ) {
-    if (!requireAuthorization(request, response)) {
-      return;
-    }
-
+  if (method === "POST" && url.pathname === "/diagnostics/koper/live-recording") {
+    if (!requireAuthorization(request, response)) return;
     const result = await runLiveRecording();
     sendJson(response, result.authenticated ? 200 : 422, result);
     return;
@@ -251,11 +194,7 @@ const server = createServer((request, response) => {
     });
 
     if (!response.headersSent) {
-      sendJson(response, 500, {
-        ok: false,
-        error: "INTERNAL_ERROR",
-        message,
-      });
+      sendJson(response, 500, { ok: false, error: "INTERNAL_ERROR", message });
       return;
     }
 
@@ -275,6 +214,8 @@ server.listen(env.PORT, "0.0.0.0", () => {
         ? discoverStockRoute
         : startupDiagnostic === "stock-request-detail"
           ? inspectStockRequestDetail
+          : startupDiagnostic === "stock-request-history-bridge"
+            ? inspectStockRequestHistoryBridge
           : startupDiagnostic === "companies"
             ? inspectKoperCompanies
             : startupDiagnostic === "flow-context"
@@ -336,21 +277,21 @@ server.listen(env.PORT, "0.0.0.0", () => {
                                       ? promoteKoperBudgetInputs
                                       : startupDiagnostic === "composition-promote-full"
                                         ? promoteKoperBudgetCompositions
-                                          : startupDiagnostic === "stock-request-active-staging-write-full"
-                                            ? writeFlowActiveStockRequests
+                                        : startupDiagnostic === "stock-request-active-staging-write-full"
+                                          ? writeFlowActiveStockRequests
                                           : startupDiagnostic === "stock-request-closed-staging-write-full"
                                             ? writeFlowClosedStockRequests
-                                          : startupDiagnostic === "stock-request-promotion-readiness"
-                                            ? checkStockRequestPromotionReadiness
-                                            : startupDiagnostic === "stock-request-full-promotion-summary"
-                                              ? checkStockRequestFullPromotionSummary
-                                            : startupDiagnostic === "stock-request-allocation-mismatches"
-                                              ? checkStockRequestAllocationMismatches
-                                            : startupDiagnostic === "stock-request-input-promote"
-                                              ? promoteStockRequestInputs
-                                            : startupDiagnostic === "stock-request-full-promote"
-                                                ? promoteAllStockRequests
-                  : null;
+                                            : startupDiagnostic === "stock-request-promotion-readiness"
+                                              ? checkStockRequestPromotionReadiness
+                                              : startupDiagnostic === "stock-request-full-promotion-summary"
+                                                ? checkStockRequestFullPromotionSummary
+                                                : startupDiagnostic === "stock-request-allocation-mismatches"
+                                                  ? checkStockRequestAllocationMismatches
+                                                  : startupDiagnostic === "stock-request-input-promote"
+                                                    ? promoteStockRequestInputs
+                                                    : startupDiagnostic === "stock-request-full-promote"
+                                                      ? promoteAllStockRequests
+                                                      : null;
 
   if (diagnostic) {
     void diagnostic()
