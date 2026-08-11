@@ -273,6 +273,13 @@ export default async function CostVsBudgetPage({
   const serviceTotal = comparableRows.reduce((sum, row) => sum + row.serviceCost, 0);
   const directTotal = comparableRows.reduce((sum, row) => sum + row.directCost, 0);
   const allErrors = [...context.errors, ...hierarchyErrors];
+  const stickyHeaderStyle = {
+    position: "sticky" as const,
+    top: 0,
+    zIndex: 5,
+    background: "#f8fbfa",
+    boxShadow: "inset 0 -1px 0 #dfe7e6",
+  };
 
   return (
     <AppShell
@@ -388,24 +395,53 @@ export default async function CostVsBudgetPage({
               <div><span>Controle por grupos e centros de custo</span><h2>Estrutura do orçamento</h2></div>
               <p>{visibleGroups.length} grupo(s) · {rows.length} serviço(s)</p>
             </div>
-            <div className="registry-table-wrap">
+            <div
+              className="registry-table-wrap"
+              style={{ maxHeight: "calc(100vh - 140px)", overflow: "auto", position: "relative" }}
+            >
               <table className="registry-table forecast-service-table" style={{ minWidth: 1780 }}>
                 <thead>
                   <tr>
-                    <th>Grupo / Centro de custo · Serviço</th>
-                    <th>Orçamento</th>
-                    <th>Materiais realizados</th>
-                    <th>Serviços medidos</th>
-                    <th>Despesas diretas</th>
-                    <th>Pedidos emitidos</th>
-                    <th>Comprometido pendente</th>
-                    <th>Custo previsto</th>
-                    <th>Saldo</th>
-                    <th>Consumo</th>
-                    <th>Situação</th>
+                    <th style={stickyHeaderStyle}>Grupo / Centro de custo · Serviço</th>
+                    <th style={stickyHeaderStyle}>Orçamento</th>
+                    <th style={stickyHeaderStyle}>Materiais realizados</th>
+                    <th style={stickyHeaderStyle}>Serviços medidos</th>
+                    <th style={stickyHeaderStyle}>Despesas diretas</th>
+                    <th style={stickyHeaderStyle}>Pedidos emitidos</th>
+                    <th style={stickyHeaderStyle}>Comprometido pendente</th>
+                    <th style={stickyHeaderStyle}>Custo previsto</th>
+                    <th style={stickyHeaderStyle}>Saldo</th>
+                    <th style={stickyHeaderStyle}>Consumo</th>
+                    <th style={stickyHeaderStyle}>Situação</th>
                   </tr>
                 </thead>
                 <tbody>
+                  <tr
+                    className={balanceIsNegative ? "danger" : ""}
+                    style={{ background: "#dfeeea", borderBottom: "2px solid #b8d5d0" }}
+                  >
+                    <td>
+                      <strong style={{ display: "block", fontSize: 13 }}>TOTAL DA OBRA</strong>
+                      <small style={{ color: "var(--muted)", fontWeight: 700 }}>
+                        {context.budget.code} · {context.budget.version} · {context.budget.name}
+                      </small>
+                    </td>
+                    <td><strong>{money(context.totals.budget)}</strong></td>
+                    <td><strong>{money(materialTotal)}</strong></td>
+                    <td><strong>{money(serviceTotal)}</strong></td>
+                    <td><strong>{money(directTotal)}</strong></td>
+                    <td><strong>{money(purchaseOrderTotal)}</strong></td>
+                    <td><strong>{money(context.totals.committed)}</strong></td>
+                    <td><strong>{money(context.totals.forecast)}</strong></td>
+                    <td>
+                      <strong className={balanceIsNegative ? "forecast-danger" : context.totals.balance > 0 ? "forecast-positive" : ""}>
+                        {money(context.totals.balance)}
+                      </strong>
+                    </td>
+                    <td>{consumptionBar(classifySummary(context.totals.budget, context.totals.forecast), context.totals.consumptionPercent)}</td>
+                    <td>{statusBadge(classifySummary(context.totals.budget, context.totals.forecast))}</td>
+                  </tr>
+
                   {visibleGroups.map(({ group, children, summary }) => (
                     <Fragment key={group.id}>
                       <tr
@@ -482,21 +518,6 @@ export default async function CostVsBudgetPage({
                     <tr><td colSpan={11} className="budget-empty-state"><strong>Nenhum centro de custo encontrado.</strong><span>Revise os filtros aplicados.</span></td></tr>
                   ) : null}
                 </tbody>
-                <tfoot>
-                  <tr>
-                    <th>Total da obra</th>
-                    <th>{money(context.totals.budget)}</th>
-                    <th>{money(materialTotal)}</th>
-                    <th>{money(serviceTotal)}</th>
-                    <th>{money(directTotal)}</th>
-                    <th>{money(purchaseOrderTotal)}</th>
-                    <th>{money(context.totals.committed)}</th>
-                    <th>{money(context.totals.forecast)}</th>
-                    <th className={balanceIsNegative ? "forecast-danger" : ""}>{money(context.totals.balance)}</th>
-                    <th>{percent(context.totals.consumptionPercent)}</th>
-                    <th>—</th>
-                  </tr>
-                </tfoot>
               </table>
             </div>
           </section>
