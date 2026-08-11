@@ -31,8 +31,11 @@ const identifier = (value: unknown): string | null => {
 };
 
 const dateText = (value: unknown): string | null => {
-  if (typeof value !== "string" || !value.trim()) return null;
-  return value.trim();
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  if (!text || text === "-") return null;
+  const parsed = Date.parse(text);
+  return Number.isNaN(parsed) ? null : text;
 };
 
 function sanitizeBill(row: Json): Json {
