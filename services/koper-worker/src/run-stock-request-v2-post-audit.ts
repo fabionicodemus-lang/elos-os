@@ -1,3 +1,4 @@
+// Deploy marker: auditoria pós-seed somente leitura.
 import { env } from "./config/env.js";
 import { requestSupabase } from "./elos/supabase.js";
 
