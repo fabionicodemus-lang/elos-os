@@ -234,6 +234,88 @@ function orderStatus(payload: Record<string, unknown>, products: Record<string, 
   return "confirmed";
 }
 
+function preflightPurchaseOrderPromotion(data: PreparedContext): void {
+  if (!data.orderRows.length) throw new Error("Koper purchase order source is empty");
+
+  const orderSourceIds = new Set(data.orderRows.map((row) => row.koper_id));
+  const supplierSourceIds = new Set(data.supplierRows.map((row) => row.koper_id));
+  const inputBySource = new Map(data.inputs.map((row) => [row.source_id, row]));
+  const requestById = new Map(data.requestRows.map((row) => [row.id, row]));
+  const serviceSourceIdByServiceId = new Map(data.services.map((row) => [row.id, row.source_id]));
+  const requestItemsByProduct = groupRequestItemsByProductId(data.requestItems, (row) => productRequestIds(row.notes));
+  const purchaseItemSourceIds = new Set<string>();
+  const allocationSourceIds = new Set<string>();
+
+  for (const row of data.orderRows) {
+    const supplierId = identifier(objectValue(row.payload).supplierId);
+    if (!supplierId || !supplierSourceIds.has(supplierId)) {
+      throw new Error(`Supplier staging mapping missing for Koper order ${row.koper_id}`);
+    }
+  }
+
+  for (const row of data.itemRows) {
+    const payload = objectValue(row.payload);
+    const orderSource = row.koper_parent_id ?? identifier(payload.orderId);
+    if (!orderSource || !orderSourceIds.has(orderSource)) {
+      throw new Error(`Purchase item ${row.koper_id} has no valid Koper order`);
+    }
+
+    const inputSource = [identifier(payload.productId), identifier(payload.mainProductId), identifier(payload.inputId)]
+      .find((id) => id && inputBySource.has(id));
+    const input = inputSource ? inputBySource.get(inputSource) : null;
+    if (!input) throw new Error(`Purchase item ${row.koper_id} has no promoted input`);
+
+    const ordered = Math.max(0, numeric(payload.amount) ?? 0);
+    if (ordered <= 0) throw new Error(`Invalid ordered quantity for ${row.koper_id}`);
+
+    const requests = Array.isArray(payload.requests) ? payload.requests.map(objectValue) : [];
+    const positiveLinks = requests.filter((link) => (numeric(link.requestAmount) ?? 0) > 0);
+    const linkTotal = positiveLinks.reduce((sum, link) => sum + (numeric(link.requestAmount) ?? 0), 0);
+    const splits = positiveLinks.length
+      ? positiveLinks.map((link) => ({ link, quantity: ordered * (numeric(link.requestAmount) ?? 0) / linkTotal }))
+      : [{ link: {}, quantity: ordered }];
+
+    for (const split of splits) {
+      const productRequestId = identifier(split.link.productRequestId);
+      const purchaseItemSourceId = productRequestId ? `${row.koper_id}:${productRequestId}` : row.koper_id;
+      if (purchaseItemSourceIds.has(purchaseItemSourceId)) {
+        throw new Error(`Duplicate Koper purchase item source_id=${purchaseItemSourceId}`);
+      }
+      purchaseItemSourceIds.add(purchaseItemSourceId);
+      if (!productRequestId) continue;
+
+      const resolution = resolvePurchaseRequestAllocations(
+        productRequestId,
+        split.quantity,
+        identifier(payload.costCenterId),
+        requestItemsByProduct,
+        serviceSourceIdByServiceId,
+      );
+      if (resolution.status === "invalid") {
+        throw new Error(`Invalid request allocation for Koper orderProductId=${row.koper_id} productRequestId=${productRequestId}: ${resolution.reason}`);
+      }
+      if (resolution.status === "missing") continue;
+
+      if (!requestById.has(resolution.status === "direct" ? resolution.item.request_id : resolution.requestId)) {
+        throw new Error(`Material request header missing for Koper productRequestId=${productRequestId}`);
+      }
+
+      const allocations = resolution.status === "direct" ? resolution.allocations : resolution.allocations;
+      for (const allocation of allocations) {
+        if (allocation.item.input_id !== input.id) {
+          throw new Error(`Input mismatch for Koper productRequestId=${productRequestId} requestItem=${allocation.item.id}`);
+        }
+        if (resolution.status !== "multi") continue;
+        const allocationSourceId = `${row.koper_id}:${productRequestId}:${allocation.item.id}`;
+        if (allocationSourceIds.has(allocationSourceId)) {
+          throw new Error(`Duplicate Koper allocation source_id=${allocationSourceId}`);
+        }
+        allocationSourceIds.add(allocationSourceId);
+      }
+    }
+  }
+}
+
 export async function promoteKoperPurchaseOrders(): Promise<{
   ok: true; orders: number; items: number; suppliers: number; linkedItems: number; unlinkedItems: number;
   directItems: number; multiItems: number; orphanItems: number; allocations: number; staleAllocationsDeleted: number;
@@ -241,7 +323,7 @@ export async function promoteKoperPurchaseOrders(): Promise<{
 }> {
   if (process.env.KOPER_PURCHASE_ORDER_PROMOTION_ENABLED !== "true") throw new Error("Koper purchase order promotion is not explicitly enabled");
   const data = await context();
-  if (data.orderRows.length !== 1_649) throw new Error("Koper purchase order source count mismatch");
+  preflightPurchaseOrderPromotion(data);
 
   const now = new Date().toISOString();
   const supplierPayloads = data.supplierRows.map((row) => {
