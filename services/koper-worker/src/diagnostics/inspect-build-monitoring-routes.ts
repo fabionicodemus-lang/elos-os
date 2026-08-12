@@ -86,6 +86,7 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
     for (let i = 0; i < 10 && !headers; i += 1) await page.waitForTimeout(750);
     page.off("request", capture);
     if (!headers) throw new Error("Koper engineering headers not captured");
+    const requestHeaders: Record<string, string> = headers;
 
     const positionDate = new Date().toISOString().slice(0, 10);
     const itemQuery = new URLSearchParams({
@@ -98,7 +99,7 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
       positionDate,
       scale: "month",
     });
-    const itemResponse = await page.request.get(`https://api.koper.com.br/engineering/v1/item_monitoring?${itemQuery.toString()}`, { headers, timeout: 10_000 });
+    const itemResponse = await page.request.get(`https://api.koper.com.br/engineering/v1/item_monitoring?${itemQuery.toString()}`, { headers: requestHeaders, timeout: 10_000 });
     const itemBody: unknown = await itemResponse.json().catch(() => null);
     const itemRecord = obj(itemBody);
     const itemRows = Array.isArray(itemRecord?.items) ? itemRecord.items : [];
@@ -123,7 +124,7 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
       const batchResults = await Promise.all(batch.map(async (item): Promise<InputLink> => {
         const response = await page.request.get(
           `https://api.koper.com.br/engineering/v1/monitoring_input?itemMonitoringId=${item.itemMonitoringId}`,
-          { headers, timeout: 6_000 },
+          { headers: requestHeaders, timeout: 6_000 },
         ).catch(() => null);
         if (!response) return { ...item, status: 0, inputIds: [], inputCount: 0 };
         const body: unknown = await response.json().catch(() => null);
