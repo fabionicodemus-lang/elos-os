@@ -1,5 +1,9 @@
 import { env } from "../config/env.js";
 import { requestSupabase } from "../elos/supabase.js";
+import {
+  officialStockRequestServiceKey,
+  resolveFlowStockRequestServices,
+} from "./resolve-flow-stock-request-services.js";
 
 type StagingRow = { koper_id: string; koper_parent_id: string | null; payload: unknown };
 type CatalogRow = { id: string; source_id: string | null };
@@ -22,7 +26,7 @@ function numberValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-async function readStaging(entity: "stock_request" | "stock_request_item" | "budget_item"): Promise<StagingRow[]> {
+async function readStaging(entity: "stock_request" | "stock_request_item"): Promise<StagingRow[]> {
   const rows: StagingRow[] = [];
   const pageSize = 1_000;
   for (let offset = 0; ; offset += pageSize) {
@@ -80,11 +84,15 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
   }>;
   invalidQuantities: string[];
   itemsWithServiceLinks: number;
+  itemsWithoutServiceLinks: number;
   serviceLinks: number;
   serviceLinkSamples: Array<{
     productRequestId: string;
     requestId: string | null;
+    inputId: string | null;
     itemMonitInputId: string | null;
+    itemMonitoringId: string | null;
+    koperServiceId: string | null;
     monitInputPchId: string | null;
     inputAmount: number | null;
   }>;
@@ -102,10 +110,9 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
   flowBudgetStatuses: Record<string, number>;
   activeCompanyMembers: number;
 }> {
-  const [requests, items, budgetItems, catalog, projects, budgets, memberships] = await Promise.all([
+  const [requests, items, catalog, projects, budgets, memberships] = await Promise.all([
     readStaging("stock_request"),
     readStaging("stock_request_item"),
-    readStaging("budget_item"),
     readKoperInputs(),
     requestSupabase<Array<{ id: string; name: string }>>("projects", {
       query: new URLSearchParams({
@@ -133,6 +140,8 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
       }),
     }),
   ]);
+
+  const officialServiceMap = await resolveFlowStockRequestServices(items);
   const sourceIds = new Set(catalog.map((row) => row.source_id).filter(Boolean));
   const resolutionByField: Record<string, number> = {};
   const missingInputs: Array<{
@@ -147,7 +156,10 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
   const serviceLinkSamples: Array<{
     productRequestId: string;
     requestId: string | null;
+    inputId: string | null;
     itemMonitInputId: string | null;
+    itemMonitoringId: string | null;
+    koperServiceId: string | null;
     monitInputPchId: string | null;
     inputAmount: number | null;
   }> = [];
@@ -163,11 +175,6 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     allocatedAmount: number;
     links: number;
   }> = [];
-  const budgetItemIds = new Set(budgetItems.map((row) => row.koper_id));
-  const budgetInputIds = new Set(budgetItems.flatMap((row) => {
-    const id = identifier(objectValue(row.payload).inputId);
-    return id ? [id] : [];
-  }));
 
   for (const row of items) {
     const payload = objectValue(row.payload);
@@ -190,6 +197,7 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
         productName: text(payload.productName) ?? text(payload.productFullName),
       });
     }
+
     const quantity = numberValue(payload.productAmount);
     if (quantity === null || quantity <= 0) invalidQuantities.push(row.koper_id);
 
@@ -211,28 +219,27 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
         });
       }
     }
+
     for (const value of links) {
       const link = objectValue(value);
+      const inputId = identifier(payload.inputId);
       const itemMonitInputId = identifier(link.itemMonitInputId);
-      const monitInputPchId = identifier(link.monitInputPchId);
-      const resolution =
-        itemMonitInputId && budgetItemIds.has(itemMonitInputId)
-          ? "itemMonitInputId->budgetItemId"
-          : monitInputPchId && budgetItemIds.has(monitInputPchId)
-            ? "monitInputPchId->budgetItemId"
-            : itemMonitInputId && budgetInputIds.has(itemMonitInputId)
-              ? "itemMonitInputId->budgetInputId"
-              : monitInputPchId && budgetInputIds.has(monitInputPchId)
-                ? "monitInputPchId->budgetInputId"
-                : null;
-      if (resolution) serviceLinkResolution[resolution] = (serviceLinkResolution[resolution] ?? 0) + 1;
-      else unresolvedServiceLinks += 1;
+      const key = officialStockRequestServiceKey(inputId, itemMonitInputId);
+      const official = key ? officialServiceMap.get(key) : null;
+      if (official) {
+        serviceLinkResolution["official-monitoring-input"] = (serviceLinkResolution["official-monitoring-input"] ?? 0) + 1;
+      } else {
+        unresolvedServiceLinks += 1;
+      }
       if (serviceLinkSamples.length < 20) {
         serviceLinkSamples.push({
           productRequestId: row.koper_id,
           requestId: row.koper_parent_id,
+          inputId,
           itemMonitInputId,
-          monitInputPchId,
+          itemMonitoringId: official?.itemMonitoringId ?? null,
+          koperServiceId: official?.koperServiceId ?? null,
+          monitInputPchId: identifier(link.monitInputPchId),
           inputAmount: numberValue(link.inputAmount),
         });
       }
@@ -244,6 +251,7 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     counts[status] = (counts[status] ?? 0) + 1;
     return counts;
   }, {});
+  const itemsWithoutServiceLinks = items.length - itemsWithServiceLinks;
   const ready = requests.length > 0
     && items.length > 0
     && missingInputs.length === 0
@@ -252,7 +260,6 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     && budgets.length === 1
     && memberships.length > 0
     && unresolvedServiceLinks === 0
-    && itemsWithServiceLinks === items.length
     && serviceQuantityMismatches.length === 0;
 
   return {
@@ -266,6 +273,7 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
     missingInputs,
     invalidQuantities,
     itemsWithServiceLinks,
+    itemsWithoutServiceLinks,
     serviceLinks,
     serviceLinkSamples,
     serviceLinkResolution,
@@ -310,6 +318,7 @@ export async function checkStockRequestFullPromotionSummary(): Promise<{
   uniqueMissingProducts: number;
   invalidQuantities: number;
   itemsWithServiceLinks: number;
+  itemsWithoutServiceLinks: number;
   serviceLinks: number;
   unresolvedServiceLinks: number;
   serviceQuantityMismatches: number;
@@ -331,6 +340,7 @@ export async function checkStockRequestFullPromotionSummary(): Promise<{
     uniqueMissingProducts,
     invalidQuantities: readiness.invalidQuantities.length,
     itemsWithServiceLinks: readiness.itemsWithServiceLinks,
+    itemsWithoutServiceLinks: readiness.itemsWithoutServiceLinks,
     serviceLinks: readiness.serviceLinks,
     unresolvedServiceLinks: readiness.unresolvedServiceLinks,
     serviceQuantityMismatches: readiness.serviceQuantityMismatches.length,
