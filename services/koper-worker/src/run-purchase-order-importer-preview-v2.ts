@@ -1,6 +1,22 @@
 import { previewKoperPurchaseOrderRequestReconciliationV2 } from "./diagnostics/reconcile-koper-purchase-order-request-links-v2.js";
 
 async function main(): Promise<void> {
+  const target = process.env.KOPER_AUDIT_TARGET?.trim() || "purchase-order-preview";
+
+  if (target === "staged-payables") {
+    await import("./audit-staged-full-payables.js");
+    return;
+  }
+
+  if (target === "live-payables") {
+    await import("./audit-full-koper-payables-authenticated.js");
+    return;
+  }
+
+  if (target !== "purchase-order-preview") {
+    throw new Error(`Unsupported KOPER_AUDIT_TARGET=${target}`);
+  }
+
   const preview = await previewKoperPurchaseOrderRequestReconciliationV2();
   const failures: string[] = [];
   if (preview.direct !== 3_480) failures.push(`direct=${preview.direct}`);
@@ -15,6 +31,6 @@ async function main(): Promise<void> {
 }
 
 void main().catch((error) => {
-  console.error("KOPER_PURCHASE_IMPORTER_V2_PREVIEW_FAILED", error instanceof Error ? error.message : String(error));
+  console.error("KOPER_AUDIT_RUNNER_FAILED", error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
