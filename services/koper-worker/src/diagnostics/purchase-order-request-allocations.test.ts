@@ -76,6 +76,30 @@ test("uses product-specific evidence when a v2 request row aggregates multiple p
   }
 });
 
+test("sums repeated evidence entries for the same productRequestId", () => {
+  const candidates: Candidate[] = [
+    {
+      id: "a",
+      request_id: "req",
+      cost_center_service_id: "svc-a",
+      requested_quantity: 30,
+      notes: "Koper productRequestIds=634,634 · resolution=v2 · reason=official,itemMonitInputId=1,inputAmount=10;reason=official,itemMonitInputId=2,inputAmount=20",
+    },
+    {
+      id: "b",
+      request_id: "req",
+      cost_center_service_id: "svc-b",
+      requested_quantity: 70,
+      notes: "Koper productRequestIds=634 · resolution=v2 · reason=official,itemMonitInputId=3,inputAmount=70",
+    },
+  ];
+  const result = resolvePurchaseRequestAllocations("634", 100, null, new Map([["634", candidates]]), serviceSources);
+  assert.equal(result.status, "multi");
+  if (result.status === "multi") {
+    assert.deepEqual(result.allocations.map((row) => [row.item.id, row.quantity]), [["a", 30], ["b", 70]]);
+  }
+});
+
 test("preserves the ordered total when proportional allocation requires rounding", () => {
   const candidates: Candidate[] = [
     { id: "a", request_id: "req", cost_center_service_id: "svc-a", requested_quantity: 1 },
