@@ -8,7 +8,6 @@ type Probe = {
   params: Record<string, string>;
   status: number;
   arrayLength: number | null;
-  fieldPaths: string[];
   technical: Record<string, string | number | boolean | null>;
   errorMessage: string | null;
 };
@@ -21,24 +20,8 @@ function safeText(value: unknown): string | null {
   return typeof value === "string" ? value.replace(/[\w.+-]+@[\w.-]+/g, "[REDACTED]").slice(0, 240) : null;
 }
 
-function fieldPaths(value: unknown, prefix = "", out: string[] = [], depth = 0): string[] {
-  if (depth > 7 || out.length >= 800) return out;
-  if (Array.isArray(value)) {
-    for (let i = 0; i < Math.min(value.length, 4); i += 1) fieldPaths(value[i], `${prefix}[${i}]`, out, depth + 1);
-    return out;
-  }
-  const record = obj(value);
-  if (!record) return out;
-  for (const [key, child] of Object.entries(record)) {
-    const path = prefix ? `${prefix}.${key}` : key;
-    if (!out.includes(path)) out.push(path);
-    if (typeof child === "object" && child !== null) fieldPaths(child, path, out, depth + 1);
-  }
-  return out;
-}
-
 function technical(value: unknown, prefix = "", out: Record<string, string | number | boolean | null> = {}, depth = 0): Record<string, string | number | boolean | null> {
-  if (depth > 8 || Object.keys(out).length >= 700) return out;
+  if (depth > 8 || Object.keys(out).length >= 500) return out;
   if (Array.isArray(value)) {
     for (let i = 0; i < Math.min(value.length, 8); i += 1) technical(value[i], `${prefix}[${i}]`, out, depth + 1);
     return out;
@@ -59,12 +42,16 @@ function technical(value: unknown, prefix = "", out: Record<string, string | num
 }
 
 const probes: Record<string, string>[] = [
-  { productRequestId: "266" },
-  { productRequestId: "266", group: "request" },
-  { requestId: "266", group: "request" },
-  { productRequestId: "357" },
-  { productRequestId: "10251" },
-  { productRequestId: "266", history: "yes" },
+  { itemMonitInputId: "465" },
+  { itemMonitInputId: "465", limit: "20", offset: "0" },
+  { itemMonitInputId: "465", limit: "20", offset: "0", orderby: "inputId" },
+  { itemMonitInputId: "465", limit: "20", offset: "0", orderby: "inputId", orderFlag: "asc" },
+  { monitInputPchId: "117" },
+  { monitInputPchId: "117", limit: "20", offset: "0", orderby: "inputId", orderFlag: "asc" },
+  { itemMonitInputId: "465", monitInputPchId: "117", limit: "20", offset: "0", orderby: "inputId", orderFlag: "asc" },
+  { buildMonitoringId: "67", itemMonitInputId: "465", limit: "20", offset: "0", orderby: "inputId", orderFlag: "asc" },
+  { buildMonitoringId: "67", monitInputPchId: "117", limit: "20", offset: "0", orderby: "inputId", orderFlag: "asc" },
+  { inputId: "2185", limit: "20", offset: "0", orderby: "inputId", orderFlag: "asc" },
 ];
 
 export async function inspectBuildMonitoringRoutes(): Promise<{
@@ -101,24 +88,24 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
     const capture = (request: { method(): string; url(): string; headers(): Record<string, string> }): void => {
       try {
         const url = new URL(request.url());
-        if (request.method() === "GET" && url.hostname === "api.koper.com.br" && url.pathname === "/stock/v1/request" && headers === null) headers = request.headers();
+        if (request.method() === "GET" && url.hostname === "api.koper.com.br" && url.pathname === "/engineering/v1/item_monitoring" && headers === null) headers = request.headers();
       } catch {}
     };
     page.on("request", capture);
-    await page.goto("https://app.koper.com.br/suprimentos/solicitacoes/", { waitUntil: "domcontentloaded", timeout: 25_000 }).catch(() => undefined);
+    await page.goto("https://app.koper.com.br/engenharia/acompanhamento_obra/view/67/cronograma_financeiro", { waitUntil: "domcontentloaded", timeout: 25_000 }).catch(() => undefined);
     for (let i = 0; i < 10 && !headers; i += 1) await page.waitForTimeout(750);
     page.off("request", capture);
-    if (!headers) throw new Error("Koper stock headers not captured");
+    if (!headers) throw new Error("Koper engineering headers not captured");
     const requestHeaders: Record<string, string> = headers;
 
     const results: Probe[] = [];
     for (const params of probes) {
       const response = await page.request.get(
-        `https://api.koper.com.br/stock/v1/product_request?${new URLSearchParams(params).toString()}`,
-        { headers: requestHeaders, timeout: 10_000 },
+        `https://api.koper.com.br/engineering/v1/monitoring_input?${new URLSearchParams(params).toString()}`,
+        { headers: requestHeaders, timeout: 8_000 },
       ).catch(() => null);
       if (!response) {
-        results.push({ params, status: 0, arrayLength: null, fieldPaths: [], technical: {}, errorMessage: null });
+        results.push({ params, status: 0, arrayLength: null, technical: {}, errorMessage: null });
         continue;
       }
       const body: unknown = await response.json().catch(() => null);
@@ -127,7 +114,6 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
         params,
         status: response.status(),
         arrayLength: Array.isArray(body) ? body.length : null,
-        fieldPaths: body === null ? [] : fieldPaths(body),
         technical: body === null ? {} : technical(body),
         errorMessage: record ? safeText(record.message) : null,
       });
