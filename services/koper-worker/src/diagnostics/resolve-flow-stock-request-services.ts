@@ -135,28 +135,38 @@ export async function resolveFlowStockRequestServices(
       });
     }
 
+    async function fetchInputServices(inputId: string): Promise<unknown[]> {
+      const query = new URLSearchParams({
+        services: "yes",
+        inputId,
+        buildMonitoringId: "67",
+        page: "stockRequest",
+      });
+      let lastStatus = 0;
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const response = await page.request.get(
+          `https://api.koper.com.br/engineering/v1/monitoring_input?${query.toString()}`,
+          { headers, timeout: 10_000 },
+        ).catch(() => null);
+        lastStatus = response?.status() ?? 0;
+        if (response && response.status() === 200) {
+          const body: unknown = await response.json().catch(() => null);
+          return Array.isArray(body) ? body : [];
+        }
+        if (attempt < 3) await page.waitForTimeout(250 * attempt);
+      }
+      throw new Error(`Koper monitoring_input failed for inputId=${inputId} status=${lastStatus} after 3 attempts`);
+    }
+
     const official = new Map<string, OfficialStockRequestServiceResolution>();
     const inputs = [...inputIds];
     const concurrency = 10;
     for (let start = 0; start < inputs.length; start += concurrency) {
       const batch = inputs.slice(start, start + concurrency);
-      const responses = await Promise.all(batch.map(async (inputId) => {
-        const query = new URLSearchParams({
-          services: "yes",
-          inputId,
-          buildMonitoringId: "67",
-          page: "stockRequest",
-        });
-        const response = await page.request.get(
-          `https://api.koper.com.br/engineering/v1/monitoring_input?${query.toString()}`,
-          { headers, timeout: 10_000 },
-        ).catch(() => null);
-        if (!response || response.status() !== 200) {
-          throw new Error(`Koper monitoring_input failed for inputId=${inputId} status=${response?.status() ?? 0}`);
-        }
-        const body: unknown = await response.json().catch(() => null);
-        return { inputId, rows: Array.isArray(body) ? body : [] };
-      }));
+      const responses = await Promise.all(batch.map(async (inputId) => ({
+        inputId,
+        rows: await fetchInputServices(inputId),
+      })));
 
       for (const response of responses) {
         for (const raw of response.rows) {
