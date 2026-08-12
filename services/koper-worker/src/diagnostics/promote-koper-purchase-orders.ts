@@ -1,5 +1,6 @@
 import { env } from "../config/env.js";
 import { requestSupabase } from "../elos/supabase.js";
+import { groupRequestItemsByProductId, resolvePurchaseRequestItem } from "./purchase-order-request-item-resolution.js";
 
 type StagingRow = { koper_id: string; koper_parent_id: string | null; payload: unknown };
 type InputRow = { id: string; source_id: string | null; code: string; description: string; unit: string };
@@ -134,7 +135,8 @@ export async function checkPurchaseOrderPromotionReadiness(): Promise<{
 }> {
   const data = await context();
   const inputBySource = new Map(data.inputs.map((row) => [row.source_id, row]));
-  const requestItemByProduct = new Map(data.requestItems.flatMap((row) => productRequestIds(row.notes).map((id) => [id, row] as const)));
+  const requestItemsByProduct = groupRequestItemsByProductId(data.requestItems, (row) => productRequestIds(row.notes));
+  const serviceSourceIdByServiceId = new Map(data.services.map((row) => [row.id, row.source_id]));
   let mappedInputs = 0; let missingInputs = 0; let mappedRequestLinks = 0; let missingRequestLinks = 0; let unlinkedItems = 0; let requestLinks = 0;
   for (const row of data.itemRows) {
     const payload = objectValue(row.payload);
@@ -145,7 +147,12 @@ export async function checkPurchaseOrderPromotionReadiness(): Promise<{
     requestLinks += links.length;
     for (const link of links) {
       const id = identifier(link.productRequestId);
-      if (id && requestItemByProduct.has(id)) mappedRequestLinks += 1; else missingRequestLinks += 1;
+      if (!id) {
+        missingRequestLinks += 1;
+        continue;
+      }
+      const resolution = resolvePurchaseRequestItem(id, identifier(payload.costCenterId), requestItemsByProduct, serviceSourceIdByServiceId);
+      if (resolution.status === "matched") mappedRequestLinks += 1; else missingRequestLinks += 1;
     }
   }
   const statuses = data.orderRows.reduce<Record<string, number>>((counts, row) => {
@@ -244,9 +251,10 @@ export async function promoteKoperPurchaseOrders(): Promise<{
   const supplierBySource = new Map(suppliers.map((row) => [row.source_id, row.id]));
   const inputBySource = new Map(data.inputs.map((row) => [row.source_id, row]));
   const serviceBySource = new Map(data.services.map((row) => [row.source_id, row]));
+  const serviceSourceIdByServiceId = new Map(data.services.map((row) => [row.id, row.source_id]));
   const requestBySource = new Map(data.requestRows.map((row) => [row.request_number.replace(/^KOPER-/, ""), row]));
   const requestById = new Map(data.requestRows.map((row) => [row.id, row]));
-  const requestItemByProduct = new Map(data.requestItems.flatMap((row) => productRequestIds(row.notes).map((id) => [id, row] as const)));
+  const requestItemsByProduct = groupRequestItemsByProductId(data.requestItems, (row) => productRequestIds(row.notes));
   const itemsByOrder = new Map<string, StagingRow[]>();
   for (const row of data.itemRows) itemsByOrder.set(row.koper_parent_id ?? "", [...(itemsByOrder.get(row.koper_parent_id ?? "") ?? []), row]);
 
@@ -317,7 +325,14 @@ export async function promoteKoperPurchaseOrders(): Promise<{
       const split = splits[index];
       if (!split) continue;
       const productRequestId = identifier(split.link.productRequestId);
-      const requestItem = productRequestId ? requestItemByProduct.get(productRequestId) : null;
+      let requestItem: RequestItemRow | null = null;
+      if (productRequestId) {
+        const resolution = resolvePurchaseRequestItem(productRequestId, identifier(payload.costCenterId), requestItemsByProduct, serviceSourceIdByServiceId);
+        if (resolution.status === "ambiguous") {
+          throw new Error(`Ambiguous request item for Koper orderProductId=${row.koper_id} productRequestId=${productRequestId} costCenterId=${identifier(payload.costCenterId) ?? "n/a"} candidates=${resolution.candidateIds.join(",")}`);
+        }
+        if (resolution.status === "matched") requestItem = resolution.item;
+      }
       const requestSource = identifier(split.link.requestId);
       const request = requestItem ? { id: requestItem.request_id } : requestSource ? requestBySource.get(requestSource) : null;
       if (requestItem) linkedItems += 1; else unlinkedItems += 1;
