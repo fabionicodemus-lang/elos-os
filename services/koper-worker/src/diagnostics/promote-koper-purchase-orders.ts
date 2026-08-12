@@ -1,5 +1,7 @@
 import { env } from "../config/env.js";
 import { requestSupabase } from "../elos/supabase.js";
+import { groupRequestItemsByProductId } from "./purchase-order-request-item-resolution.js";
+import { resolvePurchaseRequestAllocations } from "./purchase-order-request-allocations.js";
 
 type StagingRow = { koper_id: string; koper_parent_id: string | null; payload: unknown };
 type InputRow = { id: string; source_id: string | null; code: string; description: string; unit: string };
@@ -8,7 +10,23 @@ type RequestRow = { id: string; request_number: string };
 type RequestItemRow = {
   id: string; request_id: string; input_id: string; cost_center_service_id: string | null;
   input_code: string; input_name: string; unit_snapshot: string;
-  cost_center_code: string; cost_center_name: string; notes: string | null;
+  cost_center_code: string; cost_center_name: string; requested_quantity: number; notes: string | null;
+};
+type PurchaseItemRow = { id: string; source_id: string };
+type AllocationRow = {
+  id: string;
+  source_id: string | null;
+  purchase_order_item_id: string;
+  request_id: string;
+  request_item_id: string;
+  allocated_quantity: number;
+};
+type PlannedAllocation = {
+  purchaseItemSourceId: string;
+  request_id: string;
+  request_item_id: string;
+  allocated_quantity: number;
+  source_id: string;
 };
 
 function objectValue(value: unknown): Record<string, unknown> {
@@ -117,7 +135,7 @@ async function context(): Promise<PreparedContext> {
     readAll<InputRow>("engineering_inputs", { select: "id,source_id,code,description,unit", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", order: "source_id.asc" }),
     readAll<ServiceRow>("engineering_services", { select: "id,source_id,code,description", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", order: "source_id.asc" }),
     readAll<RequestRow>("execution_material_requests", { select: "id,request_number", company_id: `eq.${env.BOSSA_COMPANY_ID}`, request_number: "like.KOPER-*", order: "request_number.asc" }),
-    readAll<RequestItemRow>("execution_material_request_items", { select: "id,request_id,input_id,cost_center_service_id,input_code,input_name,unit_snapshot,cost_center_code,cost_center_name,notes", company_id: `eq.${env.BOSSA_COMPANY_ID}`, notes: "like.Koper productRequestIds=*", order: "id.asc" }),
+    readAll<RequestItemRow>("execution_material_request_items", { select: "id,request_id,input_id,cost_center_service_id,input_code,input_name,unit_snapshot,cost_center_code,cost_center_name,requested_quantity,notes", company_id: `eq.${env.BOSSA_COMPANY_ID}`, notes: "like.Koper productRequestIds=*", order: "id.asc" }),
     requestSupabase<Array<{ id: string }>>("projects", { query: new URLSearchParams({ select: "id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, name: "ilike.*Flow*", status: "neq.archived", limit: "10" }) }),
     requestSupabase<Array<{ user_id: string }>>("company_memberships", { query: new URLSearchParams({ select: "user_id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, status: "eq.active", order: "created_at.asc", limit: "1" }) }),
   ]);
@@ -134,7 +152,7 @@ export async function checkPurchaseOrderPromotionReadiness(): Promise<{
 }> {
   const data = await context();
   const inputBySource = new Map(data.inputs.map((row) => [row.source_id, row]));
-  const requestItemByProduct = new Map(data.requestItems.flatMap((row) => productRequestIds(row.notes).map((id) => [id, row] as const)));
+  const requestItemsByProduct = groupRequestItemsByProductId(data.requestItems, (row) => productRequestIds(row.notes));
   let mappedInputs = 0; let missingInputs = 0; let mappedRequestLinks = 0; let missingRequestLinks = 0; let unlinkedItems = 0; let requestLinks = 0;
   for (const row of data.itemRows) {
     const payload = objectValue(row.payload);
@@ -145,7 +163,7 @@ export async function checkPurchaseOrderPromotionReadiness(): Promise<{
     requestLinks += links.length;
     for (const link of links) {
       const id = identifier(link.productRequestId);
-      if (id && requestItemByProduct.has(id)) mappedRequestLinks += 1; else missingRequestLinks += 1;
+      if (id && (requestItemsByProduct.get(id)?.length ?? 0) > 0) mappedRequestLinks += 1; else missingRequestLinks += 1;
     }
   }
   const statuses = data.orderRows.reduce<Record<string, number>>((counts, row) => {
@@ -216,13 +234,96 @@ function orderStatus(payload: Record<string, unknown>, products: Record<string, 
   return "confirmed";
 }
 
+function preflightPurchaseOrderPromotion(data: PreparedContext): void {
+  if (!data.orderRows.length) throw new Error("Koper purchase order source is empty");
+
+  const orderSourceIds = new Set(data.orderRows.map((row) => row.koper_id));
+  const supplierSourceIds = new Set(data.supplierRows.map((row) => row.koper_id));
+  const inputBySource = new Map(data.inputs.map((row) => [row.source_id, row]));
+  const requestById = new Map(data.requestRows.map((row) => [row.id, row]));
+  const serviceSourceIdByServiceId = new Map(data.services.map((row) => [row.id, row.source_id]));
+  const requestItemsByProduct = groupRequestItemsByProductId(data.requestItems, (row) => productRequestIds(row.notes));
+  const purchaseItemSourceIds = new Set<string>();
+  const allocationSourceIds = new Set<string>();
+
+  for (const row of data.orderRows) {
+    const supplierId = identifier(objectValue(row.payload).supplierId);
+    if (!supplierId || !supplierSourceIds.has(supplierId)) {
+      throw new Error(`Supplier staging mapping missing for Koper order ${row.koper_id}`);
+    }
+  }
+
+  for (const row of data.itemRows) {
+    const payload = objectValue(row.payload);
+    const orderSource = row.koper_parent_id ?? identifier(payload.orderId);
+    if (!orderSource || !orderSourceIds.has(orderSource)) {
+      throw new Error(`Purchase item ${row.koper_id} has no valid Koper order`);
+    }
+
+    const inputSource = [identifier(payload.productId), identifier(payload.mainProductId), identifier(payload.inputId)]
+      .find((id) => id && inputBySource.has(id));
+    const input = inputSource ? inputBySource.get(inputSource) : null;
+    if (!input) throw new Error(`Purchase item ${row.koper_id} has no promoted input`);
+
+    const ordered = Math.max(0, numeric(payload.amount) ?? 0);
+    if (ordered <= 0) throw new Error(`Invalid ordered quantity for ${row.koper_id}`);
+
+    const requests = Array.isArray(payload.requests) ? payload.requests.map(objectValue) : [];
+    const positiveLinks = requests.filter((link) => (numeric(link.requestAmount) ?? 0) > 0);
+    const linkTotal = positiveLinks.reduce((sum, link) => sum + (numeric(link.requestAmount) ?? 0), 0);
+    const splits = positiveLinks.length
+      ? positiveLinks.map((link) => ({ link, quantity: ordered * (numeric(link.requestAmount) ?? 0) / linkTotal }))
+      : [{ link: {}, quantity: ordered }];
+
+    for (const split of splits) {
+      const productRequestId = identifier(split.link.productRequestId);
+      const purchaseItemSourceId = productRequestId ? `${row.koper_id}:${productRequestId}` : row.koper_id;
+      if (purchaseItemSourceIds.has(purchaseItemSourceId)) {
+        throw new Error(`Duplicate Koper purchase item source_id=${purchaseItemSourceId}`);
+      }
+      purchaseItemSourceIds.add(purchaseItemSourceId);
+      if (!productRequestId) continue;
+
+      const resolution = resolvePurchaseRequestAllocations(
+        productRequestId,
+        split.quantity,
+        identifier(payload.costCenterId),
+        requestItemsByProduct,
+        serviceSourceIdByServiceId,
+      );
+      if (resolution.status === "invalid") {
+        throw new Error(`Invalid request allocation for Koper orderProductId=${row.koper_id} productRequestId=${productRequestId}: ${resolution.reason}`);
+      }
+      if (resolution.status === "missing") continue;
+
+      if (!requestById.has(resolution.status === "direct" ? resolution.item.request_id : resolution.requestId)) {
+        throw new Error(`Material request header missing for Koper productRequestId=${productRequestId}`);
+      }
+
+      const allocations = resolution.status === "direct" ? resolution.allocations : resolution.allocations;
+      for (const allocation of allocations) {
+        if (allocation.item.input_id !== input.id) {
+          throw new Error(`Input mismatch for Koper productRequestId=${productRequestId} requestItem=${allocation.item.id}`);
+        }
+        if (resolution.status !== "multi") continue;
+        const allocationSourceId = `${row.koper_id}:${productRequestId}:${allocation.item.id}`;
+        if (allocationSourceIds.has(allocationSourceId)) {
+          throw new Error(`Duplicate Koper allocation source_id=${allocationSourceId}`);
+        }
+        allocationSourceIds.add(allocationSourceId);
+      }
+    }
+  }
+}
+
 export async function promoteKoperPurchaseOrders(): Promise<{
   ok: true; orders: number; items: number; suppliers: number; linkedItems: number; unlinkedItems: number;
+  directItems: number; multiItems: number; orphanItems: number; allocations: number; staleAllocationsDeleted: number;
   verifiedOrders: number; verifiedItems: number; statuses: Record<string, number>;
 }> {
   if (process.env.KOPER_PURCHASE_ORDER_PROMOTION_ENABLED !== "true") throw new Error("Koper purchase order promotion is not explicitly enabled");
   const data = await context();
-  if (data.orderRows.length !== 1_649) throw new Error("Koper purchase order source count mismatch");
+  preflightPurchaseOrderPromotion(data);
 
   const now = new Date().toISOString();
   const supplierPayloads = data.supplierRows.map((row) => {
@@ -244,9 +345,10 @@ export async function promoteKoperPurchaseOrders(): Promise<{
   const supplierBySource = new Map(suppliers.map((row) => [row.source_id, row.id]));
   const inputBySource = new Map(data.inputs.map((row) => [row.source_id, row]));
   const serviceBySource = new Map(data.services.map((row) => [row.source_id, row]));
+  const serviceSourceIdByServiceId = new Map(data.services.map((row) => [row.id, row.source_id]));
   const requestBySource = new Map(data.requestRows.map((row) => [row.request_number.replace(/^KOPER-/, ""), row]));
   const requestById = new Map(data.requestRows.map((row) => [row.id, row]));
-  const requestItemByProduct = new Map(data.requestItems.flatMap((row) => productRequestIds(row.notes).map((id) => [id, row] as const)));
+  const requestItemsByProduct = groupRequestItemsByProductId(data.requestItems, (row) => productRequestIds(row.notes));
   const itemsByOrder = new Map<string, StagingRow[]>();
   for (const row of data.itemRows) itemsByOrder.set(row.koper_parent_id ?? "", [...(itemsByOrder.get(row.koper_parent_id ?? "") ?? []), row]);
 
@@ -294,7 +396,8 @@ export async function promoteKoperPurchaseOrders(): Promise<{
   const orderBySource = new Map(orders.map((row) => [row.source_id, row.id]));
 
   const itemPayloads: Array<Record<string, unknown>> = [];
-  let linkedItems = 0; let unlinkedItems = 0;
+  const plannedAllocations: PlannedAllocation[] = [];
+  let directItems = 0; let multiItems = 0; let orphanItems = 0; let unlinkedItems = 0;
   for (const row of data.itemRows) {
     const payload = objectValue(row.payload);
     const orderSource = row.koper_parent_id ?? identifier(payload.orderId);
@@ -317,21 +420,76 @@ export async function promoteKoperPurchaseOrders(): Promise<{
       const split = splits[index];
       if (!split) continue;
       const productRequestId = identifier(split.link.productRequestId);
-      const requestItem = productRequestId ? requestItemByProduct.get(productRequestId) : null;
       const requestSource = identifier(split.link.requestId);
-      const request = requestItem ? { id: requestItem.request_id } : requestSource ? requestBySource.get(requestSource) : null;
-      if (requestItem) linkedItems += 1; else unlinkedItems += 1;
+      const purchaseItemSourceId = productRequestId ? `${row.koper_id}:${productRequestId}` : row.koper_id;
+      const purchaseCostCenterSourceId = identifier(payload.costCenterId);
+
+      let requestId: string | null = null;
+      let requestItem: RequestItemRow | null = null;
+      let costCenterServiceId: string | null = null;
+      let requestNumber = "KOPER-SEM-SOLICITACAO";
+      let costCenterCode = "KOPER-OC-LEGACY";
+      let costCenterName = "Compra histórica sem centro de custo recuperável";
+
+      if (productRequestId) {
+        const resolution = resolvePurchaseRequestAllocations(
+          productRequestId,
+          split.quantity,
+          purchaseCostCenterSourceId,
+          requestItemsByProduct,
+          serviceSourceIdByServiceId,
+        );
+        if (resolution.status === "invalid") {
+          throw new Error(`Invalid request allocation for Koper orderProductId=${row.koper_id} productRequestId=${productRequestId}: ${resolution.reason}`);
+        }
+        if (resolution.status === "missing") {
+          orphanItems += 1;
+          unlinkedItems += 1;
+          costCenterCode = "KOPER-OC-ORPHAN";
+          costCenterName = `Compra histórica com productRequestId=${productRequestId} ausente do staging atual`;
+        } else if (resolution.status === "direct") {
+          directItems += 1;
+          requestItem = resolution.item;
+          requestId = requestItem.request_id;
+          costCenterServiceId = requestItem.cost_center_service_id;
+          requestNumber = requestById.get(requestItem.request_id)?.request_number ?? "KOPER-SOLICITACAO-LEGADA";
+          costCenterCode = requestItem.cost_center_code;
+          costCenterName = requestItem.cost_center_name;
+        } else {
+          multiItems += 1;
+          requestId = resolution.requestId;
+          requestNumber = requestById.get(resolution.requestId)?.request_number ?? "KOPER-SOLICITACAO-LEGADA";
+          costCenterCode = "KOPER-OC-MULTI";
+          costCenterName = "Compra histórica rateada entre múltiplos serviços";
+          for (const allocation of resolution.allocations) {
+            plannedAllocations.push({
+              purchaseItemSourceId,
+              request_id: allocation.item.request_id,
+              request_item_id: allocation.item.id,
+              allocated_quantity: allocation.quantity,
+              source_id: `${row.koper_id}:${productRequestId}:${allocation.item.id}`,
+            });
+          }
+        }
+      } else {
+        unlinkedItems += 1;
+        const request = requestSource ? requestBySource.get(requestSource) : null;
+        const service = serviceBySource.get(purchaseCostCenterSourceId ?? "") ?? null;
+        requestId = request?.id ?? null;
+        costCenterServiceId = service?.id ?? null;
+        requestNumber = requestSource ? `KOPER-${requestSource}` : "KOPER-SEM-SOLICITACAO";
+        costCenterCode = service?.code ?? "KOPER-OC-LEGACY";
+        costCenterName = service?.description ?? "Compra histórica sem centro de custo recuperável";
+      }
+
       const received = Math.min(split.quantity, receivedRemaining);
       receivedRemaining -= received;
-      const service = requestItem?.cost_center_service_id ? null : serviceBySource.get(identifier(payload.costCenterId) ?? "") ?? null;
-      const costCenterCode = requestItem?.cost_center_code ?? service?.code ?? "KOPER-OC-LEGACY";
-      const costCenterName = requestItem?.cost_center_name ?? service?.description ?? "Compra histórica sem centro de custo recuperável";
       itemPayloads.push({
         company_id: env.BOSSA_COMPANY_ID, project_id: data.project.id, order_id: orderId,
         quotation_id: null, quotation_item_id: null, award_id: null, offer_item_id: null,
-        request_id: request?.id ?? null, request_item_id: requestItem?.id ?? null, input_id: input.id,
-        cost_center_service_id: requestItem?.cost_center_service_id ?? service?.id ?? null,
-        request_number: requestItem ? requestById.get(requestItem.request_id)?.request_number ?? "KOPER-SOLICITACAO-LEGADA" : requestSource ? `KOPER-${requestSource}` : "KOPER-SEM-SOLICITACAO",
+        request_id: requestId, request_item_id: requestItem?.id ?? null, input_id: input.id,
+        cost_center_service_id: costCenterServiceId,
+        request_number: requestNumber,
         input_code: requestItem?.input_code ?? input.code, input_name: requestItem?.input_name ?? input.description,
         unit_snapshot: requestItem?.unit_snapshot ?? input.unit, cost_center_code: costCenterCode, cost_center_name: costCenterName,
         brand: textValue(payload.brand), manufacturer: textValue(payload.manufacturer), ordered_quantity: split.quantity,
@@ -341,16 +499,105 @@ export async function promoteKoperPurchaseOrders(): Promise<{
         delivered_unit_cost: deliveredUnitCost, total_amount: deliveredUnitCost * split.quantity,
         expected_delivery_date: null, notes: `Koper orderProductId=${row.koper_id}${productRequestId ? ` · productRequestId=${productRequestId}` : " · sem solicitação vinculada"}`,
         sort_order: itemPayloads.length, created_at: now, updated_at: now,
-        source_system: "koper", source_id: productRequestId ? `${row.koper_id}:${productRequestId}` : row.koper_id,
+        source_system: "koper", source_id: purchaseItemSourceId,
       });
     }
   }
-  for (const batch of chunks(itemPayloads, 100)) await requestSupabase("procurement_purchase_order_items", {
+
+  const purchaseItems: PurchaseItemRow[] = [];
+  for (const batch of chunks(itemPayloads, 100)) purchaseItems.push(...await requestSupabase<PurchaseItemRow[]>("procurement_purchase_order_items", {
+    method: "POST", body: batch, prefer: "resolution=merge-duplicates,return=representation",
+    query: new URLSearchParams({ on_conflict: "company_id,source_system,source_id", select: "id,source_id" }),
+  }));
+  const purchaseItemBySource = new Map(purchaseItems.map((row) => [row.source_id, row.id]));
+  if (purchaseItemBySource.size !== itemPayloads.length) throw new Error("Duplicate or missing Koper purchase item source_id after upsert");
+
+  const allocationPayloads = plannedAllocations.map((allocation) => {
+    const purchaseOrderItemId = purchaseItemBySource.get(allocation.purchaseItemSourceId);
+    if (!purchaseOrderItemId) throw new Error(`Purchase item missing for allocation source=${allocation.source_id}`);
+    return {
+      company_id: env.BOSSA_COMPANY_ID,
+      project_id: data.project.id,
+      purchase_order_item_id: purchaseOrderItemId,
+      request_id: allocation.request_id,
+      request_item_id: allocation.request_item_id,
+      allocated_quantity: allocation.allocated_quantity,
+      source_system: "koper",
+      source_id: allocation.source_id,
+      updated_at: now,
+    };
+  });
+  for (const batch of chunks(allocationPayloads, 100)) await requestSupabase("procurement_purchase_order_item_request_allocations", {
     method: "POST", body: batch, prefer: "resolution=merge-duplicates,return=minimal",
     query: new URLSearchParams({ on_conflict: "company_id,source_system,source_id" }),
   });
+
+  const currentPurchaseItemIds = new Set(purchaseItems.map((row) => row.id));
+  const intendedAllocationSourceIds = new Set(allocationPayloads.map((row) => row.source_id));
+  const currentAllocations = await readAll<AllocationRow>("procurement_purchase_order_item_request_allocations", {
+    select: "id,source_id,purchase_order_item_id,request_id,request_item_id,allocated_quantity",
+    company_id: `eq.${env.BOSSA_COMPANY_ID}`,
+    project_id: `eq.${data.project.id}`,
+    source_system: "eq.koper",
+    order: "id.asc",
+  });
+  const staleAllocations = currentAllocations.filter((row) => currentPurchaseItemIds.has(row.purchase_order_item_id)
+    && (!row.source_id || !intendedAllocationSourceIds.has(row.source_id)));
+  for (const batch of chunks(staleAllocations, 100)) {
+    await requestSupabase("procurement_purchase_order_item_request_allocations", {
+      method: "DELETE",
+      prefer: "return=minimal",
+      query: new URLSearchParams({
+        company_id: `eq.${env.BOSSA_COMPANY_ID}`,
+        project_id: `eq.${data.project.id}`,
+        source_system: "eq.koper",
+        id: `in.(${batch.map((row) => row.id).join(",")})`,
+      }),
+    });
+  }
+
   const verifiedOrders = await readAll<{ id: string; status: OrderStatus }>("procurement_purchase_orders", { select: "id,status", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", order: "id.asc" });
-  const verifiedItems = await readAll<{ id: string }>("procurement_purchase_order_items", { select: "id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", order: "id.asc" });
+  const verifiedItems = await readAll<PurchaseItemRow>("procurement_purchase_order_items", { select: "id,source_id", company_id: `eq.${env.BOSSA_COMPANY_ID}`, source_system: "eq.koper", order: "id.asc" });
+  const verifiedAllocations = await readAll<AllocationRow>("procurement_purchase_order_item_request_allocations", {
+    select: "id,source_id,purchase_order_item_id,request_id,request_item_id,allocated_quantity",
+    company_id: `eq.${env.BOSSA_COMPANY_ID}`,
+    project_id: `eq.${data.project.id}`,
+    source_system: "eq.koper",
+    order: "id.asc",
+  });
   if (verifiedOrders.length !== headerPayloads.length || verifiedItems.length !== itemPayloads.length) throw new Error("Koper purchase order verification failed");
-  return { ok: true, orders: headerPayloads.length, items: itemPayloads.length, suppliers: suppliers.length, linkedItems, unlinkedItems, verifiedOrders: verifiedOrders.length, verifiedItems: verifiedItems.length, statuses: verifiedOrders.reduce<Record<string, number>>((counts, row) => { counts[row.status] = (counts[row.status] ?? 0) + 1; return counts; }, {}) };
+
+  const verifiedCurrentAllocations = verifiedAllocations.filter((row) => currentPurchaseItemIds.has(row.purchase_order_item_id));
+  if (verifiedCurrentAllocations.length !== allocationPayloads.length) {
+    throw new Error(`Koper purchase allocation count mismatch expected=${allocationPayloads.length} actual=${verifiedCurrentAllocations.length}`);
+  }
+  const allocationBySource = new Map(verifiedCurrentAllocations.map((row) => [row.source_id, row]));
+  for (const expected of allocationPayloads) {
+    const actual = allocationBySource.get(expected.source_id);
+    if (!actual
+      || actual.purchase_order_item_id !== expected.purchase_order_item_id
+      || actual.request_id !== expected.request_id
+      || actual.request_item_id !== expected.request_item_id
+      || Math.abs(actual.allocated_quantity - expected.allocated_quantity) > 0.000001) {
+      throw new Error(`Koper purchase allocation verification failed for source=${expected.source_id}`);
+    }
+  }
+
+  const linkedItems = directItems + multiItems;
+  return {
+    ok: true,
+    orders: headerPayloads.length,
+    items: itemPayloads.length,
+    suppliers: suppliers.length,
+    linkedItems,
+    unlinkedItems,
+    directItems,
+    multiItems,
+    orphanItems,
+    allocations: allocationPayloads.length,
+    staleAllocationsDeleted: staleAllocations.length,
+    verifiedOrders: verifiedOrders.length,
+    verifiedItems: verifiedItems.length,
+    statuses: verifiedOrders.reduce<Record<string, number>>((counts, row) => { counts[row.status] = (counts[row.status] ?? 0) + 1; return counts; }, {}),
+  };
 }

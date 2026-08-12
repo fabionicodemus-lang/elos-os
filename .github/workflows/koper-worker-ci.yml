@@ -1,0 +1,35 @@
+name: Koper Worker CI
+
+on:
+  push:
+    paths:
+      - "services/koper-worker/**"
+      - ".github/workflows/koper-worker-ci.yml"
+  pull_request:
+    paths:
+      - "services/koper-worker/**"
+      - ".github/workflows/koper-worker-ci.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/koper-worker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Request resolution tests
+        run: npx tsx --test src/diagnostics/purchase-order-request-item-resolution.test.ts src/diagnostics/purchase-order-request-allocations.test.ts

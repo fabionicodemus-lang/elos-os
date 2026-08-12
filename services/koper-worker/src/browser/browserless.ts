@@ -17,8 +17,19 @@ export type BrowserlessConnectOptions = {
 };
 
 function buildBrowserlessEndpoint(options?: BrowserlessConnectOptions): string {
-  const endpoint = new URL(env.BROWSERLESS_WS_URL);
-  endpoint.searchParams.set("token", env.BROWSERLESS_TOKEN);
+  const rawUrl = env.BROWSERLESS_WS_URL?.trim();
+  const token = env.BROWSERLESS_TOKEN?.trim();
+  if (!rawUrl || !token) {
+    throw new Error("Browserless não configurado para esta execução.");
+  }
+
+  let endpoint: URL;
+  try {
+    endpoint = new URL(rawUrl);
+  } catch {
+    throw new Error("BROWSERLESS_WS_URL inválida para esta execução.");
+  }
+  endpoint.searchParams.set("token", token);
 
   if (options?.sessionTimeoutMs) {
     endpoint.searchParams.set("timeout", String(options.sessionTimeoutMs));
