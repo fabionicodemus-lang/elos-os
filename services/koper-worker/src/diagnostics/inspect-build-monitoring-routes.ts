@@ -106,7 +106,8 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
     });
     const itemResponse = await page.request.get(`https://api.koper.com.br/engineering/v1/item_monitoring?${itemQuery.toString()}`, { headers: requestHeaders, timeout: 10_000 });
     const itemBody: unknown = await itemResponse.json().catch(() => null);
-    const itemRows = Array.isArray(obj(itemBody)?.items) ? obj(itemBody)?.items as unknown[] : [];
+    const itemRecord = obj(itemBody);
+    const itemRows = Array.isArray(itemRecord?.items) ? itemRecord.items : [];
     const serviceItems: ServiceItem[] = [];
     const seen = new Set<number>();
     for (const raw of itemRows) {
@@ -137,7 +138,9 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
         return [...new Set(rows.map((row) => num(obj(row)?.inputId)).filter((value): value is number => value !== null))];
       }));
       results.forEach((inputIds, index) => {
-        const serviceId = batch[index].serviceId;
+        const batchItem = batch[index];
+        if (!batchItem) return;
+        const serviceId = batchItem.serviceId;
         for (const inputId of inputIds) {
           const services = inputToServices.get(inputId) ?? new Set<number>();
           services.add(serviceId);
@@ -160,7 +163,8 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
       { headers: requestHeaders, timeout: 10_000 },
     );
     const requestBody: unknown = await requestResponse.json().catch(() => null);
-    const products = Array.isArray(obj(requestBody)?.products) ? obj(requestBody)?.products as unknown[] : [];
+    const requestRecord = obj(requestBody);
+    const products = Array.isArray(requestRecord?.products) ? requestRecord.products : [];
     const samples: RequestSample[] = [];
     let allocationLinks = 0;
     let uniqueByInput = 0;
