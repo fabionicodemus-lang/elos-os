@@ -3,6 +3,7 @@ export type PurchaseRequestAllocationCandidate = {
   request_id: string;
   cost_center_service_id: string | null;
   requested_quantity: number;
+  notes?: string | null;
 };
 
 export type PurchaseRequestAllocation<T extends PurchaseRequestAllocationCandidate> = {
@@ -18,6 +19,27 @@ export type PurchaseRequestAllocationResolution<T extends PurchaseRequestAllocat
 
 function round6(value: number): number {
   return Math.round((value + Number.EPSILON) * 1_000_000) / 1_000_000;
+}
+
+function sourceQuantityForCandidate(
+  candidate: PurchaseRequestAllocationCandidate,
+  productRequestId: string,
+): number | null {
+  const notes = candidate.notes ?? "";
+  const idsMatch = notes.match(/Koper productRequestIds=([^·]+)/);
+  const ids = idsMatch?.[1]?.split(",").map((value) => value.trim()).filter(Boolean) ?? [];
+  if (!ids.length) return candidate.requested_quantity;
+  const index = ids.indexOf(productRequestId);
+  if (index < 0) return null;
+  if (ids.length === 1) return candidate.requested_quantity;
+
+  const evidence = notes.split("resolution=v2 · ")[1]?.split(";") ?? [];
+  const sourceEvidence = evidence[index];
+  if (!sourceEvidence) return null;
+  const quantityMatch = sourceEvidence.match(/(?:inputAmount|productAmount)=(-?\d+(?:\.\d+)?)/);
+  if (!quantityMatch?.[1]) return null;
+  const quantity = Number(quantityMatch[1]);
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : null;
 }
 
 export function resolvePurchaseRequestAllocations<T extends PurchaseRequestAllocationCandidate>(
@@ -65,20 +87,24 @@ export function resolvePurchaseRequestAllocations<T extends PurchaseRequestAlloc
   if (requestIds.size !== 1) {
     return { status: "invalid", reason: `multiple request ids for productRequestId=${productRequestId}` };
   }
-  if (candidates.some((candidate) => !Number.isFinite(candidate.requested_quantity) || candidate.requested_quantity <= 0)) {
-    return { status: "invalid", reason: `invalid candidate quantity for productRequestId=${productRequestId}` };
-  }
 
-  const totalRequested = candidates.reduce((sum, candidate) => sum + candidate.requested_quantity, 0);
+  const sourceQuantities = candidates.map((candidate) => sourceQuantityForCandidate(candidate, productRequestId));
+  if (sourceQuantities.some((quantity) => quantity === null || !Number.isFinite(quantity) || quantity <= 0)) {
+    return { status: "invalid", reason: `missing product-specific quantity for productRequestId=${productRequestId}` };
+  }
+  const numericQuantities = sourceQuantities as number[];
+  const totalRequested = numericQuantities.reduce((sum, quantity) => sum + quantity, 0);
   if (!Number.isFinite(totalRequested) || totalRequested <= 0) {
     return { status: "invalid", reason: `invalid requested total for productRequestId=${productRequestId}` };
   }
 
   let allocated = 0;
   const allocations = candidates.map((item, index) => {
+    const sourceQuantity = numericQuantities[index];
+    if (sourceQuantity === undefined) return { item, quantity: 0 };
     const quantity = index === candidates.length - 1
       ? round6(orderedQuantity - allocated)
-      : round6(orderedQuantity * item.requested_quantity / totalRequested);
+      : round6(orderedQuantity * sourceQuantity / totalRequested);
     allocated = round6(allocated + quantity);
     return { item, quantity };
   });
