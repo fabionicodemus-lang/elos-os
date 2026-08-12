@@ -1,6 +1,7 @@
 import { env } from "./config/env.js";
 import { requestSupabase } from "./elos/supabase.js";
 
+// Diagnóstico temporário e estritamente read-only dos vínculos multi-serviço.
 type StagingRow = { koper_id: string; koper_parent_id: string | null; payload: unknown };
 type RecordValue = Record<string, unknown>;
 
