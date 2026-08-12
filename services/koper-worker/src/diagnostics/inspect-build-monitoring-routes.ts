@@ -35,14 +35,15 @@ function collectTechnical(value: unknown, prefix = "", out: Record<string, strin
 }
 
 const probes: Record<string, string>[] = [
-  { buildMonitoringId: "67" },
   { itemMonitoringId: "134" },
   { buildMonitoringId: "67", itemMonitoringId: "134" },
-  { buildMonitoringId: "67", itemMonitInputId: "449" },
-  { buildMonitoringId: "67", monitInputPchId: "101" },
-  { buildMonitoringId: "67", itemMonitoringId: "134", itemMonitInputId: "449" },
-  { buildMonitoringId: "67", limit: "500", offset: "0" },
-  { buildMonitoringId: "67", limitY: "500", offsetY: "0" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "id" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "itemMonitoringId" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "inputId" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "itemMonitInputId" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "monitInputPchId" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "createdAt" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "id", order: "asc" },
 ];
 
 export async function inspectBuildMonitoringRoutes(): Promise<{ ok: true; authenticated: boolean; flowSelected: boolean; probes: Probe[]; blockedWrites: number; message: string | null }> {
