@@ -7,6 +7,7 @@ type Candidate = {
   request_id: string;
   cost_center_service_id: string | null;
   productIds: string[];
+  notes?: string | null;
 };
 
 const serviceSources = new Map<string, string | null>([
@@ -21,6 +22,16 @@ test("groups every request item candidate instead of overwriting duplicate produ
   ];
   const grouped = groupRequestItemsByProductId(candidates, (row) => row.productIds);
   assert.deepEqual(grouped.get("630")?.map((row) => row.id), ["item-a", "item-b"]);
+});
+
+test("prefers v2 candidates when old and corrected rows coexist during reconciliation", () => {
+  const candidates: Candidate[] = [
+    { id: "old-legacy", request_id: "req", cost_center_service_id: "svc-a", productIds: ["630"], notes: "Koper productRequestIds=630" },
+    { id: "v2-a", request_id: "req", cost_center_service_id: "svc-a", productIds: ["630"], notes: "Koper productRequestIds=630 · resolution=v2" },
+    { id: "v2-b", request_id: "req", cost_center_service_id: "svc-b", productIds: ["630"], notes: "Koper productRequestIds=630 · resolution=v2" },
+  ];
+  const grouped = groupRequestItemsByProductId(candidates, (row) => row.productIds);
+  assert.deepEqual(grouped.get("630")?.map((row) => row.id), ["v2-a", "v2-b"]);
 });
 
 test("selects a single candidate without needing a cost center", () => {
