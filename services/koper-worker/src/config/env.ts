@@ -1,12 +1,17 @@
 import "dotenv/config";
 import { z } from "zod";
 
+const optionalNonEmptyString = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(
+  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  schema.optional(),
+);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(8080),
   WORKER_API_KEY: z.string().min(32),
-  BROWSERLESS_WS_URL: z.string().url().optional(),
-  BROWSERLESS_TOKEN: z.string().min(1).optional(),
+  BROWSERLESS_WS_URL: optionalNonEmptyString(z.string().url()),
+  BROWSERLESS_TOKEN: optionalNonEmptyString(z.string().min(1)),
   KOPER_LOGIN_URL: z.string().url(),
   KOPER_USERNAME: z.string().min(1),
   KOPER_PASSWORD: z.string().min(1),
