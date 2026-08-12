@@ -179,6 +179,16 @@ export async function dryRunStockRequestPromotion(): Promise<{
     intendedByKey.set(key, allocation);
   }
 
+  function officialService(payload: RecordValue, link: RecordValue): ServiceRow {
+    const resolutionKey = officialStockRequestServiceKey(payload.inputId, link.itemMonitInputId);
+    if (!resolutionKey) throw new Error("Official Koper allocation is missing inputId or itemMonitInputId");
+    const resolution = officialServiceMap.get(resolutionKey);
+    if (!resolution) throw new Error(`Official Koper service resolution missing for ${resolutionKey}`);
+    const service = serviceBySource.get(resolution.koperServiceId);
+    if (!service) throw new Error(`Koper service ${resolution.koperServiceId} is missing from Elos catalog`);
+    return service;
+  }
+
   for (const row of itemRows) {
     const payload = objectValue(row.payload);
     const sourceRequestId = row.koper_parent_id ?? identifier(payload.requestId);
@@ -208,7 +218,31 @@ export async function dryRunStockRequestPromotion(): Promise<{
 
     const allocated = links.reduce((sum, link) => sum + (numberValue(link.inputAmount) ?? 0), 0);
     const hasInvalidLinkQuantity = links.some((link) => (numberValue(link.inputAmount) ?? 0) <= 0);
-    if (hasInvalidLinkQuantity || !almostEqual(allocated, quantity)) {
+    const quantityMismatch = hasInvalidLinkQuantity || !almostEqual(allocated, quantity);
+    const allocationIds = [...new Set(links
+      .map((link) => identifier(link.itemMonitInputId))
+      .filter((value): value is string => Boolean(value))
+    )];
+
+    if (quantityMismatch && allocationIds.length === 1) {
+      const allocationId = allocationIds[0];
+      const representative = links.find((link) => identifier(link.itemMonitInputId) === allocationId);
+      if (!representative) throw new Error(`Missing representative Koper allocation for ${row.koper_id}`);
+      const service = officialService(payload, representative);
+      addAllocation({
+        requestId,
+        inputId: input.id,
+        inputCode: input.code,
+        serviceId: service.id,
+        serviceCode: service.code,
+        quantity,
+        legacyReason: null,
+        productRequestIds: [row.koper_id],
+      });
+      continue;
+    }
+
+    if (quantityMismatch) {
       addAllocation({
         requestId,
         inputId: input.id,
@@ -224,14 +258,10 @@ export async function dryRunStockRequestPromotion(): Promise<{
 
     for (const link of links) {
       const linkQuantity = numberValue(link.inputAmount);
-      const resolutionKey = officialStockRequestServiceKey(payload.inputId, link.itemMonitInputId);
-      if (linkQuantity === null || linkQuantity <= 0 || !resolutionKey) {
+      if (linkQuantity === null || linkQuantity <= 0) {
         throw new Error(`Invalid official allocation in Koper product request ${row.koper_id}`);
       }
-      const resolution = officialServiceMap.get(resolutionKey);
-      if (!resolution) throw new Error(`Official Koper service resolution missing for ${resolutionKey}`);
-      const service = serviceBySource.get(resolution.koperServiceId);
-      if (!service) throw new Error(`Koper service ${resolution.koperServiceId} is missing from Elos catalog`);
+      const service = officialService(payload, link);
       addAllocation({
         requestId,
         inputId: input.id,
