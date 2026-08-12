@@ -1,5 +1,6 @@
 import { previewKoperPurchaseOrderRequestReconciliationV2 } from "./diagnostics/reconcile-koper-purchase-order-request-links-v2.js";
 
+// One-shot audit dispatcher. All Koper financial targets remain read-only.
 async function main(): Promise<void> {
   const target = process.env.KOPER_AUDIT_TARGET?.trim() || "purchase-order-preview";
 
