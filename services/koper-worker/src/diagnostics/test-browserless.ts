@@ -16,9 +16,8 @@ if (process.env.KOPER_DRY_RUN_MARKER) {
       console.log("KOPER_DRY_RUN_RESULT", JSON.stringify(result));
     })
     .catch((error: unknown) => {
-      console.error("KOPER_DRY_RUN_FAILED", {
-        message: error instanceof Error ? error.message : "Erro desconhecido",
-      });
+      const message = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error(`KOPER_DRY_RUN_FAILED ${message}`);
     });
 }
 
