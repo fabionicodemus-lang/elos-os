@@ -56,9 +56,12 @@ export async function resolveActiveWorkspace() {
     .order("created_at", { ascending: true });
 
   const memberships = (membershipData ?? []) as unknown as Membership[];
-  const membership = requestedCompanyId
+  const requestedMembership = requestedCompanyId
     ? memberships.find((item) => item.company_id === requestedCompanyId) ?? null
-    : memberships[0] ?? null;
+    : null;
+  // Ao trocar de conta no mesmo navegador, o cookie pode apontar para uma empresa
+  // da sessão anterior. Nesse caso, usa a primeira empresa ativa do usuário atual.
+  const membership = requestedMembership ?? memberships[0] ?? null;
   const company = membership ? relatedOne(membership.companies) : null;
   const role = membership ? relatedOne(membership.roles) : null;
 
@@ -111,11 +114,13 @@ export async function resolveActiveWorkspace() {
     .order("name", { ascending: true });
 
   const projects = (projectData ?? []) as Project[];
+  const requestedProject = requestedProjectId
+    ? projects.find((item) => item.id === requestedProjectId) ?? null
+    : null;
+  // O projeto também pode ter ficado preso à conta/empresa anterior.
   const project = companyOverviewRequested
     ? null
-    : requestedProjectId
-      ? projects.find((item) => item.id === requestedProjectId) ?? null
-      : projects[0] ?? null;
+    : requestedProject ?? projects[0] ?? null;
 
   return {
     supabase,
