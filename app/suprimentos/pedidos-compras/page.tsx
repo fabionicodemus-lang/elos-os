@@ -43,7 +43,7 @@ export default async function PurchaseOrdersPage({searchParams}:{searchParams:Pr
   const project=projectResult.data as Project|null;
   const orders=ordersResult.data;
   const supplierMap=new Map(suppliersResult.data.map(s=>[s.id,s]));
-  const quoteMap=new Map(quotesResult.data.map(q=>[q.id,q]));
+  const quoteMap=new Map<string|null,Quotation>(quotesResult.data.map(q=>[q.id,q]));
   const itemMap=new Map<string,OrderItem[]>();itemsResult.data.forEach(i=>itemMap.set(i.order_id,[...(itemMap.get(i.order_id)??[]),i]));
   const docMap=new Map<string,Document[]>();docsResult.data.forEach(d=>docMap.set(d.order_id,[...(docMap.get(d.order_id)??[]),d]));
   const convertedAwards=new Set(itemsResult.data.flatMap(i=>i.award_id?[i.award_id]:[]));
