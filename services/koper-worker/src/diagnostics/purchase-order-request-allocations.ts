@@ -29,17 +29,22 @@ function sourceQuantityForCandidate(
   const idsMatch = notes.match(/Koper productRequestIds=([^·]+)/);
   const ids = idsMatch?.[1]?.split(",").map((value) => value.trim()).filter(Boolean) ?? [];
   if (!ids.length) return candidate.requested_quantity;
-  const index = ids.indexOf(productRequestId);
-  if (index < 0) return null;
+  const matchingIndexes = ids.flatMap((id, index) => id === productRequestId ? [index] : []);
+  if (!matchingIndexes.length) return null;
   if (ids.length === 1) return candidate.requested_quantity;
 
   const evidence = notes.split("resolution=v2 · ")[1]?.split(";") ?? [];
-  const sourceEvidence = evidence[index];
-  if (!sourceEvidence) return null;
-  const quantityMatch = sourceEvidence.match(/(?:inputAmount|productAmount)=(-?\d+(?:\.\d+)?)/);
-  if (!quantityMatch?.[1]) return null;
-  const quantity = Number(quantityMatch[1]);
-  return Number.isFinite(quantity) && quantity > 0 ? quantity : null;
+  let total = 0;
+  for (const index of matchingIndexes) {
+    const sourceEvidence = evidence[index];
+    if (!sourceEvidence) return null;
+    const quantityMatch = sourceEvidence.match(/(?:inputAmount|productAmount)=(-?\d+(?:\.\d+)?)/);
+    if (!quantityMatch?.[1]) return null;
+    const quantity = Number(quantityMatch[1]);
+    if (!Number.isFinite(quantity) || quantity <= 0) return null;
+    total += quantity;
+  }
+  return total > 0 ? total : null;
 }
 
 export function resolvePurchaseRequestAllocations<T extends PurchaseRequestAllocationCandidate>(
