@@ -195,5 +195,5 @@ export async function resolveFlowStockRequestServices(
     }
 
     return official;
-  }, { sessionTimeoutMs: 60_000 });
+  }, { sessionTimeoutMs: 300_000 });
 }
