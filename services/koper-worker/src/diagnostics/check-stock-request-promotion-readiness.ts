@@ -4,6 +4,7 @@ import {
   officialStockRequestServiceKey,
   resolveFlowStockRequestServices,
 } from "./resolve-flow-stock-request-services.js";
+import { dryRunStockRequestPromotion } from "./dry-run-stock-request-promotion.js";
 
 type StagingRow = { koper_id: string; koper_parent_id: string | null; payload: unknown };
 type CatalogRow = { id: string; source_id: string | null };
@@ -308,44 +309,6 @@ export async function checkStockRequestAllocationMismatches(): Promise<{
   };
 }
 
-export async function checkStockRequestFullPromotionSummary(): Promise<{
-  ok: true;
-  requests: number;
-  items: number;
-  requestStatuses: Record<string, number>;
-  resolvedInputs: number;
-  missingInputs: number;
-  uniqueMissingProducts: number;
-  invalidQuantities: number;
-  itemsWithServiceLinks: number;
-  itemsWithoutServiceLinks: number;
-  serviceLinks: number;
-  unresolvedServiceLinks: number;
-  serviceQuantityMismatches: number;
-  flowProjects: number;
-  flowBudgets: number;
-  activeCompanyMembers: number;
-}> {
-  const readiness = await checkStockRequestPromotionReadiness();
-  const uniqueMissingProducts = new Set(readiness.missingInputs.flatMap((item) =>
-    item.productId ? [item.productId] : item.inputId ? [item.inputId] : []
-  )).size;
-  return {
-    ok: true,
-    requests: readiness.requests,
-    items: readiness.items,
-    requestStatuses: readiness.requestStatuses,
-    resolvedInputs: readiness.resolvedInputs,
-    missingInputs: readiness.missingInputs.length,
-    uniqueMissingProducts,
-    invalidQuantities: readiness.invalidQuantities.length,
-    itemsWithServiceLinks: readiness.itemsWithServiceLinks,
-    itemsWithoutServiceLinks: readiness.itemsWithoutServiceLinks,
-    serviceLinks: readiness.serviceLinks,
-    unresolvedServiceLinks: readiness.unresolvedServiceLinks,
-    serviceQuantityMismatches: readiness.serviceQuantityMismatches.length,
-    flowProjects: readiness.flowProjects,
-    flowBudgets: readiness.flowBudgets,
-    activeCompanyMembers: readiness.activeCompanyMembers,
-  };
+export async function checkStockRequestFullPromotionSummary() {
+  return dryRunStockRequestPromotion();
 }
