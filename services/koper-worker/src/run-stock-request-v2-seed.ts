@@ -1,3 +1,4 @@
+// Deploy marker: executar primeiro em preview com a flag de escrita desabilitada.
 import {
   previewKoperStockRequestItemsV2,
   seedKoperStockRequestItemsV2,
