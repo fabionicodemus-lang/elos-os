@@ -1,3 +1,4 @@
+// Runner operacional protegido: sempre valida o preview antes de qualquer escrita.
 import {
   previewKoperPurchaseOrderRequestReconciliationV2,
   reconcileKoperPurchaseOrderRequestLinksV2,
