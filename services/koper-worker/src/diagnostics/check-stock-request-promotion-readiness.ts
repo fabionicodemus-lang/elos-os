@@ -24,7 +24,9 @@ function text(value: unknown): string | null {
 }
 
 function numberValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return null;
 }
 
 async function readStaging(entity: "stock_request" | "stock_request_item"): Promise<StagingRow[]> {
@@ -290,22 +292,99 @@ export async function checkStockRequestPromotionReadiness(): Promise<{
   };
 }
 
-export async function checkStockRequestAllocationMismatches(): Promise<{
-  ok: true;
-  count: number;
-  mismatches: Array<{
+export async function checkStockRequestAllocationMismatches() {
+  const [requests, items] = await Promise.all([
+    readStaging("stock_request"),
+    readStaging("stock_request_item"),
+  ]);
+  const requestById = new Map(requests.map((row) => [row.koper_id, objectValue(row.payload)]));
+
+  const mismatches: Array<{
     productRequestId: string;
     requestId: string | null;
-    productAmount: number | null;
+    requestStatus: string | null;
+    inputId: string | null;
+    productName: string | null;
+    productAmount: number;
     allocatedAmount: number;
-    links: number;
-  }>;
-}> {
-  const readiness = await checkStockRequestPromotionReadiness();
+    delta: number;
+    direction: "under" | "over";
+    linkCount: number;
+    invalidLinkQuantity: boolean;
+    links: Array<{
+      itemMonitInputId: string | null;
+      monitInputPchId: string | null;
+      inputAmount: number | null;
+    }>;
+  }> = [];
+
+  for (const row of items) {
+    const payload = objectValue(row.payload);
+    const rawLinks = Array.isArray(payload.services) ? payload.services.map(objectValue) : [];
+    if (rawLinks.length === 0) continue;
+    const productAmount = numberValue(payload.productAmount);
+    if (productAmount === null || productAmount <= 0) continue;
+    const linkAmounts = rawLinks.map((link) => numberValue(link.inputAmount));
+    const allocatedAmount = linkAmounts.reduce<number>((sum, amount) => sum + (amount ?? 0), 0);
+    const invalidLinkQuantity = linkAmounts.some((amount) => amount === null || amount <= 0);
+    const delta = allocatedAmount - productAmount;
+    if (!invalidLinkQuantity && Math.abs(delta) <= 0.00001) continue;
+
+    const requestPayload = row.koper_parent_id ? requestById.get(row.koper_parent_id) : undefined;
+    mismatches.push({
+      productRequestId: row.koper_id,
+      requestId: row.koper_parent_id,
+      requestStatus: requestPayload ? text(requestPayload.status) : null,
+      inputId: identifier(payload.inputId),
+      productName: text(payload.productName) ?? text(payload.productFullName),
+      productAmount,
+      allocatedAmount: Number(allocatedAmount.toFixed(6)),
+      delta: Number(delta.toFixed(6)),
+      direction: delta < 0 ? "under" : "over",
+      linkCount: rawLinks.length,
+      invalidLinkQuantity,
+      links: rawLinks.map((link) => ({
+        itemMonitInputId: identifier(link.itemMonitInputId),
+        monitInputPchId: identifier(link.monitInputPchId),
+        inputAmount: numberValue(link.inputAmount),
+      })),
+    });
+  }
+
+  const under = mismatches.filter((row) => row.direction === "under");
+  const over = mismatches.filter((row) => row.direction === "over");
+  const invalid = mismatches.filter((row) => row.invalidLinkQuantity);
+  const byStatus = mismatches.reduce<Record<string, number>>((counts, row) => {
+    const key = row.requestStatus ?? "(ausente)";
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
+  const byLinkCount = mismatches.reduce<Record<string, number>>((counts, row) => {
+    const key = String(row.linkCount);
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
+  const sourceQuantity = mismatches.reduce((sum, row) => sum + row.productAmount, 0);
+  const allocatedQuantity = mismatches.reduce((sum, row) => sum + row.allocatedAmount, 0);
+
   return {
-    ok: true,
-    count: readiness.serviceQuantityMismatches.length,
-    mismatches: readiness.serviceQuantityMismatches,
+    ok: true as const,
+    mode: "read-only" as const,
+    count: mismatches.length,
+    underAllocated: under.length,
+    overAllocated: over.length,
+    invalidLinkQuantity: invalid.length,
+    byStatus,
+    byLinkCount,
+    sourceQuantity: Number(sourceQuantity.toFixed(6)),
+    allocatedQuantity: Number(allocatedQuantity.toFixed(6)),
+    netDelta: Number((allocatedQuantity - sourceQuantity).toFixed(6)),
+    absoluteDelta: Number(mismatches.reduce((sum, row) => sum + Math.abs(row.delta), 0).toFixed(6)),
+    largestAbsoluteDelta: mismatches
+      .slice()
+      .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+      .slice(0, 25),
+    mismatches,
   };
 }
 
