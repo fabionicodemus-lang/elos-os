@@ -1,6 +1,6 @@
 import { previewStockRequestPurchaseOrderReconciliation } from "./diagnostics/preview-stock-request-purchase-order-reconciliation.js";
 
-// Runner temporário, exclusivamente read-only, para validar a reconciliação histórica.
+// Runner temporário, exclusivamente read-only, para validar a reconciliação histórica via Chromium local.
 async function main(): Promise<void> {
   try {
     const result = await previewStockRequestPurchaseOrderReconciliation();
