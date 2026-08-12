@@ -5,7 +5,6 @@ import { selectFlow } from "./collect-flow-stock-requests.js";
 
 type Rec = Record<string, unknown>;
 type Probe = {
-  endpoint: string;
   params: Record<string, string>;
   status: number;
   fieldPaths: string[];
@@ -18,9 +17,9 @@ function rec(value: unknown): Rec | null {
 }
 
 function paths(value: unknown, prefix = "", out: string[] = [], depth = 0): string[] {
-  if (depth > 6 || out.length >= 600) return out;
+  if (depth > 6 || out.length >= 700) return out;
   if (Array.isArray(value)) {
-    for (let i = 0; i < Math.min(value.length, 3); i += 1) paths(value[i], `${prefix}[${i}]`, out, depth + 1);
+    for (let i = 0; i < Math.min(value.length, 4); i += 1) paths(value[i], `${prefix}[${i}]`, out, depth + 1);
     return out;
   }
   const row = rec(value);
@@ -34,9 +33,9 @@ function paths(value: unknown, prefix = "", out: string[] = [], depth = 0): stri
 }
 
 function technical(value: unknown, prefix = "", out: Record<string, string | number | boolean | null> = {}, depth = 0): Record<string, string | number | boolean | null> {
-  if (depth > 7 || Object.keys(out).length >= 500) return out;
+  if (depth > 7 || Object.keys(out).length >= 600) return out;
   if (Array.isArray(value)) {
-    for (let i = 0; i < Math.min(value.length, 5); i += 1) technical(value[i], `${prefix}[${i}]`, out, depth + 1);
+    for (let i = 0; i < Math.min(value.length, 8); i += 1) technical(value[i], `${prefix}[${i}]`, out, depth + 1);
     return out;
   }
   const row = rec(value);
@@ -45,7 +44,7 @@ function technical(value: unknown, prefix = "", out: Record<string, string | num
     const lower = key.toLowerCase();
     const path = prefix ? `${prefix}.${key}` : key;
     if (child === null || typeof child === "number" || typeof child === "boolean" || typeof child === "string") {
-      if (/id$|service|planning|budget|monitor|item|stage|reference|amount|type|status/.test(lower)
+      if (/id$|service|planning|budget|monitor|item|stage|reference|amount|type|status|father|version/.test(lower)
         && !/name|description|user|customer|address|email|phone|document|token|cookie/.test(lower)) {
         out[path] = typeof child === "string" ? child.slice(0, 100) : child;
       }
@@ -54,16 +53,13 @@ function technical(value: unknown, prefix = "", out: Record<string, string | num
   return out;
 }
 
-const probes: Array<{ endpoint: string; params: Record<string, string> }> = [
-  { endpoint: "/engineering/v1/item_planning", params: { itemPlanningId: "266" } },
-  { endpoint: "/engineering/v1/item_planning", params: { buildPlanningId: "133" } },
-  { endpoint: "/engineering/v1/item_planning", params: { buildPlanningId: "133", limit: "500", offset: "0" } },
-  { endpoint: "/engineering/v1/item_planning", params: { buildPlanningId: "133", limitY: "500", offsetY: "0", limitX: "1", offsetX: "0" } },
-  { endpoint: "/engineering/v1/building_planning", params: { buildPlanningId: "133" } },
-  { endpoint: "/engineering/v1/building_planning", params: { buildingId: "133" } },
-  { endpoint: "/engineering/v1/build_planning", params: { buildPlanningId: "133" } },
-  { endpoint: "/engineering/v1/planning_item", params: { itemPlanningId: "266" } },
-  { endpoint: "/engineering/v1/planning_item", params: { buildPlanningId: "133" } },
+const probes: Record<string, string>[] = [
+  { itemPlanningId: "266", planVersionId: "133" },
+  { buildPlanningId: "133", planVersionId: "133" },
+  { planVersionId: "133", limit: "500", offset: "0" },
+  { buildPlanningId: "133", planVersionId: "133", limit: "500", offset: "0" },
+  { buildPlanningId: "133", planVersionId: "133", limitY: "500", offsetY: "0", limitX: "1", offsetX: "0" },
+  { planVersionId: "133", itemPlanningId: "266", limit: "500", offset: "0" },
 ];
 
 export async function inspectBuildMonitoringRoutes(): Promise<{
@@ -111,19 +107,19 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
     const requestHeaders: Record<string, string> = headers;
 
     const results: Probe[] = [];
-    for (const probe of probes) {
+    for (const params of probes) {
       const response = await page.request.get(
-        `https://api.koper.com.br${probe.endpoint}?${new URLSearchParams(probe.params).toString()}`,
+        `https://api.koper.com.br/engineering/v1/item_planning?${new URLSearchParams(params).toString()}`,
         { headers: requestHeaders, timeout: 8_000 },
       ).catch(() => null);
       if (!response) {
-        results.push({ ...probe, status: 0, fieldPaths: [], technical: {}, errorMessage: null });
+        results.push({ params, status: 0, fieldPaths: [], technical: {}, errorMessage: null });
         continue;
       }
       const body: unknown = await response.json().catch(() => null);
       const object = rec(body);
       results.push({
-        ...probe,
+        params,
         status: response.status(),
         fieldPaths: body === null ? [] : paths(body),
         technical: body === null ? {} : technical(body),
