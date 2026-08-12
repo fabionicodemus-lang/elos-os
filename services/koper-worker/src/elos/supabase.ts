@@ -14,7 +14,7 @@ function getSupabaseConfig(): { baseUrl: string; serviceRoleKey: string } {
 }
 
 export type SupabaseRestOptions = {
-  method?: "GET" | "POST" | "PATCH";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   query?: URLSearchParams;
   body?: unknown;
   prefer?: string;
