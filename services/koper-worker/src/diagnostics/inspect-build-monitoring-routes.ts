@@ -162,7 +162,8 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
     });
     const itemResponse = await page.request.get(`https://api.koper.com.br/engineering/v1/item_monitoring?${itemQuery.toString()}`, { headers: requestHeaders, timeout: 8_000 });
     const itemBody: unknown = await itemResponse.json().catch(() => null);
-    const items = Array.isArray(obj(itemBody).items) ? obj(itemBody).items as unknown[] : [];
+    const itemRecord = obj(itemBody);
+    const items = Array.isArray(itemRecord.items) ? itemRecord.items : [];
     const serviceItems: ServiceItem[] = [];
     const seen = new Set<number>();
     for (const raw of items) {
@@ -211,7 +212,8 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
       if (inputId === null) return { state: "missing" };
       const candidates = [...(inputToServices.get(inputId) ?? new Set<number>())];
       const mapped = [...new Set(candidates.map((id) => elosServiceByKoperId.get(String(id))).filter((id): id is string => Boolean(id)))];
-      if (candidates.length === 1 && mapped.length === 1) return { state: "safe", elosServiceId: mapped[0] };
+      const mappedServiceId = mapped.length === 1 ? mapped[0] : undefined;
+      if (candidates.length === 1 && mappedServiceId) return { state: "safe", elosServiceId: mappedServiceId };
       if (candidates.length > 1) return { state: "ambiguous" };
       return { state: "missing" };
     }
