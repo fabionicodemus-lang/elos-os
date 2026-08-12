@@ -1,10 +1,13 @@
 import { env } from "../config/env.js";
 import { requestSupabase } from "../elos/supabase.js";
+import {
+  officialStockRequestServiceKey,
+  resolveFlowStockRequestServices,
+} from "./resolve-flow-stock-request-services.js";
 
 type StagingRow = { koper_id: string; koper_parent_id: string | null; payload: unknown };
 type InputRow = { id: string; source_id: string | null; code: string; description: string; unit: string; category: string };
 type ServiceRow = { id: string; source_id: string | null; code: string; description: string };
-type BudgetItemRow = { koper_id: string; payload: unknown };
 
 function objectValue(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -34,7 +37,7 @@ function chunks<T>(values: T[], size: number): T[][] {
   return result;
 }
 
-async function readStaging(entity: "stock_request" | "stock_request_item" | "budget_item"): Promise<StagingRow[]> {
+async function readStaging(entity: "stock_request" | "stock_request_item"): Promise<StagingRow[]> {
   const rows: StagingRow[] = [];
   for (let offset = 0; ; offset += 1_000) {
     const page = await requestSupabase<StagingRow[]>("koper_staging_records", {
@@ -108,10 +111,9 @@ export async function promoteAllStockRequests(): Promise<{
     || process.env.KOPER_STOCK_REQUEST_FULL_PROMOTION_ENABLED !== "true"
   ) throw new Error("Full Koper stock request promotion is not explicitly enabled");
 
-  const [requestRows, itemRows, budgetItemRows, inputs, services, projects, budgets, memberships] = await Promise.all([
+  const [requestRows, itemRows, inputs, services, projects, budgets, memberships] = await Promise.all([
     readStaging("stock_request"),
     readStaging("stock_request_item"),
-    readStaging("budget_item"),
     readCatalog<InputRow>("engineering_inputs", "id,source_id,code,description,unit,category"),
     readCatalog<ServiceRow>("engineering_services", "id,source_id,code,description"),
     requestSupabase<Array<{ id: string }>>("projects", {
@@ -165,6 +167,11 @@ export async function promoteAllStockRequests(): Promise<{
     }
   }
 
+  // Resolve os vínculos usando a mesma rota que o próprio frontend do Koper usa
+  // ao selecionar serviços para um insumo da solicitação. A chave oficial é
+  // (inputId, itemMonitInputId) -> itemMonitoringId -> serviceId.
+  const officialServiceMap = await resolveFlowStockRequestServices(itemRows);
+
   const fallbackRows = await requestSupabase<ServiceRow[]>("engineering_services", {
     method: "POST",
     body: [{
@@ -174,7 +181,7 @@ export async function promoteAllStockRequests(): Promise<{
       unit: "un",
       group_code: "KOPER-INSTALACOES-LEGACY",
       default_method: "unit",
-      notes: "Centro técnico para solicitações históricas cujo acompanhamento não existe mais no orçamento atual do Koper.",
+      notes: "Centro técnico para solicitações históricas sem vínculo de acompanhamento no Koper ou com divergência de quantidade.",
       status: "active",
       source_system: "koper",
       source_id: "stock-request-legacy-cost-center",
@@ -190,23 +197,20 @@ export async function promoteAllStockRequests(): Promise<{
   if (!fallbackService) throw new Error("Legacy Koper cost center was not created");
 
   const serviceBySource = new Map(services.map((row) => [row.source_id, row]));
-  const budgetItemById = new Map(budgetItemRows.map((row) => [row.koper_id, row]));
-  const budgetItemByInputId = new Map<string, StagingRow>();
-  for (const row of budgetItemRows) {
-    const inputId = identifier(objectValue(row.payload).inputId);
-    if (inputId) budgetItemByInputId.set(inputId, row);
-  }
 
-  function linkedService(link: Record<string, unknown>): ServiceRow | null {
-    const itemMonitInputId = identifier(link.itemMonitInputId);
-    const monitInputPchId = identifier(link.monitInputPchId);
-    const budgetItem =
-      (itemMonitInputId ? budgetItemById.get(itemMonitInputId) : undefined)
-      ?? (monitInputPchId ? budgetItemById.get(monitInputPchId) : undefined)
-      ?? (itemMonitInputId ? budgetItemByInputId.get(itemMonitInputId) : undefined)
-      ?? (monitInputPchId ? budgetItemByInputId.get(monitInputPchId) : undefined);
-    const sourceId = budgetItem ? identifier(objectValue(budgetItem.payload).serviceId) : null;
-    return sourceId ? serviceBySource.get(sourceId) ?? null : null;
+  function linkedService(payload: Record<string, unknown>, link: Record<string, unknown>): ServiceRow {
+    const key = officialStockRequestServiceKey(payload.inputId, link.itemMonitInputId);
+    if (!key) throw new Error("Koper stock request service link is missing inputId or itemMonitInputId");
+    const resolution = officialServiceMap.get(key);
+    if (!resolution) throw new Error(`Official Koper service mapping missing for ${key}`);
+    const service = serviceBySource.get(resolution.koperServiceId);
+    if (!service) {
+      throw new Error(
+        `Koper service ${resolution.koperServiceId} from itemMonitoringId=${resolution.itemMonitoringId}`
+        + ` is not present in the Elos service catalog`,
+      );
+    }
+    return service;
   }
 
   const now = new Date().toISOString();
@@ -316,11 +320,21 @@ export async function promoteAllStockRequests(): Promise<{
           if (linkQuantity === null || linkQuantity <= 0) {
             throw new Error(`Invalid service allocation for Koper product request ${row.koper_id}`);
           }
-          const service = linkedService(link) ?? fallbackService;
+          const resolutionKey = officialStockRequestServiceKey(payload.inputId, link.itemMonitInputId);
+          const resolution = resolutionKey ? officialServiceMap.get(resolutionKey) : null;
+          const service = linkedService(payload, link);
           lineAllocations.push({
             service,
             quantity: linkQuantity,
-            link: `itemMonitInputId=${identifier(link.itemMonitInputId) ?? "n/a"},monitInputPchId=${identifier(link.monitInputPchId) ?? "n/a"},inputAmount=${linkQuantity}`,
+            link: [
+              `inputId=${identifier(payload.inputId) ?? "n/a"}`,
+              `itemMonitInputId=${identifier(link.itemMonitInputId) ?? "n/a"}`,
+              `itemMonitoringId=${resolution?.itemMonitoringId ?? "n/a"}`,
+              `serviceId=${resolution?.koperServiceId ?? "n/a"}`,
+              `referencia=${resolution?.itemReference ?? "n/a"}`,
+              `monitInputPchId=${identifier(link.monitInputPchId) ?? "n/a"}`,
+              `inputAmount=${linkQuantity}`,
+            ].join(","),
           });
         }
       }
