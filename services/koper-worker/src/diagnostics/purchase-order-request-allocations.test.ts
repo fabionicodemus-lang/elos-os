@@ -7,6 +7,7 @@ type Candidate = {
   request_id: string;
   cost_center_service_id: string | null;
   requested_quantity: number;
+  notes?: string | null;
 };
 
 const serviceSources = new Map<string, string | null>([
@@ -48,6 +49,30 @@ test("allocates an aggregate purchase line proportionally across service request
     assert.equal(result.requestId, "req");
     assert.deepEqual(result.allocations.map((row) => [row.item.id, row.quantity]), [["a", 2000], ["b", 3000]]);
     assert.equal(result.allocations.reduce((sum, row) => sum + row.quantity, 0), 5000);
+  }
+});
+
+test("uses product-specific evidence when a v2 request row aggregates multiple productRequestIds", () => {
+  const candidates: Candidate[] = [
+    {
+      id: "a",
+      request_id: "req",
+      cost_center_service_id: "svc-a",
+      requested_quantity: 120,
+      notes: "Koper productRequestIds=100,200 · resolution=v2 · reason=official,itemMonitInputId=1,inputAmount=20;reason=official,itemMonitInputId=2,inputAmount=100",
+    },
+    {
+      id: "b",
+      request_id: "req",
+      cost_center_service_id: "svc-b",
+      requested_quantity: 80,
+      notes: "Koper productRequestIds=100,200 · resolution=v2 · reason=official,itemMonitInputId=3,inputAmount=30;reason=official,itemMonitInputId=4,inputAmount=50",
+    },
+  ];
+  const result = resolvePurchaseRequestAllocations("100", 50, null, new Map([["100", candidates]]), serviceSources);
+  assert.equal(result.status, "multi");
+  if (result.status === "multi") {
+    assert.deepEqual(result.allocations.map((row) => [row.item.id, row.quantity]), [["a", 20], ["b", 30]]);
   }
 });
 
