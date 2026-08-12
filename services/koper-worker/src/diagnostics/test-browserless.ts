@@ -1,5 +1,6 @@
 import { env } from "../config/env.js";
 import { withBrowserless } from "../browser/browserless.js";
+import { dryRunStockRequestPromotion } from "./dry-run-stock-request-promotion.js";
 
 export type BrowserlessDiagnostic = {
   ok: true;
@@ -8,6 +9,18 @@ export type BrowserlessDiagnostic = {
   finalUrl: string;
   checkedAt: string;
 };
+
+if (process.env.KOPER_DRY_RUN_MARKER) {
+  void dryRunStockRequestPromotion()
+    .then((result) => {
+      console.log("KOPER_DRY_RUN_RESULT", JSON.stringify(result));
+    })
+    .catch((error: unknown) => {
+      console.error("KOPER_DRY_RUN_FAILED", {
+        message: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    });
+}
 
 export async function testBrowserlessConnection(): Promise<BrowserlessDiagnostic> {
   return withBrowserless(async ({ page }) => {
