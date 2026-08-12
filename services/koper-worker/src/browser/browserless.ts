@@ -16,7 +16,15 @@ export type BrowserlessConnectOptions = {
   sessionTimeoutMs?: number;
 };
 
+function hasRemoteBrowserless(): boolean {
+  return Boolean(env.BROWSERLESS_WS_URL && env.BROWSERLESS_TOKEN);
+}
+
 function buildBrowserlessEndpoint(options?: BrowserlessConnectOptions): string {
+  if (!env.BROWSERLESS_WS_URL || !env.BROWSERLESS_TOKEN) {
+    throw new Error("Browserless remoto não configurado");
+  }
+
   const endpoint = new URL(env.BROWSERLESS_WS_URL);
   endpoint.searchParams.set("token", env.BROWSERLESS_TOKEN);
 
@@ -27,9 +35,24 @@ function buildBrowserlessEndpoint(options?: BrowserlessConnectOptions): string {
   return endpoint.toString();
 }
 
+async function connectLocalChromium(): Promise<BrowserlessSession> {
+  const browser = await chromium.launch({
+    executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium",
+    headless: true,
+    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  });
+  const context = await browser.newContext();
+  context.setDefaultTimeout(20_000);
+  context.setDefaultNavigationTimeout(45_000);
+  const page = await context.newPage();
+  return { browser, context, page };
+}
+
 export async function connectBrowserless(
   options?: BrowserlessConnectOptions,
 ): Promise<BrowserlessSession> {
+  if (!hasRemoteBrowserless()) return connectLocalChromium();
+
   const browser = await chromium.connectOverCDP(buildBrowserlessEndpoint(options), {
     timeout: 30_000,
   });
