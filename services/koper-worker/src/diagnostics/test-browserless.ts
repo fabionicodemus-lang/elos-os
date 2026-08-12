@@ -6,6 +6,7 @@ import {
   officialStockRequestServiceKey,
   resolveFlowStockRequestServices,
 } from "./resolve-flow-stock-request-services.js";
+import { previewStockRequestPurchaseOrderReconciliation } from "./preview-stock-request-purchase-order-reconciliation.js";
 
 export type BrowserlessDiagnostic = {
   ok: true;
@@ -115,6 +116,17 @@ if (temporaryDiagnostic === "mismatch-services") {
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : "Erro desconhecido";
       console.error(`KOPER_MISMATCH_SERVICES_FAILED ${message}`);
+    });
+}
+
+if (temporaryDiagnostic === "po-reconciliation-preview") {
+  void previewStockRequestPurchaseOrderReconciliation()
+    .then((result) => {
+      console.log("KOPER_PO_RECONCILIATION_RESULT", JSON.stringify(result));
+    })
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error(`KOPER_PO_RECONCILIATION_FAILED ${message}`);
     });
 }
 
