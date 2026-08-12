@@ -181,7 +181,7 @@ export async function promoteAllStockRequests(): Promise<{
       unit: "un",
       group_code: "KOPER-INSTALACOES-LEGACY",
       default_method: "unit",
-      notes: "Centro técnico para solicitações históricas sem vínculo de acompanhamento no Koper ou com divergência de quantidade.",
+      notes: "Centro técnico para solicitações históricas sem vínculo de acompanhamento no Koper ou com divergência ambígua entre serviços.",
       status: "active",
       source_system: "koper",
       source_id: "stock-request-legacy-cost-center",
@@ -303,7 +303,39 @@ export async function promoteAllStockRequests(): Promise<{
     } else {
       const allocated = links.reduce((sum, link) => sum + (numberValue(link.inputAmount) ?? 0), 0);
       const hasInvalidLinkQuantity = links.some((link) => (numberValue(link.inputAmount) ?? 0) <= 0);
-      if (hasInvalidLinkQuantity || Math.abs(allocated - quantity) > 0.00001) {
+      const quantityMismatch = hasInvalidLinkQuantity || Math.abs(allocated - quantity) > 0.00001;
+      const allocationIds = [...new Set(links
+        .map((link) => identifier(link.itemMonitInputId))
+        .filter((value): value is string => Boolean(value))
+      )];
+
+      if (quantityMismatch && allocationIds.length === 1) {
+        const allocationId = allocationIds[0];
+        const representative = links.find((link) => identifier(link.itemMonitInputId) === allocationId);
+        if (!representative) throw new Error(`Missing representative Koper allocation for product request ${row.koper_id}`);
+        const resolutionKey = officialStockRequestServiceKey(payload.inputId, representative.itemMonitInputId);
+        const resolution = resolutionKey ? officialServiceMap.get(resolutionKey) : null;
+        const service = linkedService(payload, representative);
+        const historicalLinks = links.map((link) =>
+          `itemMonitInputId=${identifier(link.itemMonitInputId) ?? "n/a"},`
+          + `monitInputPchId=${identifier(link.monitInputPchId) ?? "n/a"},`
+          + `inputAmount=${numberValue(link.inputAmount) ?? "n/a"}`
+        ).join("|");
+        lineAllocations.push({
+          service,
+          quantity,
+          link: [
+            "divergência histórica com identidade única preservada",
+            `productAmount=${quantity}`,
+            `allocatedAmount=${allocated}`,
+            `itemMonitInputId=${allocationId}`,
+            `itemMonitoringId=${resolution?.itemMonitoringId ?? "n/a"}`,
+            `serviceId=${resolution?.koperServiceId ?? "n/a"}`,
+            `referencia=${resolution?.itemReference ?? "n/a"}`,
+            `links=[${historicalLinks}]`,
+          ].join(","),
+        });
+      } else if (quantityMismatch) {
         const legacyLinks = links.map((link) =>
           `itemMonitInputId=${identifier(link.itemMonitInputId) ?? "n/a"},`
           + `monitInputPchId=${identifier(link.monitInputPchId) ?? "n/a"},`
@@ -312,7 +344,7 @@ export async function promoteAllStockRequests(): Promise<{
         lineAllocations.push({
           service: fallbackService,
           quantity,
-          link: `divergência histórica: productAmount=${quantity},allocatedAmount=${allocated},invalidLinkQuantity=${hasInvalidLinkQuantity},links=[${legacyLinks}]`,
+          link: `divergência histórica ambígua: productAmount=${quantity},allocatedAmount=${allocated},invalidLinkQuantity=${hasInvalidLinkQuantity},allocationIds=${allocationIds.join(",")},links=[${legacyLinks}]`,
         });
       } else {
         for (const link of links) {
