@@ -6,6 +6,12 @@ import { selectFlow } from "./collect-flow-stock-requests.js";
 type StagingLike = { koper_id: string; payload: unknown };
 type UnknownRecord = Record<string, unknown>;
 
+type RequiredPair = {
+  inputId: string;
+  itemMonitInputId: string;
+  productRequestId: string;
+};
+
 export type OfficialStockRequestServiceResolution = {
   inputId: string;
   itemMonitInputId: string;
@@ -35,36 +41,22 @@ function pairKey(inputId: string, itemMonitInputId: string): string {
   return `${inputId}:${itemMonitInputId}`;
 }
 
+function chunks<T>(values: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < values.length; index += size) result.push(values.slice(index, index + size));
+  return result;
+}
+
 export function officialStockRequestServiceKey(inputId: unknown, itemMonitInputId: unknown): string | null {
   const input = identifier(inputId);
   const allocation = identifier(itemMonitInputId);
   return input && allocation ? pairKey(input, allocation) : null;
 }
 
-export async function resolveFlowStockRequestServices(
-  itemRows: StagingLike[],
+async function resolveInputShard(
+  shardInputs: string[],
+  requiredPairs: Map<string, RequiredPair>,
 ): Promise<OfficialStockRequestServiceMap> {
-  const requiredPairs = new Map<string, { inputId: string; itemMonitInputId: string; productRequestId: string }>();
-  const inputIds = new Set<string>();
-
-  for (const itemRow of itemRows) {
-    const payload = objectValue(itemRow.payload);
-    const inputId = identifier(payload.inputId);
-    const links = Array.isArray(payload.services) ? payload.services.map(objectValue) : [];
-    if (links.length === 0) continue;
-    if (!inputId) throw new Error(`Koper product request ${itemRow.koper_id} has service links without inputId`);
-    inputIds.add(inputId);
-    for (const link of links) {
-      const itemMonitInputId = identifier(link.itemMonitInputId);
-      if (!itemMonitInputId) {
-        throw new Error(`Koper product request ${itemRow.koper_id} has a service link without itemMonitInputId`);
-      }
-      requiredPairs.set(pairKey(inputId, itemMonitInputId), { inputId, itemMonitInputId, productRequestId: itemRow.koper_id });
-    }
-  }
-
-  if (requiredPairs.size === 0) return new Map();
-
   return withBrowserless(async ({ page }) => {
     const login = await performKoperLogin(page);
     if (!login.authenticated) throw new Error(login.message ?? "Koper login failed while resolving stock request services");
@@ -159,10 +151,9 @@ export async function resolveFlowStockRequestServices(
     }
 
     const official = new Map<string, OfficialStockRequestServiceResolution>();
-    const inputs = [...inputIds];
     const concurrency = 10;
-    for (let start = 0; start < inputs.length; start += concurrency) {
-      const batch = inputs.slice(start, start + concurrency);
+    for (let start = 0; start < shardInputs.length; start += concurrency) {
+      const batch = shardInputs.slice(start, start + concurrency);
       const responses = await Promise.all(batch.map(async (inputId) => ({
         inputId,
         rows: await fetchInputServices(inputId),
@@ -190,20 +181,54 @@ export async function resolveFlowStockRequestServices(
       await page.waitForTimeout(80);
     }
 
-    const missing = [...requiredPairs.entries()].filter(([key]) => !official.has(key));
-    if (missing.length > 0) {
-      const examples = missing.slice(0, 10).map(([, value]) =>
-        `productRequestId=${value.productRequestId},inputId=${value.inputId},itemMonitInputId=${value.itemMonitInputId}`
-      ).join(";");
-      throw new Error(`Koper official stock request service mapping incomplete: ${missing.length}/${requiredPairs.size} missing. ${examples}`);
-    }
-
-    for (const resolution of official.values()) {
-      if (positiveInteger(resolution.koperServiceId) === null) {
-        throw new Error(`Invalid Koper serviceId ${resolution.koperServiceId} for inputId=${resolution.inputId}`);
-      }
-    }
-
     return official;
-  }, { sessionTimeoutMs: 300_000 });
+  }, { sessionTimeoutMs: 60_000 });
+}
+
+export async function resolveFlowStockRequestServices(
+  itemRows: StagingLike[],
+): Promise<OfficialStockRequestServiceMap> {
+  const requiredPairs = new Map<string, RequiredPair>();
+  const inputIds = new Set<string>();
+
+  for (const itemRow of itemRows) {
+    const payload = objectValue(itemRow.payload);
+    const inputId = identifier(payload.inputId);
+    const links = Array.isArray(payload.services) ? payload.services.map(objectValue) : [];
+    if (links.length === 0) continue;
+    if (!inputId) throw new Error(`Koper product request ${itemRow.koper_id} has service links without inputId`);
+    inputIds.add(inputId);
+    for (const link of links) {
+      const itemMonitInputId = identifier(link.itemMonitInputId);
+      if (!itemMonitInputId) {
+        throw new Error(`Koper product request ${itemRow.koper_id} has a service link without itemMonitInputId`);
+      }
+      requiredPairs.set(pairKey(inputId, itemMonitInputId), { inputId, itemMonitInputId, productRequestId: itemRow.koper_id });
+    }
+  }
+
+  if (requiredPairs.size === 0) return new Map();
+
+  const official = new Map<string, OfficialStockRequestServiceResolution>();
+  const inputShards = chunks([...inputIds], 250);
+  for (const shard of inputShards) {
+    const shardResult = await resolveInputShard(shard, requiredPairs);
+    for (const [key, resolution] of shardResult) official.set(key, resolution);
+  }
+
+  const missing = [...requiredPairs.entries()].filter(([key]) => !official.has(key));
+  if (missing.length > 0) {
+    const examples = missing.slice(0, 10).map(([, value]) =>
+      `productRequestId=${value.productRequestId},inputId=${value.inputId},itemMonitInputId=${value.itemMonitInputId}`
+    ).join(";");
+    throw new Error(`Koper official stock request service mapping incomplete: ${missing.length}/${requiredPairs.size} missing. ${examples}`);
+  }
+
+  for (const resolution of official.values()) {
+    if (positiveInteger(resolution.koperServiceId) === null) {
+      throw new Error(`Invalid Koper serviceId ${resolution.koperServiceId} for inputId=${resolution.inputId}`);
+    }
+  }
+
+  return official;
 }
