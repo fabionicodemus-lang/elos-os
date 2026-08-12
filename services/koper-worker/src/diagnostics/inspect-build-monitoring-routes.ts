@@ -1,134 +1,112 @@
-import { env } from "../config/env.js";
-import { requestSupabase } from "../elos/supabase.js";
+import { performKoperLogin } from "../auth/koper-auto-login.js";
+import { withBrowserless } from "../browser/browserless.js";
+import { isAllowedFlowSwitch } from "./inspect-koper-engineering.js";
+import { selectFlow } from "./collect-flow-stock-requests.js";
 
-type Row = {
-  entity: string;
-  koper_id: string;
-  koper_parent_id: string | null;
-  payload: unknown;
+type Hit = {
+  script: string;
+  term: string;
+  snippets: string[];
 };
 
-type Match = {
-  entity: string;
-  koperId: string;
-  koperParentId: string | null;
-  matchedPaths: string[];
-  technical: Record<string, string | number | boolean | null>;
-};
+const terms = [
+  "itemMonitInputId",
+  "monitInputPchId",
+  "monitoring_input",
+  "item_monitoring",
+  "itemPlanningId",
+  "item_planning",
+];
 
-const entities = [
-  "service",
-  "budget_item",
-  "budget_input",
-  "budget_composition",
-  "budget_composition_detail",
-  "construction_budget",
-  "stock_request_item",
-] as const;
-
-const targets = new Set(["449", "101", "465", "117", "450", "102", "466", "118"]);
-
-function obj(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function findTargetPaths(value: unknown, prefix = "", out: string[] = [], depth = 0): string[] {
-  if (depth > 7) return out;
-  if (Array.isArray(value)) {
-    for (let i = 0; i < Math.min(value.length, 30); i += 1) {
-      findTargetPaths(value[i], `${prefix}[${i}]`, out, depth + 1);
-    }
-    return out;
+function snippets(text: string, term: string): string[] {
+  const result: string[] = [];
+  let from = 0;
+  while (result.length < 8) {
+    const index = text.indexOf(term, from);
+    if (index < 0) break;
+    const start = Math.max(0, index - 260);
+    const end = Math.min(text.length, index + term.length + 360);
+    result.push(text.slice(start, end).replace(/\s+/g, " "));
+    from = index + term.length;
   }
-  const record = obj(value);
-  if (!record) return out;
-  for (const [key, child] of Object.entries(record)) {
-    const path = prefix ? `${prefix}.${key}` : key;
-    if ((typeof child === "string" || typeof child === "number") && targets.has(String(child))) {
-      out.push(path);
-    }
-    if (typeof child === "object" && child !== null) findTargetPaths(child, path, out, depth + 1);
-  }
-  return out;
-}
-
-function technical(value: unknown, prefix = "", out: Record<string, string | number | boolean | null> = {}, depth = 0): Record<string, string | number | boolean | null> {
-  if (depth > 6 || Object.keys(out).length >= 120) return out;
-  if (Array.isArray(value)) {
-    for (let i = 0; i < Math.min(value.length, 5); i += 1) technical(value[i], `${prefix}[${i}]`, out, depth + 1);
-    return out;
-  }
-  const record = obj(value);
-  if (!record) return out;
-  for (const [key, child] of Object.entries(record)) {
-    const lower = key.toLowerCase();
-    const path = prefix ? `${prefix}.${key}` : key;
-    if (child === null || typeof child === "number" || typeof child === "boolean" || typeof child === "string") {
-      if (/id$|service|input|budget|composition|monitor|monit|planning|item|stage|reference|amount|quantity|type/.test(lower)
-        && !/name|description|user|customer|email|phone|document|token|cookie|address/.test(lower)) {
-        out[path] = typeof child === "string" ? child.slice(0, 120) : child;
-      }
-    } else technical(child, path, out, depth + 1);
-  }
-  return out;
-}
-
-async function readEntity(entity: string): Promise<Row[]> {
-  const rows: Row[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    const page = await requestSupabase<Row[]>("koper_staging_records", {
-      query: new URLSearchParams({
-        select: "entity,koper_id,koper_parent_id,payload",
-        company_id: `eq.${env.BOSSA_COMPANY_ID}`,
-        source: "eq.koper",
-        entity: `eq.${entity}`,
-        sync_state: "eq.present",
-        limit: "1000",
-        offset: String(offset),
-      }),
-      timeoutMs: 30_000,
-    });
-    rows.push(...page);
-    if (page.length < 1000) break;
-  }
-  return rows;
+  return result;
 }
 
 export async function inspectBuildMonitoringRoutes(): Promise<{
   ok: true;
-  targets: string[];
-  entityCounts: Record<string, number>;
-  matches: Match[];
-  directKoperIdMatches: Match[];
+  authenticated: boolean;
+  flowSelected: boolean;
+  scriptsSeen: string[];
+  hits: Hit[];
+  blockedWrites: number;
+  message: string | null;
 }> {
-  const matches: Match[] = [];
-  const entityCounts: Record<string, number> = {};
+  return withBrowserless(async ({ page }) => {
+    const login = await performKoperLogin(page);
+    if (!login.authenticated) return { ok: true, authenticated: false, flowSelected: false, scriptsSeen: [], hits: [], blockedWrites: 0, message: login.message };
 
-  for (const entity of entities) {
-    const rows = await readEntity(entity);
-    entityCounts[entity] = rows.length;
-    for (const row of rows) {
-      const matchedPaths = findTargetPaths(row.payload);
-      if (targets.has(row.koper_id)) matchedPaths.unshift("$koper_id");
-      if (row.koper_parent_id && targets.has(row.koper_parent_id)) matchedPaths.unshift("$koper_parent_id");
-      if (matchedPaths.length === 0) continue;
-      matches.push({
-        entity: row.entity,
-        koperId: row.koper_id,
-        koperParentId: row.koper_parent_id,
-        matchedPaths: [...new Set(matchedPaths)],
-        technical: technical(row.payload),
-      });
+    let blockedWrites = 0;
+    await page.route("**/*", async (route) => {
+      const request = route.request();
+      try {
+        const url = new URL(request.url());
+        const isKoper = url.hostname === "koper.com.br" || url.hostname.endsWith(".koper.com.br");
+        if (isKoper && !["GET", "HEAD", "OPTIONS"].includes(request.method()) && !isAllowedFlowSwitch(url, request.method(), request.postData())) {
+          blockedWrites += 1;
+          await route.abort("blockedbyclient");
+          return;
+        }
+      } catch {}
+      await route.continue();
+    });
+
+    const flowSelected = await selectFlow(page);
+    if (!flowSelected) return { ok: true, authenticated: true, flowSelected: false, scriptsSeen: [], hits: [], blockedWrites, message: "KOPER_FLOW_COMPANY_NOT_SELECTED" };
+
+    const scripts = new Map<string, Promise<string>>();
+    page.on("response", (response) => {
+      try {
+        const url = new URL(response.url());
+        if (!url.hostname.endsWith("koper.com.br") || !url.pathname.endsWith(".js")) return;
+        if (scripts.has(response.url())) return;
+        scripts.set(
+          response.url(),
+          response.text().catch(() => ""),
+        );
+      } catch {}
+    });
+
+    await page.goto("https://app.koper.com.br/engenharia/acompanhamento_obra/view/67/cronograma_financeiro", {
+      waitUntil: "domcontentloaded",
+      timeout: 25_000,
+    }).catch(() => undefined);
+    await page.waitForTimeout(5_000);
+
+    const scriptsSeen: string[] = [];
+    const hits: Hit[] = [];
+    for (const [rawUrl, bodyPromise] of scripts.entries()) {
+      const body = await bodyPromise;
+      let display = rawUrl;
+      try {
+        const url = new URL(rawUrl);
+        display = `${url.hostname}${url.pathname}`;
+      } catch {}
+      scriptsSeen.push(display);
+      if (!body) continue;
+      for (const term of terms) {
+        const found = snippets(body, term);
+        if (found.length > 0) hits.push({ script: display, term, snippets: found });
+      }
     }
-  }
 
-  return {
-    ok: true,
-    targets: [...targets],
-    entityCounts,
-    matches: matches.slice(0, 120),
-    directKoperIdMatches: matches.filter((match) => match.matchedPaths.includes("$koper_id")).slice(0, 80),
-  };
+    return {
+      ok: true,
+      authenticated: true,
+      flowSelected: true,
+      scriptsSeen: [...new Set(scriptsSeen)].slice(0, 80),
+      hits: hits.slice(0, 40),
+      blockedWrites,
+      message: hits.length > 0 ? null : "KOPER_ALLOCATION_TERMS_NOT_FOUND_IN_LOADED_BUNDLES",
+    };
+  }, { sessionTimeoutMs: 60_000 });
 }
