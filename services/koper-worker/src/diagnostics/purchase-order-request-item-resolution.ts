@@ -9,6 +9,12 @@ export type PurchaseRequestItemResolution<T extends PurchaseRequestItemCandidate
   | { status: "missing" }
   | { status: "ambiguous"; candidateIds: string[]; candidateServiceSourceIds: Array<string | null> };
 
+function isV2Candidate(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || !("notes" in value)) return false;
+  const notes = (value as { notes?: unknown }).notes;
+  return typeof notes === "string" && notes.includes("resolution=v2");
+}
+
 export function groupRequestItemsByProductId<T extends PurchaseRequestItemCandidate>(
   rows: T[],
   productRequestIds: (row: T) => string[],
@@ -20,6 +26,11 @@ export function groupRequestItemsByProductId<T extends PurchaseRequestItemCandid
       existing.push(row);
       grouped.set(productRequestId, existing);
     }
+  }
+
+  for (const [productRequestId, candidates] of grouped) {
+    const v2 = candidates.filter(isV2Candidate);
+    if (v2.length) grouped.set(productRequestId, v2);
   }
   return grouped;
 }
