@@ -4,57 +4,80 @@ import { isAllowedFlowSwitch } from "./inspect-koper-engineering.js";
 import { selectFlow } from "./collect-flow-stock-requests.js";
 
 type UnknownRecord = Record<string, unknown>;
-type MonitoringItem = { itemMonitoringId: number; serviceId: number };
-type InputLink = { itemMonitoringId: number; serviceId: number; status: number; inputIds: number[]; inputCount: number };
+type Probe = {
+  params: Record<string, string>;
+  status: number;
+  arrayLength: number | null;
+  fieldPaths: string[];
+  technical: Record<string, string | number | boolean | null>;
+  errorMessage: string | null;
+};
 
 function obj(value: unknown): UnknownRecord | null {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value as UnknownRecord : null;
 }
 
-function numberish(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) return Number(value);
-  return null;
+function safeText(value: unknown): string | null {
+  return typeof value === "string" ? value.replace(/[\w.+-]+@[\w.-]+/g, "[REDACTED]").slice(0, 240) : null;
 }
+
+function fieldPaths(value: unknown, prefix = "", out: string[] = [], depth = 0): string[] {
+  if (depth > 7 || out.length >= 800) return out;
+  if (Array.isArray(value)) {
+    for (let i = 0; i < Math.min(value.length, 4); i += 1) fieldPaths(value[i], `${prefix}[${i}]`, out, depth + 1);
+    return out;
+  }
+  const record = obj(value);
+  if (!record) return out;
+  for (const [key, child] of Object.entries(record)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (!out.includes(path)) out.push(path);
+    if (typeof child === "object" && child !== null) fieldPaths(child, path, out, depth + 1);
+  }
+  return out;
+}
+
+function technical(value: unknown, prefix = "", out: Record<string, string | number | boolean | null> = {}, depth = 0): Record<string, string | number | boolean | null> {
+  if (depth > 8 || Object.keys(out).length >= 700) return out;
+  if (Array.isArray(value)) {
+    for (let i = 0; i < Math.min(value.length, 8); i += 1) technical(value[i], `${prefix}[${i}]`, out, depth + 1);
+    return out;
+  }
+  const record = obj(value);
+  if (!record) return out;
+  for (const [key, child] of Object.entries(record)) {
+    const lower = key.toLowerCase();
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (child === null || typeof child === "number" || typeof child === "boolean" || typeof child === "string") {
+      if (/id$|service|monitor|monit|input|budget|item|request|amount|quantity|cost|center|stage|reference|type|status/.test(lower)
+        && !/name|description|comment|address|email|phone|document|cnpj|cpf|token|cookie|file|url|supplier|user/.test(lower)) {
+        out[path] = typeof child === "string" ? child.slice(0, 120) : child;
+      }
+    } else technical(child, path, out, depth + 1);
+  }
+  return out;
+}
+
+const probes: Record<string, string>[] = [
+  { productRequestId: "266" },
+  { productRequestId: "266", group: "request" },
+  { requestId: "266", group: "request" },
+  { productRequestId: "357" },
+  { productRequestId: "10251" },
+  { productRequestId: "266", history: "yes" },
+];
 
 export async function inspectBuildMonitoringRoutes(): Promise<{
   ok: true;
   authenticated: boolean;
   flowSelected: boolean;
-  itemsAmount: number;
-  itemRows: number;
-  serviceItems: number;
-  queriedItems: number;
-  successfulItems: number;
-  itemsWithInputs: number;
-  totalInputLinks: number;
-  distinctInputs: number;
-  statusCounts: Record<string, number>;
-  sampleLinks: InputLink[];
+  probes: Probe[];
   blockedWrites: number;
   message: string | null;
 }> {
   return withBrowserless(async ({ page }) => {
-    const empty = {
-      ok: true as const,
-      authenticated: false,
-      flowSelected: false,
-      itemsAmount: 0,
-      itemRows: 0,
-      serviceItems: 0,
-      queriedItems: 0,
-      successfulItems: 0,
-      itemsWithInputs: 0,
-      totalInputLinks: 0,
-      distinctInputs: 0,
-      statusCounts: {},
-      sampleLinks: [],
-      blockedWrites: 0,
-      message: null as string | null,
-    };
-
     const login = await performKoperLogin(page);
-    if (!login.authenticated) return { ...empty, message: login.message };
+    if (!login.authenticated) return { ok: true, authenticated: false, flowSelected: false, probes: [], blockedWrites: 0, message: login.message };
 
     let blockedWrites = 0;
     await page.route("**/*", async (route) => {
@@ -72,98 +95,44 @@ export async function inspectBuildMonitoringRoutes(): Promise<{
     });
 
     const flowSelected = await selectFlow(page);
-    if (!flowSelected) return { ...empty, authenticated: true, blockedWrites, message: "KOPER_FLOW_COMPANY_NOT_SELECTED" };
+    if (!flowSelected) return { ok: true, authenticated: true, flowSelected: false, probes: [], blockedWrites, message: "KOPER_FLOW_COMPANY_NOT_SELECTED" };
 
     let headers: Record<string, string> | null = null;
     const capture = (request: { method(): string; url(): string; headers(): Record<string, string> }): void => {
       try {
         const url = new URL(request.url());
-        if (request.method() === "GET" && url.hostname === "api.koper.com.br" && url.pathname === "/engineering/v1/item_monitoring" && headers === null) headers = request.headers();
+        if (request.method() === "GET" && url.hostname === "api.koper.com.br" && url.pathname === "/stock/v1/request" && headers === null) headers = request.headers();
       } catch {}
     };
     page.on("request", capture);
-    await page.goto("https://app.koper.com.br/engenharia/acompanhamento_obra/view/67/cronograma_financeiro", { waitUntil: "domcontentloaded", timeout: 25_000 }).catch(() => undefined);
+    await page.goto("https://app.koper.com.br/suprimentos/solicitacoes/", { waitUntil: "domcontentloaded", timeout: 25_000 }).catch(() => undefined);
     for (let i = 0; i < 10 && !headers; i += 1) await page.waitForTimeout(750);
     page.off("request", capture);
-    if (!headers) throw new Error("Koper engineering headers not captured");
+    if (!headers) throw new Error("Koper stock headers not captured");
     const requestHeaders: Record<string, string> = headers;
 
-    const positionDate = new Date().toISOString().slice(0, 10);
-    const itemQuery = new URLSearchParams({
-      buildMonitoringId: "67",
-      financialSchedule: "yes",
-      limitX: "1",
-      limitY: "500",
-      offsetX: "0",
-      offsetY: "0",
-      positionDate,
-      scale: "month",
-    });
-    const itemResponse = await page.request.get(`https://api.koper.com.br/engineering/v1/item_monitoring?${itemQuery.toString()}`, { headers: requestHeaders, timeout: 10_000 });
-    const itemBody: unknown = await itemResponse.json().catch(() => null);
-    const itemRecord = obj(itemBody);
-    const itemRows = Array.isArray(itemRecord?.items) ? itemRecord.items : [];
-    const itemsAmount = numberish(itemRecord?.itemsAmount) ?? itemRows.length;
-
-    const serviceItems: MonitoringItem[] = [];
-    const seen = new Set<number>();
-    for (const raw of itemRows) {
-      const record = obj(raw);
-      if (!record) continue;
-      const itemMonitoringId = numberish(record.itemMonitoringId);
-      const serviceId = numberish(record.serviceId);
-      if (itemMonitoringId === null || serviceId === null || seen.has(itemMonitoringId)) continue;
-      seen.add(itemMonitoringId);
-      serviceItems.push({ itemMonitoringId, serviceId });
+    const results: Probe[] = [];
+    for (const params of probes) {
+      const response = await page.request.get(
+        `https://api.koper.com.br/stock/v1/product_request?${new URLSearchParams(params).toString()}`,
+        { headers: requestHeaders, timeout: 10_000 },
+      ).catch(() => null);
+      if (!response) {
+        results.push({ params, status: 0, arrayLength: null, fieldPaths: [], technical: {}, errorMessage: null });
+        continue;
+      }
+      const body: unknown = await response.json().catch(() => null);
+      const record = obj(body);
+      results.push({
+        params,
+        status: response.status(),
+        arrayLength: Array.isArray(body) ? body.length : null,
+        fieldPaths: body === null ? [] : fieldPaths(body),
+        technical: body === null ? {} : technical(body),
+        errorMessage: record ? safeText(record.message) : null,
+      });
     }
 
-    const links: InputLink[] = [];
-    const batchSize = 20;
-    for (let start = 0; start < serviceItems.length; start += batchSize) {
-      const batch = serviceItems.slice(start, start + batchSize);
-      const batchResults = await Promise.all(batch.map(async (item): Promise<InputLink> => {
-        const response = await page.request.get(
-          `https://api.koper.com.br/engineering/v1/monitoring_input?itemMonitoringId=${item.itemMonitoringId}`,
-          { headers: requestHeaders, timeout: 6_000 },
-        ).catch(() => null);
-        if (!response) return { ...item, status: 0, inputIds: [], inputCount: 0 };
-        const body: unknown = await response.json().catch(() => null);
-        const rows = Array.isArray(body) ? body : [];
-        const inputIds = [...new Set(rows.map((row) => numberish(obj(row)?.inputId)).filter((id): id is number => id !== null))];
-        return { ...item, status: response.status(), inputIds, inputCount: rows.length };
-      }));
-      links.push(...batchResults);
-    }
-
-    const statusCounts: Record<string, number> = {};
-    const distinctInputIds = new Set<number>();
-    let successfulItems = 0;
-    let itemsWithInputs = 0;
-    let totalInputLinks = 0;
-    for (const link of links) {
-      statusCounts[String(link.status)] = (statusCounts[String(link.status)] ?? 0) + 1;
-      if (link.status === 200) successfulItems += 1;
-      if (link.inputCount > 0) itemsWithInputs += 1;
-      totalInputLinks += link.inputCount;
-      for (const inputId of link.inputIds) distinctInputIds.add(inputId);
-    }
-
-    return {
-      ok: true,
-      authenticated: true,
-      flowSelected: true,
-      itemsAmount,
-      itemRows: itemRows.length,
-      serviceItems: serviceItems.length,
-      queriedItems: links.length,
-      successfulItems,
-      itemsWithInputs,
-      totalInputLinks,
-      distinctInputs: distinctInputIds.size,
-      statusCounts,
-      sampleLinks: links.filter((link) => link.inputCount > 0).slice(0, 30),
-      blockedWrites,
-      message: itemResponse.status() === 200 ? null : `KOPER_ITEM_MONITORING_STATUS_${itemResponse.status()}`,
-    };
+    return { ok: true, authenticated: true, flowSelected: true, probes: results, blockedWrites, message: null };
   }, { sessionTimeoutMs: 60_000 });
 }
