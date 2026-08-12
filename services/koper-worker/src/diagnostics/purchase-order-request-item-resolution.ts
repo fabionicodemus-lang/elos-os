@@ -21,7 +21,7 @@ export function groupRequestItemsByProductId<T extends PurchaseRequestItemCandid
 ): Map<string, T[]> {
   const grouped = new Map<string, T[]>();
   for (const row of rows) {
-    for (const productRequestId of productRequestIds(row)) {
+    for (const productRequestId of new Set(productRequestIds(row))) {
       const existing = grouped.get(productRequestId) ?? [];
       existing.push(row);
       grouped.set(productRequestId, existing);
