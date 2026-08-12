@@ -1,3 +1,4 @@
+// Runner operacional protegido: o preview e os invariantes sempre rodam antes de qualquer DELETE.
 import {
   cleanupKoperStockRequestItemsV1,
   previewKoperStockRequestV1Cleanup,
