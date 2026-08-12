@@ -36,14 +36,13 @@ function collectTechnical(value: unknown, prefix = "", out: Record<string, strin
 
 const probes: Record<string, string>[] = [
   { itemMonitoringId: "134" },
-  { buildMonitoringId: "67", itemMonitoringId: "134" },
-  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "id" },
-  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "itemMonitoringId" },
-  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "inputId" },
-  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "itemMonitInputId" },
-  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "monitInputPchId" },
-  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "createdAt" },
-  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "id", order: "asc" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "inputId", orderFlag: "ASC" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "inputId", orderFlag: "asc" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "inputId", orderFlag: "DESC" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "inputId", orderFlag: "1" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "inputId", orderFlag: "0" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "inputId", orderFlag: "true" },
+  { buildMonitoringId: "67", limit: "500", offset: "0", orderby: "inputId", orderFlag: "false" },
 ];
 
 export async function inspectBuildMonitoringRoutes(): Promise<{ ok: true; authenticated: boolean; flowSelected: boolean; probes: Probe[]; blockedWrites: number; message: string | null }> {
