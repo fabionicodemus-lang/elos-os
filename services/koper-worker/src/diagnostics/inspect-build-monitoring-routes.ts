@@ -12,7 +12,7 @@ type MonitoringItem = { serviceId: number | null; reference: string | null };
 type OfficialOption = { itemMonitoringId: number; itemMonitInputId: number; reference: string | null };
 
 const SHARD_COUNT = 4;
-const SHARD_INDEX = 1;
+const SHARD_INDEX = 2;
 
 function rec(value: unknown): Rec {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Rec : {};
