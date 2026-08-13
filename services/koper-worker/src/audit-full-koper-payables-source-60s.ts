@@ -7,7 +7,7 @@ import { env } from "./config/env.js";
 import { requestSupabase } from "./elos/supabase.js";
 
 type Json = Record<string, unknown>;
-type ElosPayable = { source_id: string | null; amount: number; status: string; due_date: string | null };
+type ElosPayable = { source_id: string | null; amount: number; status: string; due_date: string | null; paid_at: string | null; paid_amount: number | null };
 const obj = (v: unknown): Json | null => typeof v === "object" && v !== null && !Array.isArray(v) ? v as Json : null;
 const num = (v: unknown): number => Number.isFinite(Number(v)) ? Number(v) : 0;
 const has = (v: unknown): boolean => v !== null && v !== undefined && String(v).trim() !== "";
@@ -94,7 +94,7 @@ try {
     const bills = [...unique.values()];
 
     const elos = await readAll<ElosPayable>("payables", {
-      select: "source_id,amount,status,due_date",
+      select: "source_id,amount,status,due_date,paid_at,paid_amount",
       company_id: `eq.${env.BOSSA_COMPANY_ID}`,
       source_system: "eq.koper_flow",
       order: "source_id.asc",
@@ -115,8 +115,8 @@ try {
     let openAmount = 0;
     let matched = 0;
     let amountMismatch = 0;
-    let statusMismatch = 0;
     const missing: Json[] = [];
+    const statusMismatchBills: Array<Record<string, unknown>> = [];
 
     for (const bill of bills) {
       const id = String(bill.billId);
@@ -127,7 +127,20 @@ try {
       if (!imported) { missing.push(bill); continue; }
       matched += 1;
       if (toCents(imported.amount) !== cents) amountMismatch += 1;
-      if ((imported.status === "paid") !== (bill.isPaid === true)) statusMismatch += 1;
+      if ((imported.status === "paid") !== (bill.isPaid === true)) {
+        statusMismatchBills.push({
+          billId: bill.billId ?? null,
+          billToPayId: bill.billToPayId ?? null,
+          koperIsPaid: bill.isPaid === true,
+          koperPaymentDate: bill.paymentDate ?? null,
+          koperPaymentValue: bill.paymentValue ?? null,
+          elosStatus: imported.status,
+          elosPaidAt: imported.paid_at,
+          elosPaidAmount: imported.paid_amount,
+          amount: num(bill.billValue),
+          dueDate: bill.dueDate ?? null,
+        });
+      }
     }
 
     const liveIds = new Set(bills.map((bill) => String(bill.billId)));
@@ -143,6 +156,30 @@ try {
       }
       return { count: items.length, amount: sum / 100, paid, open, invoiceOnly, receiptOnly, invoiceAndReceipt, neither };
     };
+
+    const missingParents = new Map<string, Json[]>();
+    for (const bill of missing) {
+      const parentId = has(bill.billToPayId) ? String(bill.billToPayId) : `missing-parent:${String(bill.billId)}`;
+      const group = missingParents.get(parentId) ?? [];
+      group.push(bill);
+      missingParents.set(parentId, group);
+    }
+    const parentSizeHistogram: Record<string, number> = {};
+    for (const group of missingParents.values()) {
+      const size = String(group.length);
+      parentSizeHistogram[size] = (parentSizeHistogram[size] ?? 0) + 1;
+    }
+    const largestMissingParents = [...missingParents.entries()]
+      .sort((a, b) => b[1].length - a[1].length || num(b[0]) - num(a[0]))
+      .slice(0, 20)
+      .map(([billToPayId, group]) => ({
+        billToPayId,
+        installments: group.length,
+        billIds: group.map((row) => row.billId),
+        amount: group.reduce((sum, row) => sum + toCents(row.billValue), 0) / 100,
+        paid: group.filter((row) => row.isPaid === true).length,
+        open: group.filter((row) => row.isPaid !== true).length,
+      }));
 
     const missingSorted = [...missing].sort((a, b) => num(b.billId) - num(a.billId));
 
@@ -170,8 +207,14 @@ try {
       reconciliation: {
         matched,
         missing: classify(missing),
+        missingParents: {
+          count: missingParents.size,
+          sizeHistogram: parentSizeHistogram,
+          largest: largestMissingParents,
+        },
         amountMismatch,
-        statusMismatch,
+        statusMismatch: statusMismatchBills.length,
+        statusMismatchBills: statusMismatchBills.slice(0, 50),
         directElosNotInKoper: directElosNotInKoper.length,
         sampleDirectElosNotInKoper: directElosNotInKoper.slice(0, 20),
         syntheticSourceIdsSample: syntheticElos.slice(0, 20).map((row) => row.source_id),
