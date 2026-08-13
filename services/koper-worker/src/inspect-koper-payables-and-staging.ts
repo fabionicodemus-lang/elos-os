@@ -103,6 +103,25 @@ try {
   const invoiceStages = staging.filter((row) => row.entity === "xml_invoice");
   const invoiceRelevantPaths = [...new Set(invoiceStages.slice(0, 200).flatMap((row) => keyPaths(row.payload)).filter(paymentRelevant))].sort();
 
+  const koperPayables = payables.filter((row) => String(row.source_system ?? "").includes("koper"));
+  const projectCounts = koperPayables.reduce<Record<string, number>>((counts, row) => {
+    const id = String(row.project_id ?? "null");
+    counts[id] = (counts[id] ?? 0) + 1;
+    return counts;
+  }, {});
+  const projectIds = Object.keys(projectCounts).filter((id) => id !== "null");
+  let projects: Record<string, unknown>[] = [];
+  if (projectIds.length) {
+    projects = await requestSupabase<Record<string, unknown>[]>("projects", {
+      query: new URLSearchParams({
+        select: "id,company_id,name,slug",
+        company_id: `eq.${env.BOSSA_COMPANY_ID}`,
+        id: `in.(${projectIds.join(",")})`,
+        limit: "100",
+      }),
+    });
+  }
+
   console.log("KOPER_PAYABLE_SOURCE_DIAGNOSTIC", JSON.stringify({
     ok: true,
     staging: {
@@ -121,8 +140,10 @@ try {
       electronicInvoiceInstallments: nativeInstallments.length,
       installmentSample: nativeInstallments.slice(0, 3),
       payables: payables.length,
-      koperPayables: payables.filter((row) => String(row.source_system ?? "").includes("koper")).length,
-      payableSample: payables.slice(0, 3),
+      koperPayables: koperPayables.length,
+      koperPayableProjectCounts: projectCounts,
+      koperPayableProjects: projects,
+      payableSample: koperPayables.slice(0, 3),
     },
   }));
 } catch (error) {
