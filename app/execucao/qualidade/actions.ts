@@ -151,7 +151,6 @@ export async function reportCorrection(formData: FormData) {
 
 export async function reinspectNonconformity(formData: FormData) {
   const ncId = text(formData, "nonconformity_id");
-  const inspectionId = text(formData, "inspection_id");
   const approved = text(formData, "result") === "approved";
   const { supabase, companyId, projectId } = await requireCompanyPermission("execution.quality.reinspect");
   if (!projectId) redirect(url("Selecione uma obra.", "error"));

@@ -7,22 +7,22 @@
 
 .tax-summary-grid article {
   min-width: 0;
-  border: 1px solid #dce8e5;
+  border:1px solid var(--line);
   border-radius: 14px;
-  background: #fff;
+  background:#fff;
   padding: 16px;
   box-shadow: 0 9px 24px rgba(18, 49, 44, 0.05);
 }
 
 .tax-summary-grid article.alert {
-  border-color: #efc1ad;
-  background: #fff8f4;
+  border-color:#efc1ad;
+  background:#fff8f4;
 }
 
 .tax-summary-grid span,
 .tax-summary-grid small {
   display: block;
-  color: #6a7c78;
+  color:var(--muted);
 }
 
 .tax-summary-grid span {
@@ -35,14 +35,14 @@
 
 .tax-summary-grid strong {
   display: block;
-  color: #153d36;
+  color:var(--brand-strong);
   font-family: var(--font-space-grotesk), sans-serif;
   font-size: clamp(20px, 1.6vw, 28px);
   line-height: 1.1;
 }
 
 .tax-summary-grid article.alert strong {
-  color: #a04422;
+  color:#a04422;
 }
 
 .tax-summary-grid small {
@@ -57,16 +57,16 @@
   gap: 24px;
   align-items: center;
   margin-bottom: 18px;
-  border: 1px solid #dce8e5;
+  border:1px solid var(--line);
   border-radius: 16px;
-  background: #fff;
+  background:#fff;
   padding: 20px;
 }
 
 .tax-guidance-card > div:first-child > span,
 .tax-catalog-card .section-heading span,
 .tax-agenda-card .section-heading span {
-  color: #087e70;
+  color:var(--brand-strong);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .08em;
@@ -75,13 +75,13 @@
 
 .tax-guidance-card h2 {
   margin: 7px 0 8px;
-  color: #163d37;
+  color:var(--brand-strong);
   font-size: 19px;
 }
 
 .tax-guidance-card p {
   margin: 0;
-  color: #657873;
+  color:var(--muted);
   font-size: 12px;
   line-height: 1.55;
 }
@@ -97,9 +97,9 @@
   gap: 9px;
   align-items: flex-start;
   min-width: 0;
-  border: 1px solid #dbe7e4;
+  border:1px solid var(--line);
   border-radius: 11px;
-  background: #f7fbfa;
+  background:var(--brand-soft);
   padding: 11px;
 }
 
@@ -109,8 +109,8 @@
   flex: 0 0 23px;
   height: 23px;
   border-radius: 50%;
-  background: #078b7b;
-  color: #fff;
+  background:var(--brand);
+  color:#fff;
   font-size: 11px;
 }
 
@@ -120,13 +120,13 @@
 }
 
 .tax-guidance-flow strong {
-  color: #23423d;
+  color:var(--foreground);
   font-size: 11px;
 }
 
 .tax-guidance-flow small {
   margin-top: 3px;
-  color: #768783;
+  color:var(--muted);
   font-size: 9px;
   line-height: 1.35;
 }
@@ -146,9 +146,9 @@
 .tax-agenda-card,
 .tax-catalog-card {
   margin-bottom: 18px;
-  border: 1px solid #dce8e5;
+  border:1px solid var(--line);
   border-radius: 16px;
-  background: #fff;
+  background:#fff;
   padding: 16px;
   box-shadow: 0 9px 26px rgba(18, 49, 44, 0.04);
 }
@@ -167,18 +167,18 @@
 
 .tax-agenda-table td small {
   margin-top: 4px;
-  color: #788985;
+  color:var(--muted);
   font-size: 10px;
   line-height: 1.35;
 }
 
 .tax-total-value {
   white-space: nowrap;
-  color: #0b6257;
+  color:var(--brand-strong);
 }
 
 .tax-overdue-row td {
-  background: #fff8f4;
+  background:#fff8f4;
 }
 
 .tax-cancelled-row {
@@ -188,8 +188,8 @@
 .tax-overdue-label {
   width: fit-content;
   border-radius: 999px;
-  background: #fde1d5;
-  color: #9d3f1e !important;
+  background:#fde1d5;
+  color:#9d3f1e !important;
   padding: 3px 7px;
   font-weight: 700;
 }
@@ -205,10 +205,10 @@
   line-height: 1;
 }
 
-.tax-status.scheduled { background: #fff0c9; color: #7b5508; }
-.tax-status.payable_generated { background: #dceefb; color: #245d7a; }
-.tax-status.paid { background: #def3e8; color: #176b4d; }
-.tax-status.cancelled { background: #ecefef; color: #65716f; }
+.tax-status.scheduled { background:#fff0c9; color:#7b5508; }
+.tax-status.payable_generated { background:#dceefb; color:#245d7a; }
+.tax-status.paid { background:#def3e8; color:#176b4d; }
+.tax-status.cancelled { background:var(--background); color:var(--muted); }
 
 .tax-row-actions {
   display: flex;
@@ -222,7 +222,7 @@
 }
 
 .table-action.primary-action {
-  color: #087e70;
+  color:var(--brand-strong);
   font-weight: 700;
 }
 
@@ -234,9 +234,9 @@
 
 .tax-type-grid article {
   min-width: 0;
-  border: 1px solid #dce8e5;
+  border:1px solid var(--line);
   border-radius: 12px;
-  background: #f9fcfb;
+  background:#f9fcfb;
   padding: 14px;
 }
 
@@ -252,7 +252,7 @@
 }
 
 .tax-type-head span {
-  color: #087e70;
+  color:var(--brand-strong);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: .07em;
@@ -261,20 +261,20 @@
 
 .tax-type-head b {
   border-radius: 999px;
-  background: #e2f2ed;
-  color: #226d59;
+  background:#e2f2ed;
+  color:var(--brand-strong);
   padding: 4px 7px;
   font-size: 9px;
 }
 
 .tax-type-grid article.inactive .tax-type-head b {
-  background: #e9eceb;
-  color: #687572;
+  background:var(--background);
+  color:var(--muted);
 }
 
 .tax-type-grid h3 {
   margin: 12px 0 7px;
-  color: #1b403a;
+  color:var(--foreground);
   font-size: 14px;
   line-height: 1.35;
 }
@@ -282,7 +282,7 @@
 .tax-type-grid p,
 .tax-type-grid small {
   display: block;
-  color: #687a76;
+  color:var(--muted);
   font-size: 10px;
   line-height: 1.45;
 }
@@ -309,7 +309,7 @@
   overflow: hidden;
   border: 0;
   border-radius: 16px;
-  background: #fff;
+  background:#fff;
   color: inherit;
   box-shadow: 0 30px 80px rgba(5, 25, 22, .28);
 }
@@ -336,15 +336,15 @@
   justify-content: space-between;
   gap: 16px;
   padding: 16px 18px;
-  background: #fff;
+  background:#fff;
 }
 
 .tax-dialog header {
-  border-bottom: 1px solid #e2ebe8;
+  border-bottom:1px solid var(--line);
 }
 
 .tax-dialog header span {
-  color: #087e70;
+  color:var(--brand-strong);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: .08em;
@@ -353,13 +353,13 @@
 
 .tax-dialog header h2 {
   margin: 4px 0 3px;
-  color: #173d37;
+  color:var(--brand-strong);
   font-size: 19px;
 }
 
 .tax-dialog header p {
   margin: 0;
-  color: #758681;
+  color:var(--muted);
   font-size: 11px;
 }
 
@@ -370,8 +370,8 @@
   height: 34px;
   border: 0;
   border-radius: 10px;
-  background: #eff5f3;
-  color: #526762;
+  background:#eff5f3;
+  color:var(--muted);
   font-size: 21px;
   cursor: pointer;
 }
@@ -391,7 +391,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #314b46;
+  color:var(--foreground);
   font-size: 11px;
   font-weight: 600;
 }
@@ -401,7 +401,7 @@
 }
 
 .tax-form-grid label small {
-  color: #7a8a87;
+  color:var(--muted);
   font-size: 9px;
   font-weight: 400;
   line-height: 1.35;
@@ -411,11 +411,11 @@
 .tax-form-grid select,
 .tax-form-grid textarea {
   width: 100%;
-  border: 1px solid #cfded9;
+  border:1px solid var(--line);
   border-radius: 9px;
-  background: #fff;
+  background:#fff;
   padding: 10px 11px;
-  color: #233e39;
+  color:var(--foreground);
   font: inherit;
   font-weight: 400;
 }
@@ -429,43 +429,43 @@
   flex-direction: column;
   gap: 4px;
   margin-top: 14px;
-  border: 1px dashed #bcd8d1;
+  border:1px dashed var(--line);
   border-radius: 10px;
-  background: #f5faf8;
+  background:#f5faf8;
   padding: 11px 12px;
 }
 
 .tax-form-note strong {
-  color: #1c5c51;
+  color:var(--brand-strong);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: .06em;
 }
 
 .tax-form-note span {
-  color: #6c7e7a;
+  color:var(--muted);
   font-size: 10px;
 }
 
 .tax-dialog footer {
   justify-content: flex-end;
-  border-top: 1px solid #e2ebe8;
+  border-top:1px solid var(--line);
 }
 
 .tax-dialog footer button {
-  border: 1px solid #cfddd9;
+  border:1px solid var(--line);
   border-radius: 9px;
-  background: #fff;
+  background:#fff;
   padding: 9px 13px;
-  color: #38534e;
+  color:var(--foreground);
   font-weight: 600;
   cursor: pointer;
 }
 
 .tax-dialog footer button.primary {
-  border-color: #087e70;
-  background: #087e70;
-  color: #fff;
+  border-color:var(--brand);
+  background:var(--brand);
+  color:#fff;
 }
 
 @media (max-width: 1450px) {

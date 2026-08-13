@@ -15,7 +15,7 @@
 .reports-filter button {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 11px;
   padding: 0 11px;
   color: var(--foreground);
@@ -45,11 +45,11 @@
 }
 
 .reports-negative {
-  color: #a33c3c !important;
+  color:#a33c3c !important;
 }
 
 .reports-alert {
-  color: #a05f17 !important;
+  color:#a05f17 !important;
 }
 
 .reports-panel {
@@ -104,7 +104,7 @@
   height: 9px;
   overflow: hidden;
   border-radius: 999px;
-  background: #edf2f1;
+  background:var(--background);
 }
 
 .reports-aging-list i {
@@ -112,7 +112,7 @@
   height: 100%;
   min-width: 2px;
   border-radius: inherit;
-  background: #bd6b57;
+  background:#bd6b57;
 }
 
 .reports-ranking {
@@ -124,7 +124,7 @@
 .reports-ranking > div {
   min-height: 44px;
   padding: 8px 10px;
-  border: 1px solid #e4ebea;
+  border:1px solid var(--line);
   border-radius: 11px;
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) auto;
@@ -139,7 +139,7 @@
   display: grid;
   place-items: center;
   color: var(--brand);
-  background: #e7f3f1;
+  background:var(--brand-soft);
   font-size: 10px;
   font-weight: 800;
 }

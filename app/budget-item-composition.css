@@ -4,21 +4,21 @@
   gap: 1px;
   margin-bottom: 16px;
   overflow: hidden;
-  border: 1px solid var(--border, #dfe9e7);
+  border:1px solid var(--border, var(--line));
   border-radius: 16px;
-  background: var(--border, #dfe9e7);
+  background:var(--border, var(--background));
 }
 
 .budget-item-composition-context > div {
   display: grid;
   gap: 5px;
   padding: 18px 20px;
-  background: var(--surface, #fff);
+  background:var(--surface, #fff);
 }
 
 .budget-item-composition-context span,
 .budget-composition-item-form label > span {
-  color: #46706b;
+  color:var(--muted);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -26,12 +26,12 @@
 }
 
 .budget-item-composition-context strong {
-  color: #102d2a;
+  color:var(--brand-strong);
   font-size: 1rem;
 }
 
 .budget-item-composition-context small {
-  color: #667b78;
+  color:var(--muted);
   line-height: 1.45;
 }
 
@@ -45,9 +45,9 @@
 
 .budget-composition-difference {
   margin-bottom: 16px;
-  border-color: #e4b95c;
-  background: #fff9e9;
-  color: #6a4b09;
+  border-color:#e4b95c;
+  background:#fff9e9;
+  color:#6a4b09;
   line-height: 1.5;
 }
 
@@ -74,11 +74,11 @@
 .budget-composition-item-form textarea {
   width: 100%;
   min-height: 42px;
-  border: 1px solid var(--border, #d7e3e1);
+  border:1px solid var(--border, var(--line));
   border-radius: 10px;
-  background: #fff;
+  background:#fff;
   padding: 9px 11px;
-  color: #102d2a;
+  color:var(--brand-strong);
 }
 
 .budget-composition-input-wide {
@@ -110,13 +110,13 @@
 
 .budget-item-composition-table tbody td:first-child > span {
   margin-top: 3px;
-  color: #2b4744;
+  color:var(--foreground);
   font-weight: 600;
 }
 
 .budget-item-composition-table tbody td:first-child > small {
   margin-top: 4px;
-  color: #768986;
+  color:var(--muted);
   font-size: 0.72rem;
 }
 

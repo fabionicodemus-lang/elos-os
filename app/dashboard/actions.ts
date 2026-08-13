@@ -105,14 +105,22 @@ export async function selectWorkspace(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { data: membership } = await supabase
+  const { data: authData, error: authError } = await supabase.auth.getClaims();
+  const userId = typeof authData?.claims?.sub === "string" ? authData.claims.sub : "";
+
+  if (authError || !userId) {
+    redirect("/login");
+  }
+
+  const { data: membership, error: membershipError } = await supabase
     .from("company_memberships")
     .select("id")
     .eq("company_id", companyId)
+    .eq("user_id", userId)
     .eq("status", "active")
     .maybeSingle();
 
-  if (!membership) {
+  if (membershipError || !membership) {
     redirect(returnUrlWithMessage(returnTo, "Você não possui acesso ativo a esta empresa."));
   }
 

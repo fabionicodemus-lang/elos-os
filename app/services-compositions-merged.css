@@ -35,7 +35,7 @@
 
 .outsourced-labor-name {
   display: block;
-  color: #173f39;
+  color:var(--brand-strong);
   font-size: 12px;
   line-height: 1.35;
 }
@@ -53,19 +53,19 @@
 }
 
 .labor-policy-badge.excluded {
-  background: #edf1f0;
-  color: #5d6d69;
+  background:var(--background);
+  color:var(--muted);
 }
 
 .labor-policy-badge.pending {
-  background: #fff2d5;
-  color: #80580b;
+  background:#fff2d5;
+  color:#80580b;
 }
 
 .outsourced-labor-tag {
   margin-top: 5px;
-  background: #def3ec;
-  color: #176a55;
+  background:#def3ec;
+  color:var(--brand-strong);
 }
 
 .merged-service-actions,
@@ -89,16 +89,16 @@
 
 .service-technical-strip article {
   min-width: 0;
-  border: 1px solid #dce6e3;
+  border:1px solid var(--line);
   border-radius: 10px;
-  background: #f7faf9;
+  background:#f7faf9;
   padding: 11px 12px;
 }
 
 .service-technical-strip span {
   display: block;
   margin-bottom: 5px;
-  color: #70817d;
+  color:var(--muted);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -107,7 +107,7 @@
 
 .service-technical-strip strong {
   display: block;
-  color: #203834;
+  color:var(--foreground);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -131,11 +131,11 @@
 }
 
 .service-clickable-row:hover td {
-  background: #f4faf8;
+  background:#f4faf8;
 }
 
 .service-clickable-row.composition-service-selected td {
-  background: #e9f6f2;
+  background:#e9f6f2;
 }
 
 .service-clickable-row:focus-visible {
@@ -145,8 +145,8 @@
 
 .service-inline-composition-row > td.service-inline-composition-cell {
   padding: 0 !important;
-  border-bottom: 2px solid #bcd8d2;
-  background: #eef6f4;
+  border-bottom:2px solid var(--line);
+  background:var(--brand-soft);
 }
 
 .service-inline-composition-row .merged-service-detail {
@@ -154,8 +154,8 @@
   margin: 0;
   border: 0;
   border-radius: 0;
-  box-shadow: inset 0 1px 0 #d9e8e4;
-  background: #fbfdfc;
+  box-shadow:inset 0 1px 0 #d9e8e4;
+  background:#fbfdfc;
 }
 
 .service-inline-composition-row .composition-detail-head {

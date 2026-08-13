@@ -31,7 +31,7 @@ export default async function IntegratedSupplyPage({searchParams}:{searchParams:
   const params=await searchParams;
   const {supabase,company,companyId,projectId,roleKey}=await requireCompanyPermission("procurement.intelligence.view");
   const privileged=roleKey==="owner"||roleKey==="admin";
-  const [projectResult,controlResult,balancesResult,locationsResult,servicesResult,reservationsResult,projectsResult,allLocationsResult,manageResult]=await Promise.all([
+  const [projectResult,controlResult,balancesResult,_locationsResult,servicesResult,reservationsResult,projectsResult,allLocationsResult,manageResult]=await Promise.all([
     projectId?supabase.from("projects").select("id,code,name,status").eq("id",projectId).eq("company_id",companyId).maybeSingle():Promise.resolve({data:null,error:null}),
     projectId?fetchAllRows<Control>(async(from,to)=>{const{data,error}=await supabase.from("procurement_integrated_supply_control").select("*").eq("company_id",companyId).eq("project_id",projectId).order("first_use_date").range(from,to);return{data:(data??[])as Control[],error};}):Promise.resolve({data:[]as Control[],error:null}),
     projectId?fetchAllRows<Balance>(async(from,to)=>{const{data,error}=await supabase.from("procurement_inventory_balances").select("id,input_id,location_id,input_code,input_name,unit_snapshot,batch_number,expiration_date,quantity_on_hand,reserved_quantity,available_quantity,average_unit_cost").eq("company_id",companyId).eq("project_id",projectId).gt("available_quantity",0).order("input_name").range(from,to);return{data:(data??[])as Balance[],error};}):Promise.resolve({data:[]as Balance[],error:null}),

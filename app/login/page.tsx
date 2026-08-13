@@ -1,4 +1,4 @@
-import { login, signup } from "./actions";
+import { signup } from "./actions";
 
 export default async function LoginPage({
   searchParams,
@@ -30,7 +30,7 @@ export default async function LoginPage({
         {params.error ? <div className="auth-message error">{params.error}</div> : null}
         {params.success ? <div className="auth-message success">{params.success}</div> : null}
 
-        <form className="auth-form">
+        <form className="auth-form" action="/api/auth/login" method="post">
           <label>
             E-mail
             <input name="email" type="email" autoComplete="email" required />
@@ -47,7 +47,7 @@ export default async function LoginPage({
             />
           </label>
 
-          <button className="auth-primary" formAction={login}>
+          <button className="auth-primary" type="submit">
             Entrar
           </button>
           <button className="auth-secondary" formAction={signup}>

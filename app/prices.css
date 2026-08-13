@@ -75,12 +75,12 @@
 .price-guidance-flow article {
   min-height: 86px;
   padding: 13px;
-  border: 1px solid #dfe8e7;
+  border:1px solid var(--line);
   border-radius: 13px;
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  background: #f8fbfa;
+  background:#f8fbfa;
 }
 
 .price-guidance-flow b {
@@ -128,7 +128,7 @@
 .price-filter button {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #d7e0df;
+  border:1px solid var(--line);
   border-radius: 11px;
   padding: 0 11px;
   background: white;
@@ -191,32 +191,32 @@
 }
 
 .price-scope.corporate {
-  color: #315c57;
-  background: #e8f1f0;
+  color:var(--foreground);
+  background:var(--brand-soft);
 }
 
 .price-status.adopted {
-  color: #176348;
-  background: #e4f5ea;
+  color:#176348;
+  background:#e4f5ea;
 }
 
 .price-status.adopted.stale {
-  color: #8a5616;
-  background: #fff1d9;
+  color:#8a5616;
+  background:#fff1d9;
 }
 
 .price-status.quoted {
-  color: #355a72;
-  background: #e8f2f8;
+  color:#355a72;
+  background:#e8f2f8;
 }
 
 .price-status.inactive {
-  color: #6f7777;
-  background: #edf0f0;
+  color:var(--muted);
+  background:var(--background);
 }
 
 .price-row-stale td {
-  background: #fffaf0;
+  background:#fffaf0;
 }
 
 .price-row-inactive td {
@@ -224,7 +224,7 @@
 }
 
 .price-pending-text {
-  color: #a36a28 !important;
+  color:#a36a28 !important;
   font-style: italic;
 }
 
@@ -236,9 +236,9 @@
 }
 
 .price-adopt-action {
-  color: #176348;
-  border-color: #b6dcc8;
-  background: #edf8f2;
+  color:#176348;
+  border-color:#b6dcc8;
+  background:#edf8f2;
 }
 
 .price-modal {
@@ -257,7 +257,7 @@
 }
 
 .price-modal-grid label > span {
-  color: #425150;
+  color:var(--foreground);
   font-size: 11px;
   font-weight: 700;
 }
@@ -266,7 +266,7 @@
 .price-modal-grid select,
 .price-modal-grid textarea {
   width: 100%;
-  border: 1px solid #d5dfde;
+  border:1px solid var(--line);
   border-radius: 10px;
   padding: 10px 11px;
   background: white;
@@ -285,9 +285,9 @@
   align-items: center;
   gap: 9px !important;
   padding: 12px;
-  border: 1px solid #dce6e4;
+  border:1px solid var(--line);
   border-radius: 11px;
-  background: #f7fbfa;
+  background:var(--brand-soft);
 }
 
 .price-checkbox-field input {

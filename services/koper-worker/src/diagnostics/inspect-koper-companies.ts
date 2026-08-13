@@ -1117,7 +1117,7 @@ function inspectSwitchAttempt(
       const form = new URLSearchParams(postData);
       const keys = [...new Set(form.keys())];
 
-      if (keys.length > 0 && keys.some((key) => postData.includes("="))) {
+      if (keys.length > 0 && keys.some(() => postData.includes("="))) {
         bodyKind = "form";
         bodyKeys = keys.slice(0, 30);
       }

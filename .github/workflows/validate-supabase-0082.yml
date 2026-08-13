@@ -1,0 +1,41 @@
+name: Validate Supabase 0082
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20260811_0082_koper_cost_center_mapping.sql"
+      - ".github/tests/koper-cost-center-mapping-0082.sql"
+      - ".github/workflows/validate-supabase-0082.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: elos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d elos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar roles compatíveis com Supabase
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -c "create role anon nologin; create role authenticated nologin;"
+      - name: Executar migration e cenários de de-para Koper
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d elos_test -v ON_ERROR_STOP=1 -f .github/tests/koper-cost-center-mapping-0082.sql

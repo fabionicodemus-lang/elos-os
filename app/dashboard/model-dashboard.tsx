@@ -34,6 +34,8 @@ type Project = {
   name: string;
   code: string | null;
   status: string;
+  city: string | null;
+  state: string | null;
   construction_start_date: string | null;
   delivery_date: string | null;
   total_units: number | null;
@@ -96,6 +98,13 @@ type ScheduleMeasurement = {
 type ScheduleWeight = { service_id: string; physical_weight_percent: number; distribution_method: "quantity" | "cost" | "duration" | "equal" };
 type EngineeringService = { id: string; code: string; description: string; group_code: string | null };
 type PhysicalSnapshot = { planned: number; actual: number; delayed: number; forecastIso: string | null; baseline: string };
+type QualityInspection = {
+  id: string;
+  status: string;
+  due_date: string;
+  first_inspection_score: number | null;
+  release_status: string;
+};
 
 function relatedOne<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
@@ -321,7 +330,7 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
   const memberships = (membershipResult.data ?? []) as unknown as Membership[];
   const companyIds = memberships.map((membership) => membership.company_id);
   const projectResult = companyIds.length
-    ? await supabase.from("projects").select("id, company_id, name, code, status, construction_start_date, delivery_date, total_units")
+    ? await supabase.from("projects").select("id, company_id, name, code, status, city, state, construction_start_date, delivery_date, total_units")
       .in("company_id", companyIds).neq("status", "archived").order("name")
     : { data: [], error: null };
   const projects = (projectResult.data ?? []) as Project[];
@@ -410,6 +419,14 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
   const servicesPromise = can("schedule.view")
     ? supabase.from("engineering_services").select("id,code,description,group_code").eq("company_id", activeCompany.id).eq("status", "active").limit(5000)
     : null;
+  const qualityPromise = can("execution.quality.view") && projectId
+    ? fetchAllRows<QualityInspection>(async (from, to) => {
+      const { data, error } = await supabase.from("quality_inspections")
+        .select("id,status,due_date,first_inspection_score,release_status")
+        .eq("company_id", activeCompany.id).eq("project_id", projectId).range(from, to);
+      return { data: (data ?? []) as QualityInspection[], error };
+    })
+    : emptyResult<QualityInspection>();
 
   const [
     unitsResult,
@@ -424,6 +441,7 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
     budgetsResult,
     baselinesResult,
     servicesResult,
+    qualityResult,
   ] = await Promise.all([
     unitsPromise ?? emptyResult<UnitRow>(),
     proposalSummaryPromise,
@@ -437,6 +455,7 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
     budgetsPromise ?? emptyResult<Budget>(),
     baselinesPromise ?? emptyResult<Baseline>(),
     servicesPromise ?? emptyResult<EngineeringService>(),
+    qualityPromise,
   ]);
 
   const units = (unitsResult.data ?? []) as UnitRow[];
@@ -446,10 +465,11 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
   const budgets = (budgetsResult.data ?? []) as Budget[];
   const baselines = (baselinesResult.data ?? []) as Baseline[];
   const services = (servicesResult.data ?? []) as EngineeringService[];
+  const qualityInspections = qualityResult.data;
   const proposalSummary = (proposalSummaryResult.data ?? {}) as Partial<ProposalSummary>;
   const salesSummary = (salesSummaryResult.data ?? {}) as Partial<SalesSummary>;
   const payablesSummary = (payablesSummaryResult.data ?? {}) as Partial<PayablesSummary>;
-  const receivablesSummary = (receivablesSummaryResult.data ?? {}) as Partial<ReceivablesSummary>;
+  const _receivablesSummary = (receivablesSummaryResult.data ?? {}) as Partial<ReceivablesSummary>;
   const assistanceSummary = (assistanceSummaryResult.data ?? {}) as Partial<AssistanceSummary>;
 
   const selectedBaseline = baselines.find((item) => item.status === "approved") ?? baselines[0] ?? null;
@@ -507,6 +527,16 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
   const physicalMonths = buildPhysicalMonths(activities, measurements, activityWeights, selectedBaseline, today);
   const stageRows = buildStageRows(activities, measurements, activityWeights, services, today, selectedBaseline);
   const cashMonths = buildCashFlowMonths(payables, receivables, today);
+  const activeQuality = qualityInspections.filter((item) => item.status !== "cancelled");
+  const pendingQuality = activeQuality.filter((item) => ["pending", "in_progress"].includes(item.status));
+  const scoredQuality = activeQuality.filter((item) => item.first_inspection_score !== null);
+  const qualityScore = scoredQuality.length
+    ? scoredQuality.reduce((sum, item) => sum + Number(item.first_inspection_score), 0) / scoredQuality.length
+    : null;
+  const qualityFirstApproval = scoredQuality.length
+    ? scoredQuality.filter((item) => Number(item.first_inspection_score) >= 80 && item.status !== "blocked").length / scoredQuality.length * 100
+    : null;
+  const blockedQuality = activeQuality.filter((item) => item.release_status === "blocked");
 
   const budgetTotal = budgetItemsResult.data.reduce((sum, item) => sum + Number(item.total_direct_cost ?? 0), 0);
   const paidAmount = Number(payablesSummary.paid_amount ?? 0);
@@ -578,7 +608,7 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
     severity: "high",
     title: "Compromissos acima do orçamento",
     description: `Pago e comprometido superam o orçamento em ${money(paidAmount + committedAmount - budgetTotal)}.`,
-    href: "/engenharia/orcamento-analitico",
+    href: "/engenharia/custo-orcamento",
   });
   if (Number(proposalSummary.expiring_count ?? 0) > 0) risks.push({
     id: "proposals-expiring",
@@ -591,16 +621,21 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
   const criticalCount = risks.filter((risk) => risk.severity === "high").length;
   const overallStatus = criticalCount > 0 ? "critical" : risks.length || physicalVariance < -2 ? "attention" : "ok";
   const statusLabel = overallStatus === "critical" ? "Situação: crítica" : overallStatus === "attention" ? "Situação: atenção" : "Situação: dentro do plano";
+  const projectLocation = activeProject ? [activeProject.city, activeProject.state].filter(Boolean).join("/") : "";
   const projectMeta = activeProject
-    ? [activeProject.name, activeProject.total_units ? `${activeProject.total_units} unidades` : "", activeProject.delivery_date ? `entrega ${dateBR(activeProject.delivery_date)}` : ""].filter(Boolean).join(" · ")
+    ? [activeProject.name, projectLocation].filter(Boolean).join(" · ")
     : `${activeCompany.name} · visão consolidada da empresa`;
+  const canBackup = privileged || can("admin.data.view") || can("admin.data.export") || can("admin.data.manage");
 
   return <AppShell
     activeGroup="home"
-    eyebrow="Início · Gestão executiva"
+    eyebrow="Início"
     title="Dashboard Geral"
-    description={`${activeCompany.name} · ${activeProject?.code ? `${activeProject.code} · ` : ""}${activeProject?.name ?? "Todos os empreendimentos"}.`}
-    actions={<Link className="elos-button" href="/dashboard">Atualizar indicadores</Link>}
+    description="Visão consolidada de todos os módulos, empreendimentos e atividades do Elos OS."
+    actions={<>
+      <DashboardPrintButton label="🖨 Imprimir relatório" className="elos-button" />
+      {canBackup ? <Link className="elos-button" href="/configuracoes/dados-backup">Exportar backup</Link> : null}
+    </>}
   >
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
@@ -634,7 +669,7 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
           label="Custo · CPI"
           value={cpi === null ? "—" : cpi.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           detail={cpi === null ? "Consolide orçamento e custos" : <span className={cpi >= 1 ? "v20-up" : "v20-down"}>{cpi >= 1 ? "Custo favorável ao avanço" : "Custo acima do valor agregado"}</span>}
-          href="/engenharia/orcamento-analitico"
+          href="/engenharia/custo-orcamento"
         /> : null}
         {can("sales.view") || can("projects.view") ? <ModelKpi
           icon="◇"
@@ -658,22 +693,44 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
           label="Folga de prazo"
           value={deliverySlack === null ? "—" : <>{Math.abs(deliverySlack)} <small>dias</small></>}
           detail={<span className={deliverySlack === null ? "v20-flat" : deliverySlack >= 0 ? "v20-up" : "v20-down"}>{deliverySlack === null ? "Informe a entrega da obra" : deliverySlack >= 0 ? "Folga até a entrega" : "Atraso projetado"}</span>}
-          href="/engenharia/cronograma"
+          href="/execucao/cronograma"
         /> : null}
+
+        {can("execution.quality.view") ? <>
+          <Link className="v20-kpi v20-span3" href="/execucao/qualidade">
+            <div className="v20-kpi-top"><span className="v20-kpi-icon green">★</span><span className="v20-kpi-label">Qualidade · nota acumulada</span></div>
+            <div className="v20-kpi-value">{qualityScore === null ? "—" : qualityScore.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</div>
+            <div className="v20-kpi-foot">Notas da obra — 1ª inspeção</div>
+          </Link>
+          <Link className="v20-kpi v20-span3" href="/execucao/qualidade?tab=indicators">
+            <div className="v20-kpi-top"><span className="v20-kpi-icon blue">✓</span><span className="v20-kpi-label">Aprovação 1ª inspeção</span></div>
+            <div className="v20-kpi-value">{qualityFirstApproval === null ? "—" : `${qualityFirstApproval.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`}</div>
+            <div className="v20-kpi-foot">{qualityFirstApproval === null ? "Sem vistorias concluídas" : "Aprovação na primeira vistoria"}</div>
+          </Link>
+          <Link className="v20-kpi v20-span3" href="/execucao/qualidade?tab=all&status=pending">
+            <div className="v20-kpi-top"><span className="v20-kpi-icon amber">◷</span><span className="v20-kpi-label">Vistorias pendentes</span></div>
+            <div className="v20-kpi-value">{pendingQuality.length}</div>
+            <div className="v20-kpi-foot">Aguardando conclusão</div>
+          </Link>
+          <Link className="v20-kpi v20-span3" href="/execucao/qualidade?tab=blocked">
+            <div className="v20-kpi-top"><span className="v20-kpi-icon red">⚠</span><span className="v20-kpi-label">Serviços bloqueados</span></div>
+            <div className="v20-kpi-value">{blockedQuality.length}</div>
+            <div className="v20-kpi-foot">{blockedQuality.length ? `${blockedQuality.length} bloqueio(s) ativo(s)` : "Nenhum bloqueio ativo"}</div>
+          </Link>
+        </> : null}
 
         {can("schedule.view") ? <ModelCard title="Avanço físico — curva S e planilha mensal" subtitle="% acumulado · previsto versus realizado" href="/execucao/cronograma" linkLabel="Abrir controle do cronograma" span={12}><PhysicalCurve rows={physicalMonths} /></ModelCard> : null}
         {can("payables.view") || can("receivables.view") ? <ModelCard title="Fluxo de caixa" subtitle="3 meses anteriores + 6 meses projetados" href="/financeiro/fluxo-de-caixa" linkLabel="Abrir fluxo completo" span={8}><CashFlowChart rows={cashMonths} money={money} /></ModelCard> : null}
         {can("sales.view") || can("projects.view") ? <ModelCard title="Comercial" subtitle="Unidades e VGV" href="/comercial/vendas" linkLabel="Abrir vendas" span={4}><CommercialSummary sold={soldUnits.length} total={activeUnits.length} vgvSold={Number(salesSummary.total_amount ?? 0)} vgvAvailable={vgvAvailable} money={money} /></ModelCard> : null}
         {can("schedule.view") ? <ModelCard title="Avanço por etapa" subtitle="Realizado versus meta prevista" href="/execucao/cronograma" linkLabel="Ver cronograma" span={5}><StageProgress rows={stageRows} /></ModelCard> : null}
-        {can("budgets.view") || can("payables.view") ? <ModelCard title="Orçamento" subtitle="Controle gerencial de custos" href="/engenharia/orcamento-analitico" linkLabel="Abrir controle" span={3}><BudgetSummary total={budgetTotal} paid={paidAmount} committed={committedAmount} remaining={budgetRemaining} money={money} /></ModelCard> : null}
+        {can("budgets.view") || can("payables.view") ? <ModelCard title="Orçamento" subtitle="Controle gerencial de custos" href="/engenharia/custo-orcamento" linkLabel="Abrir controle" span={3}><BudgetSummary total={budgetTotal} paid={paidAmount} committed={committedAmount} remaining={budgetRemaining} money={money} /></ModelCard> : null}
         <ModelCard title="Pontos críticos" subtitle={`${risks.length || 1} indicador(es) automático(s)`} span={4}><CriticalPoints risks={risks} /></ModelCard>
       </div>}
 
-      {(unitsResult.error || payablesResult.error || receivablesResult.error || ordersResult.error || activitiesResult.error || measurementsResult.error || weightsResult.error || budgetItemsResult.error)
+      {(unitsResult.error || payablesResult.error || receivablesResult.error || ordersResult.error || activitiesResult.error || measurementsResult.error || weightsResult.error || budgetItemsResult.error || qualityResult.error)
         ? <div className="dashboard-data-note">Alguns indicadores não puderam ser carregados. Os demais dados continuam disponíveis normalmente.</div>
         : null}
       <span className="dashboard-context-note">Contexto atual: {activeProject ? `${activeProject.code ? `${activeProject.code} · ` : ""}${activeProject.name}` : activeCompany.name}</span>
-      <span className="v20-version-stamp">Dashboard do modelo original · V0.64.0</span>
     </div>
   </AppShell>;
 }

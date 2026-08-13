@@ -6,9 +6,9 @@
   gap: 18px;
   margin: 14px 0;
   padding: 14px 16px;
-  border: 1px solid #cfe0dc;
+  border:1px solid var(--line);
   border-radius: 14px;
-  background: linear-gradient(135deg, #f8fbfa 0%, #edf6f3 100%);
+  background:linear-gradient(135deg, #f8fbfa 0%, #edf6f3 100%);
 }
 
 .budget-composition-toggle-card > div {
@@ -17,7 +17,7 @@
 }
 
 .budget-composition-toggle-card span {
-  color: #0b776d;
+  color:var(--brand-strong);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .08em;
@@ -25,7 +25,7 @@
 }
 
 .budget-composition-toggle-card strong {
-  color: #18312e;
+  color:var(--foreground);
   font-size: 14px;
 }
 
@@ -42,23 +42,23 @@
 
 .budget-service-edit-link:hover,
 .budget-service-edit-link:focus-visible {
-  color: #08766c;
+  color:var(--brand-strong);
   border-bottom-color: currentColor;
 }
 
 .budget-composition-detail-row > td {
   padding: 0 !important;
   border-top: 0 !important;
-  background: #f3f8f6;
+  background:#f3f8f6;
 }
 
 .budget-composition-detail-panel {
   margin: 0 12px 14px;
   padding: 12px;
-  border: 1px solid #cfe0dc;
+  border:1px solid var(--line);
   border-radius: 12px;
-  background: #fff;
-  box-shadow: inset 4px 0 0 #0b7b70;
+  background:#fff;
+  box-shadow:inset 4px 0 0 var(--brand);
 }
 
 .budget-composition-detail-panel > header {
@@ -75,7 +75,7 @@
 }
 
 .budget-composition-detail-panel > header span {
-  color: #638079;
+  color:var(--muted);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .06em;
@@ -83,20 +83,20 @@
 }
 
 .budget-composition-detail-panel > header strong {
-  color: #17322e;
+  color:var(--foreground);
   font-size: 13px;
 }
 
 .budget-composition-detail-panel > header a,
 .budget-composition-detail-empty a {
-  color: #08766c;
+  color:var(--brand-strong);
   font-size: 11px;
   font-weight: 800;
   text-decoration: none;
 }
 
 .budget-composition-inputs-wrap {
-  border: 1px solid #dce9e6;
+  border:1px solid var(--line);
   border-radius: 10px;
 }
 
@@ -117,46 +117,46 @@
   display: inline-flex;
   padding: 4px 7px;
   border-radius: 999px;
-  background: #e8f4f1;
-  color: #17675f;
+  background:var(--brand-soft);
+  color:var(--brand-strong);
   font-size: 10px;
   font-weight: 800;
   white-space: nowrap;
 }
 
 .budget-composition-category.labor {
-  background: #fff1d8;
-  color: #8a5c08;
+  background:#fff1d8;
+  color:#8a5c08;
 }
 
 .budget-composition-category.equipment {
-  background: #e9eef9;
-  color: #405985;
+  background:#e9eef9;
+  color:#405985;
 }
 
 .budget-composition-category.service {
-  background: #efe8fa;
-  color: #68458d;
+  background:#efe8fa;
+  color:#68458d;
 }
 
 .budget-composition-category.freight,
 .budget-composition-category.other {
-  background: #edf0f0;
-  color: #56635f;
+  background:var(--background);
+  color:var(--muted);
 }
 
 .budget-composition-detail-empty {
   display: grid;
   gap: 5px;
   padding: 14px;
-  border: 1px dashed #bfd5d0;
+  border:1px dashed var(--line);
   border-radius: 10px;
-  color: #657a75;
+  color:var(--muted);
   font-size: 12px;
 }
 
 .budget-composition-detail-empty strong {
-  color: #2d4944;
+  color:var(--foreground);
 }
 
 @media (max-width: 760px) {
