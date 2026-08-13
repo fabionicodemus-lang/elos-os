@@ -119,5 +119,3 @@ try {
 } catch (error: unknown) {
   console.error("KOPER_FULL_PAYABLE_SOURCE_AUDIT_FAILED", JSON.stringify({ message: error instanceof Error ? error.message.slice(0, 1_000) : "unknown" }));
 }
-
-await import("./index.js");
