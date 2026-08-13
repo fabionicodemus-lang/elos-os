@@ -7,7 +7,7 @@ import {
   parseLeadFieldData,
   verifyMetaSignature,
   type MetaWebhookPayload,
-} from "@/lib/meta/leads";
+} from "@/lib/meta/leads.mjs";
 
 // Precisamos de Node.js: usamos node:crypto (assinatura) e a service_role do Supabase.
 export const runtime = "nodejs";
