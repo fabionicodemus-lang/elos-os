@@ -1,0 +1,30 @@
+import type { Response } from "playwright-core";
+import { performKoperLogin } from "./auth/koper-auto-login.js";
+import { withBrowserless } from "./browser/browserless.js";
+import { env } from "./config/env.js";
+import { saveKoperStagingBatch } from "./elos/koper-staging-repository.js";
+import { createKoperStagingRecord } from "./sync/staging-record.js";
+import { isAllowedFlowSwitch } from "./diagnostics/inspect-koper-engineering.js";
+import { selectFlow } from "./diagnostics/collect-flow-stock-requests.js";
+
+type Json=Record<string,unknown>;
+const obj=(v:unknown):Json|null=>typeof v==="object"&&v!==null&&!Array.isArray(v)?v as Json:null;
+const num=(v:unknown):number|null=>v===null||v===undefined||v===""?null:(Number.isFinite(Number(v))?Number(v):null);
+const text=(v:unknown):string|null=>v===null||v===undefined?null:(String(v).trim()||null);
+const bool=(v:unknown):boolean=>v===true||v===1||v==="1"||String(v??"").toUpperCase()==="S";
+const dateText=(v:unknown):string|null=>{const s=text(v);if(!s||s==="-")return null;return Number.isNaN(Date.parse(s))?null:s;};
+function sanitize(row:Json):Json{return {billId:text(row.billId),billToPayId:text(row.billToPayId),fatherBillId:text(row.fatherBillId),joinBillId:text(row.joinBillId),billOrder:text(row.billOrder),billValue:num(row.billValue),installmentAmount:num(row.installmentAmount),dueDate:dateText(row.dueDate),isPaid:bool(row.isPaid),paymentDate:dateText(row.paymentDate),paymentValue:num(row.paymentValue),paymentType:text(row.paymentType),discountValue:num(row.discountValue),interestValue:num(row.interestValue),lateFeeValue:num(row.lateFeeValue),otherAccruals:num(row.otherAccruals),accountId:text(row.accountId),accountName:text(row.accountName),originName:text(row.originName),invoiceNumber:text(row.invoiceNumber),receiptNumber:text(row.receiptNumber),receiptDraft:bool(row.receiptDraft),billReceiptNumber:text(row.billReceiptNumber),duplicateNumber:text(row.duplicateNumber),recTypeId:text(row.recTypeId),recTypeName:text(row.recTypeName),hasRecurrence:bool(row.hasRecurrence),splitted:bool(row.splitted),taxId:text(row.taxId),taxDraft:bool(row.taxDraft),checkId:text(row.checkId),bankSlipFileId:text(row.bankSlipFileId),bankSlipFilename:text(row.bankSlipFilename),proofPayFileId:text(row.proofPayFileId),proofPayFilename:text(row.proofPayFilename),billComments:text(row.billComments),tags:row.tags??null,payroll_apportionment:row.payroll_apportionment??null};}
+
+if(process.env.KOPER_PAYABLE_SOURCE_STAGING_WRITE_ENABLED!=="true")throw new Error("Koper payable source staging write is not explicitly enabled");
+const captured=await withBrowserless(async({page})=>{
+ const login=await performKoperLogin(page);if(!login.authenticated)throw new Error(login.message??"KOPER_AUTH_FAILED");let blockedWrites=0;
+ await page.route("**/*",async route=>{const r=route.request();try{const u=new URL(r.url());const koper=u.hostname==="koper.com.br"||u.hostname.endsWith(".koper.com.br");if(koper&&!["GET","HEAD","OPTIONS"].includes(r.method())&&!isAllowedFlowSwitch(u,r.method(),r.postData())){blockedWrites++;await route.abort("blockedbyclient");return;}}catch{}await route.continue();});
+ if(!await selectFlow(page))throw new Error("FLOW_NOT_SELECTED");
+ const seedPromise=page.waitForResponse((r:Response)=>{try{const u=new URL(r.url());return r.request().method()==="GET"&&u.hostname==="api.koper.com.br"&&u.pathname==="/financial/v1/bills_to_pay"&&!u.searchParams.has("billId");}catch{return false;}},{timeout:20000}).catch(()=>null);
+ await page.goto("https://app.koper.com.br/financeiro/contas_pagar",{waitUntil:"domcontentloaded",timeout:12000}).catch(()=>undefined);const seed=await seedPromise;if(!seed)throw new Error("PAYABLE_SEED_NOT_FOUND");
+ const sh=seed.request().headers();const headers:Record<string,string>={};for(const k of["accept","origin","referer","x-accesstoken","x-koper"])if(sh[k])headers[k]=sh[k];const base=new URL(seed.url());const rows:Json[]=[];let expected=0;let headerTotal=0;
+ for(let offset=0;offset<10000;offset+=500){const u=new URL(base);for(const[k,v]of Object.entries({allBills:"yes",initialDate:"",finalDate:"",limit:"500",offset:String(offset),orderFlag:"asc",orderby:"dueDate",typeDate:"dueDate",cb:String(Date.now())}))u.searchParams.set(k,v);const response=await page.request.get(u.toString(),{headers,timeout:8000});if(!response.ok())throw new Error(`PAGE_${response.status()}_${offset}`);const body=obj(await response.json().catch(()=>null));if(!body)throw new Error(`BODY_${offset}`);if(offset===0){expected=num(body.billsAmount)??0;headerTotal=num(body.totalBills)??0;}const pageRows=Array.isArray(body.bills)?body.bills.map(obj).filter((x):x is Json=>Boolean(x)):[];rows.push(...pageRows);if(!pageRows.length||rows.length>=expected||pageRows.length<500)break;}
+ const unique=new Map<string,Json>();for(const row of rows){const id=text(row.billId);if(!id)throw new Error("BILL_WITHOUT_ID");if(unique.has(id))throw new Error(`DUPLICATE_BILL_${id}`);unique.set(id,row);}if(unique.size!==expected)throw new Error(`COUNT_${unique.size}_${expected}`);return{rows:[...unique.values()],expected,headerTotal,blockedWrites};
+},{sessionTimeoutMs:58000});
+const seenAt=new Date();const records=captured.rows.map(row=>createKoperStagingRecord({companyId:env.BOSSA_COMPANY_ID,entity:"bill_to_pay",koperId:text(row.billId)!,koperParentId:text(row.billToPayId),sanitizedPayload:sanitize(row),koperCreatedAt:null,koperUpdatedAt:dateText(row.paymentDate),mappingVersion:2,seenAt}));
+const saved=await saveKoperStagingBatch(records);console.log("KOPER_FULL_PAYABLE_STAGING_RESULT",JSON.stringify({ok:true,source:{rows:captured.expected,headerTotal:captured.headerTotal,rowSum:captured.rows.reduce((s,r)=>s+(num(r.billValue)??0),0)},staging:{records:records.length,...saved},koperReadOnly:true,blockedKoperWrites:captured.blockedWrites}));
