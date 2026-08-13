@@ -1,1 +1,1 @@
-await import("./audit-full-koper-payables-authenticated.js");
+await import("./audit-koper-payables.js");
