@@ -3,12 +3,27 @@ import { performKoperLogin } from "./auth/koper-auto-login.js";
 import { withBrowserless } from "./browser/browserless.js";
 import { isAllowedFlowSwitch } from "./diagnostics/inspect-koper-engineering.js";
 import { selectFlow } from "./diagnostics/collect-flow-stock-requests.js";
+import { env } from "./config/env.js";
+import { requestSupabase } from "./elos/supabase.js";
 
 type Json = Record<string, unknown>;
+type ElosPayable = { source_id: string | null; amount: number; status: string; due_date: string | null };
 const obj = (v: unknown): Json | null => typeof v === "object" && v !== null && !Array.isArray(v) ? v as Json : null;
 const num = (v: unknown): number => Number.isFinite(Number(v)) ? Number(v) : 0;
 const has = (v: unknown): boolean => v !== null && v !== undefined && String(v).trim() !== "";
 const toCents = (v: unknown): number => Math.round((num(v) + Number.EPSILON) * 100);
+
+async function readAll<T>(table: string, query: Record<string, string>): Promise<T[]> {
+  const out: T[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const page = await requestSupabase<T[]>(table, {
+      query: new URLSearchParams({ ...query, limit: "1000", offset: String(offset) }),
+      timeoutMs: 30_000,
+    });
+    out.push(...page);
+    if (page.length < 1000) return out;
+  }
+}
 
 try {
   const result = await withBrowserless(async ({ page }) => {
@@ -45,9 +60,7 @@ try {
 
     const seedHeaders = seed.request().headers();
     const headers: Record<string, string> = {};
-    for (const key of ["accept", "origin", "referer", "x-accesstoken", "x-koper"]) {
-      if (seedHeaders[key]) headers[key] = seedHeaders[key];
-    }
+    for (const key of ["accept", "origin", "referer", "x-accesstoken", "x-koper"]) if (seedHeaders[key]) headers[key] = seedHeaders[key];
 
     const template = new URL(seed.url());
     for (const [key, value] of Object.entries({
@@ -60,7 +73,6 @@ try {
     let expectedTotalCents = 0;
     let offset = 0;
     let pages = 0;
-
     while (pages < 30) {
       const url = new URL(template);
       url.searchParams.set("offset", String(offset));
@@ -70,10 +82,7 @@ try {
       const body = obj(await response.json().catch(() => null));
       if (!body) return { ok: false, message: "INVALID_BODY", offset, pages, blockedWrites };
       const pageRows = Array.isArray(body.bills) ? body.bills.map(obj).filter((v): v is Json => Boolean(v)) : [];
-      if (pages === 0) {
-        expectedCount = num(body.billsAmount);
-        expectedTotalCents = toCents(body.totalBills);
-      }
+      if (pages === 0) { expectedCount = num(body.billsAmount); expectedTotalCents = toCents(body.totalBills); }
       rows.push(...pageRows);
       pages += 1;
       offset += pageRows.length;
@@ -83,46 +92,104 @@ try {
     const unique = new Map<string, Json>();
     for (const row of rows) if (has(row.billId) && !unique.has(String(row.billId))) unique.set(String(row.billId), row);
     const bills = [...unique.values()];
-    const refs = { invoiceOnly: 0, receiptOnly: 0, invoiceAndReceipt: 0, neither: 0, father: 0, joined: 0, tax: 0, split: 0, recurring: 0 };
-    let sumCents = 0, paidCents = 0, openCents = 0, paidCount = 0, openCount = 0;
 
-    for (const row of bills) {
-      const value = toCents(row.billValue);
-      sumCents += value;
-      if (row.isPaid === true) { paidCount += 1; paidCents += value; } else { openCount += 1; openCents += value; }
-      const inv = has(row.invoiceNumber), rec = has(row.receiptNumber);
-      if (inv && rec) refs.invoiceAndReceipt += 1; else if (inv) refs.invoiceOnly += 1; else if (rec) refs.receiptOnly += 1; else refs.neither += 1;
-      if (has(row.fatherBillId)) refs.father += 1;
-      if (has(row.joinBillId)) refs.joined += 1;
-      if (has(row.taxId)) refs.tax += 1;
-      if (row.splitted === true) refs.split += 1;
-      if (row.hasRecurrence === true) refs.recurring += 1;
+    const elos = await readAll<ElosPayable>("payables", {
+      select: "source_id,amount,status,due_date",
+      company_id: `eq.${env.BOSSA_COMPANY_ID}`,
+      source_system: "eq.koper_flow",
+      order: "source_id.asc",
+    });
+
+    const directElos = new Map<string, ElosPayable>();
+    const syntheticElos: ElosPayable[] = [];
+    for (const payable of elos) {
+      const match = String(payable.source_id ?? "").match(/^koper_bill:(\d+)$/);
+      if (match) directElos.set(match[1]!, payable);
+      else syntheticElos.push(payable);
     }
 
-    const sample = bills.slice(0, 8).map((row) => ({
-      billId: row.billId ?? null, billToPayId: row.billToPayId ?? null, fatherBillId: row.fatherBillId ?? null,
-      billValue: num(row.billValue), dueDate: row.dueDate ?? null, isPaid: row.isPaid ?? null,
-      invoiceNumber: row.invoiceNumber ?? null, receiptNumber: row.receiptNumber ?? null,
-      recTypeId: row.recTypeId ?? null, installmentAmount: row.installmentAmount ?? null,
-      duplicateNumber: row.duplicateNumber ?? null, billOrder: row.billOrder ?? null,
-    }));
+    let koperSum = 0;
+    let paidCount = 0;
+    let openCount = 0;
+    let paidAmount = 0;
+    let openAmount = 0;
+    let matched = 0;
+    let amountMismatch = 0;
+    let statusMismatch = 0;
+    const missing: Json[] = [];
+
+    for (const bill of bills) {
+      const id = String(bill.billId);
+      const cents = toCents(bill.billValue);
+      koperSum += cents;
+      if (bill.isPaid === true) { paidCount += 1; paidAmount += cents; } else { openCount += 1; openAmount += cents; }
+      const imported = directElos.get(id);
+      if (!imported) { missing.push(bill); continue; }
+      matched += 1;
+      if (toCents(imported.amount) !== cents) amountMismatch += 1;
+      if ((imported.status === "paid") !== (bill.isPaid === true)) statusMismatch += 1;
+    }
+
+    const liveIds = new Set(bills.map((bill) => String(bill.billId)));
+    const directElosNotInKoper = [...directElos.keys()].filter((id) => !liveIds.has(id));
+
+    const classify = (items: Json[]) => {
+      let sum = 0, paid = 0, open = 0, invoiceOnly = 0, receiptOnly = 0, invoiceAndReceipt = 0, neither = 0;
+      for (const row of items) {
+        sum += toCents(row.billValue);
+        if (row.isPaid === true) paid += 1; else open += 1;
+        const inv = has(row.invoiceNumber), rec = has(row.receiptNumber);
+        if (inv && rec) invoiceAndReceipt += 1; else if (inv) invoiceOnly += 1; else if (rec) receiptOnly += 1; else neither += 1;
+      }
+      return { count: items.length, amount: sum / 100, paid, open, invoiceOnly, receiptOnly, invoiceAndReceipt, neither };
+    };
+
+    const missingSorted = [...missing].sort((a, b) => num(b.billId) - num(a.billId));
 
     return {
-      ok: bills.length === expectedCount && sumCents === expectedTotalCents,
-      readOnly: true, blockedWrites,
-      source: {
-        endpoint: "/financial/v1/bills_to_pay", pages, fetchedRows: rows.length, uniqueBillIds: bills.length,
-        duplicateBillIds: rows.length - bills.length, headerRows: expectedCount,
-        headerTotal: expectedTotalCents / 100, summedBillValue: sumCents / 100,
-        amountDifference: (sumCents - expectedTotalCents) / 100,
+      ok: bills.length === expectedCount && rows.length === bills.length,
+      readOnly: true,
+      blockedWrites,
+      koper: {
+        pages,
+        rows: bills.length,
+        headerRows: expectedCount,
+        rowSum: koperSum / 100,
+        headerTotal: expectedTotalCents / 100,
+        headerVsRowsDifference: (koperSum - expectedTotalCents) / 100,
+        paidCount,
+        openCount,
+        paidAmount: paidAmount / 100,
+        openAmount: openAmount / 100,
       },
-      status: { paidCount, openCount, paidAmount: paidCents / 100, openAmount: openCents / 100 },
-      references: refs,
-      sample,
+      elos: {
+        totalRows: elos.length,
+        directBillIds: directElos.size,
+        syntheticRows: syntheticElos.length,
+      },
+      reconciliation: {
+        matched,
+        missing: classify(missing),
+        amountMismatch,
+        statusMismatch,
+        directElosNotInKoper: directElosNotInKoper.length,
+        sampleDirectElosNotInKoper: directElosNotInKoper.slice(0, 20),
+        syntheticSourceIdsSample: syntheticElos.slice(0, 20).map((row) => row.source_id),
+        newestMissing: missingSorted.slice(0, 20).map((row) => ({
+          billId: row.billId ?? null,
+          billToPayId: row.billToPayId ?? null,
+          billValue: num(row.billValue),
+          dueDate: row.dueDate ?? null,
+          isPaid: row.isPaid ?? null,
+          invoiceNumber: row.invoiceNumber ?? null,
+          receiptNumber: row.receiptNumber ?? null,
+          recTypeId: row.recTypeId ?? null,
+        })),
+      },
     };
   }, { sessionTimeoutMs: 58_000 });
 
-  console.log("KOPER_FULL_PAYABLE_SOURCE_AUDIT", JSON.stringify(result));
+  console.log("KOPER_PAYABLE_LIVE_VS_ELOS", JSON.stringify(result));
 } catch (error: unknown) {
-  console.error("KOPER_FULL_PAYABLE_SOURCE_AUDIT_FAILED", JSON.stringify({ message: error instanceof Error ? error.message.slice(0, 1_000) : "unknown" }));
+  console.error("KOPER_PAYABLE_LIVE_VS_ELOS_FAILED", JSON.stringify({ message: error instanceof Error ? error.message.slice(0, 1_000) : "unknown" }));
 }
