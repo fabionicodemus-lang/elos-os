@@ -43,6 +43,12 @@ try {
     const seed = await seedPromise;
     if (!seed) return { ok: false, message: "PAYABLE_SEED_NOT_FOUND", blockedWrites };
 
+    const seedHeaders = seed.request().headers();
+    const headers: Record<string, string> = {};
+    for (const key of ["accept", "origin", "referer", "x-accesstoken", "x-koper"]) {
+      if (seedHeaders[key]) headers[key] = seedHeaders[key];
+    }
+
     const template = new URL(seed.url());
     for (const [key, value] of Object.entries({
       allBills: "yes", initialDate: "", finalDate: "", limit: "200", offset: "0",
@@ -58,7 +64,8 @@ try {
     while (pages < 30) {
       const url = new URL(template);
       url.searchParams.set("offset", String(offset));
-      const response = await page.request.get(url.toString(), { timeout: 8_000 });
+      url.searchParams.set("cb", String(Date.now()));
+      const response = await page.request.get(url.toString(), { headers, timeout: 8_000 });
       if (!response.ok()) return { ok: false, message: "PAGE_FAILED", status: response.status(), offset, pages, blockedWrites };
       const body = obj(await response.json().catch(() => null));
       if (!body) return { ok: false, message: "INVALID_BODY", offset, pages, blockedWrites };
