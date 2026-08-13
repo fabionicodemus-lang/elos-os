@@ -20,6 +20,7 @@ const objectValue = (value: unknown): Json | null =>
   typeof value === "object" && value !== null && !Array.isArray(value) ? value as Json : null;
 
 const numeric = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 };
@@ -38,38 +39,55 @@ const dateText = (value: unknown): string | null => {
   return Number.isNaN(parsed) ? null : text;
 };
 
+const booleanish = (value: unknown): boolean =>
+  value === true || value === 1 || value === "1" || String(value ?? "").toUpperCase() === "S";
+
+/**
+ * Keep the native financial identity of a Koper payable intact in staging.
+ * The list endpoint is the source of truth for title/value/status fields; detail
+ * enrichment (supplier / cost center) is stored separately and must not rewrite
+ * these values heuristically.
+ */
 function sanitizeBill(row: Json): Json {
   return {
     billId: identifier(row.billId),
     billToPayId: identifier(row.billToPayId),
     fatherBillId: identifier(row.fatherBillId),
     joinBillId: identifier(row.joinBillId),
+    billOrder: identifier(row.billOrder),
     billValue: numeric(row.billValue),
-    paymentValue: numeric(row.paymentValue),
-    discount: numeric(row.discount),
-    interest: numeric(row.interest),
-    lateFee: numeric(row.lateFee),
-    otherAccruals: numeric(row.otherAccruals),
-    issueDate: dateText(row.issueDate),
+    installmentAmount: numeric(row.installmentAmount),
     dueDate: dateText(row.dueDate),
+    isPaid: booleanish(row.isPaid),
     paymentDate: dateText(row.paymentDate),
-    isPaid: row.isPaid === true,
+    paymentValue: numeric(row.paymentValue),
+    paymentType: identifier(row.paymentType),
+    discountValue: numeric(row.discountValue),
+    interestValue: numeric(row.interestValue),
+    lateFeeValue: numeric(row.lateFeeValue),
+    otherAccruals: numeric(row.otherAccruals),
+    accountId: identifier(row.accountId),
+    accountName: identifier(row.accountName),
+    originName: identifier(row.originName),
     invoiceNumber: identifier(row.invoiceNumber),
     receiptNumber: identifier(row.receiptNumber),
+    receiptDraft: booleanish(row.receiptDraft),
     billReceiptNumber: identifier(row.billReceiptNumber),
-    recTypeId: identifier(row.recTypeId),
-    paymentType: identifier(row.paymentType),
-    installmentAmount: numeric(row.installmentAmount),
     duplicateNumber: identifier(row.duplicateNumber),
-    billOrder: identifier(row.billOrder),
-    splitted: row.splitted === true,
-    hasRecurrence: row.hasRecurrence === true,
+    recTypeId: identifier(row.recTypeId),
+    recTypeName: identifier(row.recTypeName),
+    hasRecurrence: booleanish(row.hasRecurrence),
+    splitted: booleanish(row.splitted),
     taxId: identifier(row.taxId),
-    accountId: identifier(row.accountId),
+    taxDraft: booleanish(row.taxDraft),
     checkId: identifier(row.checkId),
-    receiptDraft: row.receiptDraft === true,
-    taxDraft: row.taxDraft === true,
-    originName: identifier(row.originName),
+    bankSlipFileId: identifier(row.bankSlipFileId),
+    bankSlipFilename: identifier(row.bankSlipFilename),
+    proofPayFileId: identifier(row.proofPayFileId),
+    proofPayFilename: identifier(row.proofPayFilename),
+    billComments: identifier(row.billComments),
+    tags: row.tags ?? null,
+    payroll_apportionment: row.payroll_apportionment ?? null,
   };
 }
 
@@ -195,10 +213,11 @@ const records = captured.rows.map((row) => {
     companyId: env.BOSSA_COMPANY_ID,
     entity: "bill_to_pay",
     koperId: billId,
+    koperParentId: identifier(row.billToPayId),
     sanitizedPayload: sanitizeBill(row),
-    koperCreatedAt: dateText(row.issueDate),
-    koperUpdatedAt: dateText(row.paymentDate) ?? dateText(row.issueDate),
-    mappingVersion: 1,
+    koperCreatedAt: null,
+    koperUpdatedAt: dateText(row.paymentDate),
+    mappingVersion: 2,
     seenAt,
   });
 });
