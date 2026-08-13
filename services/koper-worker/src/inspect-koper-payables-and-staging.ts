@@ -63,7 +63,7 @@ try {
     readAll<Record<string, unknown>>("finance_electronic_invoices", {
       select: "id,registry_number,invoice_number,issue_date,invoice_total,status,validation_status,three_way_status",
       company_id: `eq.${env.BOSSA_COMPANY_ID}`,
-      order: "id.asc",
+      order: "registry_number.asc",
     }),
     readAll<Record<string, unknown>>("finance_electronic_invoice_installments", {
       select: "*",
@@ -114,7 +114,7 @@ try {
   if (projectIds.length) {
     projects = await requestSupabase<Record<string, unknown>[]>("projects", {
       query: new URLSearchParams({
-        select: "id,company_id,name,slug",
+        select: "id,company_id,name",
         company_id: `eq.${env.BOSSA_COMPANY_ID}`,
         id: `in.(${projectIds.join(",")})`,
         limit: "100",
