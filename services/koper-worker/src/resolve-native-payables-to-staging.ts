@@ -213,7 +213,7 @@ async function main() {
           if (directWbs.length === 1) {
             const mappedService = serviceSourceIds.length === 1 ? serviceBySource.get(serviceSourceIds[0]!) : undefined;
             const budgetItem = mappedService ? currentWbs(mappedService.id) : null;
-            allocations.push({ serviceId: mappedService?.id ?? null, serviceSourceId: serviceSourceIds.length === 1 ? serviceSourceIds[0]! : null, serviceName: mappedService?.description ?? names[0] ?? null, budgetItemId: budgetItem?.code === directWbs[0] ? budgetItem.id : null, wbsCode: directWbs[0]!, amount: billValue, method: "koper_receipt_purchase", evidence: { receiptId: origin.receiptId, purchaseIds, serviceOrderIds } });
+            allocations.push({ serviceId: mappedService?.id ?? null, serviceSourceId: serviceSourceIds.length === 1 ? serviceSourceIds[0]! : null, serviceName: mappedService?.description ?? names[0] ?? null, budgetItemId: budgetItem && budgetItem.code === directWbs[0] ? budgetItem.id : null, wbsCode: directWbs[0]!, amount: billValue, method: "koper_receipt_purchase", evidence: { receiptId: origin.receiptId, purchaseIds, serviceOrderIds } });
           }
           const status: Resolution["status"] = allocations.length ? "exact_allocated" : directWbs.length > 1 ? "exact_wbs_unallocated" : serviceSourceIds.length ? "service_only" : (costCenterIds.length || buildMonitoringIds.length) ? "project_only" : "unresolved";
           return { ...base, ids: { receiptId: origin.receiptId, purchaseIds, serviceOrderIds }, projectEvidence: { costCenterIds, buildMonitoringIds }, serviceSourceIds, wbsCodes: directWbs, allocations, status };
