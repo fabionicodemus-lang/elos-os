@@ -1,2 +1,2 @@
-// Intentionally empty. Forces a fresh Railway snapshot after the v2 failure-audit start command was configured.
+// Intentionally empty. Forces a fresh Railway snapshot after the retry-reset start command was configured.
 export {};
