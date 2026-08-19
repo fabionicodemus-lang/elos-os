@@ -27,4 +27,4 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 8080
 
-CMD ["node", "dist/discover-koper-measurements.js"]
+CMD ["node", "dist/export-koper-measurements.js"]
