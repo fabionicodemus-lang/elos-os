@@ -6,6 +6,7 @@ import { selectFlow } from "./diagnostics/collect-flow-stock-requests.js";
 import { isAllowedFlowSwitch } from "./diagnostics/inspect-koper-engineering.js";
 import { requestSupabase } from "./elos/supabase.js";
 
+// Read-only financial origin resolver. Keep native billId as the financial identity.
 type Json = Record<string, unknown>;
 type StageRow = { koper_id: string; koper_parent_id: string | null; payload: unknown };
 type Route =
