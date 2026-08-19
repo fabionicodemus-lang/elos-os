@@ -18,7 +18,8 @@ try{
   const dropdowns=page.locator("div.input-default.dropdown-toggle");let dateDrop=-1;for(let i=0;i<await dropdowns.count();i++){const b=await dropdowns.nth(i).boundingBox();if(b&&b.x>=480&&b.x<=680&&b.y>=130&&b.y<=190)dateDrop=i;}
   if(dateDrop<0)return{ok:false,message:"DATE_DROPDOWN_NOT_FOUND",blockedWrites,calls};
   await dropdowns.nth(dateDrop).click();await sleep(500);
-  const specific=page.getByText(/^Período específico$/,{exact:true}).last();if(!await specific.count())return{ok:false,message:"SPECIFIC_OPTION_NOT_FOUND",blockedWrites,calls};
+  const specific=page.locator("ul.dropdown-menu a").filter({hasText:"Período específico"}).first();
+  if(!await specific.count())return{ok:false,message:"SPECIFIC_OPTION_NOT_FOUND",blockedWrites,calls};
   await specific.click();await sleep(1000);
   const controls=await page.evaluate(()=>Array.from(document.querySelectorAll<HTMLInputElement>("input")).map((el,index)=>{const r=el.getBoundingClientRect();return{index,type:el.type,value:el.value,placeholder:el.placeholder,name:el.name||null,id:el.id||null,className:String(el.className||"").slice(0,180),ngModel:el.getAttribute("ng-model"),x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height),visible:r.width>0&&r.height>0};}).filter(x=>x.visible&&x.y<350));
   const body=(await page.locator("body").innerText()).replace(/\s+/g," ").slice(0,3000);
