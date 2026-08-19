@@ -27,4 +27,4 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 8080
 
-CMD ["node", "dist/discover-koper-measurement-year-arrows.js"]
+CMD ["node", "dist/discover-koper-measurement-period-dropdown.js"]
