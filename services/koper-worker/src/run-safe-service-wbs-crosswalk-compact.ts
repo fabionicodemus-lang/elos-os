@@ -24,4 +24,8 @@ console.log = (...args: unknown[]) => {
   }
   originalLog(...args);
 };
+originalLog("KOPER_SAFE_WBS_WRAPPER_START");
+await new Promise((resolve) => setTimeout(resolve, 1200));
 await import("./audit-safe-service-wbs-crosswalk.js");
+originalLog("KOPER_SAFE_WBS_WRAPPER_DONE");
+await new Promise((resolve) => setTimeout(resolve, 1200));
