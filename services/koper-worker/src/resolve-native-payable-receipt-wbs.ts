@@ -14,6 +14,8 @@ type Evidence = {
   value: number;
   receiptId: string | null;
   receiptStatus: number | null;
+  purchaseIds: string[];
+  purchaseStatuses: number[];
   serviceOrderIds: string[];
   serviceOrderStatuses: number[];
   serviceIds: string[];
@@ -22,6 +24,7 @@ type Evidence = {
   wbsReferences: string[];
   costCenterIds: string[];
   buildMonitoringIds: string[];
+  evidencePath: string[];
   resolution: "exact_wbs" | "service_only" | "cost_center_only" | "receipt_only" | "not_receipt" | "failed";
   error?: string;
 };
@@ -139,6 +142,12 @@ async function run(stages: StageRow[]): Promise<{ blockedWrites: number; evidenc
     const headers: Record<string, string> = {};
     for (const key of ["accept", "origin", "referer", "x-accesstoken", "x-koper"]) if (seedHeaders[key]) headers[key] = seedHeaders[key];
 
+    const fetchJson = async (url: URL): Promise<{ status: number; body: Json }> => {
+      url.searchParams.set("cb", String(Date.now()));
+      const response = await page.request.get(url.toString(), { headers, timeout: 10_000 });
+      return { status: response.status(), body: objectValue(await response.json().catch(() => null)) };
+    };
+
     const result: Evidence[] = [];
     const concurrency = 8;
     for (let offset = 0; offset < stages.length; offset += concurrency) {
@@ -154,45 +163,63 @@ async function run(stages: StageRow[]): Promise<{ blockedWrites: number; evidenc
         try {
           const detailUrl = new URL("https://api.koper.com.br/financial/v1/bills_to_pay");
           detailUrl.searchParams.set("billId", billId);
-          detailUrl.searchParams.set("cb", String(Date.now()));
-          const detailResponse = await page.request.get(detailUrl.toString(), { headers, timeout: 10_000 });
-          const detail = objectValue(await detailResponse.json().catch(() => null));
+          const detailResponse = await fetchJson(detailUrl);
+          const detail = detailResponse.body;
           const receiptId = detailReceiptId(detail);
           if (!receiptId) {
-            return { ...base, receiptId: null, receiptStatus: null, serviceOrderIds: [], serviceOrderStatuses: [], serviceIds: [], serviceNames: [], itemMonitoringIds: [], wbsReferences: [], costCenterIds: [], buildMonitoringIds: [], resolution: "not_receipt" };
+            return {
+              ...base,
+              receiptId: null,
+              receiptStatus: null,
+              purchaseIds: [],
+              purchaseStatuses: [],
+              serviceOrderIds: [],
+              serviceOrderStatuses: [],
+              serviceIds: [],
+              serviceNames: [],
+              itemMonitoringIds: [],
+              wbsReferences: [],
+              costCenterIds: [],
+              buildMonitoringIds: [],
+              evidencePath: ["bill"],
+              resolution: "not_receipt",
+            };
           }
 
           const receiptUrl = new URL("https://api.koper.com.br/financial/v1/receipt");
           receiptUrl.searchParams.set("receiptId", receiptId);
-          receiptUrl.searchParams.set("cb", String(Date.now()));
-          const receiptResponse = await page.request.get(receiptUrl.toString(), { headers, timeout: 10_000 });
-          const receipt = objectValue(await receiptResponse.json().catch(() => null));
-          const serviceOrderIds = unique([
+          const receiptResponse = await fetchJson(receiptUrl);
+          const receipt = receiptResponse.body;
+
+          const purchaseIds = unique(collectByKeys(receipt, new Set(["purchaseId", "purchase_id"])));
+          const purchases = await Promise.all(purchaseIds.map(async (purchaseId) => {
+            const url = new URL("https://api.koper.com.br/purchase/v1/purchase");
+            url.searchParams.set("purchaseId", purchaseId);
+            return fetchJson(url);
+          }));
+          const purchaseBodies = purchases.map((row) => row.body);
+
+          const directServiceOrderIds = unique([
             ...collectByKeys(receipt.servicesOrders, new Set(["serviceOrderId", "service_order_id", "orderId", "order_id"])),
             ...collectByKeys(receipt, new Set(["serviceOrderId", "service_order_id"])),
           ]);
+          const purchaseServiceOrderIds = unique(purchaseBodies.flatMap((body) => collectByKeys(body, new Set(["serviceOrderId", "service_order_id"]))));
+          const serviceOrderIds = unique([...directServiceOrderIds, ...purchaseServiceOrderIds]);
 
           const serviceOrders = await Promise.all(serviceOrderIds.map(async (orderId) => {
             const url = new URL("https://api.koper.com.br/purchase/v1/service_order");
             url.searchParams.set("orderId", orderId);
-            url.searchParams.set("cb", String(Date.now()));
-            const response = await page.request.get(url.toString(), { headers, timeout: 10_000 });
-            return { status: response.status(), body: objectValue(await response.json().catch(() => null)) };
+            return fetchJson(url);
           }));
+          const serviceOrderBodies = serviceOrders.map((row) => row.body);
+          const evidenceBodies = [receipt, ...purchaseBodies, ...serviceOrderBodies];
 
-          const bodies = serviceOrders.map((row) => row.body);
-          const serviceIds = unique(bodies.flatMap((body) => collectByKeys(body, new Set(["serviceId", "service_id"]))));
-          const serviceNames = unique(bodies.flatMap((body) => collectServiceNames(body)));
-          const itemMonitoringIds = unique(bodies.flatMap((body) => collectByKeys(body, new Set(["itemMonitoringId", "item_monitoring_id", "itemMonitContractId"]))));
-          const wbsReferences = unique(bodies.flatMap((body) => collectByKeys(body, new Set(["monItemReference", "itemReference", "item_reference", "reference"]))));
-          const costCenterIds = unique([
-            ...collectByKeys(receipt, new Set(["costCenterId", "cost_center_id", "stockPlaceId", "stock_place_id"])),
-            ...bodies.flatMap((body) => collectByKeys(body, new Set(["costCenterId", "cost_center_id", "stockPlaceId", "stock_place_id"]))),
-          ]);
-          const buildMonitoringIds = unique([
-            ...collectByKeys(receipt, new Set(["buildMonitoringId", "build_monitoring_id"])),
-            ...bodies.flatMap((body) => collectByKeys(body, new Set(["buildMonitoringId", "build_monitoring_id"]))),
-          ]);
+          const serviceIds = unique(evidenceBodies.flatMap((body) => collectByKeys(body, new Set(["serviceId", "service_id"]))));
+          const serviceNames = unique(evidenceBodies.flatMap((body) => collectServiceNames(body)));
+          const itemMonitoringIds = unique(evidenceBodies.flatMap((body) => collectByKeys(body, new Set(["itemMonitoringId", "item_monitoring_id", "itemMonitContractId"]))));
+          const wbsReferences = unique(evidenceBodies.flatMap((body) => collectByKeys(body, new Set(["monItemReference", "itemReference", "item_reference"]))));
+          const costCenterIds = unique(evidenceBodies.flatMap((body) => collectByKeys(body, new Set(["costCenterId", "cost_center_id", "stockPlaceId", "stock_place_id"]))));
+          const buildMonitoringIds = unique(evidenceBodies.flatMap((body) => collectByKeys(body, new Set(["buildMonitoringId", "build_monitoring_id"]))));
 
           const resolution: Evidence["resolution"] = wbsReferences.length > 0
             ? "exact_wbs"
@@ -202,10 +229,16 @@ async function run(stages: StageRow[]): Promise<{ blockedWrites: number; evidenc
                 ? "cost_center_only"
                 : "receipt_only";
 
+          const evidencePath = ["bill", "receipt"];
+          if (purchaseIds.length) evidencePath.push("purchase");
+          if (serviceOrderIds.length) evidencePath.push("service_order");
+
           return {
             ...base,
             receiptId,
-            receiptStatus: receiptResponse.status(),
+            receiptStatus: receiptResponse.status,
+            purchaseIds,
+            purchaseStatuses: purchases.map((row) => row.status),
             serviceOrderIds,
             serviceOrderStatuses: serviceOrders.map((row) => row.status),
             serviceIds,
@@ -214,10 +247,28 @@ async function run(stages: StageRow[]): Promise<{ blockedWrites: number; evidenc
             wbsReferences,
             costCenterIds,
             buildMonitoringIds,
+            evidencePath,
             resolution,
           };
         } catch (error: unknown) {
-          return { ...base, receiptId: null, receiptStatus: null, serviceOrderIds: [], serviceOrderStatuses: [], serviceIds: [], serviceNames: [], itemMonitoringIds: [], wbsReferences: [], costCenterIds: [], buildMonitoringIds: [], resolution: "failed", error: error instanceof Error ? error.message.slice(0, 300) : "unknown" };
+          return {
+            ...base,
+            receiptId: null,
+            receiptStatus: null,
+            purchaseIds: [],
+            purchaseStatuses: [],
+            serviceOrderIds: [],
+            serviceOrderStatuses: [],
+            serviceIds: [],
+            serviceNames: [],
+            itemMonitoringIds: [],
+            wbsReferences: [],
+            costCenterIds: [],
+            buildMonitoringIds: [],
+            evidencePath: ["bill"],
+            resolution: "failed",
+            error: error instanceof Error ? error.message.slice(0, 300) : "unknown",
+          };
         }
       })));
     }
@@ -255,12 +306,19 @@ try {
     resolutions: Object.fromEntries([...byResolution.entries()]),
     unique: {
       receipts: unique(receiptRows.flatMap((row) => row.receiptId ? [row.receiptId] : [])).length,
+      purchases: unique(receiptRows.flatMap((row) => row.purchaseIds)).length,
       serviceOrders: unique(receiptRows.flatMap((row) => row.serviceOrderIds)).length,
       services: unique(receiptRows.flatMap((row) => row.serviceIds)).length,
       itemMonitoringIds: unique(receiptRows.flatMap((row) => row.itemMonitoringIds)).length,
       wbsReferences: unique(receiptRows.flatMap((row) => row.wbsReferences)).length,
       costCenters: unique(receiptRows.flatMap((row) => row.costCenterIds)).length,
       buildMonitorings: unique(receiptRows.flatMap((row) => row.buildMonitoringIds)).length,
+    },
+    purchaseBridge: {
+      receiptBillsWithPurchase: receiptRows.filter((row) => row.purchaseIds.length > 0).length,
+      exactWbsWithPurchase: receiptRows.filter((row) => row.purchaseIds.length > 0 && row.resolution === "exact_wbs").length,
+      serviceOnlyWithPurchase: receiptRows.filter((row) => row.purchaseIds.length > 0 && row.resolution === "service_only").length,
+      costCenterOnlyWithPurchase: receiptRows.filter((row) => row.purchaseIds.length > 0 && row.resolution === "cost_center_only").length,
     },
     exceptions: resolved.evidence.filter((row) => ["receipt_only", "cost_center_only", "service_only", "failed"].includes(row.resolution)).slice(0, 50),
     wbsSample: receiptRows.filter((row) => row.resolution === "exact_wbs").slice(0, 30),
