@@ -5,3 +5,4 @@ await import("./enhance-native-payable-nfe-stock-safe.js");
 console.log("KOPER_POSTSWEEP_STEP",JSON.stringify({done:"nfe_stock_single_service_v5"}));
 await import("./audit-native-payable-resolution-matrix-v4.js");
 console.log("KOPER_POSTSWEEP_DONE",JSON.stringify({ok:true}));
+process.exit(0);
