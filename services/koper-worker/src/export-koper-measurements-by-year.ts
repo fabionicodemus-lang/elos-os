@@ -28,12 +28,12 @@ try{
   const allByYear:Record<string,Row[]>={};
   const metas:Array<Record<string,unknown>>=[];
   for(const year of years){
-    const from=page.locator("input[id^='dateFilterFrom_']").first();
-    const to=page.locator("input[id^='dateFilterTo_']").first();
-    await from.fill(`01/01/${year}`);await to.fill(`31/12/${year}`);
+    const from=page.locator("input[id^='dateFilterFrom_']:visible").first();
+    const to=page.locator("input[id^='dateFilterTo_']:visible").first();
+    await from.fill(`${year}-01-01`);await to.fill(`${year}-12-31`);
     const seedPromise=page.waitForResponse(isList,{timeout:15000}).catch(()=>null);
-    const apply=page.getByText(/^Aplicar$/,{exact:true}).first();
-    await apply.click({timeout:5000});
+    const applied=await page.evaluate(()=>{const els=Array.from(document.querySelectorAll<HTMLElement>("a,button,span"));const el=els.find(e=>(e.innerText||e.textContent||"").replace(/\s+/g," ").trim()==="Aplicar"&&e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0);if(!el)return false;el.click();return true;});
+    if(!applied){metas.push({year,error:"VISIBLE_APPLY_NOT_FOUND"});continue;}
     const seed=await seedPromise;
     if(!seed){metas.push({year,error:"FILTER_RESPONSE_NOT_FOUND"});continue;}
     const sr=seed.request();const sh=sr.headers();const headers:Record<string,string>={};for(const k of ["accept","origin","referer","x-accesstoken","x-koper"])if(sh[k])headers[k]=sh[k];
