@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-const rounds=Math.max(1,Math.min(8,Number(process.env.KOPER_RESOLUTION_ROUNDS??5)||5));
+const rounds=Math.max(1,Math.min(20,Number(process.env.KOPER_RESOLUTION_ROUNDS??8)||8));
 const batch=String(Math.max(10,Math.min(50,Number(process.env.KOPER_RESOLUTION_INNER_BATCH??40)||40)));
 const concurrency=String(Math.max(1,Math.min(6,Number(process.env.KOPER_RESOLUTION_INNER_CONCURRENCY??4)||4)));
 console.log("KOPER_V2_MULTISESSION_START",JSON.stringify({rounds,batch,concurrency}));
