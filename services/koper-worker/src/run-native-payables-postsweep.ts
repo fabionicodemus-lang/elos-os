@@ -1,4 +1,6 @@
-console.log("KOPER_POSTSWEEP_START",JSON.stringify({steps:["nfe_partial_safe_v4","nfe_stock_single_service_v5","matrix_audit_v4","supplier_evidence","measurement_probe"]}));
+console.log("KOPER_POSTSWEEP_START",JSON.stringify({steps:["nfe_partial_aggregate_gate","nfe_partial_safe_v4","nfe_stock_single_service_v5","matrix_audit_v4","supplier_evidence","measurement_probe"]}));
+await import("./audit-nfe-partial-aggregate-safety.js");
+console.log("KOPER_POSTSWEEP_STEP",JSON.stringify({done:"nfe_partial_aggregate_gate"}));
 await import("./enhance-native-payable-nfe-resolutions-v4.js");
 console.log("KOPER_POSTSWEEP_STEP",JSON.stringify({done:"nfe_partial_safe_v4"}));
 await import("./enhance-native-payable-nfe-stock-safe.js");
