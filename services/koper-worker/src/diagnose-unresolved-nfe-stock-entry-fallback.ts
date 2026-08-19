@@ -1,0 +1,27 @@
+import { env } from "./config/env.js";
+import { requestSupabase } from "./elos/supabase.js";
+type J=Record<string,unknown>;type Stage={koper_id:string;koper_parent_id:string|null;payload:unknown};type Order={id:string;source_id:string|null};type OI={id:string;order_id:string;input_id:string;cost_center_service_id:string|null;source_id:string|null};type Input={id:string;source_id:string|null};
+const obj=(v:unknown):J=>typeof v==="object"&&v!==null&&!Array.isArray(v)?v as J:{};const arr=(v:unknown):J[]=>Array.isArray(v)?v.map(obj):[];const id=(v:unknown):string|null=>(typeof v==="string"||typeof v==="number")&&String(v).trim()?String(v).trim():null;const ids=(v:unknown)=>Array.isArray(v)?[...new Set(v.flatMap(x=>id(x)?[id(x)!]:[]))]:[];const uniq=<T>(v:T[])=>[...new Set(v)];
+const nativeProductIds=(p:J)=>uniq([id(p.mainProductId),id(p.productId),id(p.inputId),id(p.genericProdSeq)].filter((x):x is string=>!!x));
+const invoiceIds=(p:J)=>{const nested=arr(p.invoices).flatMap(x=>{const y=id(x.invoiceId);return y?[y]:[]});return nested.length?uniq(nested):ids(p.invoiceIds)};
+const orderSources=(p:J)=>uniq(arr(p.purchaseOrders).flatMap(x=>{const y=id(x.purchaseOrderId??x.purchase_order_id);return y?[y]:[]}));
+async function all<T>(t:string,q:Record<string,string>){const out:T[]=[];for(let o=0;;o+=1000){const rows=await requestSupabase<T[]>(t,{query:new URLSearchParams({...q,limit:"1000",offset:String(o)}),timeoutMs:30000});out.push(...rows);if(rows.length<1000)return out}}
+await import("./index.js");
+const [resolutions,invoices,products,stockItems,orders,ois,inputs]=await Promise.all([
+ all<Stage>("koper_staging_records",{select:"koper_id,koper_parent_id,payload",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source:"eq.koper",entity:"eq.bill_resolution",sync_state:"eq.present"}),
+ all<Stage>("koper_staging_records",{select:"koper_id,koper_parent_id,payload",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source:"eq.koper",entity:"eq.xml_invoice",sync_state:"eq.present"}),
+ all<Stage>("koper_staging_records",{select:"koper_id,koper_parent_id,payload",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source:"eq.koper",entity:"eq.xml_invoice_product",sync_state:"eq.present"}),
+ all<Stage>("koper_staging_records",{select:"koper_id,koper_parent_id,payload",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source:"eq.koper",entity:"eq.stock_entry_item",sync_state:"eq.present"}),
+ all<Order>("procurement_purchase_orders",{select:"id,source_id",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source_system:"eq.koper"}),
+ all<OI>("procurement_purchase_order_items",{select:"id,order_id,input_id,cost_center_service_id,source_id",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source_system:"eq.koper"}),
+ all<Input>("engineering_inputs",{select:"id,source_id",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source_system:"eq.koper"})
+]);
+const invById=new Map(invoices.map(x=>[x.koper_id,x]));const prodByInv=new Map<string,Stage[]>();for(const x of products)if(x.koper_parent_id)prodByInv.set(x.koper_parent_id,[...(prodByInv.get(x.koper_parent_id)??[]),x]);const stockByInv=new Map<string,Stage[]>();for(const x of stockItems)for(const iid of invoiceIds(obj(x.payload)))stockByInv.set(iid,[...(stockByInv.get(iid)??[]),x]);const orderBySource=new Map(orders.flatMap(x=>x.source_id?[[x.source_id,x] as const]:[]));const oiByOrder=new Map<string,OI[]>();for(const x of ois)oiByOrder.set(x.order_id,[...(oiByOrder.get(x.order_id)??[]),x]);const inputBySource=new Map(inputs.flatMap(x=>x.source_id?[[x.source_id,x] as const]:[]));
+const targets=resolutions.filter(r=>{const p=obj(r.payload);return Number(p.version??0)>=2&&p.status==="unresolved"&&p.route==="invoice";});
+let singleInvoiceProductAndStockItem=0,safeSingleLine=0,safeMultiLineByDirectStockIds=0;const examples:J[]=[];
+function resolveStock(stock:Stage,orderId:string){const sp=obj(stock.payload);const sources=nativeProductIds(sp);const inputIds=new Set(sources.flatMap(s=>{const i=inputBySource.get(s);return i?[i.id]:[]}));const candidates=(oiByOrder.get(orderId)??[]).filter(oi=>inputIds.has(oi.input_id)&&!!oi.cost_center_service_id);return candidates.length===1?candidates[0]!:null;}
+for(const r of targets){const p=obj(r.payload),rid=obj(p.ids),invoiceId=id(rid.invoiceId);if(!invoiceId)continue;const inv=invById.get(invoiceId);if(!inv)continue;const nativeOrders=orderSources(obj(inv.payload)).flatMap(s=>{const o=orderBySource.get(s);return o?[o]:[]});if(nativeOrders.length!==1)continue;const order=nativeOrders[0]!;const prods=prodByInv.get(invoiceId)??[],stocks=stockByInv.get(invoiceId)??[];
+ if(prods.length===1&&stocks.length===1){singleInvoiceProductAndStockItem++;const oi=resolveStock(stocks[0]!,order.id);if(oi){safeSingleLine++;if(examples.length<30)examples.push({billId:r.koper_id,invoiceId,mode:"single_line_stock_entry",stockEntryItemId:stocks[0]!.koper_id,orderItemId:oi.id,serviceId:oi.cost_center_service_id});}}
+ if(prods.length>1&&stocks.length===prods.length){const mapped=stocks.map(s=>resolveStock(s,order.id));if(mapped.every((x):x is OI=>!!x)&&new Set(mapped.map(x=>x.id)).size===mapped.length){safeMultiLineByDirectStockIds++;if(examples.length<30)examples.push({billId:r.koper_id,invoiceId,mode:"multi_line_stock_direct_ids",stockItems:stocks.map(x=>x.koper_id),orderItems:mapped.map(x=>x.id),services:uniq(mapped.map(x=>x.cost_center_service_id))});}}
+}
+console.log("KOPER_UNRESOLVED_NFE_STOCK_FALLBACK_AUDIT",JSON.stringify({targets:targets.length,singleInvoiceProductAndStockItem,safeSingleLine,safeMultiLineByDirectStockIds,examples}));await new Promise(r=>setTimeout(r,1200));
