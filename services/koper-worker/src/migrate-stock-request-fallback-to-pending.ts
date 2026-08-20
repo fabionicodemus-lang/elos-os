@@ -51,7 +51,20 @@ async function main(): Promise<void> {
   const currentPending = candidates.filter((row) =>
     row.cost_center_service_id === null && row.cost_center_code === PENDING_CODE
   ).length;
-  const preview = { candidates: candidates.length, noLinks, ambiguous, currentPending, quantity };
+  const realServiceRows = promotedRows.filter((row) => row.cost_center_service_id !== null).length;
+  const legacyRows = promotedRows.filter((row) => row.cost_center_code === "KOPER-SR-LEGACY").length;
+  const unclassifiedRows = promotedRows.length - realServiceRows - currentPending;
+  const preview = {
+    promotedRows: promotedRows.length,
+    realServiceRows,
+    candidates: candidates.length,
+    noLinks,
+    ambiguous,
+    currentPending,
+    legacyRows,
+    unclassifiedRows,
+    quantity,
+  };
   console.log("KOPER_STOCK_REQUEST_PENDING_PREVIEW", JSON.stringify(preview));
 
   if (candidates.length !== EXPECTED_ROWS || Math.abs(quantity - EXPECTED_QUANTITY) > 0.00001) {
@@ -59,6 +72,9 @@ async function main(): Promise<void> {
   }
   if (noLinks !== 517 || ambiguous !== 7) {
     throw new Error(`Fallback reason mismatch noLinks=${noLinks} ambiguous=${ambiguous}`);
+  }
+  if (promotedRows.length !== 3_769 || realServiceRows !== 3_245 || legacyRows !== 0 || unclassifiedRows !== 0) {
+    throw new Error(`Promotion mismatch rows=${promotedRows.length} real=${realServiceRows} legacy=${legacyRows} unclassified=${unclassifiedRows}`);
   }
   if (process.env.KOPER_STOCK_REQUEST_NATIVE_PENDING_ENABLED !== "true") {
     console.log("KOPER_STOCK_REQUEST_PENDING_SKIPPED", JSON.stringify({ reason: "write-flag-disabled" }));
