@@ -775,3 +775,27 @@ Foi criada a migration `20260801_0067_koper_staging_records.sql`, ainda **não e
 O Fábio informou o CNPJ da Bossa em 01/08/2026. O valor não foi versionado nem gravado no Railway. Ele será usado somente para resolver `public.companies.id`; depois o worker receberá apenas `BOSSA_COMPANY_ID` como UUID.
 
 **Próximo passo:** executar e verificar a migration no Supabase, resolver o UUID da Bossa pelo CNPJ e configurar `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e `BOSSA_COMPANY_ID` no worker antes da primeira amostra do Flow.
+
+---
+
+## 2026-08-20 — Apropriação nativa de todos os itens de solicitação conciliada
+
+**Hipótese:** itens sem `services[]` ou com rateio ambíguo não podem usar `KOPER-SR-LEGACY` como centro de custo; devem permanecer pendentes, enquanto os demais usam exclusivamente o vínculo nativo `services[]`.
+
+O seed `seed-koper-stock-request-items-v2.ts` foi corrigido para gravar `cost_center_service_id=null`, código `KOPER-PENDING-NATIVE-SERVICE` e nome explícito de pendência nos casos sem vínculo determinístico. A execução isolada `migrate-stock-request-fallback-to-pending.ts` confirmou o estado operacional sem escrever no Koper.
+
+Conciliação final no deployment Railway `8022bd72-4ad2-4b84-a3a6-23b784d9a82f` (`SUCCESS`):
+
+- 3.697 itens de solicitação na staging;
+- 3.769 linhas operacionais após os rateios por serviço;
+- 3.245 linhas com serviço real;
+- 524 linhas pendentes: 517 sem `services[]` e 7 com quantidade ambígua;
+- quantidade pendente total de 111.762,72;
+- zero linhas `KOPER-SR-LEGACY`;
+- zero linhas sem classificação.
+
+As 524 linhas já estavam corretamente pendentes, portanto a flag de escrita permaneceu desativada e nenhuma atualização material desnecessária foi executada. O runner diagnóstico foi restaurado para `node dist/export-koper-measurements-by-year.js`.
+
+Commits: `22dc427`, `5197095` e `d6daa1b`. **Hipótese confirmada.**
+
+**Próximo passo:** propagar a apropriação nativa pelos vínculos solicitação → pedido → recebimento/NF-e → título e medir quantidade e valor financeiro efetivamente cobertos.
