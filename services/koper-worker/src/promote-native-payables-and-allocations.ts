@@ -105,6 +105,7 @@ try {
   let existingTitleValue = 0;
   let beneficiaryFallbackCount = 0;
   let beneficiaryFallbackValue = 0;
+  let excludedZeroValueCount = 0;
   let exactResolutionCount = 0;
   let exactResolutionValue = 0;
 
@@ -127,8 +128,12 @@ try {
     const payableId = stableUuid(`elos:koper:payable:${billId}`);
     const existing = payableBySource.get(sourceId);
 
-    if (amount <= 0 || !dueDate) {
-      if (titleBlockers.length < 80) titleBlockers.push({ billId, reason: amount <= 0 ? "invalid_amount" : "invalid_due_date", amount, dueDate });
+    if (amount === 0) {
+      excludedZeroValueCount += 1;
+      continue;
+    }
+    if (amount < 0 || !dueDate) {
+      if (titleBlockers.length < 80) titleBlockers.push({ billId, reason: amount < 0 ? "invalid_amount" : "invalid_due_date", amount, dueDate });
       continue;
     }
     if (isPaid && !paidAt) {
@@ -230,7 +235,7 @@ try {
     flowProject,
     source: { bills: billStages.length, resolutions: resolutionStages.length, details: detailStages.length },
     current: { payables: payables.length, existingNativeTitles: existingTitleCount, existingNativeValue: existingTitleValue, allocations: existingAllocations.length },
-    titles: { toInsert: titleRows.length, value: titleValue, beneficiaryFallbackCount, beneficiaryFallbackValue, blockers: titleBlockers.length },
+    titles: { toInsert: titleRows.length, value: titleValue, excludedZeroValueCount, beneficiaryFallbackCount, beneficiaryFallbackValue, blockers: titleBlockers.length },
     exactResolutions: { count: exactResolutionCount, value: exactResolutionValue, allocationBills: plannedAllocationBills, allocationRows: allocationRows.length, allocationValue, blockers: allocationBlockers.length },
     titleBlockerExamples: titleBlockers,
     allocationBlockerExamples: allocationBlockers,
