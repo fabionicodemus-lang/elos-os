@@ -1,0 +1,6 @@
+import { gunzipSync } from "node:zlib";
+type J=Record<string,unknown>;const n=(v:unknown)=>typeof v==="number"?v:Number(v??0),s=(v:unknown)=>String(v??"").trim();
+const k=Number(process.env.FLOW_IMPORT_PLAN_PARTS??0),enc=Array.from({length:k},(_,i)=>process.env[`FLOW_IMPORT_PLAN_${String(i).padStart(2,"0")}`]??"").join(""),pl=JSON.parse(gunzipSync(Buffer.from(enc,"base64")).toString("utf8")) as J,cs=Array.isArray(pl.compositions)?pl.compositions as J[]:[];
+const m=new Map<string,J[]>();let total=0;for(const c of cs)for(const i of(Array.isArray(c.items)?c.items as J[]:[])){total++;const row={service_code:s(c.service_code),input_code:s(i.input_code),effective_coefficient:n(i.effective_coefficient),coefficient:n(i.coefficient),waste_percentage:n(i.waste_percentage),unit_price:n(i.unit_price),price_source:s(i.price_source)};const key=`${row.service_code}|${row.input_code}`;m.set(key,[...(m.get(key)??[]),row]);}
+const duplicates=[...m.entries()].filter(([,v])=>v.length>1).map(([key,rows])=>({key,count:rows.length,sum_effective:rows.reduce((a,r)=>a+n(r.effective_coefficient),0),prices:[...new Set(rows.map(r=>n(r.unit_price)))],rows}));
+console.log("FLOW_COMPOSITION_DUPLICATES",JSON.stringify({total,uniquePairs:m.size,duplicatePairCount:duplicates.length,duplicateExtraRows:total-m.size,duplicates}));
