@@ -25,7 +25,7 @@ type ServiceRow = {
 type IntendedItem = {
   requestId: string;
   input: InputRow;
-  service: ServiceRow;
+  service: ServiceRow | null;
   quantity: number;
   productRequestIds: string[];
   evidence: string[];
@@ -40,7 +40,7 @@ type IntendedPayload = {
   input_name: string;
   unit_snapshot: string;
   category_snapshot: string;
-  cost_center_service_id: string;
+  cost_center_service_id: string | null;
   cost_center_code: string;
   cost_center_name: string;
   requested_quantity: number;
@@ -140,9 +140,6 @@ async function buildIntendedPayloads(): Promise<{
   const requestIdBySource = new Map(requests.map((row) => [row.request_number.replace(/^KOPER-/, ""), row.id]));
   const inputBySource = new Map(inputs.map((row) => [row.source_id, row]));
   const serviceBySource = new Map(services.map((row) => [row.source_id, row]));
-  const fallbackService = services.find((row) => row.source_id === "stock-request-legacy-cost-center");
-  if (!fallbackService) throw new Error("KOPER-SR-LEGACY service is missing");
-
   const official = await resolveFlowStockRequestServices(itemRows);
   const intendedByKey = new Map<string, IntendedItem>();
   let legacyNoLinks = 0;
@@ -159,7 +156,7 @@ async function buildIntendedPayloads(): Promise<{
   }
 
   function add(item: IntendedItem): void {
-    const key = `${item.requestId}:${item.input.id}:${item.service.id}`;
+    const key = `${item.requestId}:${item.input.id}:${item.service?.id ?? "pending-native-service"}`;
     const current = intendedByKey.get(key);
     if (!current) {
       intendedByKey.set(key, item);
@@ -188,7 +185,7 @@ async function buildIntendedPayloads(): Promise<{
       add({
         requestId,
         input,
-        service: fallbackService,
+        service: null,
         quantity,
         productRequestIds: [row.koper_id],
         evidence: ["reason=no-service-links"],
@@ -208,7 +205,7 @@ async function buildIntendedPayloads(): Promise<{
       add({
         requestId,
         input,
-        service: fallbackService,
+        service: null,
         quantity,
         productRequestIds: [row.koper_id],
         evidence: [`reason=ambiguous-quantity,productAmount=${quantity},allocatedAmount=${allocated},allocationIds=${allocationIds.join(",")}`],
@@ -259,9 +256,9 @@ async function buildIntendedPayloads(): Promise<{
     input_name: item.input.description,
     unit_snapshot: item.input.unit,
     category_snapshot: item.input.category,
-    cost_center_service_id: item.service.id,
-    cost_center_code: item.service.code,
-    cost_center_name: item.service.description,
+    cost_center_service_id: item.service?.id ?? null,
+    cost_center_code: item.service?.code ?? "KOPER-PENDING-NATIVE-SERVICE",
+    cost_center_name: item.service?.description ?? "Pendente — sem vínculo nativo no Koper",
     requested_quantity: item.quantity,
     notes: `Koper productRequestIds=${item.productRequestIds.join(",")} · resolution=v2 · ${item.evidence.join(";")}`,
     sort_order: sortOrder,
@@ -269,7 +266,7 @@ async function buildIntendedPayloads(): Promise<{
   }));
 
   const totalQuantity = payloads.reduce((sum, row) => sum + row.requested_quantity, 0);
-  const realServiceRows = payloads.filter((row) => row.cost_center_service_id !== fallbackService.id).length;
+  const realServiceRows = payloads.filter((row) => row.cost_center_service_id !== null).length;
   return {
     projectId: project.id,
     payloads,
@@ -327,7 +324,7 @@ export async function seedKoperStockRequestItemsV2(): Promise<{
     id: string;
     request_id: string;
     input_id: string;
-    cost_center_service_id: string;
+    cost_center_service_id: string | null;
     requested_quantity: number;
     notes: string | null;
   }>("execution_material_request_items", {
