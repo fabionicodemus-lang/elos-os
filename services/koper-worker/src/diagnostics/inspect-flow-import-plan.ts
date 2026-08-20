@@ -1,20 +1,27 @@
 import { createHash } from "node:crypto";
+import { gunzipSync } from "node:zlib";
 
 const parts = Number(process.env.FLOW_IMPORT_PLAN_PARTS ?? "0");
 if (!Number.isInteger(parts) || parts <= 0 || parts > 99) {
   throw new Error(`FLOW_IMPORT_PLAN_PARTS inválido: ${process.env.FLOW_IMPORT_PLAN_PARTS ?? "ausente"}`);
 }
 
-const raw = Array.from({ length: parts }, (_, i) => {
+const encoded = Array.from({ length: parts }, (_, i) => {
   const key = `FLOW_IMPORT_PLAN_${String(i).padStart(2, "0")}`;
   const value = process.env[key];
   if (value == null) throw new Error(`${key} ausente`);
   return value;
 }).join("");
 
-const sha256 = createHash("sha256").update(raw).digest("hex");
+const compressed = Buffer.from(encoded, "base64");
+const jsonBuffer = gunzipSync(compressed);
+const json = jsonBuffer.toString("utf8");
+const encodedSha256 = createHash("sha256").update(encoded).digest("hex");
+const compressedSha256 = createHash("sha256").update(compressed).digest("hex");
+const jsonSha256 = createHash("sha256").update(jsonBuffer).digest("hex");
 const expectedSha256 = process.env.FLOW_IMPORT_PLAN_SHA256 ?? "";
-const plan = JSON.parse(raw) as Record<string, unknown>;
+const shaMatches = !expectedSha256 || [encodedSha256, compressedSha256, jsonSha256].includes(expectedSha256);
+const plan = JSON.parse(json) as Record<string, unknown>;
 
 const summarizeArray = (value: unknown) => {
   if (!Array.isArray(value)) return null;
@@ -37,11 +44,16 @@ const scalarPreview = Object.fromEntries(
 console.log(
   "FLOW_IMPORT_PLAN_PREVIEW",
   JSON.stringify({
-    ok: expectedSha256 ? sha256 === expectedSha256 : true,
+    ok: shaMatches,
     parts,
-    bytes: Buffer.byteLength(raw, "utf8"),
-    sha256,
+    encodedBytes: Buffer.byteLength(encoded, "utf8"),
+    compressedBytes: compressed.byteLength,
+    jsonBytes: jsonBuffer.byteLength,
+    encodedSha256,
+    compressedSha256,
+    jsonSha256,
     expectedSha256,
+    shaMatches,
     topLevelKeys: Object.keys(plan),
     scalarPreview,
     arrays,
