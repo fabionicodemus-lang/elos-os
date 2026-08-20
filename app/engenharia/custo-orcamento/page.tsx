@@ -50,6 +50,8 @@ type GroupSummary = {
   materialCost: number;
   serviceCost: number;
   directCost: number;
+  payablePaidCost: number;
+  payableOpenCost: number;
   purchaseOrderCost: number;
   openCommitment: number;
   forecastCost: number;
@@ -115,6 +117,8 @@ function summarizeGroup(group: BudgetGroup, children: DisplayRow[]): GroupSummar
       summary.materialCost += row.materialCost;
       summary.serviceCost += row.serviceCost;
       summary.directCost += row.directCost;
+      summary.payablePaidCost += row.payablePaidCost;
+      summary.payableOpenCost += row.payableOpenCost;
       summary.purchaseOrderCost += row.purchaseOrderCost;
       summary.openCommitment += row.openCommitment;
       summary.forecastCost += row.forecastCost;
@@ -125,6 +129,8 @@ function summarizeGroup(group: BudgetGroup, children: DisplayRow[]): GroupSummar
       materialCost: 0,
       serviceCost: 0,
       directCost: 0,
+      payablePaidCost: 0,
+      payableOpenCost: 0,
       purchaseOrderCost: 0,
       openCommitment: 0,
       forecastCost: 0,
@@ -324,14 +330,19 @@ export default async function CostVsBudgetPage({
               <small>total da revisão selecionada</small>
             </article>
             <article className="actual">
+              <span>Títulos apropriados</span>
+              <strong>{money(context.totals.payableAllocated)}</strong>
+              <small>{money(context.totals.payablePaid)} pagos · {money(context.totals.payableOpen)} em aberto</small>
+            </article>
+            <article className="actual">
               <span>Custo realizado</span>
               <strong>{money(context.totals.allocated)}</strong>
-              <small>consumos, medições e despesas diretas</small>
+              <small>inclui títulos pagos, consumos, medições e despesas diretas</small>
             </article>
             <article className="committed">
               <span>Comprometido pendente</span>
               <strong>{money(context.totals.committed)}</strong>
-              <small>saldo dos pedidos ainda não realizado</small>
+              <small>títulos em aberto e saldo dos pedidos ainda não realizado</small>
             </article>
             <article className={context.totals.consumptionPercent > 100 ? "danger" : "committed"}>
               <span>Custo total previsto</span>
@@ -344,11 +355,16 @@ export default async function CostVsBudgetPage({
               <small>{balanceIsNegative ? "previsão acima do orçamento" : "valor ainda disponível"}</small>
             </article>
             <article className={context.totals.unallocated > 0 ? "danger" : "ok"}>
-              <span>Sem apropriação</span>
+              <span>Sem apropriação operacional</span>
               <strong>{money(context.totals.unallocated)}</strong>
               <small>
                 {context.totals.overBudgetCount + context.totals.withoutBudgetCount} centro(s) crítico(s)
               </small>
+            </article>
+            <article className={context.totals.payableUnallocated > 0 ? "danger" : "ok"}>
+              <span>Títulos sem apropriação</span>
+              <strong>{money(context.totals.payableUnallocated)}</strong>
+              <small>contas do Koper pendentes para tratamento manual</small>
             </article>
           </section>
 
@@ -399,7 +415,7 @@ export default async function CostVsBudgetPage({
               className="registry-table-wrap"
               style={{ maxHeight: "calc(100vh - 140px)", overflow: "auto", position: "relative" }}
             >
-              <table className="registry-table forecast-service-table" style={{ minWidth: 1780 }}>
+              <table className="registry-table forecast-service-table" style={{ minWidth: 2060 }}>
                 <thead>
                   <tr>
                     <th style={stickyHeaderStyle}>Grupo / Centro de custo · Serviço</th>
@@ -407,6 +423,8 @@ export default async function CostVsBudgetPage({
                     <th style={stickyHeaderStyle}>Materiais realizados</th>
                     <th style={stickyHeaderStyle}>Serviços medidos</th>
                     <th style={stickyHeaderStyle}>Despesas diretas</th>
+                    <th style={stickyHeaderStyle}>Títulos pagos</th>
+                    <th style={stickyHeaderStyle}>Títulos em aberto</th>
                     <th style={stickyHeaderStyle}>Pedidos emitidos</th>
                     <th style={stickyHeaderStyle}>Comprometido pendente</th>
                     <th style={stickyHeaderStyle}>Custo previsto</th>
@@ -430,6 +448,8 @@ export default async function CostVsBudgetPage({
                     <td><strong>{money(materialTotal)}</strong></td>
                     <td><strong>{money(serviceTotal)}</strong></td>
                     <td><strong>{money(directTotal)}</strong></td>
+                    <td><strong>{money(context.totals.payablePaid)}</strong></td>
+                    <td><strong>{money(context.totals.payableOpen)}</strong></td>
                     <td><strong>{money(purchaseOrderTotal)}</strong></td>
                     <td><strong>{money(context.totals.committed)}</strong></td>
                     <td><strong>{money(context.totals.forecast)}</strong></td>
@@ -456,6 +476,8 @@ export default async function CostVsBudgetPage({
                         <td><strong>{money(summary.materialCost)}</strong></td>
                         <td><strong>{money(summary.serviceCost)}</strong></td>
                         <td><strong>{money(summary.directCost)}</strong></td>
+                        <td><strong>{money(summary.payablePaidCost)}</strong></td>
+                        <td><strong>{money(summary.payableOpenCost)}</strong></td>
                         <td><strong>{money(summary.purchaseOrderCost)}</strong></td>
                         <td><strong>{money(summary.openCommitment)}</strong></td>
                         <td><strong>{money(summary.forecastCost)}</strong></td>
@@ -474,6 +496,8 @@ export default async function CostVsBudgetPage({
                           <td>{money(row.materialCost)}</td>
                           <td>{money(row.serviceCost)}</td>
                           <td>{money(row.directCost)}</td>
+                          <td>{money(row.payablePaidCost)}</td>
+                          <td>{money(row.payableOpenCost)}</td>
                           <td>{money(row.purchaseOrderCost)}</td>
                           <td>{money(row.openCommitment)}</td>
                           <td><strong>{money(row.forecastCost)}</strong></td>
@@ -491,7 +515,7 @@ export default async function CostVsBudgetPage({
 
                   {ungroupedRows.length > 0 ? (
                     <tr style={{ background: "#f5f7f7", borderTop: "2px solid #dfe6e5" }}>
-                      <td colSpan={11}><strong>Sem grupo no orçamento</strong></td>
+                      <td colSpan={13}><strong>Sem grupo no orçamento</strong></td>
                     </tr>
                   ) : null}
                   {ungroupedRows.map((row) => (
@@ -501,6 +525,8 @@ export default async function CostVsBudgetPage({
                       <td>{money(row.materialCost)}</td>
                       <td>{money(row.serviceCost)}</td>
                       <td>{money(row.directCost)}</td>
+                      <td>{money(row.payablePaidCost)}</td>
+                      <td>{money(row.payableOpenCost)}</td>
                       <td>{money(row.purchaseOrderCost)}</td>
                       <td>{money(row.openCommitment)}</td>
                       <td><strong>{money(row.forecastCost)}</strong></td>
@@ -515,7 +541,7 @@ export default async function CostVsBudgetPage({
                   ))}
 
                   {rows.length === 0 ? (
-                    <tr><td colSpan={11} className="budget-empty-state"><strong>Nenhum centro de custo encontrado.</strong><span>Revise os filtros aplicados.</span></td></tr>
+                    <tr><td colSpan={13} className="budget-empty-state"><strong>Nenhum centro de custo encontrado.</strong><span>Revise os filtros aplicados.</span></td></tr>
                   ) : null}
                 </tbody>
               </table>

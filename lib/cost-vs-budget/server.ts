@@ -22,6 +22,7 @@ export type CostVsBudgetBudget = {
 };
 
 type BudgetItem = {
+  id: string;
   service_id: string | null;
   code: string | null;
   description: string;
@@ -45,6 +46,8 @@ type InventoryMovement = {
 type PurchaseOrder = {
   id: string;
   status: "confirmed" | "partially_received" | "received" | "closed";
+  source_system: string | null;
+  source_id: string | null;
 };
 
 type PurchaseOrderItem = {
@@ -99,6 +102,23 @@ type ElectronicInvoiceItem = {
   receipt_item_id: string | null;
 };
 
+type KoperPayable = {
+  id: string;
+  status: "open" | "paid";
+  source_id: string | null;
+  amount: number;
+};
+
+type PayableCostAllocation = {
+  payable_id: string;
+  service_id: string | null;
+  budget_item_id: string | null;
+  wbs_code_snapshot: string | null;
+  service_name_snapshot: string | null;
+  allocation_amount: number;
+  evidence: unknown;
+};
+
 type WorkingRow = {
   id: string;
   serviceId: string | null;
@@ -109,6 +129,9 @@ type WorkingRow = {
   serviceCost: number;
   directCost: number;
   purchaseOrderCost: number;
+  coveredPurchaseOrderCost: number;
+  payablePaidCost: number;
+  payableOpenCost: number;
 };
 
 export type CostVsBudgetStatus = "ok" | "attention" | "over" | "no_budget" | "unallocated";
@@ -135,6 +158,10 @@ export type CostVsBudgetTotals = {
   attentionCount: number;
   withoutBudgetCount: number;
   budgetWithoutService: number;
+  payableAllocated: number;
+  payablePaid: number;
+  payableOpen: number;
+  payableUnallocated: number;
 };
 
 export type CostVsBudgetContext = {
@@ -160,6 +187,21 @@ function activeOrderItemValue(item: PurchaseOrderItem) {
   return activeQuantity * Math.max(0, number(item.delivered_unit_cost));
 }
 
+function object(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function nativeOrderSourceIds(evidence: unknown) {
+  const nativeEvidence = object(object(evidence).nativeEvidence);
+  const values = [
+    ...(Array.isArray(nativeEvidence.purchaseIds) ? nativeEvidence.purchaseIds : []),
+    ...(Array.isArray(nativeEvidence.orderSourceIds) ? nativeEvidence.orderSourceIds : []),
+  ];
+  return [...new Set(values.map((value) => String(value).trim()).filter(Boolean))];
+}
+
 function emptyTotals(): CostVsBudgetTotals {
   return {
     budget: 0,
@@ -174,6 +216,10 @@ function emptyTotals(): CostVsBudgetTotals {
     attentionCount: 0,
     withoutBudgetCount: 0,
     budgetWithoutService: 0,
+    payableAllocated: 0,
+    payablePaid: 0,
+    payableOpen: 0,
+    payableUnallocated: 0,
   };
 }
 
@@ -267,11 +313,13 @@ export async function loadCostVsBudget({
     manualInvoiceItemsResult,
     electronicInvoicesResult,
     electronicInvoiceItemsResult,
+    koperPayablesResult,
+    payableAllocationsResult,
   ] = await Promise.all([
     fetchAllRows<BudgetItem>(async (from, to) => {
       const { data, error } = await supabase
         .from("engineering_budget_items")
-        .select("service_id, code, description, total_direct_cost")
+        .select("id, service_id, code, description, total_direct_cost")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .eq("budget_id", budget.id)
@@ -292,7 +340,7 @@ export async function loadCostVsBudget({
     fetchAllRows<PurchaseOrder>(async (from, to) => {
       const { data, error } = await supabase
         .from("procurement_purchase_orders")
-        .select("id, status")
+        .select("id, status, source_system, source_id")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .in("status", ["confirmed", "partially_received", "received", "closed"])
@@ -365,6 +413,27 @@ export async function loadCostVsBudget({
         .range(from, to);
       return { data: (data ?? []) as ElectronicInvoiceItem[], error };
     }),
+    fetchAllRows<KoperPayable>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("payables")
+        .select("id, status, source_id, amount")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .eq("source_system", "koper_flow")
+        .in("status", ["open", "paid"])
+        .range(from, to);
+      return { data: (data ?? []) as KoperPayable[], error };
+    }),
+    fetchAllRows<PayableCostAllocation>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("payable_cost_allocations")
+        .select("payable_id, service_id, budget_item_id, wbs_code_snapshot, service_name_snapshot, allocation_amount, evidence")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .eq("source_system", "koper_native_resolution")
+        .range(from, to);
+      return { data: (data ?? []) as PayableCostAllocation[], error };
+    }),
   ]);
 
   const errors = [
@@ -379,6 +448,8 @@ export async function loadCostVsBudget({
     manualInvoiceItemsResult.error?.message,
     electronicInvoicesResult.error?.message,
     electronicInvoiceItemsResult.error?.message,
+    koperPayablesResult.error?.message,
+    payableAllocationsResult.error?.message,
   ].filter(Boolean) as string[];
 
   const serviceById = new Map(servicesResult.data.map((service) => [service.id, service]));
@@ -398,6 +469,9 @@ export async function loadCostVsBudget({
       serviceCost: 0,
       directCost: 0,
       purchaseOrderCost: 0,
+      coveredPurchaseOrderCost: 0,
+      payablePaidCost: 0,
+      payableOpenCost: 0,
     };
     rows.set(id, next);
     return next;
@@ -427,8 +501,60 @@ export async function loadCostVsBudget({
   }
 
   const activePurchaseOrderIds = new Set(purchaseOrdersResult.data.map((order) => order.id));
+  const activePurchaseOrderBySource = new Map(
+    purchaseOrdersResult.data
+      .filter((order) => order.source_system === "koper" && order.source_id)
+      .map((order) => [order.source_id!, order.id]),
+  );
+  const payableById = new Map(
+    koperPayablesResult.data
+      .filter((payable) => !payable.source_id?.startsWith("koper_bill:missing-"))
+      .map((payable) => [payable.id, payable]),
+  );
+  const budgetItemById = new Map(budgetItemsResult.data.map((item) => [item.id, item]));
+  const allocatedPayableIds = new Set<string>();
+  const coveredAmountByOrder = new Map<string, number>();
+
+  for (const allocation of payableAllocationsResult.data) {
+    const payable = payableById.get(allocation.payable_id);
+    if (!payable) continue;
+    allocatedPayableIds.add(payable.id);
+    const budgetItem = allocation.budget_item_id ? budgetItemById.get(allocation.budget_item_id) : null;
+    const serviceId = allocation.service_id ?? budgetItem?.service_id ?? null;
+    const id = serviceId ?? UNALLOCATED_COST_ID;
+    const row = ensureRow(
+      id,
+      serviceId,
+      allocation.wbs_code_snapshot ?? "SEM-APROPRIAÇÃO",
+      allocation.service_name_snapshot ?? "Título financeiro sem serviço identificado",
+    );
+    const amount = Math.max(0, number(allocation.allocation_amount));
+    if (payable.status === "paid") row.payablePaidCost += amount;
+    else row.payableOpenCost += amount;
+
+    const linkedOrderIds = nativeOrderSourceIds(allocation.evidence)
+      .map((sourceId) => activePurchaseOrderBySource.get(sourceId))
+      .filter((orderId): orderId is string => Boolean(orderId));
+    if (linkedOrderIds.length === 1) {
+      const orderId = linkedOrderIds[0]!;
+      coveredAmountByOrder.set(orderId, (coveredAmountByOrder.get(orderId) ?? 0) + amount);
+    }
+  }
+
+  const purchaseOrderItemsByOrder = new Map<string, PurchaseOrderItem[]>();
   for (const item of purchaseOrderItemsResult.data) {
     if (!activePurchaseOrderIds.has(item.order_id)) continue;
+    purchaseOrderItemsByOrder.set(item.order_id, [
+      ...(purchaseOrderItemsByOrder.get(item.order_id) ?? []),
+      item,
+    ]);
+  }
+  for (const [orderId, items] of purchaseOrderItemsByOrder) {
+    const orderTotal = items.reduce((sum, item) => sum + activeOrderItemValue(item), 0);
+    const coveredRatio = orderTotal > 0
+      ? Math.min(1, Math.max(0, coveredAmountByOrder.get(orderId) ?? 0) / orderTotal)
+      : 0;
+    for (const item of items) {
     const id = item.cost_center_service_id ?? UNALLOCATED_COST_ID;
     const row = ensureRow(
       id,
@@ -436,7 +562,10 @@ export async function loadCostVsBudget({
       item.cost_center_code ?? "SEM-APROPRIAÇÃO",
       item.cost_center_name ?? "Pedidos de compra sem centro de custo",
     );
-    row.purchaseOrderCost += activeOrderItemValue(item);
+      const itemValue = activeOrderItemValue(item);
+      row.purchaseOrderCost += itemValue;
+      row.coveredPurchaseOrderCost += itemValue * coveredRatio;
+    }
   }
 
   const approvedMeasurementIds = new Set(measurementsResult.data.map((measurement) => measurement.id));
@@ -481,8 +610,12 @@ export async function loadCostVsBudget({
 
   const resultRows = [...rows.values()]
     .map<CostVsBudgetRow>((row) => {
-      const allocatedCost = row.materialCost + row.serviceCost + row.directCost;
-      const openCommitment = Math.max(0, row.purchaseOrderCost - Math.max(0, row.materialCost));
+      const allocatedCost = row.materialCost + row.serviceCost + row.directCost + row.payablePaidCost;
+      const residualPurchaseOrder = Math.max(
+        0,
+        row.purchaseOrderCost - row.coveredPurchaseOrderCost - Math.max(0, row.materialCost),
+      );
+      const openCommitment = row.payableOpenCost + residualPurchaseOrder;
       const forecastCost = allocatedCost + openCommitment;
       const balance = row.budgetAmount - forecastCost;
       const consumptionPercent = row.budgetAmount > 0
@@ -517,6 +650,13 @@ export async function loadCostVsBudget({
     if (row.status === "no_budget") summary.withoutBudgetCount += 1;
     return summary;
   }, emptyTotals());
+
+  totals.payablePaid = resultRows.reduce((sum, row) => sum + row.payablePaidCost, 0);
+  totals.payableOpen = resultRows.reduce((sum, row) => sum + row.payableOpenCost, 0);
+  totals.payableAllocated = totals.payablePaid + totals.payableOpen;
+  totals.payableUnallocated = [...payableById.values()]
+    .filter((payable) => !allocatedPayableIds.has(payable.id))
+    .reduce((sum, payable) => sum + Math.max(0, number(payable.amount)), 0);
 
   totals.forecast = totals.allocated + totals.committed;
   totals.balance = totals.budget - totals.forecast;
