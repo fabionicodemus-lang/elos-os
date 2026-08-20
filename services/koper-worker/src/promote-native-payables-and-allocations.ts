@@ -251,7 +251,26 @@ try {
     console.log("KOPER_NATIVE_PAYABLE_PROMOTION_RESULT", JSON.stringify({ ...summary, verified: { nativePayables: verifiedPayables.length, nativePayableValue: money(verifiedPayables.reduce((sum, row) => sum + money(row.amount), 0)), nativeAllocations: verifiedAllocations.length, nativeAllocationBills: new Set(verifiedAllocations.map((row) => row.payable_id)).size, nativeAllocationValue: verifiedAllocationValue } }));
   }
 } catch (error) {
-  console.error("KOPER_NATIVE_PAYABLE_PROMOTION_FAILED", JSON.stringify({ message: error instanceof Error ? error.message.slice(0, 2_000) : String(error).slice(0, 2_000) }));
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("PGRST205")) {
+    try {
+      const supabaseUrl = env.SUPABASE_URL;
+      const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!supabaseUrl || !serviceRoleKey) throw new Error("SUPABASE_ENV_MISSING");
+      const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/`, {
+        headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}` },
+      });
+      const schema = object(await response.json());
+      const paths = object(schema.paths);
+      console.log("KOPER_NATIVE_PAYABLE_SCHEMA_DIAGNOSTIC", JSON.stringify({
+        supabaseHost: new URL(supabaseUrl).hostname,
+        status: response.status,
+        rpcPaths: Object.keys(paths).filter((path) => path.startsWith("/rpc/")).sort(),
+      }));
+    } catch (diagnosticError) {
+      console.error("KOPER_NATIVE_PAYABLE_SCHEMA_DIAGNOSTIC_FAILED", JSON.stringify({ message: diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError) }));
+    }
+  }
+  console.error("KOPER_NATIVE_PAYABLE_PROMOTION_FAILED", JSON.stringify({ message: message.slice(0, 2_000) }));
   process.exitCode = 1;
 }
-
