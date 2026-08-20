@@ -1,0 +1,12 @@
+import { env } from "../config/env.js";
+import { requestSupabase } from "../elos/supabase.js";
+type J=Record<string,unknown>;
+const q=(o:Record<string,string>)=>new URLSearchParams(o);
+const projectId="ffe8b7ec-1f01-4f6c-8a03-2bd6d3ae94fc";
+const rows=(r:string,p:Record<string,string>)=>requestSupabase<J[]>(r,{query:q(p)});
+const knownGroupIds=["0c2cbeb2-f352-460d-ab4a-27426cc7b4dc","17eeb249-9ce6-4c53-9f67-658a79d4b7a4"];
+const groups=await rows("engineering_budget_groups",{select:"*",id:`in.(${knownGroupIds.join(",")})`}).catch(e=>[{error:String(e)}]);
+const services=await rows("engineering_services",{select:"*",company_id:`eq.${env.BOSSA_COMPANY_ID}`,limit:"1000",order:"code.asc"}).catch(e=>[{error:String(e)}]);
+const inputs=await rows("engineering_inputs",{select:"id,code,name,unit,status,company_id",company_id:`eq.${env.BOSSA_COMPANY_ID}`,limit:"2000",order:"code.asc"}).catch(e=>[{error:String(e)}]);
+const svc=Array.isArray(services)?services:[];
+console.log("FLOW_ENGINEERING_MASTER",JSON.stringify({ok:true,projectId,groupRows:groups,serviceCount:svc.length,serviceKeys:svc[0]?Object.keys(svc[0]):[],serviceSamples:svc.filter(s=>String(s.code??"").match(/^0?1\./)).slice(0,8).map(s=>({id:s.id,code:s.code,name:s.name,unit:s.unit,group_id:s.group_id,status:s.status})),inputCount:Array.isArray(inputs)?inputs.length:0,inputSamples:Array.isArray(inputs)?inputs.filter(i=>["ME.01.02","ME.01.03","AL.05.06","AL.05.07"].includes(String(i.code))).map(i=>({id:i.id,code:i.code,name:i.name,unit:i.unit,status:i.status})):[]}));
