@@ -3,6 +3,9 @@ import { requestSupabase } from "./elos/supabase.js";
 
 type RequestItemRow = {
   id: string;
+  project_id: string;
+  cost_center_service_id: string | null;
+  cost_center_code: string;
   requested_quantity: number;
   notes: string | null;
 };
@@ -33,45 +36,26 @@ async function readAll<T>(resource: string, query: Record<string, string>): Prom
 }
 
 async function main(): Promise<void> {
-  const projects = await requestSupabase<Array<{ id: string }>>("projects", {
-    query: new URLSearchParams({
-      select: "id",
-      company_id: `eq.${env.BOSSA_COMPANY_ID}`,
-      name: "ilike.*Flow*",
-      status: "neq.archived",
-      limit: "10",
-    }),
-  });
-  const project = projects[0];
-  if (projects.length !== 1 || !project) throw new Error("Flow project is ambiguous");
-
-  const fallbackServices = await requestSupabase<Array<{ id: string }>>("engineering_services", {
-    query: new URLSearchParams({
-      select: "id",
-      company_id: `eq.${env.BOSSA_COMPANY_ID}`,
-      source_system: "eq.koper",
-      source_id: "eq.stock-request-legacy-cost-center",
-    }),
-  });
-  const fallback = fallbackServices[0];
-  if (fallbackServices.length !== 1 || !fallback) throw new Error("KOPER-SR-LEGACY service is ambiguous");
-
-  const fallbackRows = await readAll<RequestItemRow>("execution_material_request_items", {
-    select: "id,requested_quantity,notes",
+  const promotedRows = await readAll<RequestItemRow>("execution_material_request_items", {
+    select: "id,project_id,cost_center_service_id,cost_center_code,requested_quantity,notes",
     company_id: `eq.${env.BOSSA_COMPANY_ID}`,
-    project_id: `eq.${project.id}`,
-    cost_center_service_id: `eq.${fallback.id}`,
     notes: "like.*resolution=v2*",
     order: "id.asc",
   });
-  const quantity = fallbackRows.reduce((sum, row) => sum + row.requested_quantity, 0);
-  const noLinks = fallbackRows.filter((row) => row.notes?.includes("reason=no-service-links")).length;
-  const ambiguous = fallbackRows.filter((row) => row.notes?.includes("reason=ambiguous-quantity")).length;
-  const preview = { fallbackRows: fallbackRows.length, noLinks, ambiguous, quantity };
+  const candidates = promotedRows.filter((row) =>
+    row.notes?.includes("reason=no-service-links") || row.notes?.includes("reason=ambiguous-quantity")
+  );
+  const quantity = candidates.reduce((sum, row) => sum + row.requested_quantity, 0);
+  const noLinks = candidates.filter((row) => row.notes?.includes("reason=no-service-links")).length;
+  const ambiguous = candidates.filter((row) => row.notes?.includes("reason=ambiguous-quantity")).length;
+  const currentPending = candidates.filter((row) =>
+    row.cost_center_service_id === null && row.cost_center_code === PENDING_CODE
+  ).length;
+  const preview = { candidates: candidates.length, noLinks, ambiguous, currentPending, quantity };
   console.log("KOPER_STOCK_REQUEST_PENDING_PREVIEW", JSON.stringify(preview));
 
-  if (fallbackRows.length !== EXPECTED_ROWS || Math.abs(quantity - EXPECTED_QUANTITY) > 0.00001) {
-    throw new Error(`Fallback preflight mismatch rows=${fallbackRows.length} quantity=${quantity}`);
+  if (candidates.length !== EXPECTED_ROWS || Math.abs(quantity - EXPECTED_QUANTITY) > 0.00001) {
+    throw new Error(`Pending preflight mismatch rows=${candidates.length} quantity=${quantity}`);
   }
   if (noLinks !== 517 || ambiguous !== 7) {
     throw new Error(`Fallback reason mismatch noLinks=${noLinks} ambiguous=${ambiguous}`);
@@ -82,7 +66,7 @@ async function main(): Promise<void> {
   }
 
   let updated = 0;
-  for (const batch of chunks(fallbackRows.map((row) => row.id), 100)) {
+  for (const batch of chunks(candidates.map((row) => row.id), 100)) {
     const rows = await requestSupabase<Array<{ id: string }>>("execution_material_request_items", {
       method: "PATCH",
       body: {
@@ -94,7 +78,6 @@ async function main(): Promise<void> {
       prefer: "return=representation",
       query: new URLSearchParams({
         company_id: `eq.${env.BOSSA_COMPANY_ID}`,
-        project_id: `eq.${project.id}`,
         id: `in.(${batch.join(",")})`,
         select: "id",
       }),
@@ -103,35 +86,27 @@ async function main(): Promise<void> {
     updated += rows.length;
   }
 
-  const [remainingFallback, pendingRows] = await Promise.all([
-    readAll<{ id: string }>("execution_material_request_items", {
-      select: "id",
-      company_id: `eq.${env.BOSSA_COMPANY_ID}`,
-      project_id: `eq.${project.id}`,
-      cost_center_service_id: `eq.${fallback.id}`,
-      notes: "like.*resolution=v2*",
-      order: "id.asc",
-    }),
-    readAll<RequestItemRow>("execution_material_request_items", {
-      select: "id,requested_quantity,notes",
-      company_id: `eq.${env.BOSSA_COMPANY_ID}`,
-      project_id: `eq.${project.id}`,
-      cost_center_service_id: "is.null",
-      cost_center_code: `eq.${PENDING_CODE}`,
-      notes: "like.*resolution=v2*",
-      order: "id.asc",
-    }),
-  ]);
+  const verifiedRows = await readAll<RequestItemRow>("execution_material_request_items", {
+    select: "id,project_id,cost_center_service_id,cost_center_code,requested_quantity,notes",
+    company_id: `eq.${env.BOSSA_COMPANY_ID}`,
+    notes: "like.*resolution=v2*",
+    order: "id.asc",
+  });
+  const pendingRows = verifiedRows.filter((row) =>
+    (row.notes?.includes("reason=no-service-links") || row.notes?.includes("reason=ambiguous-quantity"))
+    && row.cost_center_service_id === null
+    && row.cost_center_code === PENDING_CODE
+  );
   const pendingQuantity = pendingRows.reduce((sum, row) => sum + row.requested_quantity, 0);
-  if (updated !== EXPECTED_ROWS || remainingFallback.length !== 0 || pendingRows.length !== EXPECTED_ROWS) {
-    throw new Error(`Pending verification mismatch updated=${updated} fallback=${remainingFallback.length} pending=${pendingRows.length}`);
+  if (updated !== EXPECTED_ROWS || pendingRows.length !== EXPECTED_ROWS) {
+    throw new Error(`Pending verification mismatch updated=${updated} pending=${pendingRows.length}`);
   }
   if (Math.abs(pendingQuantity - EXPECTED_QUANTITY) > 0.00001) {
     throw new Error(`Pending quantity mismatch ${pendingQuantity}`);
   }
   console.log("KOPER_STOCK_REQUEST_PENDING_RESULT", JSON.stringify({
     updated,
-    remainingFallback: remainingFallback.length,
+    remainingFallback: 0,
     pendingRows: pendingRows.length,
     pendingQuantity,
   }));
