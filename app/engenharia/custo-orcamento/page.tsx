@@ -6,8 +6,16 @@ import {
   type CostVsBudgetRow,
   type CostVsBudgetStatus,
 } from "@/lib/cost-vs-budget/server";
+import {
+  loadCostVsBudgetTitles,
+  type CostVsBudgetTitle,
+} from "@/lib/cost-vs-budget/title-details";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
+import {
+  CostVsBudgetExpansionProvider,
+  CostVsBudgetServiceRow,
+} from "./cost-vs-budget-service-row";
 
 const statusLabels: Record<CostVsBudgetStatus, string> = {
   ok: "Dentro do orçamento",
@@ -190,10 +198,11 @@ export default async function CostVsBudgetPage({
 
   let budgetGroups: BudgetGroup[] = [];
   let budgetHierarchyItems: BudgetHierarchyItem[] = [];
+  let titlesByRow: Record<string, CostVsBudgetTitle[]> = {};
   const hierarchyErrors: string[] = [];
 
   if (projectId && context.budget) {
-    const [groupsResult, itemsResult] = await Promise.all([
+    const [groupsResult, itemsResult, titleContext] = await Promise.all([
       fetchAllRows<BudgetGroup>(async (from, to) => {
         const { data, error } = await supabase
           .from("engineering_budget_groups")
@@ -220,11 +229,19 @@ export default async function CostVsBudgetPage({
           .range(from, to);
         return { data: (data ?? []) as BudgetHierarchyItem[], error };
       }),
+      loadCostVsBudgetTitles({
+        supabase,
+        companyId,
+        projectId,
+        budgetId: context.budget.id,
+      }),
     ]);
     budgetGroups = groupsResult.data;
     budgetHierarchyItems = itemsResult.data;
+    titlesByRow = titleContext.titlesByRow;
     if (groupsResult.error?.message) hierarchyErrors.push(groupsResult.error.message);
     if (itemsResult.error?.message) hierarchyErrors.push(itemsResult.error.message);
+    hierarchyErrors.push(...titleContext.errors);
   }
 
   const groupById = new Map(budgetGroups.map((group) => [group.id, group]));
@@ -415,136 +432,110 @@ export default async function CostVsBudgetPage({
               className="registry-table-wrap"
               style={{ maxHeight: "calc(100vh - 140px)", overflow: "auto", position: "relative" }}
             >
-              <table className="registry-table forecast-service-table" style={{ minWidth: 2060 }}>
-                <thead>
-                  <tr>
-                    <th style={stickyHeaderStyle}>Grupo / Centro de custo · Serviço</th>
-                    <th style={stickyHeaderStyle}>Orçamento</th>
-                    <th style={stickyHeaderStyle}>Materiais realizados</th>
-                    <th style={stickyHeaderStyle}>Serviços medidos</th>
-                    <th style={stickyHeaderStyle}>Despesas diretas</th>
-                    <th style={stickyHeaderStyle}>Títulos pagos</th>
-                    <th style={stickyHeaderStyle}>Títulos em aberto</th>
-                    <th style={stickyHeaderStyle}>Pedidos emitidos</th>
-                    <th style={stickyHeaderStyle}>Comprometido pendente</th>
-                    <th style={stickyHeaderStyle}>Custo previsto</th>
-                    <th style={stickyHeaderStyle}>Saldo</th>
-                    <th style={stickyHeaderStyle}>Consumo</th>
-                    <th style={stickyHeaderStyle}>Situação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    className={balanceIsNegative ? "danger" : ""}
-                    style={{ background: "#dfeeea", borderBottom: "2px solid #b8d5d0" }}
-                  >
-                    <td>
-                      <strong style={{ display: "block", fontSize: 13 }}>TOTAL DA OBRA</strong>
-                      <small style={{ color: "var(--muted)", fontWeight: 700 }}>
-                        {context.budget.code} · {context.budget.version} · {context.budget.name}
-                      </small>
-                    </td>
-                    <td><strong>{money(context.totals.budget)}</strong></td>
-                    <td><strong>{money(materialTotal)}</strong></td>
-                    <td><strong>{money(serviceTotal)}</strong></td>
-                    <td><strong>{money(directTotal)}</strong></td>
-                    <td><strong>{money(context.totals.payablePaid)}</strong></td>
-                    <td><strong>{money(context.totals.payableOpen)}</strong></td>
-                    <td><strong>{money(purchaseOrderTotal)}</strong></td>
-                    <td><strong>{money(context.totals.committed)}</strong></td>
-                    <td><strong>{money(context.totals.forecast)}</strong></td>
-                    <td>
-                      <strong className={balanceIsNegative ? "forecast-danger" : context.totals.balance > 0 ? "forecast-positive" : ""}>
-                        {money(context.totals.balance)}
-                      </strong>
-                    </td>
-                    <td>{consumptionBar(classifySummary(context.totals.budget, context.totals.forecast), context.totals.consumptionPercent)}</td>
-                    <td>{statusBadge(classifySummary(context.totals.budget, context.totals.forecast))}</td>
-                  </tr>
-
-                  {visibleGroups.map(({ group, children, summary }) => (
-                    <Fragment key={group.id}>
-                      <tr
-                        className={summary.status === "over" || summary.status === "no_budget" ? "danger" : ""}
-                        style={{ background: "#edf6f4", borderTop: "2px solid #c9ddda" }}
-                      >
-                        <td>
-                          <strong style={{ display: "block", fontSize: 13 }}>{summary.code} - {summary.name}</strong>
-                          <small style={{ color: "var(--muted)", fontWeight: 700 }}>{children.length} serviço(s)</small>
-                        </td>
-                        <td><strong>{money(summary.budgetAmount)}</strong></td>
-                        <td><strong>{money(summary.materialCost)}</strong></td>
-                        <td><strong>{money(summary.serviceCost)}</strong></td>
-                        <td><strong>{money(summary.directCost)}</strong></td>
-                        <td><strong>{money(summary.payablePaidCost)}</strong></td>
-                        <td><strong>{money(summary.payableOpenCost)}</strong></td>
-                        <td><strong>{money(summary.purchaseOrderCost)}</strong></td>
-                        <td><strong>{money(summary.openCommitment)}</strong></td>
-                        <td><strong>{money(summary.forecastCost)}</strong></td>
-                        <td>
-                          <strong className={summary.balance < 0 ? "forecast-danger" : summary.balance > 0 ? "forecast-positive" : ""}>
-                            {money(summary.balance)}
-                          </strong>
-                        </td>
-                        <td>{consumptionBar(summary.status, summary.consumptionPercent)}</td>
-                        <td>{statusBadge(summary.status)}</td>
-                      </tr>
-                      {children.map((row) => (
-                        <tr key={row.id} className={row.status === "over" || row.status === "no_budget" ? "danger" : ""}>
-                          <td style={{ paddingLeft: 30 }}><strong>{row.displayCode} · {row.displayName}</strong></td>
-                          <td>{money(row.budgetAmount)}</td>
-                          <td>{money(row.materialCost)}</td>
-                          <td>{money(row.serviceCost)}</td>
-                          <td>{money(row.directCost)}</td>
-                          <td>{money(row.payablePaidCost)}</td>
-                          <td>{money(row.payableOpenCost)}</td>
-                          <td>{money(row.purchaseOrderCost)}</td>
-                          <td>{money(row.openCommitment)}</td>
-                          <td><strong>{money(row.forecastCost)}</strong></td>
-                          <td>
-                            <strong className={row.balance < 0 ? "forecast-danger" : row.balance > 0 ? "forecast-positive" : ""}>
-                              {money(row.balance)}
-                            </strong>
-                          </td>
-                          <td>{consumptionBar(row.status, row.consumptionPercent)}</td>
-                          <td>{statusBadge(row.status)}</td>
-                        </tr>
-                      ))}
-                    </Fragment>
-                  ))}
-
-                  {ungroupedRows.length > 0 ? (
-                    <tr style={{ background: "#f5f7f7", borderTop: "2px solid #dfe6e5" }}>
-                      <td colSpan={13}><strong>Sem grupo no orçamento</strong></td>
+              <CostVsBudgetExpansionProvider>
+                <table className="registry-table forecast-service-table" style={{ minWidth: 2060 }}>
+                  <thead>
+                    <tr>
+                      <th style={stickyHeaderStyle}>Grupo / Centro de custo · Serviço</th>
+                      <th style={stickyHeaderStyle}>Orçamento</th>
+                      <th style={stickyHeaderStyle}>Materiais realizados</th>
+                      <th style={stickyHeaderStyle}>Serviços medidos</th>
+                      <th style={stickyHeaderStyle}>Despesas diretas</th>
+                      <th style={stickyHeaderStyle}>Títulos pagos</th>
+                      <th style={stickyHeaderStyle}>Títulos em aberto</th>
+                      <th style={stickyHeaderStyle}>Pedidos emitidos</th>
+                      <th style={stickyHeaderStyle}>Comprometido pendente</th>
+                      <th style={stickyHeaderStyle}>Custo previsto</th>
+                      <th style={stickyHeaderStyle}>Saldo</th>
+                      <th style={stickyHeaderStyle}>Consumo</th>
+                      <th style={stickyHeaderStyle}>Situação</th>
                     </tr>
-                  ) : null}
-                  {ungroupedRows.map((row) => (
-                    <tr key={row.id} className={row.status === "over" || row.status === "no_budget" ? "danger" : ""}>
-                      <td style={{ paddingLeft: 30 }}><strong>{row.displayCode} · {row.displayName}</strong></td>
-                      <td>{money(row.budgetAmount)}</td>
-                      <td>{money(row.materialCost)}</td>
-                      <td>{money(row.serviceCost)}</td>
-                      <td>{money(row.directCost)}</td>
-                      <td>{money(row.payablePaidCost)}</td>
-                      <td>{money(row.payableOpenCost)}</td>
-                      <td>{money(row.purchaseOrderCost)}</td>
-                      <td>{money(row.openCommitment)}</td>
-                      <td><strong>{money(row.forecastCost)}</strong></td>
+                  </thead>
+                  <tbody>
+                    <tr
+                      className={balanceIsNegative ? "danger" : ""}
+                      style={{ background: "#dfeeea", borderBottom: "2px solid #b8d5d0" }}
+                    >
                       <td>
-                        <strong className={row.balance < 0 ? "forecast-danger" : row.balance > 0 ? "forecast-positive" : ""}>
-                          {money(row.balance)}
+                        <strong style={{ display: "block", fontSize: 13 }}>TOTAL DA OBRA</strong>
+                        <small style={{ color: "var(--muted)", fontWeight: 700 }}>
+                          {context.budget.code} · {context.budget.version} · {context.budget.name}
+                        </small>
+                      </td>
+                      <td><strong>{money(context.totals.budget)}</strong></td>
+                      <td><strong>{money(materialTotal)}</strong></td>
+                      <td><strong>{money(serviceTotal)}</strong></td>
+                      <td><strong>{money(directTotal)}</strong></td>
+                      <td><strong>{money(context.totals.payablePaid)}</strong></td>
+                      <td><strong>{money(context.totals.payableOpen)}</strong></td>
+                      <td><strong>{money(purchaseOrderTotal)}</strong></td>
+                      <td><strong>{money(context.totals.committed)}</strong></td>
+                      <td><strong>{money(context.totals.forecast)}</strong></td>
+                      <td>
+                        <strong className={balanceIsNegative ? "forecast-danger" : context.totals.balance > 0 ? "forecast-positive" : ""}>
+                          {money(context.totals.balance)}
                         </strong>
                       </td>
-                      <td>{consumptionBar(row.status, row.consumptionPercent)}</td>
-                      <td>{statusBadge(row.status)}</td>
+                      <td>{consumptionBar(classifySummary(context.totals.budget, context.totals.forecast), context.totals.consumptionPercent)}</td>
+                      <td>{statusBadge(classifySummary(context.totals.budget, context.totals.forecast))}</td>
                     </tr>
-                  ))}
 
-                  {rows.length === 0 ? (
-                    <tr><td colSpan={13} className="budget-empty-state"><strong>Nenhum centro de custo encontrado.</strong><span>Revise os filtros aplicados.</span></td></tr>
-                  ) : null}
-                </tbody>
-              </table>
+                    {visibleGroups.map(({ group, children, summary }) => (
+                      <Fragment key={group.id}>
+                        <tr
+                          className={summary.status === "over" || summary.status === "no_budget" ? "danger" : ""}
+                          style={{ background: "#edf6f4", borderTop: "2px solid #c9ddda" }}
+                        >
+                          <td>
+                            <strong style={{ display: "block", fontSize: 13 }}>{summary.code} - {summary.name}</strong>
+                            <small style={{ color: "var(--muted)", fontWeight: 700 }}>{children.length} serviço(s)</small>
+                          </td>
+                          <td><strong>{money(summary.budgetAmount)}</strong></td>
+                          <td><strong>{money(summary.materialCost)}</strong></td>
+                          <td><strong>{money(summary.serviceCost)}</strong></td>
+                          <td><strong>{money(summary.directCost)}</strong></td>
+                          <td><strong>{money(summary.payablePaidCost)}</strong></td>
+                          <td><strong>{money(summary.payableOpenCost)}</strong></td>
+                          <td><strong>{money(summary.purchaseOrderCost)}</strong></td>
+                          <td><strong>{money(summary.openCommitment)}</strong></td>
+                          <td><strong>{money(summary.forecastCost)}</strong></td>
+                          <td>
+                            <strong className={summary.balance < 0 ? "forecast-danger" : summary.balance > 0 ? "forecast-positive" : ""}>
+                              {money(summary.balance)}
+                            </strong>
+                          </td>
+                          <td>{consumptionBar(summary.status, summary.consumptionPercent)}</td>
+                          <td>{statusBadge(summary.status)}</td>
+                        </tr>
+                        {children.map((row) => (
+                          <CostVsBudgetServiceRow
+                            key={row.id}
+                            row={row}
+                            titles={titlesByRow[row.id] ?? []}
+                          />
+                        ))}
+                      </Fragment>
+                    ))}
+
+                    {ungroupedRows.length > 0 ? (
+                      <tr style={{ background: "#f5f7f7", borderTop: "2px solid #dfe6e5" }}>
+                        <td colSpan={13}><strong>Sem grupo no orçamento</strong></td>
+                      </tr>
+                    ) : null}
+                    {ungroupedRows.map((row) => (
+                      <CostVsBudgetServiceRow
+                        key={row.id}
+                        row={row}
+                        titles={titlesByRow[row.id] ?? []}
+                      />
+                    ))}
+
+                    {rows.length === 0 ? (
+                      <tr><td colSpan={13} className="budget-empty-state"><strong>Nenhum centro de custo encontrado.</strong><span>Revise os filtros aplicados.</span></td></tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </CostVsBudgetExpansionProvider>
             </div>
           </section>
         </>
