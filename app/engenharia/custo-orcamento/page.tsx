@@ -8,6 +8,7 @@ import {
 } from "@/lib/cost-vs-budget/server";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
+import { TraceabilityPanel } from "./traceability-panel";
 
 const statusLabels: Record<CostVsBudgetStatus, string> = {
   ok: "Dentro do orçamento",
@@ -367,6 +368,8 @@ export default async function CostVsBudgetPage({
               <small>contas do Koper pendentes para tratamento manual</small>
             </article>
           </section>
+
+          <TraceabilityPanel />
 
           <section className="registry-toolbar cashflow-toolbar">
             <form
