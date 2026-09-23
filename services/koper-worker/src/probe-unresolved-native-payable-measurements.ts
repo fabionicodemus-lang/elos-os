@@ -44,9 +44,6 @@ try{
  console.log("KOPER_UNRESOLVED_MEASUREMENT_PROBE",JSON.stringify(result));
 }catch(error:unknown){console.error("KOPER_UNRESOLVED_MEASUREMENT_PROBE_FAILED",JSON.stringify({message:error instanceof Error?error.message.slice(0,1200):"unknown",targetCount:targets.length,targetSummary}));}
 
-await import("./audit-unresolved-measurement-staging.js");
 
-await import("./promote-unresolved-measurements-project-only.js");
-await import("./audit-native-payable-resolution-matrix-v4.js");
 
 await import("./audit-unresolved-project-evidence.js");
