@@ -2,6 +2,12 @@ import { createHash } from "node:crypto";
 import { env } from "./config/env.js";
 import { requestSupabase } from "./elos/supabase.js";
 
+if (process.env.KOPER_MEASUREMENT_PROBE_RUN === "true") {
+  console.log("KOPER_NFE_RESOLUTION_ENHANCER_V4_REDIRECT", JSON.stringify({ target: "measurement_probe" }));
+  await import("./probe-unresolved-native-payable-measurements.js");
+  process.exit(0);
+}
+
 type J=Record<string,unknown>;
 type Stage={koper_id:string;koper_parent_id:string|null;payload:unknown};
 type Order={id:string;source_id:string|null};
