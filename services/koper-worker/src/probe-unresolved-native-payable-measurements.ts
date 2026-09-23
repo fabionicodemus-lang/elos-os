@@ -48,3 +48,5 @@ await import("./audit-unresolved-measurement-staging.js");
 
 await import("./promote-unresolved-measurements-project-only.js");
 await import("./audit-native-payable-resolution-matrix-v4.js");
+
+await import("./audit-unresolved-project-evidence.js");
