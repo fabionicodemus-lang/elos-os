@@ -27,4 +27,4 @@ COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 8080
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/probe-unresolved-native-payable-measurements.js"]
