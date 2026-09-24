@@ -20,7 +20,7 @@ const [bills, resolutions, details, payables, allocations, suppliers, invoices, 
   all<{payable_id:string;source_id:string|null;allocation_amount:number}>("payable_cost_allocations", {select:"payable_id,source_id,allocation_amount",company_id:`eq.${env.BOSSA_COMPANY_ID}`,order:"id.asc"}),
   all<{id:string;source_id:string|null;tax_id:string|null;legal_name:string}>("suppliers", {select:"id,source_id,tax_id,legal_name",company_id:`eq.${env.BOSSA_COMPANY_ID}`,order:"id.asc"}),
   all<{id:string;registry_number:string;project_id:string;supplier_id:string}>("finance_electronic_invoices", {select:"id,registry_number,project_id,supplier_id",company_id:`eq.${env.BOSSA_COMPANY_ID}`,order:"id.asc"}),
-  all<{id:string;source_id:string|null;name:string}>("projects", {select:"id,source_id,name",company_id:`eq.${env.BOSSA_COMPANY_ID}`,order:"id.asc"}),
+  all<{id:string;name:string}>("projects", {select:"id,name",company_id:`eq.${env.BOSSA_COMPANY_ID}`,order:"id.asc"}),
   all<{user_id:string}>("company_memberships", {select:"user_id",company_id:`eq.${env.BOSSA_COMPANY_ID}`,status:"eq.active",limit:"1"}),
 ]);
 const rm = new Map(resolutions.map(x=>[x.koper_id,o(x.payload)]));
