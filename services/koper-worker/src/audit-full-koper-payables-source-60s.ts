@@ -29,7 +29,15 @@ async function readAll<T>(table: string, query: Record<string, string>): Promise
 try {
   const result = await withBrowserless(async ({ page }) => {
     const login = await performKoperLogin(page);
-    if (!login.authenticated) return { ok: false, message: login.message };
+    if (!login.authenticated) {
+      const staged = await readAll<StagedBill>("koper_staging_records", {
+        select: "koper_id,first_seen_at,last_seen_at", company_id: `eq.${env.BOSSA_COMPANY_ID}`,
+        source: "eq.koper", entity: "eq.bill_to_pay", sync_state: "eq.present", order: "koper_id.asc",
+      });
+      const latestSeenAt = staged.map(row => row.last_seen_at).filter((v): v is string => Boolean(v)).sort().at(-1) ?? null;
+      const firstSeenAt = staged.map(row => row.first_seen_at).filter((v): v is string => Boolean(v)).sort().at(0) ?? null;
+      return { ok: false, message: login.message, loginBlocked: true, staging: { rows: staged.length, firstSeenAt, latestSeenAt } };
+    }
 
     let blockedWrites = 0;
     await page.route("**/*", async (route) => {
