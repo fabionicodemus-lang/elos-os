@@ -33,6 +33,7 @@ const projectIds = new Set(projects.map(x=>x.id));
 const allocatedByPayable = new Map<string,{count:number;amount:number}>();
 for(const a of allocations){const v=allocatedByPayable.get(a.payable_id)??{count:0,amount:0};v.count++;v.amount+=Number(a.allocation_amount);allocatedByPayable.set(a.payable_id,v);}
 const posting: Record<string,{count:number;value:number;withAllocations:number;allocatedValue:number;amountMismatch:number;projectMismatch:number;invoiceProjectMismatch:number;invoiceSupplierMismatch:number;noAllocations:number}> = {};
+const invoiceProjectOnly = { count:0,value:0,alreadyPosted:0,withoutAllocations:0,invoiceProjectMatch:0,invoiceSupplierMatch:0 };
 const grouped: Record<string,{count:number;value:number;existing:number;invoiceSupplier:number;sourceSupplier:number;taxSupplier:number;noSupplier:number;noProject:number;noDue:number;paidWithoutDate:number}> = {};
 const samples: Record<string,unknown[]> = {};
 for(const row of bills){
@@ -44,6 +45,10 @@ for(const row of bills){
  const a=posted?allocatedByPayable.get(posted.id):undefined;
  const v=posting[status]??{count:0,value:0,withAllocations:0,allocatedValue:0,amountMismatch:0,projectMismatch:0,invoiceProjectMismatch:0,invoiceSupplierMismatch:0,noAllocations:0}; posting[status]=v;
  if(posted){v.count++;v.value+=Number(posted.amount);if(a){v.withAllocations++;v.allocatedValue+=a.amount;}else v.noAllocations++;if(Math.abs(Number(posted.amount)-Number(b.billValue??0))>0.01)v.amountMismatch++;if(s(ev.projectId)&&posted.project_id!==s(ev.projectId))v.projectMismatch++;if(inv?.project_id&&posted.project_id!==inv.project_id)v.invoiceProjectMismatch++;if(inv?.supplier_id&&posted.supplier_id!==inv.supplier_id)v.invoiceSupplierMismatch++;}
+ if(status==="project_only"&&Number(r.version)===8&&r.route==="invoice"){
+  invoiceProjectOnly.count++;invoiceProjectOnly.value+=Number(b.billValue??0);
+  if(posted){invoiceProjectOnly.alreadyPosted++;if(!a)invoiceProjectOnly.withoutAllocations++;if(inv?.project_id===posted.project_id)invoiceProjectOnly.invoiceProjectMatch++;if(inv?.supplier_id===posted.supplier_id)invoiceProjectOnly.invoiceSupplierMatch++;}
+ }
  const sourceSupplier=s(d.supplierId),tax=s(b.taxId)?.replace(/\D/g,"")??"";
  if(inv?.supplier_id)g.invoiceSupplier++;
  else if(sourceSupplier&&supplierSources.has(sourceSupplier))g.sourceSupplier++;
@@ -57,4 +62,5 @@ for(const row of bills){
 }
 for(const g of Object.values(grouped))g.value=Math.round(g.value*100)/100;
 for(const v of Object.values(posting)){v.value=Math.round(v.value*100)/100;v.allocatedValue=Math.round(v.allocatedValue*100)/100;}
-console.log("KOPER_POSTING_AUDIT",JSON.stringify({bills:bills.length,resolutions:resolutions.length,details:details.length,payables:payables.length,existingNative:[...pm.keys()].filter(x=>x.startsWith("koper_bill:")).length,allocations:allocations.length,suppliers:suppliers.length,invoices:invoices.length,projects:projects.length,actor:members.length,grouped,posting,samples}));
+invoiceProjectOnly.value=Math.round(invoiceProjectOnly.value*100)/100;
+console.log("KOPER_POSTING_AUDIT",JSON.stringify({bills:bills.length,resolutions:resolutions.length,details:details.length,payables:payables.length,existingNative:[...pm.keys()].filter(x=>x.startsWith("koper_bill:")).length,allocations:allocations.length,suppliers:suppliers.length,invoices:invoices.length,projects:projects.length,actor:members.length,grouped,posting,invoiceProjectOnly,samples}));
