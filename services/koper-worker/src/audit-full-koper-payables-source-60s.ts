@@ -8,6 +8,7 @@ import { requestSupabase } from "./elos/supabase.js";
 
 type Json = Record<string, unknown>;
 type ElosPayable = { source_id: string | null; amount: number; status: string; due_date: string | null; paid_at: string | null; paid_amount: number | null };
+type StagedBill = { koper_id: string; first_seen_at: string | null; last_seen_at: string | null };
 const obj = (v: unknown): Json | null => typeof v === "object" && v !== null && !Array.isArray(v) ? v as Json : null;
 const num = (v: unknown): number => Number.isFinite(Number(v)) ? Number(v) : 0;
 const has = (v: unknown): boolean => v !== null && v !== undefined && String(v).trim() !== "";
@@ -93,12 +94,22 @@ try {
     for (const row of rows) if (has(row.billId) && !unique.has(String(row.billId))) unique.set(String(row.billId), row);
     const bills = [...unique.values()];
 
-    const elos = await readAll<ElosPayable>("payables", {
+    const [elos, staged] = await Promise.all([readAll<ElosPayable>("payables", {
       select: "source_id,amount,status,due_date,paid_at,paid_amount",
       company_id: `eq.${env.BOSSA_COMPANY_ID}`,
       source_system: "eq.koper_flow",
       order: "source_id.asc",
-    });
+    }), readAll<StagedBill>("koper_staging_records", {
+      select: "koper_id,first_seen_at,last_seen_at",
+      company_id: `eq.${env.BOSSA_COMPANY_ID}`,
+      source: "eq.koper",
+      entity: "eq.bill_to_pay",
+      sync_state: "eq.present",
+      order: "koper_id.asc",
+    })]);
+    const stagedIds = new Set(staged.map(row => row.koper_id));
+    const latestStagedSeenAt = staged.map(row => row.last_seen_at).filter((v): v is string => Boolean(v)).sort().at(-1) ?? null;
+    const stagedMissingLive = bills.filter(row => !stagedIds.has(String(row.billId)));
 
     const directElos = new Map<string, ElosPayable>();
     const syntheticElos: ElosPayable[] = [];
@@ -204,6 +215,8 @@ try {
         directBillIds: directElos.size,
         syntheticRows: syntheticElos.length,
       },
+      staging: { rows: staged.length, latestSeenAt: latestStagedSeenAt, liveMissing: stagedMissingLive.length,
+        newestMissing: stagedMissingLive.sort((a,b) => num(b.billId)-num(a.billId)).slice(0,20).map(row => ({billId:row.billId,billValue:row.billValue,dueDate:row.dueDate})) },
       reconciliation: {
         matched,
         missing: classify(missing),
