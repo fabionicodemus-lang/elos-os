@@ -28,6 +28,7 @@ type Payable = {
   source_category: string | null;
   beneficiary_name: string | null;
   beneficiary_tax_id: string | null;
+  payable_cost_allocations: { id: string }[] | null;
   suppliers: Supplier | Supplier[] | null;
 };
 
@@ -109,7 +110,7 @@ export default async function PayablesPage({
 
   let listQuery = supabase
     .from("payables")
-    .select("id, document, due_date, amount, status, installment_label, notes, paid_at, paid_amount, paid_account_name, source_system, source_category, beneficiary_name, beneficiary_tax_id, suppliers(id, legal_name, trade_name, tax_id)", { count: "exact" })
+    .select("id, document, due_date, amount, status, installment_label, notes, paid_at, paid_amount, paid_account_name, source_system, source_category, beneficiary_name, beneficiary_tax_id, suppliers(id, legal_name, trade_name, tax_id), payable_cost_allocations(id)", { count: "exact" })
     .eq("company_id", companyId)
     .order("due_date", { ascending: false })
     .range(fromRow, toRow);
@@ -214,7 +215,7 @@ export default async function PayablesPage({
             </div>
             <div className="registry-table-wrap">
               <table className="registry-table finance-table">
-                <thead><tr><th>Favorecido</th><th>Documento</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Pagamento</th><th>Ação</th></tr></thead>
+                <thead><tr><th>Favorecido</th><th>Documento</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Apropriação</th><th>Pagamento</th><th>Ação</th></tr></thead>
                 <tbody>
                   {payables.map((payable) => {
                     const supplier = relatedOne(payable.suppliers);
@@ -228,6 +229,7 @@ export default async function PayablesPage({
                         <td>{dateBR(payable.due_date)}</td>
                         <td><strong>{money(payable.amount)}</strong></td>
                         <td><span className={`status-badge ${payable.status}`}>{payable.status === "open" ? "Em aberto" : payable.status === "paid" ? "Pago" : "Cancelado"}</span></td>
+                        <td>{payable.source_system === "koper_flow" ? (payable.payable_cost_allocations?.length ? "Apropriado" : "À Apropriar") : "—"}</td>
                         <td><span>{payable.paid_at ? dateBR(payable.paid_at) : "—"}</span><small>{payable.paid_at ? `${money(payable.paid_amount ?? payable.amount)}${payable.paid_account_name ? ` · ${payable.paid_account_name}` : ""}` : ""}</small></td>
                         <td>
                           {canManage && payable.status === "open" ? (
@@ -249,7 +251,7 @@ export default async function PayablesPage({
                       </tr>
                     );
                   })}
-                  {payables.length === 0 ? <tr><td className="empty-table" colSpan={7}>Nenhuma conta encontrada.</td></tr> : null}
+                  {payables.length === 0 ? <tr><td className="empty-table" colSpan={8}>Nenhuma conta encontrada.</td></tr> : null}
                 </tbody>
               </table>
             </div>
