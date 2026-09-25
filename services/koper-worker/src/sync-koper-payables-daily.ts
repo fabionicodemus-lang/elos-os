@@ -83,6 +83,14 @@ try{
  }
  const write=process.argv.includes("--write");const summary={write,override,flowProjectId,source:source.bills.length,sourceTotal:source.computedTotal,headerReportedTotal:source.headerTotal,headerDifference:Math.round((source.computedTotal-source.headerTotal)*100)/100,previousStage:previous.length,previousPayables:payables.length,newInSource:newBills.length,detailsFetched:source.details.size,detailsAvailable:selected.length,remainingDetails:newBills.length-selected.length,newSuppliers:newSuppliers.size,toCreate:creates.length,conflictUpdates:conflictUpdates.length,allocationsToReduce:conflictUpdates.filter(x=>x.allocationToReduce).length,overallocatedConflicts:conflictUpdates.filter(x=>x.overallocated).length,paymentUpdates:paymentUpdates.length,unchanged,exceptions:exceptions.length,exceptionsByReason:exceptions.reduce<Record<string,number>>((m,x)=>(m[x.reason]=(m[x.reason]??0)+1,m),{}),examples:exceptions.slice(0,12),blockedKoperWrites:source.blockedWrites};
  console.log("KOPER_DAILY_SYNC_PLAN",JSON.stringify(summary));
+ if(process.argv.includes("--reconcile")){
+  const sourceIds=new Set(source.bills.map(x=>`koper_bill:${x.billId}`));
+  const extra=payables.filter(x=>!x.source_id||!sourceIds.has(x.source_id));
+  const missing=source.bills.filter(x=>!byPayable.has(`koper_bill:${x.billId}`));
+  const mismatched=source.bills.flatMap(x=>{const p=byPayable.get(`koper_bill:${x.billId}`);return p&&cents(p.amount)!==cents(x.billValue)?[{billId:x.billId,koper:x.billValue,elos:p.amount,delta:Math.round((p.amount-x.billValue)*100)/100,projectId:p.project_id}]:[];});
+  const projectTotals=new Map<string,{count:number,cents:number}>();for(const p of payables){const v=projectTotals.get(p.project_id)??{count:0,cents:0};v.count++;v.cents+=cents(p.amount);projectTotals.set(p.project_id,v);}
+  console.log("KOPER_DAILY_RECONCILIATION",JSON.stringify({sourceCount:source.bills.length,sourceTotal:source.computedTotal,payablesCount:payables.length,payablesTotal:payables.reduce((n,p)=>n+cents(p.amount),0)/100,projectTotals:[...projectTotals].map(([projectId,v])=>({projectId,count:v.count,total:v.cents/100})),extra:extra.map(p=>({sourceId:p.source_id,amount:p.amount,projectId:p.project_id,status:p.status})),extraTotal:extra.reduce((n,p)=>n+cents(p.amount),0)/100,missing:missing.map(b=>({billId:b.billId,amount:b.billValue})),missingTotal:missing.reduce((n,b)=>n+cents(b.billValue),0)/100,mismatched}));
+ }
  if(process.argv.includes("--report")){
   const [allocationRows,bankRows,supplierRows,projectRows]=await Promise.all([
    all<{payable_id:string;allocation_amount:number}>("payable_cost_allocations",{select:"payable_id,allocation_amount",company_id:`eq.${env.BOSSA_COMPANY_ID}`,order:"id.asc"}),
