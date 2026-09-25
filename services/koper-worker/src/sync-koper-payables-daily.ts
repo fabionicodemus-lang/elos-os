@@ -90,6 +90,21 @@ try{
   const mismatched=source.bills.flatMap(x=>{const p=byPayable.get(`koper_bill:${x.billId}`);return p&&cents(p.amount)!==cents(x.billValue)?[{billId:x.billId,koper:x.billValue,elos:p.amount,delta:Math.round((p.amount-x.billValue)*100)/100,projectId:p.project_id}]:[];});
   const projectTotals=new Map<string,{count:number,cents:number}>();for(const p of payables){const v=projectTotals.get(p.project_id)??{count:0,cents:0};v.count++;v.cents+=cents(p.amount);projectTotals.set(p.project_id,v);}
   console.log("KOPER_DAILY_RECONCILIATION",JSON.stringify({sourceCount:source.bills.length,sourceTotal:source.computedTotal,payablesCount:payables.length,payablesTotal:payables.reduce((n,p)=>n+cents(p.amount),0)/100,projectTotals:[...projectTotals].map(([projectId,v])=>({projectId,count:v.count,total:v.cents/100})),extra:extra.map(p=>({sourceId:p.source_id,amount:p.amount,projectId:p.project_id,status:p.status})),extraTotal:extra.reduce((n,p)=>n+cents(p.amount),0)/100,missing:missing.map(b=>({billId:b.billId,amount:b.billValue})),missingTotal:missing.reduce((n,b)=>n+cents(b.billValue),0)/100,mismatched}));
+  if(process.argv.includes("--details")&&extra.length){
+   const ids=extra.map(p=>p.source_id?.replace(/^koper_bill:/,"")??"").filter(Boolean);
+   const payableIds=extra.map(p=>p.id);
+   const supplierIds=[...new Set(extra.map(p=>p.supplier_id))];
+   const [fullPayables,fullSuppliers,staged,allocations,bankTransactions]=await Promise.all([
+    all<J>("payables",{select:"*",company_id:`eq.${env.BOSSA_COMPANY_ID}`,id:`in.(${payableIds.join(",")})`,order:"id.asc"}),
+    all<J>("suppliers",{select:"*",company_id:`eq.${env.BOSSA_COMPANY_ID}`,id:`in.(${supplierIds.join(",")})`,order:"id.asc"}),
+    all<J>("koper_staging_records",{select:"*",company_id:`eq.${env.BOSSA_COMPANY_ID}`,koper_id:`in.(${ids.join(",")})`,order:"koper_id.asc"}),
+    all<J>("payable_cost_allocations",{select:"*",company_id:`eq.${env.BOSSA_COMPANY_ID}`,payable_id:`in.(${payableIds.join(",")})`,order:"id.asc"}),
+    all<J>("finance_bank_transactions",{select:"*",company_id:`eq.${env.BOSSA_COMPANY_ID}`,payable_id:`in.(${payableIds.join(",")})`,order:"id.asc"}),
+   ]);
+   const payableMap=new Map(fullPayables.map(x=>[String(x.id),x])),supplierMap=new Map(fullSuppliers.map(x=>[String(x.id),x]));
+   for(const p of extra){const billId=p.source_id?.replace(/^koper_bill:/,"")??"";console.log("KOPER_EXTRA_DETAIL",JSON.stringify({billId,payable:payableMap.get(p.id)??p,supplier:supplierMap.get(p.supplier_id)??null,staging:staged.filter(x=>x.koper_id===billId),allocations:allocations.filter(x=>x.payable_id===p.id),bankTransactions:bankTransactions.filter(x=>x.payable_id===p.id)}));}
+   console.log("KOPER_EXTRA_DETAIL_SUMMARY",JSON.stringify({count:extra.length,payables:fullPayables.length,suppliers:fullSuppliers.length,staging:staged.length,allocations:allocations.length,bankTransactions:bankTransactions.length}));
+  }
  }
  if(process.argv.includes("--report")){
   const [allocationRows,bankRows,supplierRows,projectRows]=await Promise.all([
