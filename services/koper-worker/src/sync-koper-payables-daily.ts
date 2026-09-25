@@ -39,7 +39,8 @@ async function capture():Promise<{bills:Bill[];details:Map<string,Detail>;blocke
   const bills:Bill[]=[];let expected=-1,headerTotal=0;
   for(let offset=0;offset<20000;offset+=500){const u=new URL(template);u.searchParams.set("offset",String(offset));u.searchParams.set("cb",String(Date.now()));const res=await page.request.get(u.toString(),{headers,timeout:12000});if(!res.ok())throw new Error(`KOPER_LIST_HTTP_${res.status()}`);const body=o(await res.json().catch(()=>null));if(offset===0){expected=Number(body.billsAmount);headerTotal=cents(body.totalBills);}const list=Array.isArray(body.bills)?body.bills.map(o):[];bills.push(...list.map(parseBill));if(!list.length||bills.length>=expected||list.length<500)break;}
   if(!Number.isInteger(expected)||expected<0||bills.length!==expected||new Set(bills.map(x=>x.billId)).size!==expected||bills.some(x=>!x.billId||!Number.isFinite(x.billValue)))throw new Error(`KOPER_LIST_INCOMPLETE_${bills.length}_${expected}`);
-  if(bills.reduce((v,x)=>v+cents(x.billValue),0)!==headerTotal)throw new Error("KOPER_LIST_TOTAL_MISMATCH");
+  const computedTotal=bills.reduce((v,x)=>v+cents(x.billValue),0);
+  if(computedTotal!==headerTotal)throw new Error(`KOPER_LIST_TOTAL_MISMATCH_count_${bills.length}_sum_${computedTotal}_header_${headerTotal}`);
   const [posted,storedDetails]=await Promise.all([all<{source_id:string|null}>("payables",{select:"source_id",company_id:`eq.${env.BOSSA_COMPANY_ID}`,source_system:"eq.koper_flow",order:"id.asc"}),stage("bill_detail_enrichment")]);const known=new Set(posted.map(x=>x.source_id)),detailIds=new Set(storedDetails.map(x=>x.koper_id));const newBills=bills.filter(x=>!known.has(`koper_bill:${x.billId}`)&&!detailIds.has(x.billId));
   const cap=Math.max(1,Math.min(500,Number(process.env.KOPER_DAILY_NEW_LIMIT??"250")||250));
   const selected=newBills.slice(0,cap);const details=new Map<string,Detail>();let cursor=0;
