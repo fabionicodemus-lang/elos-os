@@ -93,7 +93,7 @@ try{
   if(process.argv.includes("--details")&&extra.length){
    const ids=extra.map(p=>p.source_id?.replace(/^koper_bill:/,"")??"").filter(Boolean);
    const payableIds=extra.map(p=>p.id);
-   const supplierIds=[...new Set(extra.map(p=>p.supplier_id))];
+   const supplierIds=[...new Set(extra.map(p=>p.supplier_id).filter(Boolean))];
    const [fullPayables,fullSuppliers,staged,allocations,bankTransactions]=await Promise.all([
     all<J>("payables",{select:"*",company_id:`eq.${env.BOSSA_COMPANY_ID}`,id:`in.(${payableIds.join(",")})`,order:"id.asc"}),
     all<J>("suppliers",{select:"*",company_id:`eq.${env.BOSSA_COMPANY_ID}`,id:`in.(${supplierIds.join(",")})`,order:"id.asc"}),
