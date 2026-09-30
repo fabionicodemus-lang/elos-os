@@ -305,7 +305,19 @@ dialog h2{font-size:21px;font-weight:700}
       <label class="f">Data<input class="input" type="date" name="data"></label>
       <label class="f">Fase<select class="input" name="fase"></select></label>
     </div>
-    <p style="margin:-2px 0 2px;color:var(--muted);font-size:12.5px">Com data, a tarefa aparece automaticamente no dashboard Hoje. Sem data, fica apenas na aba Tarefas.</p>
+    <label><input type="checkbox" name="recorrente"> Repetir toda semana</label>
+    <fieldset id="taskRepeatDays" hidden style="border:1px solid var(--line);border-radius:11px"><legend>Dias da semana</legend>
+      <div class="row">
+        <label><input type="checkbox" name="dias" value="1"> Seg</label>
+        <label><input type="checkbox" name="dias" value="2"> Ter</label>
+        <label><input type="checkbox" name="dias" value="3"> Qua</label>
+        <label><input type="checkbox" name="dias" value="4"> Qui</label>
+        <label><input type="checkbox" name="dias" value="5"> Sex</label>
+        <label><input type="checkbox" name="dias" value="6"> Sáb</label>
+        <label><input type="checkbox" name="dias" value="0"> Dom</label>
+      </div>
+    </fieldset>
+    <p style="margin:-2px 0 2px;color:var(--muted);font-size:12.5px">Com data, aparece no dashboard Hoje. Ao concluir uma tarefa recorrente, a próxima data é agendada automaticamente. Se atrasar, ela permanece pendente até você concluir.</p>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger" id="taskDeleteBtn">Excluir tarefa</button>
       <div class="row">
@@ -351,8 +363,8 @@ function empToDb(o){const d={};for(const k in EMP)if(k in o&&o[k]!==undefined)d[
 const empFromDb=r=>({id:r.id,nome:r.nome,tipo:r.tipo,cidade:ss(r.cidade),endereco:ss(r.endereco),contato:ss(r.contato),cargo:ss(r.cargo),telefone:ss(r.telefone),email:ss(r.email),site:ss(r.site),origem:ss(r.origem),servico:r.servico,valor:ss(r.valor),etapa:r.etapa,elosOs:r.elos_os,quente:!!r.quente,proximaAcao:ss(r.proxima_acao),proximaData:ss(r.proxima_data),ultimoContato:ss(r.ultimo_contato),notas:ss(r.notas),criadoEm:r.criado_em});
 function intToDb(o){const d={};if("empresaId"in o)d.empresa_id=o.empresaId;for(const k of ["canal","data","resumo"])if(k in o)d[k]=o[k];return d}
 const intFromDb=r=>({id:r.id,empresaId:r.empresa_id,canal:r.canal,data:r.data,resumo:ss(r.resumo),criadoEm:r.criado_em});
-function tarToDb(o){const d={};for(const k of ["id","custom","fase","titulo","feito"])if(k in o)d[k]=o[k];if("feitoEm"in o)d.feito_em=nn(o.feitoEm);if("data"in o)d.data=nn(o.data);if("excluida"in o)d.excluida=!!o.excluida;return d}
-const tarFromDb=r=>({id:r.id,custom:!!r.custom,fase:ss(r.fase),titulo:ss(r.titulo),feito:!!r.feito,feitoEm:ss(r.feito_em),data:ss(r.data),excluida:!!r.excluida});
+function tarToDb(o){const d={};for(const k of ["id","custom","fase","titulo","feito"])if(k in o)d[k]=o[k];if("feitoEm"in o)d.feito_em=nn(o.feitoEm);if("data"in o)d.data=nn(o.data);if("excluida"in o)d.excluida=!!o.excluida;if("recorrente"in o)d.recorrente=!!o.recorrente;if("diasSemana"in o)d.dias_semana=o.diasSemana;return d}
+const tarFromDb=r=>({id:r.id,custom:!!r.custom,fase:ss(r.fase),titulo:ss(r.titulo),feito:!!r.feito,feitoEm:ss(r.feito_em),data:ss(r.data),excluida:!!r.excluida,recorrente:!!r.recorrente,diasSemana:r.dias_semana||[],historico:r.historico_recorrencia||[]});
 const CONV={empresas:empToDb,interacoes:intToDb,tarefas:tarToDb};
 const Store={
   async add(col,body){
@@ -458,7 +470,7 @@ function taskRow(t){
   const fase=FASES.find(x=>x[0]===t.fase)?.[1]||"Tarefa";
   return `<button class="item ${late?"late":""}" data-edittask="${t.id}">
     <span class="ic">T</span>
-    <span><span class="name">${esc(t.titulo)}</span><div class="sub">${esc(fase)}</div></span>
+    <span><span class="name">${esc(t.titulo)}</span><div class="sub">${esc(fase)}${t.recorrente?` · ${esc(resumoRecorrencia(t))}`:""}</div></span>
     <span class="when">${t.data?fmtData(t.data):"—"}<b>Tarefa</b></span>
   </button>`;
 }
@@ -667,6 +679,9 @@ async function upsertTarefa(body){const {error}=await sb.from("tarefas").upsert(
 function abrirTarefa(id){
   const t=listaTarefas().find(x=>x.id===id);if(!t)return;
   const f=$("#taskEditForm");f.reset();f.elements.id.value=t.id;f.elements.base.value=t.base?"1":"";f.elements.titulo.value=t.titulo||"";f.elements.data.value=t.data||"";
+  f.elements.recorrente.checked=!!t.recorrente;
+  for(const el of f.querySelectorAll('[name="dias"]'))el.checked=(t.diasSemana||[]).includes(+el.value);
+  $("#taskRepeatDays").hidden=!t.recorrente;f.elements.data.required=!!t.recorrente;
   f.elements.fase.innerHTML=FASES.map(([k,n])=>`<option value="${k}" ${k===t.fase?"selected":""}>${esc(n)}</option>`).join("");
   $("#taskDlg").showModal();f.elements.titulo.focus();
 }
@@ -679,11 +694,17 @@ async function excluirTarefa(id){
 }
 $("#taskCancelBtn").onclick=()=>$("#taskDlg").close();
 $("#taskDeleteBtn").onclick=async()=>{const id=$("#taskEditForm").elements.id.value;await tentar(()=>excluirTarefa(id))};
+$("#taskEditForm").elements.recorrente.onchange=ev=>{
+  $("#taskRepeatDays").hidden=!ev.target.checked;$("#taskEditForm").elements.data.required=ev.target.checked;
+};
 $("#taskEditForm").addEventListener("submit",async ev=>{
   ev.preventDefault();const f=ev.target,id=f.elements.id.value,atual=listaTarefas().find(x=>x.id===id),titulo=f.elements.titulo.value.trim(),data=f.elements.data.value,fase=f.elements.fase.value;
   if(!atual||!titulo)return;
+  const recorrente=f.elements.recorrente.checked,diasSemana=[...f.querySelectorAll('[name="dias"]:checked')].map(el=>+el.value);
+  if(recorrente&&(!data||!diasSemana.length)){toast("Defina a data e ao menos um dia da semana.");return}
+  if(recorrente&&!diasSemana.includes(new Date(data+"T12:00:00").getDay())){toast("A data precisa corresponder a um dos dias selecionados.");return}
   $("#taskDlg").close();
-  await tentar(()=>upsertTarefa({id,custom:!atual.base,fase,titulo,feito:atual.feito,feitoEm:atual.feitoEm,data,excluida:false}),"Tarefa salva");
+  await tentar(()=>upsertTarefa({id,custom:!atual.base,fase,titulo,feito:atual.feito,feitoEm:atual.feitoEm,data,excluida:false,recorrente,diasSemana:recorrente?diasSemana:[]}),"Tarefa salva");
 });
 document.addEventListener("click",async ev=>{
   const t=ev.target;
@@ -728,11 +749,11 @@ document.addEventListener("submit",async ev=>{
   btn.disabled=false;
 });
 const FASES=[
- ["f1","Semana 1 — Preparação","Deixar tudo pronto antes de sair a campo."],
- ["f2","Semanas 2 a 4 — Primeiros contatos","Colocar a Elos na frente das empresas certas."],
- ["f3","Mês 2 — Vistorias e propostas","Transformar conversas em propostas."],
- ["f4","Mês 3 — Fechamento e Elos OS","Fechar os primeiros contratos e ativar o Elos OS."],
- ["f5","Toda semana","Rotina que se repete. Marque e desmarque a cada semana."]
+ ["f1","Semana 1 — Preparação","01 a 09/10/2026 · Deixar tudo pronto antes de sair a campo."],
+ ["f2","Semanas 2 a 4 — Primeiros contatos","13 a 30/10/2026 · Colocar a Elos na frente das empresas certas."],
+ ["f3","Mês 2 — Vistorias e propostas","03 a 30/11/2026 · Transformar conversas em propostas."],
+ ["f4","Mês 3 — Fechamento e Elos OS","01 a 30/12/2026 · Fechar os primeiros contratos e ativar o Elos OS."],
+ ["f5","Toda semana","Rotina semanal · Ao concluir, o CRM registra no histórico e agenda a próxima ocorrência."]
 ];
 const TAREFAS_BASE=[
  ["t01","f1","Definir com o Fábio os preços do orçamento e do acompanhamento mensal","Base de cálculo já feita: taxa fixa mais valor por m² construído."],
@@ -768,17 +789,23 @@ const TAREFAS_BASE=[
  ["t31","f5","Terça e quinta: rota de visitas (uma cidade por dia)",""],
  ["t32","f5","Quarta: follow-ups por WhatsApp e ligação, preparar propostas",""],
  ["t33","f5","Sexta: enviar propostas e revisar o funil com o Fábio",""],
- ["t34","f5","Registrar no CRM todo contato no mesmo dia",""]
+ ["t34","f5","Sexta: conferir os registros de contatos da semana","Registrar cada contato no mesmo dia. Na sexta, conferir se todos ficaram registrados."]
 ];
 function listaTarefas(){
   const st=Object.fromEntries(state.tarefas.map(t=>[t.id,t]));
   const base=TAREFAS_BASE.map(([id,fase,titulo,det])=>({
     id,fase:st[id]?.fase||fase,titulo:st[id]?.titulo||titulo,det,
     feito:!!st[id]?.feito,feitoEm:st[id]?.feitoEm||"",data:st[id]?.data||"",
-    excluida:!!st[id]?.excluida,base:true
+    excluida:!!st[id]?.excluida,recorrente:!!st[id]?.recorrente,diasSemana:st[id]?.diasSemana||[],historico:st[id]?.historico||[],base:true
   })).filter(t=>!t.excluida);
   const extra=state.tarefas.filter(t=>t.custom&&!t.excluida).map(t=>({...t,det:"",base:false}));
   return [...base,...extra];
+}
+const DIAS_SEMANA=["dom","seg","ter","qua","qui","sex","sáb"];
+function resumoRecorrencia(t){return t.recorrente?`Toda semana · ${(t.diasSemana||[]).map(d=>DIAS_SEMANA[d]).join(" e ")}`:""}
+function historicoRecorrencia(t){
+  const itens=(t.historico||[]).slice(-12).reverse();if(!itens.length)return "";
+  return `<details style="font-size:12px;color:var(--muted)"><summary>Histórico · ${t.historico.length} conclusão(ões)</summary>${itens.map(h=>`<div>Prevista: ${fmtData(h.data)} · concluída: ${fmtData(h.concluidaEm)}</div>`).join("")}</details>`;
 }
 function vTarefas(){
   const todas=listaTarefas();
@@ -795,7 +822,7 @@ function vTarefas(){
         const late=t.data&&!t.feito&&t.data<hoje();
         return `<div class="task ${t.feito?"done":""}">
           <input type="checkbox" id="tk-${t.id}" data-task="${t.id}" data-custom="${t.base?"":"1"}" ${t.feito?"checked":""}>
-          <label for="tk-${t.id}"><span class="tt">${esc(t.titulo)}</span>${t.det?`<span class="td">${esc(t.det)}</span>`:""}<span class="task-date ${late?"late":""}">${t.data?`${late?"Atrasada · ":"Data · "}${fmtData(t.data)}`:"Sem data definida"}</span>${t.feito&&t.feitoEm?`<span class="td">Feito em ${fmtData(t.feitoEm)}</span>`:""}</label>
+          <div><label for="tk-${t.id}"><span class="tt">${esc(t.titulo)}</span>${t.det?`<span class="td">${esc(t.det)}</span>`:""}<span class="task-date ${late?"late":""}">${t.data?`${late?"Atrasada · ":"Data · "}${fmtData(t.data)}`:"Sem data definida"}</span>${t.recorrente?`<span class="td">${esc(resumoRecorrencia(t))}</span>`:""}${t.feito&&t.feitoEm?`<span class="td">Feito em ${fmtData(t.feitoEm)}</span>`:""}</label>${historicoRecorrencia(t)}</div>
           <div class="task-actions"><button class="chip" type="button" style="font-size:11px;padding:3px 9px" data-edittask="${t.id}">editar</button><button class="chip" type="button" style="font-size:11px;padding:3px 9px;color:var(--danger)" data-deltask="${t.id}">excluir</button></div>
         </div>`;
       }).join("")}
@@ -803,6 +830,11 @@ function vTarefas(){
     </section>`}).join("")}`;
 }
 async function marcarTarefa(id,custom,feito){
+  const atual=listaTarefas().find(x=>x.id===id);if(!atual)return;
+  if(atual.recorrente&&feito){
+    const {error}=await sb.rpc("concluir_tarefa_recorrente",{p_id:id,p_data:atual.data});if(error)throw error;
+    await carregar();toast("Concluída. Próxima ocorrência agendada.");return;
+  }
   if(custom){const {error}=await sb.from("tarefas").update({feito,feito_em:feito?hoje():null}).eq("id",id);if(error)throw error}
   else{
     const t=listaTarefas().find(x=>x.id===id);if(!t)return;
