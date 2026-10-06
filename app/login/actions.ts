@@ -4,8 +4,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-function loginUrl(message: string, type: "error" | "success" = "error") {
-  const params = new URLSearchParams({ [type]: message });
+function loginUrl(message: string, type: "error" | "success" = "error", extra?: Record<string, string>) {
+  const params = new URLSearchParams({ [type]: message, ...(extra ?? {}) });
   return `/login?${params.toString()}`;
 }
 
@@ -23,7 +23,7 @@ function cleanUrlCandidate(value: string | null | undefined) {
   return hasWrappingQuotes ? cleaned.slice(1, -1).trim() : cleaned;
 }
 
-async function getEmailRedirectTo() {
+async function getEmailRedirectTo(next = "/dashboard") {
   const requestHeaders = await headers();
   const host =
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
@@ -52,7 +52,9 @@ async function getEmailRedirectTo() {
         continue;
       }
 
-      return new URL("/auth/confirm", siteUrl.origin).toString();
+      const confirmUrl = new URL("/auth/confirm", siteUrl.origin);
+      confirmUrl.searchParams.set("next", next);
+      return confirmUrl.toString();
     } catch {
       // Tenta o próximo endereço disponível.
     }
@@ -95,6 +97,60 @@ export async function login(formData: FormData) {
   }
 
   redirect("/dashboard");
+}
+
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+
+  if (!email) {
+    redirect(loginUrl("Informe seu e-mail para recuperar a senha."));
+  }
+
+  const emailRedirectTo = await getEmailRedirectTo("/login?recovery=1");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    ...(emailRedirectTo ? { redirectTo: emailRedirectTo } : {}),
+  });
+
+  if (error) {
+    redirect(loginUrl("Não foi possível enviar o e-mail de recuperação. Tente novamente."));
+  }
+
+  redirect(
+    loginUrl(
+      "Enviamos um link para redefinir sua senha. Abra o e-mail e siga o link.",
+      "success",
+    ),
+  );
+}
+
+export async function updatePassword(formData: FormData) {
+  const password = String(formData.get("password") ?? "");
+  const confirmation = String(formData.get("confirmation") ?? "");
+
+  if (password.length < 8) {
+    redirect(loginUrl("A nova senha precisa ter pelo menos 8 caracteres.", "error", { recovery: "1" }));
+  }
+
+  if (password !== confirmation) {
+    redirect(loginUrl("As senhas não conferem.", "error", { recovery: "1" }));
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error || !data.user) {
+    redirect(loginUrl("O link de recuperação expirou ou é inválido. Solicite outro."));
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({ password });
+
+  if (updateError) {
+    redirect(loginUrl("Não foi possível alterar a senha. Solicite um novo link."));
+  }
+
+  await supabase.auth.signOut();
+  redirect("/crm-elos?senha=alterada");
 }
 
 export async function signup(formData: FormData) {
