@@ -7,15 +7,21 @@ const LEGACY_SUPABASE_KEY = "sb_publishable_dCyqNgp56RnuCdXIf0Dbog_1kifoWcH";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const configuredSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !supabaseKey) {
+  if (!configuredSupabaseUrl || !supabaseKey) {
     return new Response("Configuração do Supabase do Elos OS não encontrada.", {
       status: 500,
       headers: { "content-type": "text/plain; charset=utf-8" },
     });
   }
+
+  // O Elos OS mantém a URL do REST em alguns ambientes. O supabase-js
+  // precisa receber a URL-base do projeto para Auth + REST funcionarem juntos.
+  const supabaseUrl = configuredSupabaseUrl
+    .replace(/\/rest\/v1\/?$/, "")
+    .replace(/\/$/, "");
 
   const source = await fetch(LEGACY_CRM_SOURCE, { cache: "no-store" });
   if (!source.ok) {
