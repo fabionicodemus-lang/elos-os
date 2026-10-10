@@ -99,8 +99,8 @@ type DetailSpec = {
 type DerivedSource = { entity: string; level: "list" | "detail"; path: string[] };
 
 export type EntitySpec =
-  | { name: string; list: ListSpec; detail?: DetailSpec; derivedFrom?: undefined }
-  | { name: string; list?: undefined; detail: DetailSpec; derivedFrom: DerivedSource[] };
+  | { name: string; list: ListSpec; detail?: DetailSpec; derivedFrom?: undefined; alwaysRefresh?: boolean }
+  | { name: string; list?: undefined; detail: DetailSpec; derivedFrom: DerivedSource[]; alwaysRefresh?: boolean };
 
 export const ENTITIES: EntitySpec[] = [
   // --- Cadastros-base -----------------------------------------------------
@@ -205,11 +205,37 @@ export const ENTITIES: EntitySpec[] = [
     },
     detail: { path: "/purchase/v1/purchase", idParam: "purchaseId" },
   },
+  // --- Listagens completas de notas (alimentam as derivadas abaixo) --------
+  {
+    name: "receipt_list",
+    list: {
+      path: "/financial/v1/receipt",
+      params: { dateFilter: "receiptEmitDate", initialDate: "", finalDate: "", orderFlag: "desc", orderby: "receiptId", receiptId: "all" },
+      arrayKey: "receipts",
+      totalKey: "receiptsAmount",
+      pageSize: 500,
+      idKey: "receiptId",
+      emptyOn404: true,
+    },
+  },
+  {
+    name: "xml_invoice_list",
+    list: {
+      path: "/financial/v1/xml_invoice",
+      params: { dateFilter: "emitDate", initialDate: "", finalDate: "", invoiceId: "all", orderFlag: "desc", orderby: "isDraft" },
+      arrayKey: "invoices",
+      totalKey: "invoicesAmount",
+      pageSize: 500,
+      idKey: "invoiceId",
+      emptyOn404: true,
+    },
+  },
   // --- Derivadas: o id vem de outra entidade (elo da apropriação) ----------
   {
     // Recibo / nota manual: centro de custo, plano de contas, serviços e produtos.
     name: "receipt",
     derivedFrom: [
+      { entity: "receipt_list", level: "list", path: ["receiptId"] },
       { entity: "purchase", level: "list", path: ["receiptId"] },
       { entity: "bill_to_pay", level: "detail", path: ["origins", "receipt_id"] },
     ],
@@ -219,10 +245,125 @@ export const ENTITIES: EntitySpec[] = [
     // Nota fiscal eletrônica: produtos, duplicatas e pedidos de compra ligados.
     name: "xml_invoice",
     derivedFrom: [
+      { entity: "xml_invoice_list", level: "list", path: ["invoiceId"] },
       { entity: "purchase", level: "list", path: ["xmlInvoiceId"] },
       { entity: "bill_to_pay", level: "detail", path: ["origins", "invoice_id"] },
     ],
     detail: { path: "/financial/v1/xml_invoice", idParam: "invoiceId" },
+  },
+  // --- Financeiro a receber ------------------------------------------------
+  {
+    name: "bill_to_receive",
+    list: {
+      path: "/financial/v1/bills_to_receive",
+      params: { initialDate: "", finalDate: "", orderFlag: "asc", orderby: "dueDate", typeDate: "dueDate" },
+      // "no" traz os títulos normais; "yes" traz as partes de títulos desmembrados.
+      variants: [{ splittedBills: "no" }, { splittedBills: "yes" }],
+      arrayKey: "bills",
+      totalKey: "itemsAmount",
+      pageSize: 500,
+      idKey: "billReceiveId",
+      emptyOn404: true,
+    },
+    detail: { path: "/financial/v1/bills_to_receive", idParam: "billReceiveId" },
+  },
+  // --- Cadastro de produtos ------------------------------------------------
+  {
+    name: "product",
+    list: {
+      path: "/stock/v1/product",
+      params: { orderFlag: "asc", orderby: "productName" },
+      arrayKey: "products",
+      totalKey: "amount",
+      pageSize: 500,
+      idKey: "productId",
+      emptyOn404: true,
+    },
+  },
+  // --- Engenharia ----------------------------------------------------------
+  {
+    name: "building",
+    list: {
+      path: "/engineering/v1/building",
+      params: { orderFlag: "asc", orderby: "buildingName", page: "constructionBudget" },
+      arrayKey: "buildings",
+      totalKey: "itemsAmount",
+      pageSize: 100,
+      idKey: "buildingId",
+      emptyOn404: true,
+    },
+  },
+  {
+    // Acompanhamento de obra: é o `buildMonitoringId` citado em compras, recibos e contratos.
+    name: "building_monitoring",
+    list: {
+      path: "/engineering/v1/building_monitoring",
+      params: { orderFlag: "desc", orderby: "buildMonitoringId", page: "engineeringContract" },
+      arrayKey: "monitorings",
+      totalKey: "itemsAmount",
+      pageSize: 100,
+      idKey: "buildMonitoringId",
+      emptyOn404: true,
+    },
+    detail: { path: "/engineering/v1/building_monitoring", idParam: "buildMonitoringId" },
+  },
+  {
+    // Itens do acompanhamento (EAP da obra): `itemMonitoringId` ↔ serviço e referência do item.
+    name: "monitoring_items",
+    derivedFrom: [{ entity: "building_monitoring", level: "list", path: ["buildMonitoringId"] }],
+    detail: {
+      path: "/engineering/v1/item_monitoring",
+      idParam: "buildMonitoringId",
+      params: { financialSchedule: "yes", limitX: "1", limitY: "5000", offsetX: "0", offsetY: "0", positionDate: "{today}", scale: "month" },
+    },
+    alwaysRefresh: true,
+  },
+  {
+    name: "construction_budget",
+    list: {
+      path: "/engineering/v1/construction_budget",
+      params: { orderFlag: "desc", orderby: "engBudgetId" },
+      arrayKey: "budgets",
+      totalKey: "itemsAmount",
+      pageSize: 100,
+      idKey: "engBudgetId",
+      emptyOn404: true,
+    },
+    detail: { path: "/engineering/v1/construction_budget", idParam: "engBudgetId" },
+  },
+  {
+    name: "construction_budget_items",
+    derivedFrom: [{ entity: "construction_budget", level: "list", path: ["engBudgetId"] }],
+    detail: { path: "/engineering/v1/item_budget", idParam: "engBudgetId", params: { limit: "5000", offset: "0" } },
+    alwaysRefresh: true,
+  },
+  {
+    // Contratos de empreitada: serviços com `itemMonitoringId` e `itemReference`.
+    name: "engineering_contract",
+    list: {
+      path: "/engineering/v1/contract",
+      params: { orderFlag: "desc", orderby: "contractDate" },
+      arrayKey: "contracts",
+      totalKey: "itemsAmount",
+      pageSize: 200,
+      idKey: "contractId",
+      emptyOn404: true,
+    },
+    detail: { path: "/engineering/v1/contract", idParam: "contractId" },
+  },
+  {
+    name: "build_measurement",
+    list: {
+      path: "/engineering/v1/build_measurement",
+      params: { orderFlag: "desc", orderby: "measurementDate" },
+      variants: [{ open: "yes" }, { open: "no" }],
+      arrayKey: "measurements",
+      totalKey: "itemsAmount",
+      pageSize: 200,
+      idKey: "measurementId",
+      emptyOn404: true,
+    },
+    detail: { path: "/engineering/v1/build_measurement", idParam: "measurementId" },
   },
 ];
 
@@ -511,6 +652,7 @@ async function readDetails(
   let notFound = 0;
   let cursor = 0;
   let authError: KoperHttpError | null = null;
+  const today = new Date().toISOString().slice(0, 10);
   const worker = async () => {
     while (!authError) {
       const index = cursor;
@@ -518,7 +660,8 @@ async function readDetails(
       const id = ids[index];
       if (id === undefined) return;
       const path = typeof spec.path === "function" ? spec.path(id) : spec.path;
-      const params: Record<string, string> = { ...(spec.params ?? {}) };
+      const params: Record<string, string> = {};
+      for (const [key, value] of Object.entries(spec.params ?? {})) params[key] = value === "{today}" ? today : value;
       if (spec.idParam) params[spec.idParam] = id;
       try {
         const body = await koperGet(session, path, params);
@@ -784,7 +927,7 @@ export async function mirrorEntity(
 
   if (spec.detail) {
     const detailIndex = await loadStagingIndex(detailEntity, company, request);
-    let ids = candidateIds.filter((id) => options.full || changedIds.has(id) || !detailIndex.has(`${company}:${id}`));
+    let ids = candidateIds.filter((id) => options.full || spec.alwaysRefresh === true || changedIds.has(id) || !detailIndex.has(`${company}:${id}`));
     if (options.detailLimit > 0) ids = ids.slice(0, options.detailLimit);
     report.detailsRequested = ids.length;
     const result = await readDetails(session, spec.detail, ids, options.concurrency);
@@ -804,9 +947,8 @@ export async function mirrorEntity(
   return report;
 }
 
-async function main(): Promise<void> {
-  const write = process.argv.includes("--write");
-  const full = process.argv.includes("--full");
+export async function runKoperMirror(flags: { write: boolean; full: boolean }): Promise<{ ok: boolean }> {
+  const { write, full } = flags;
   const companies = parseSelection(process.env.KOPER_MIRROR_COMPANIES, Object.keys(COMPANIES) as CompanyKey[], "COMPANY");
   const entityNames = parseSelection(process.env.KOPER_MIRROR_ENTITIES, ENTITIES.map((spec) => spec.name), "ENTITY");
   const concurrency = Math.max(1, Math.min(16, Number(process.env.KOPER_MIRROR_CONCURRENCY ?? "8") || 8));
@@ -870,13 +1012,17 @@ async function main(): Promise<void> {
     { listed: 0, inserted: 0, updated: 0, missingAtSource: 0, detailFailures: 0, incompleteLists: 0 },
   );
   console.log("KOPER_MIRROR_RESULT", JSON.stringify({ write, full, entitiesOk: reports.length, entitiesFailed: errors.length, ...totals, errors }));
-  if (errors.length || totals.incompleteLists || totals.detailFailures) process.exitCode = 1;
+  return { ok: errors.length === 0 && totals.incompleteLists === 0 && totals.detailFailures === 0 };
 }
 
 // Só executa quando chamado diretamente (node dist/mirror-koper.js), não ao ser importado.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error: unknown) => {
-    console.error("KOPER_MIRROR_FAILED", JSON.stringify({ message: error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500) }));
-    process.exitCode = 1;
-  });
+  runKoperMirror({ write: process.argv.includes("--write"), full: process.argv.includes("--full") })
+    .then((result) => {
+      if (!result.ok) process.exitCode = 1;
+    })
+    .catch((error: unknown) => {
+      console.error("KOPER_MIRROR_FAILED", JSON.stringify({ message: error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500) }));
+      process.exitCode = 1;
+    });
 }
