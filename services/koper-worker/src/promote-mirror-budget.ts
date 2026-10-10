@@ -9,6 +9,13 @@
  * (`KOPER-100`): itens estruturais viram grupos, folhas com serviço viram itens ligados ao
  * serviço do catálogo (`engineering_services`, `source_system = koper`).
  *
+ * Valor previsto guardado na etapa: no Koper o previsto de um grupo pode ser maior que a soma
+ * dos filhos (o orçamento foi lançado por etapa e só parte foi detalhada em serviços). Essa
+ * diferença vira um item **sem serviço** na própria etapa (marcador `Koper etapa
+ * itemMonitoringId=<id>`), para o total do orçamento no Elos OS ser exatamente o do Koper.
+ * Na tela Custo x Orçamento ela aparece em "Itens do orçamento sem serviço vinculado".
+ * Nada é distribuído por conta própria entre serviços.
+ *
  * Garantias: identidade estável (`source_id = monitoring:<id>` no orçamento, código do grupo,
  * marcador `Koper itemMonitoringId=<id>` no item), então reexecutar não duplica; nunca apaga;
  * item que sumiu do Koper só é listado. Valor: o total previsto do item é preservado ao
@@ -26,6 +33,8 @@ import {
 } from "./mirror-shared.js";
 
 export const itemToken = (itemMonitoringId: string) => `Koper itemMonitoringId=${itemMonitoringId}`;
+/** Marcador do valor previsto que o Koper guarda na etapa (grupo), sem serviço. */
+export const stageToken = (itemMonitoringId: string) => `Koper etapa itemMonitoringId=${itemMonitoringId}`;
 export const budgetSourceId = (monitoringId: string) => `monitoring:${monitoringId}`;
 
 export type MonitoringItem = {
@@ -72,6 +81,11 @@ export function exactQuantity(amount: number, expectedCents: number): { quantity
 export type BudgetPlan = {
   groups: Array<{ id: string; code: string; name: string; notes: string }>;
   leaves: MonitoringItem[];
+  /** Previsto que está na etapa e não nos filhos (previsto do grupo − soma dos filhos diretos). */
+  stageItems: Array<{ id: string; reference: string | null; name: string | null; ownCents: number }>;
+  /** Grupos cujo previsto é menor que a soma dos filhos (não deveria acontecer). */
+  negativeStages: Array<{ id: string; reference: string | null; ownCents: number }>;
+  rootsCents: number;
   /** Item com serviço que também tem filhos, ou folha sem serviço: ficam fora e são listados. */
   oddItems: Array<{ id: string; reference: string | null; reason: string }>;
   leavesCents: number;
@@ -85,14 +99,28 @@ export function planBudget(items: MonitoringItem[]): BudgetPlan {
   for (const item of items) {
     if (item.serviceId && !item.hasChildren) leaves.push(item);
     else if (!item.serviceId) {
-      if (!item.hasChildren && item.expectedCents > 0) oddItems.push({ id: item.id, reference: item.reference, reason: "folha com valor e sem serviço" });
       let code = item.reference ?? `KOPER-G-${item.id}`;
       if (usedCodes.has(code)) code = `${code} (${item.id})`;
       usedCodes.add(code);
       groups.push({ id: item.id, code, name: item.name ?? `Grupo Koper ${item.id}`, notes: `${itemToken(item.id)} · fatherItemId=${item.fatherId ?? "root"}` });
     } else oddItems.push({ id: item.id, reference: item.reference, reason: "item com serviço e com filhos" });
   }
-  return { groups, leaves, oddItems, leavesCents: leaves.reduce((sum, item) => sum + item.expectedCents, 0) };
+  const childrenCents = new Map<string, number>();
+  for (const item of items) if (item.fatherId) childrenCents.set(item.fatherId, (childrenCents.get(item.fatherId) ?? 0) + item.expectedCents);
+  const stageItems: BudgetPlan["stageItems"] = [];
+  const negativeStages: BudgetPlan["negativeStages"] = [];
+  for (const item of items) {
+    if (item.serviceId) continue;
+    const ownCents = item.expectedCents - (childrenCents.get(item.id) ?? 0);
+    if (ownCents > 0) stageItems.push({ id: item.id, reference: item.reference, name: item.name, ownCents });
+    else if (ownCents < -1) negativeStages.push({ id: item.id, reference: item.reference, ownCents });
+  }
+  const known = new Set(items.map((item) => item.id));
+  return {
+    groups, leaves, oddItems, stageItems, negativeStages,
+    leavesCents: leaves.reduce((sum, item) => sum + item.expectedCents, 0),
+    rootsCents: items.filter((item) => !item.fatherId || !known.has(item.fatherId)).reduce((sum, item) => sum + item.expectedCents, 0),
+  };
 }
 
 type ExistingItem = { id: string; group_id: string | null; service_id: string | null; code: string | null; description: string; unit: string; quantity: number; other_unit_cost: number; notes: string | null; status: string };
@@ -115,6 +143,9 @@ export async function promoteMirrorBudget(options: { write: boolean; target: Tar
       const items = readMonitoringItems(payload);
       const plan = planBudget(items);
       const reportedCents = cents(payload.totalItems);
+      const stageCents = plan.stageItems.reduce((sum, item) => sum + item.ownCents, 0);
+      const budgetCents = plan.leavesCents + stageCents;
+      const totalsMatch = Math.abs(budgetCents - reportedCents) <= 5 && Math.abs(budgetCents - plan.rootsCents) <= 5 && plan.negativeStages.length === 0;
       const byId = new Map(items.map((item) => [item.id, item]));
 
       // Serviços das folhas no catálogo do Elos OS.
@@ -142,8 +173,13 @@ export async function promoteMirrorBudget(options: { write: boolean; target: Tar
         leaves: plan.leaves.length,
         oddItems: plan.oddItems,
         leavesTotal: money(plan.leavesCents),
+        stageItems: plan.stageItems.length,
+        stageTotal: money(stageCents),
+        budgetTotal: money(budgetCents),
+        koperRootsTotal: money(plan.rootsCents),
         koperReportedTotal: money(reportedCents),
-        totalsMatch: Math.abs(plan.leavesCents - reportedCents) <= 5,
+        totalsMatch,
+        negativeStages: plan.negativeStages,
         servicesNeeded: needed.size,
         servicesCreated: services.created,
         servicesWouldCreate: services.wouldCreate,
@@ -167,14 +203,15 @@ export async function promoteMirrorBudget(options: { write: boolean; target: Tar
         for (const part of chunks(tree, 70)) console.log("KOPER_BUDGET_TREE_ROWS", part.join(" ; "));
       }
       if (plan.oddItems.some((item) => item.reason === "item com serviço e com filhos")) throw new Error(`KOPER_BUDGET_ITEM_WITH_SERVICE_AND_CHILDREN_${monitoringId}`);
-      if (write && Math.abs(plan.leavesCents - reportedCents) > 5) {
-        console.log("KOPER_BUDGET_PLAN", JSON.stringify({ ...report, aborted: "soma das folhas difere do total informado pelo Koper" }));
+      if (write && !totalsMatch) {
+        console.log("KOPER_BUDGET_PLAN", JSON.stringify({ ...report, aborted: "itens não fecham com o total informado pelo Koper" }));
         throw new Error(`KOPER_BUDGET_TOTAL_MISMATCH_${monitoringId}`);
       }
       if (!write) {
         console.log("KOPER_BUDGET_PLAN", JSON.stringify({
           ...report,
-          sample: plan.leaves.slice(0, 5).map((leaf) => ({ code: leaf.reference, name: leaf.name, serviceId: leaf.serviceId, expected: money(leaf.expectedCents), ...exactQuantity(leaf.amount, leaf.expectedCents) })),
+          sample: plan.leaves.slice(0, 3).map((leaf) => ({ code: leaf.reference, name: leaf.name, serviceId: leaf.serviceId, expected: money(leaf.expectedCents), ...exactQuantity(leaf.amount, leaf.expectedCents) })),
+          stageSample: plan.stageItems.map((item) => ({ code: item.reference, name: item.name, own: money(item.ownCents) })),
         }));
         summary.push(report);
         continue;
@@ -240,7 +277,7 @@ export async function promoteMirrorBudget(options: { write: boolean; target: Tar
         if (!service) throw new Error(`KOPER_BUDGET_SERVICE_NOT_IN_CATALOG_${leaf.serviceId}`);
         const exact = exactQuantity(leaf.amount, leaf.expectedCents);
         return {
-          koperId: leaf.id,
+          key: `item:${leaf.id}`,
           row: {
             company_id: env.BOSSA_COMPANY_ID,
             project_id: project.id,
@@ -268,6 +305,30 @@ export async function promoteMirrorBudget(options: { write: boolean; target: Tar
           },
         };
       });
+      plan.stageItems.forEach((stage, index) => {
+        desired.push({
+          key: `stage:${stage.id}`,
+          row: {
+            company_id: env.BOSSA_COMPANY_ID,
+            project_id: project.id,
+            budget_id: budgetId,
+            group_id: groupIdByKoper.get(stage.id) ?? null,
+            service_id: null as unknown as string,
+            code: stage.reference,
+            description: `${stage.name ?? `Etapa Koper ${stage.id}`} — previsto na etapa (sem serviço no Koper)`,
+            unit: "vb",
+            quantity: 1,
+            material_unit_cost: 0,
+            labor_unit_cost: 0,
+            equipment_unit_cost: 0,
+            other_unit_cost: stage.ownCents / 100,
+            sort_order: plan.leaves.length + index,
+            notes: `${stageToken(stage.id)} · previsto da etapa menos a soma dos filhos`,
+            status: "active",
+            updated_at: now,
+          },
+        });
+      });
 
       const existing = await allRows<ExistingItem>(request, "engineering_budget_items", {
         select: "id,group_id,service_id,code,description,unit,quantity,other_unit_cost,notes,status",
@@ -275,14 +336,20 @@ export async function promoteMirrorBudget(options: { write: boolean; target: Tar
         budget_id: `eq.${budgetId}`,
         order: "id.asc",
       });
+      const keyOf = (notes: string | null): string | null => {
+        const stage = notes?.match(/Koper etapa itemMonitoringId=(\d+)/);
+        if (stage?.[1]) return `stage:${stage[1]}`;
+        const item = notes?.match(/Koper itemMonitoringId=(\d+)/);
+        return item?.[1] ? `item:${item[1]}` : null;
+      };
       const existingByKoper = new Map<string, ExistingItem>();
       for (const row of existing) {
-        const match = row.notes?.match(/Koper itemMonitoringId=(\d+)/);
-        if (match?.[1]) existingByKoper.set(match[1], row);
+        const key = keyOf(row.notes);
+        if (key) existingByKoper.set(key, row);
       }
-      const inserts = desired.filter((item) => !existingByKoper.has(item.koperId)).map((item) => item.row);
+      const inserts = desired.filter((item) => !existingByKoper.has(item.key)).map((item) => item.row);
       const updates = desired.flatMap((item) => {
-        const current = existingByKoper.get(item.koperId);
+        const current = existingByKoper.get(item.key);
         if (!current) return [];
         const same = current.group_id === item.row.group_id && current.service_id === item.row.service_id && current.code === item.row.code
           && current.description === item.row.description && current.unit === item.row.unit && num(current.quantity) === item.row.quantity
@@ -312,15 +379,16 @@ export async function promoteMirrorBudget(options: { write: boolean; target: Tar
         budget_id: `eq.${budgetId}`,
         order: "id.asc",
       });
-      const wanted = new Set(desired.map((item) => item.koperId));
+      const wanted = new Set(desired.map((item) => item.key));
       const present = after.filter((row) => {
-        const match = row.notes?.match(/Koper itemMonitoringId=(\d+)/);
-        return Boolean(match?.[1] && wanted.has(match[1]) && row.status === "active");
+        const key = keyOf(row.notes);
+        return Boolean(key && wanted.has(key) && row.status === "active");
       });
       const storedCents = present.reduce((sum, row) => sum + cents(row.total_direct_cost), 0);
       const goneFromKoper = [...existingByKoper.keys()].filter((id) => !wanted.has(id));
-      const verified = present.length === desired.length && present.every((row) => row.service_id) && Math.abs(storedCents - plan.leavesCents) <= 5;
-      const result = { ...report, servicesCreated: services.created, servicesWouldCreate: [], budgetId, groupsSaved: promotedGroups.length, inserted, updated, unchanged: desired.length - inserts.length - updates.length, storedItems: present.length, storedTotal: money(storedCents), goneFromKoper, verified };
+      const withService = present.filter((row) => row.service_id).length;
+      const verified = present.length === desired.length && withService === plan.leaves.length && Math.abs(storedCents - budgetCents) <= 5;
+      const result = { ...report, servicesCreated: services.created, servicesWouldCreate: [], budgetId, groupsSaved: promotedGroups.length, inserted, updated, unchanged: desired.length - inserts.length - updates.length, storedItems: present.length, storedWithService: withService, storedTotal: money(storedCents), goneFromKoper, verified };
       console.log("KOPER_BUDGET_RESULT", JSON.stringify(result));
       if (!verified) throw new Error(`KOPER_BUDGET_POST_VERIFICATION_FAILED_${monitoringId}`);
       summary.push(result);

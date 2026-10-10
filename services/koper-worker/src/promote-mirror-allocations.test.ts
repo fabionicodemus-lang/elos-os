@@ -124,6 +124,17 @@ test("orçamento: grupos, folhas e quantidade exata", () => {
   assert.deepEqual(plan.leaves.map((leaf) => leaf.reference), ["1.1", "1.2", "1.3"]);
   assert.equal(plan.leavesCents, 30000);
   assert.deepEqual(plan.oddItems, []);
+  assert.deepEqual([plan.stageItems, plan.negativeStages, plan.rootsCents], [[], [], 30000]);
+  // Previsto lançado na etapa: o que sobra além dos filhos vira item da etapa, sem serviço.
+  const staged = planBudget(readMonitoringItems({ items: [
+    { itemMonitoringId: 1, itemReference: "2", itemName: "Estrutura", serviceId: null, itemHasChildren: true, fatherItemId: null, monItemExpectedValue: 1000.5 },
+    { itemMonitoringId: 2, itemReference: "2.1", itemName: "Fundação", serviceId: null, itemHasChildren: true, fatherItemId: 1, monItemExpectedValue: 400 },
+    { itemMonitoringId: 3, itemReference: "2.1.1", itemName: "Estaca", serviceId: 9, itemHasChildren: false, fatherItemId: 2, monItemExpectedValue: 150 },
+    { itemMonitoringId: 4, itemReference: "2.2", itemName: "Sem detalhe", serviceId: null, itemHasChildren: false, fatherItemId: 1, monItemExpectedValue: 100 },
+  ] }));
+  assert.deepEqual(staged.stageItems.map((item) => [item.reference, item.ownCents]), [["2", 50050], ["2.1", 25000], ["2.2", 10000]]);
+  assert.equal(staged.leavesCents + staged.stageItems.reduce((sum, item) => sum + item.ownCents, 0), staged.rootsCents);
+  assert.equal(staged.rootsCents, 100050);
   assert.deepEqual(exactQuantity(4, 10000), { quantity: 4, unitCost: 25, keptQuantity: true });
   assert.deepEqual(exactQuantity(3, 10000), { quantity: 1, unitCost: 100, keptQuantity: false });
   assert.deepEqual(exactQuantity(0, 10000), { quantity: 1, unitCost: 100, keptQuantity: false });
