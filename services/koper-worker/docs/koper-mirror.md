@@ -37,17 +37,20 @@ Contas a pagar por empresa (cabeçalho do Koper):
 | Flow Aptos - Bossa      |   4.079 |  19.267.130,93 |   3.795.429,73 |
 | Alma Seahouses - Bossa  |     656 |   7.632.085,12 |   2.581.510,28 |
 
-Empresa Bossa por centro de custo (detalhe dos 3.651 títulos, soma de `billValue`):
+Empresa Bossa por centro de custo. "Cabeçalho" é o total que o próprio Koper mostra ao
+filtrar a listagem por `costCenterId`; "soma de billValue" é a soma bruta das linhas
+(detalhe lido para os 3.651 títulos):
 
-| Centro de custo (id)            | Títulos | Total (R$)   |
-|---------------------------------|--------:|-------------:|
-| Escritório Central (135)        |   2.407 | 3.754.593,03 |
-| Matriz (3)                      |     691 | 1.767.023,08 |
-| Soul Residence (102)            |     499 |   765.291,16 |
-| Alma Seahouses (202)            |      32 |   307.865,98 |
-| Alma Seahouses - EMPRESA (201)  |       3 |    16.300,00 |
-| Jazz Residence (103)            |      11 |     2.126,28 |
-| sem centro de custo (tipo Grupo)|       8 |    39.819,46 |
+| Centro de custo (id)            | Títulos | Cabeçalho (R$) | Soma de billValue (R$) |
+|---------------------------------|--------:|---------------:|-----------------------:|
+| Escritório Central (135)        |   2.407 |   3.738.213,01 |           3.754.593,03 |
+| Matriz (3)                      |     691 |   1.766.072,90 |           1.767.023,08 |
+| Soul Residence (102)            |     499 |     764.387,17 |             765.291,16 |
+| Alma Seahouses (202)            |      32 |     307.865,98 |             307.865,98 |
+| Alma Seahouses - EMPRESA (201)  |       3 |      16.300,00 |              16.300,00 |
+| Jazz Residence (103)            |      11 |       2.126,28 |               2.126,28 |
+| sem centro de custo (tipo Grupo)|       8 |              — |              39.819,46 |
+| **Total**                       |   3.651 |   6.594.965,34 |           6.653.018,99 |
 
 Não há contas a pagar com centro de custo "Flow Aptos" dentro da empresa Bossa.
 
@@ -64,12 +67,17 @@ Demais volumes (linhas de listagem):
 
 ## 4. Aprendizados sobre o Koper (evidência: sessão de 2026-10-10)
 
-1. **Títulos agrupados contam em dobro na listagem.** `bills_to_pay` devolve o título
-   pai (`bill_type = "Grupo"`, sem centro de custo) **e** os filhos (`status = "Agrupada"`,
-   `join_bill_id` preenchido). O cabeçalho (`totalBills`) ignora os pais. Na Bossa: 8 pais =
-   23 filhos = R$ 39.819,46. No Flow a diferença cabeçalho × soma da lista é R$ 151.373,46 —
-   é a "divergência interna" registrada no handoff de setembro. **Na promoção, o pai tipo
-   Grupo não pode virar custo**; conferir se o Flow já promovido no Elos OS tem esse dobro.
+1. **O cabeçalho do Koper não é a soma de `billValue` — e a diferença tem composição exata.**
+   `bills_to_pay` devolve o título pai de um agrupamento (`bill_type = "Grupo"`, sem centro
+   de custo) **e** os filhos (`status = "Agrupada"`, `join_bill_id` preenchido), além de
+   títulos `bill_type = "Crédito"`. Na empresa Bossa a conta fecha ao centavo:
+   soma de billValue 6.653.018,99 − pais tipo Grupo 39.819,46 − créditos 12.950,31
+   − descontos 7.012,05 + juros 168,76 + outros acréscimos 1.559,41 = 6.594.965,34
+   (cabeçalho). No Flow a diferença soma da lista × cabeçalho é R$ 151.373,46 (a
+   "divergência interna" do handoff de setembro); a composição dela ainda não foi
+   detalhada, mas o mecanismo é o mesmo. **Na promoção, o pai tipo Grupo não pode virar
+   custo** (os filhos já carregam o valor e o centro de custo); conferir se o Flow já
+   promovido no Elos OS tem esse dobro.
 2. **`costCenterId` é filtro válido** da listagem `GET /financial/v1/bills_to_pay`.
 3. **A troca de empresa devolve um `accessToken` novo.** `POST /login/change_company`
    (corpo `accessToken`, `toEnterpriseId`, `changeCompany`) responde com outro token já no
