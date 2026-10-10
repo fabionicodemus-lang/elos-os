@@ -130,7 +130,8 @@ export function resolveBeneficiary(detail: Json, fallbackName: string | null = n
   ];
   for (const [kind, idKey, nameKey] of kinds) {
     const id = text(beneficiary[idKey]);
-    const name = text(beneficiary[nameKey]);
+    // Em devolução a cliente o detalhe traz só o id; o nome vem da listagem (`originName`).
+    const name = text(beneficiary[nameKey]) ?? fallbackName;
     if (id && name) return { sourceId: `${kind}:${id}`, name };
   }
   // Guia de tributo não tem fornecedor no Koper: o beneficiário é o próprio tributo
