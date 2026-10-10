@@ -9,17 +9,20 @@
  *
  *   KOPER_TOOL=chain-audit        mede a cadeia de apropriação (leitura)
  *   KOPER_TOOL=inspect-elos       inspeciona orçamento / serviços / rateios (leitura)
- *   KOPER_TOOL=budget             promove orçamento do Koper para o Elos OS
- *   KOPER_TOOL=allocations        promove o rateio dos títulos por serviço
- *   KOPER_TOOL_TARGET=alma        obra alvo das duas últimas
+ *   KOPER_TOOL=budget             promove o orçamento (acompanhamento do Koper) da obra alvo
+ *   KOPER_TOOL=allocations        promove o rateio dos títulos por serviço da obra alvo
+ *   KOPER_TOOL=budget,allocations várias ferramentas, em ordem
+ *   KOPER_TOOL_TARGET=alma        obra alvo
+ *   KOPER_ALLOC_LIMIT=5           piloto do rateio: nº de títulos gravados
  */
 import { pathToFileURL } from "node:url";
 
 const write = process.env.KOPER_TOOL_WRITE === "true";
-const tool = (process.env.KOPER_TOOL ?? "chain-audit").trim();
-const target = (process.env.KOPER_TOOL_TARGET ?? "alma").trim().toLowerCase();
+const tools = (process.env.KOPER_TOOL ?? "chain-audit").split(",").map((item) => item.trim()).filter(Boolean);
 
-export async function runTool() {
+export async function runTool(tool: string) {
+  const { parseTarget } = await import("./mirror-shared.js");
+  const target = parseTarget(process.env.KOPER_TOOL_TARGET);
   console.log("KOPER_TOOL_START", JSON.stringify({ tool, target, write }));
   if (tool === "chain-audit") {
     const { auditAppropriationChain } = await import("./audit-mirror-appropriation-chain.js");
@@ -27,6 +30,13 @@ export async function runTool() {
   } else if (tool === "inspect-elos") {
     const { inspectElos } = await import("./inspect-elos-allocation-base.js");
     await inspectElos();
+  } else if (tool === "budget") {
+    const { promoteMirrorBudget } = await import("./promote-mirror-budget.js");
+    await promoteMirrorBudget({ write, target });
+  } else if (tool === "allocations") {
+    const { promoteMirrorAllocations } = await import("./promote-mirror-allocations.js");
+    const limit = Math.max(0, Number(process.env.KOPER_ALLOC_LIMIT ?? "0") || 0);
+    await promoteMirrorAllocations({ write, target, limit });
   } else {
     throw new Error(`KOPER_TOOL_UNKNOWN_${tool}`);
   }
@@ -34,8 +44,11 @@ export async function runTool() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runTool().catch((error: unknown) => {
-    console.error("KOPER_TOOL_FAILED", JSON.stringify({ tool, message: error instanceof Error ? error.message.slice(0, 800) : String(error).slice(0, 800) }));
+  (async () => {
+    // Várias ferramentas separadas por vírgula rodam em ordem; a primeira falha interrompe.
+    for (const tool of tools) await runTool(tool);
+  })().catch((error: unknown) => {
+    console.error("KOPER_TOOL_FAILED", JSON.stringify({ tools, message: error instanceof Error ? error.message.slice(0, 800) : String(error).slice(0, 800) }));
     process.exitCode = 1;
   });
 }
