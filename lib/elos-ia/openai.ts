@@ -84,7 +84,9 @@ export function friendlyOpenAiError(error: unknown) {
   if (error.status === 401) return "A chave da OpenAI configurada no Elos OS é inválida ou foi revogada. Avise o administrador.";
   if (error.status === 403) return "A chave da OpenAI não tem acesso a este modelo. Avise o administrador.";
   if (error.status === 404) return "O modelo configurado para o Elos IA não existe nesta conta da OpenAI. Avise o administrador.";
-  if (error.status === 429 && error.code === "insufficient_quota") return "O limite de gastos da conta da OpenAI foi atingido. Avise o administrador.";
+  // Sem crédito na conta ou limite mensal de gastos (da organização ou do projeto) atingido.
+  const spendCodes = ["insufficient_quota", "organization_spend_limit_exceeded", "project_spend_limit_exceeded"];
+  if (error.status === 429 && spendCodes.includes(error.code ?? "")) return "O limite de gastos da conta da OpenAI foi atingido. Avise o administrador.";
   if (error.status === 429) return "A OpenAI está limitando as chamadas neste momento. Aguarde um minuto e tente de novo.";
   if (error.code === "timeout") return "A OpenAI demorou demais para responder. Tente uma pergunta mais específica ou tente de novo.";
   if (error.status >= 500 || error.status === 0) return "A OpenAI está instável neste momento. Tente novamente em instantes.";
