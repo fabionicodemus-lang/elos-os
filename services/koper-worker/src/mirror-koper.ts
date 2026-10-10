@@ -371,6 +371,18 @@ export const ENTITIES: EntitySpec[] = [
     },
     detail: { path: "/engineering/v1/build_measurement", idParam: "measurementId" },
   },
+  {
+    // Itens de cada medição: trazem `contractId`, `itemMonitoringId`, `serviceId` e valores.
+    // É o elo medição → contrato → item do acompanhamento (o detalhe da medição não traz itens).
+    name: "measurement_items",
+    derivedFrom: [{ entity: "build_measurement", level: "list", path: ["measurementId"] }],
+    detail: {
+      path: "/engineering/v1/item_measurement",
+      idParam: "measurementId",
+      params: { limit: "5000", offset: "0", orderby: "itemReference", orderFlag: "asc" },
+    },
+    alwaysRefresh: true,
+  },
 ];
 
 // ---------------------------------------------------------------------------

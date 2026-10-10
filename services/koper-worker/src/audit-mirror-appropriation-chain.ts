@@ -178,14 +178,34 @@ export function measureChain(data: ChainData) {
     }
   }
   const measuredContracts = new Set([...data.measurements.values()].map((row) => text(row.contractId)).filter((id): id is string => id !== null));
-  const release = { receiptsWithRelease: 0, releaseIdIsMeasurement: 0, stageReleaseIdIsMeasurement: 0 };
+  const suppliersWithContract = new Set([...data.contracts.values()].map((row) => text(row.supplierId)).filter((id): id is string => id !== null));
+  // `fncReleaseId` / `fncStageReleaseId` do recibo: são o id da medição? O teste é o fornecedor —
+  // se o id existe como medição E o fornecedor é o mesmo, a coincidência deixa de ser plausível.
+  const release = {
+    receiptsWithRelease: 0,
+    receiptsWithSupplier: 0,
+    releaseIdIsMeasurement: 0,
+    releaseIdSameSupplier: 0,
+    stageReleaseIdIsMeasurement: 0,
+    stageReleaseIdSameSupplier: 0,
+    receiptSupplierHasContract: 0,
+  };
+  const sameSupplier = (receiptSupplier: string | null, measurementId: string | null) => {
+    const measurement = measurementId ? data.measurements.get(measurementId) : undefined;
+    return Boolean(receiptSupplier && measurement && text(measurement.supplierId) === receiptSupplier);
+  };
   for (const receipt of data.receipts.values()) {
     const releaseId = text(receipt.fncReleaseId);
     const stageReleaseId = text(receipt.fncStageReleaseId);
     if (!releaseId && !stageReleaseId) continue;
+    const supplierId = text(receipt.supplierId) ?? text(asObject(receipt.supplier).supplierId);
     release.receiptsWithRelease += 1;
+    if (supplierId) release.receiptsWithSupplier += 1;
+    if (supplierId && suppliersWithContract.has(supplierId)) release.receiptSupplierHasContract += 1;
     if (releaseId && measurementIds.has(releaseId)) release.releaseIdIsMeasurement += 1;
+    if (sameSupplier(supplierId, releaseId)) release.releaseIdSameSupplier += 1;
     if (stageReleaseId && measurementIds.has(stageReleaseId)) release.stageReleaseIdIsMeasurement += 1;
+    if (sameSupplier(supplierId, stageReleaseId)) release.stageReleaseIdSameSupplier += 1;
   }
 
   const byDocument = new Map<string, Bucket>();
@@ -299,6 +319,7 @@ export function measureChain(data: ChainData) {
         if (contractId) inferredContracts.add(contractId);
       }
     }
+    if (serviceOrderDetails.some((order) => suppliersWithContract.has(text(order.supplierId) ?? ""))) bump(reach, "ordem de serviço de fornecedor que tem contrato", valueCents);
     if (inferredContracts.size) bump(reach, "ordem de serviço bate com contrato (fornecedor + item)", valueCents);
     if ([...inferredContracts].some((id) => measuredContracts.has(id))) bump(reach, "contrato inferido tem medição", valueCents);
     if (measurementRefs.size) bump(reach, "cita medição / liberação", valueCents);
@@ -336,6 +357,10 @@ function structures(data: ChainData): Json {
     purchaseServicesOrders: firstWith(data.purchases, (row) => row.servicesOrders),
     receiptServicesOrders: firstWith(data.receipts, (row) => row.servicesOrders),
     receiptServices: firstWith(data.receipts, (row) => row.services),
+    receiptWithReleaseTop: firstWith(data.receipts, (row) =>
+      text(row.fncReleaseId) || text(row.fncStageReleaseId)
+        ? Object.fromEntries(Object.entries(row).filter(([, value]) => typeof value !== "object" || value === null))
+        : null),
     purchaseOrderProductRequests: firstWith(data.purchaseOrders, (row) => asArray(row.products).flatMap((product) => asArray(asObject(product).requests))),
     purchaseOrderProductServices: firstWith(data.purchaseOrders, (row) => asArray(row.products).flatMap((product) => asArray(asObject(product).services))),
     invoicePurchaseOrders: firstWith(data.invoices, (row) => row.purchaseOrders),
