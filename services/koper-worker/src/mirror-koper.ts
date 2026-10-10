@@ -265,7 +265,9 @@ export const ENTITIES: EntitySpec[] = [
       idKey: "billReceiveId",
       emptyOn404: true,
     },
-    detail: { path: "/financial/v1/bills_to_receive", idParam: "billReceiveId" },
+    // Sem detalhe de propósito: `?billReceiveId=` leva ~11 s por título (o Koper recalcula a
+    // correção monetária a cada chamada). A linha da listagem já traz cliente, valores,
+    // saldo corrigido e datas. Detalhe por título só sob demanda, na promoção de recebíveis.
   },
   // --- Cadastro de produtos ------------------------------------------------
   {
