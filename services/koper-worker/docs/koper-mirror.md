@@ -112,8 +112,19 @@ O payload é `{ _enterprise, _enterpriseId, data }`, com CPF, telefone e e-mail 
 | `purchase_order` / `purchase_order_detail`          | `/purchase/v1/purchase_order`    | `?orderId=`                              |
 | `service_order` / `service_order_detail`            | `/purchase/v1/service_order`     | `?orderId=`                              |
 | `purchase` / `purchase_detail`                      | `/purchase/v1/purchase`          | `?purchaseId=`                           |
-| `receipt` (derivada)                                | ids vindos de compras e títulos  | `/financial/v1/receipt?receiptId=`       |
-| `xml_invoice` (derivada)                            | ids vindos de compras e títulos  | `/financial/v1/xml_invoice?invoiceId=`   |
+| `receipt_list`                                      | `/financial/v1/receipt` (`receiptId=all`) | —                               |
+| `xml_invoice_list`                                  | `/financial/v1/xml_invoice` (`invoiceId=all`) | —                           |
+| `receipt` (derivada)                                | ids das listas, compras e títulos| `/financial/v1/receipt?receiptId=`       |
+| `xml_invoice` (derivada)                            | ids das listas, compras e títulos| `/financial/v1/xml_invoice?invoiceId=`   |
+| `bill_to_receive`                                   | `/financial/v1/bills_to_receive` (`splittedBills` no/yes) | — (`?billReceiveId=` existe, mas leva ~11 s por título) |
+| `product`                                           | `/stock/v1/product`              | —                                        |
+| `building`                                          | `/engineering/v1/building`       | —                                        |
+| `building_monitoring` / `building_monitoring_detail`| `/engineering/v1/building_monitoring` | `?buildMonitoringId=`               |
+| `monitoring_items` (derivada, relida sempre)        | ids dos acompanhamentos          | `/engineering/v1/item_monitoring?buildMonitoringId=` |
+| `construction_budget` / `construction_budget_detail`| `/engineering/v1/construction_budget` | `?engBudgetId=`                     |
+| `construction_budget_items` (derivada, relida sempre)| ids dos orçamentos              | `/engineering/v1/item_budget?engBudgetId=` |
+| `engineering_contract` / `engineering_contract_detail` | `/engineering/v1/contract`    | `?contractId=`                           |
+| `build_measurement` / `build_measurement_detail`    | `/engineering/v1/build_measurement` (open yes/no) | `?measurementId=`       |
 
 Com isso a cadeia da apropriação fica inteira na staging: título → recibo/nota → compra →
 ordem de compra / ordem de serviço → solicitação, com centro de custo, plano de contas,
@@ -140,17 +151,65 @@ veio inteira; rodar duas vezes sem mudança no Koper não altera nenhum hash.
 
 ## 7. O que ainda falta mapear (próximas entidades do catálogo)
 
-- Financeiro: contas a receber, notas manuais sem compra, tributos, plano de contas
-  (`item_chart_account`), movimentação bancária.
-- Suprimentos: entradas de estoque (`/stock/v1/entry`, `product_entry`), produtos, serviços.
-- Engenharia: orçamentos de obra, contratos, medições (`/engineering/v1/*`).
+- Financeiro: tributos, plano de contas (`item_chart_account` respondeu 500 com os
+  parâmetros testados), movimentação bancária.
+- Suprimentos: entradas de estoque (`/stock/v1/entry` e `pending_entry` responderam 404 na
+  empresa Bossa; conferir no Flow), serviços (`/supply/v2/services` exige `Authorization`).
+- Engenharia: composições e insumos do orçamento, planejamento.
 - Comercial e pós-obra: vendas, contratos de venda, clientes, assistências técnicas.
 - RH: folha e rateio.
 
-## 8. Decisões pendentes para a camada 2 (promoção)
+## 8. Camada 2 — promoção das contas a pagar (`src/promote-mirror-payables.ts`)
 
-1. Projetos no Elos OS para Alma, Soul, Jazz e Escritório Bossa (o Flow já existe).
-2. `source_system` dos títulos novos: sugerido `koper_bossa` e `koper_alma`, no padrão do
-   `koper_flow` já usado.
-3. Títulos tipo Grupo: promover só os filhos.
-4. As 59 exceções `existing_value_or_due_date_conflict` da rotina diária do Flow.
+Lê `mirror.bill_to_pay` e `mirror.bill_to_pay_detail` das empresas **Bossa** e **Alma** e
+grava em `public.payables`. O Flow fica fora: continua em `sync-koper-payables-daily.ts`
+(`source_system = koper_flow`).
+
+| Item               | Regra                                                                                 |
+|--------------------|---------------------------------------------------------------------------------------|
+| Identidade         | `source_system` = `koper_bossa` ou `koper_alma`; `source_id` = `koper_bill:<billId>`; `id` = UUID determinístico do `billId` (mesma semente do Flow) |
+| Obra               | Tabela da Seção 2, pelo `cost_center.id` do detalhe; na empresa Alma, sempre Alma     |
+| Fornecedor         | `suppliers` com `source_system = koper` e `source_id` = id do Koper; sem esse cadastro, reaproveita o fornecedor existente quando há exatamente um com o mesmo nome (mesmo critério da rotina do Flow); beneficiário que não é fornecedor entra como `employee:<id>`, `customer:<id>` ou `commission:<id>`; guia de tributo usa um cadastro por tipo de tributo (`tax:<tax_type_id>`, ex.: "PIS — Programa de Integração Social") e folha usa `payroll:<id>`; nome sozinho nunca é chave |
+| Pagamento          | `isPaid`/`paymentDate`/`paymentValue` da listagem; filho de agrupamento herda a baixa do título pai |
+| Não promove        | pai de agrupamento (`Grupo`), `Crédito`, sem centro de custo mapeado, sem beneficiário, sem vencimento, pago sem data |
+| Já existente       | só recebe baixa (aberto → pago); valor ou vencimento divergente vira exceção, sem sobrescrever |
+| Apropriação        | entra como "À Apropriar"; centro de custo e plano de contas do Koper ficam em `notes`; rateio por serviço/WBS é etapa separada |
+
+Rotina diária única: `node dist/sync-koper-mirror-daily.js` (espelho + promoção).
+Obras criadas em 2026-10-10 por `src/ensure-bossa-projects.ts`: Alma Seahouses,
+Soul Residence, Jazz Residence e Escritório Bossa.
+
+## 9. Pendências
+
+1. Rateio por serviço/WBS dos títulos de Alma, Soul, Jazz e Escritório
+   (`payable_cost_allocations`): depende de promover os orçamentos dessas obras a partir de
+   `mirror.construction_budget*` e `mirror.monitoring_items`.
+2. Títulos tipo `Crédito` (créditos de fornecedor): definir como representar no Elos OS.
+3. As 59 exceções `existing_value_or_due_date_conflict` da rotina diária do Flow.
+4. Conferir no Flow já promovido se há título pai de agrupamento contado junto com os filhos.
+5. Promoção de contas a receber, solicitações, ordens, compras e contratos de Bossa e Alma.
+
+## 10. Estado ao fim de 2026-10-10
+
+- Serviço Railway `koper-mirror` (projeto `powerful-joy`), branch `feature/koper-mirror`,
+  raiz `/services/koper-worker`. Variáveis por referência ao `koper-audit-runner`.
+- Carga completa da staging concluída: 49.162 registros na primeira carga e mais 12.454
+  ao incluir recebíveis, produtos e engenharia. Rodada incremental das três empresas e 22
+  entidades leva cerca de 5 minutos e meio.
+- Volumes lidos (linhas de listagem): contas a pagar 3.651 / 4.079 / 656 (Bossa / Flow /
+  Alma); contas a receber 2.251 / 3.979 / 722; notas manuais 2.657 / 2.132 / 334; notas
+  eletrônicas 400 / 1.069 / 92; contratos 4 / 22 / 5; medições 7 / 143 / 25; orçamentos de
+  obra 6 / 2 / 1; produtos 1.220 (cadastro comum às três).
+- Duas notas eletrônicas do Flow falharam ao ler o detalhe nas duas rodadas; a causa ainda
+  não foi identificada. A partir do commit `4e66846` o relatório traz o id e o erro em
+  `detailProblemSamples` (resposta 400/404 conta como `detailNotFound`, o resto como falha).
+- Obras criadas no Elos OS: Alma Seahouses, Soul Residence, Jazz Residence, Escritório Bossa.
+- Promoção de contas a pagar autorizada pelo Fábio em 2026-10-10. Piloto de 3 títulos
+  gravado e conferido (Escritório Bossa, R$ 2.321,34). Plano completo: 4.287 títulos —
+  empresa Bossa 3.633 (Escritório Bossa 3.090 / R$ 5.510.127,39; Soul 497 / R$ 763.829,57;
+  Alma 35 / R$ 324.165,98; Jazz 11 / R$ 2.126,28) e empresa Alma 654 / R$ 7.558.922,29.
+  Ficam de fora 9 pais de agrupamento (R$ 40.569,46) e 11 créditos de fornecedor
+  (R$ 196.157,31, sendo um de R$ 183.207,00 no Alma). Fornecedores: 195 reaproveitados por
+  nome único, 258 cadastros novos (inclui um por tipo de tributo e os clientes de devolução).
+- Rotina diária: comando do serviço `node dist/sync-koper-mirror-daily.js`, cron `0 8 * * *`
+  (05h de Brasília), uma hora depois do `koper-audit-runner` do Flow.
