@@ -150,8 +150,24 @@ export async function promoteMirrorBudget(options: { write: boolean; target: Tar
         servicesWithoutName: services.unnamed,
         budgetExists: existingBudgets.length > 0,
       };
+      if (!write) {
+        // Árvore compacta para conferência: referência | serviço | tem filhos | previsto | realizado.
+        const raw = asArray(payload.items).map(asObject);
+        const tree = raw.map((row) => `${text(row.itemReference) ?? "?"}|${idOf(row.serviceId) ?? "-"}|${row.itemHasChildren === true ? 1 : 0}|${Math.round(num(row.monItemExpectedValue))}|${Math.round(num(row.totalMonItem))}`);
+        const sumWhere = (pick: (item: MonitoringItem) => boolean) => money(items.filter(pick).reduce((sum, item) => sum + item.expectedCents, 0));
+        console.log("KOPER_BUDGET_TREE", JSON.stringify({
+          monitoringId,
+          roots: sumWhere((item) => !item.fatherId),
+          withoutChildren: sumWhere((item) => !item.hasChildren),
+          withService: sumWhere((item) => Boolean(item.serviceId)),
+          all: sumWhere(() => true),
+          executedRoots: money(raw.filter((row) => !idOf(row.fatherItemId)).reduce((sum, row) => sum + cents(row.totalMonItem), 0)),
+          top: Object.fromEntries(Object.entries(payload).filter(([, value]) => typeof value !== "object")),
+        }));
+        for (const part of chunks(tree, 70)) console.log("KOPER_BUDGET_TREE_ROWS", part.join(" ; "));
+      }
       if (plan.oddItems.some((item) => item.reason === "item com serviço e com filhos")) throw new Error(`KOPER_BUDGET_ITEM_WITH_SERVICE_AND_CHILDREN_${monitoringId}`);
-      if (Math.abs(plan.leavesCents - reportedCents) > 5) {
+      if (write && Math.abs(plan.leavesCents - reportedCents) > 5) {
         console.log("KOPER_BUDGET_PLAN", JSON.stringify({ ...report, aborted: "soma das folhas difere do total informado pelo Koper" }));
         throw new Error(`KOPER_BUDGET_TOTAL_MISMATCH_${monitoringId}`);
       }
