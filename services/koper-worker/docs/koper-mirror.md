@@ -213,3 +213,58 @@ Soul Residence, Jazz Residence e Escritório Bossa.
   nome único, 258 cadastros novos (inclui um por tipo de tributo e os clientes de devolução).
 - Rotina diária: comando do serviço `node dist/sync-koper-mirror-daily.js`, cron `0 8 * * *`
   (05h de Brasília), uma hora depois do `koper-audit-runner` do Flow.
+
+## 11. Medição da cadeia de apropriação (2026-10-10, somente leitura)
+
+Script `src/audit-mirror-appropriation-chain.ts`, serviço Railway `koper-mirror-tools`
+(mesma branch; só lê a staging, não chama o Koper e não grava nada). Pergunta respondida:
+dos títulos já gravados como "À Apropriar", até onde a staging permite seguir
+título → nota → compra → ordem de compra → solicitação / ordem de serviço → contrato / medição.
+
+Melhor evidência por título (quantidade de títulos; pais de agrupamento e créditos fora):
+
+| Obra | Títulos | Item do acompanhamento | Só serviço | Só obra | Nenhuma |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Flow (empresa Flow) | 4.032 | 2.301 | 1.506 | 73 | 152 |
+| Alma (empresa Alma + centros 201/202 da Bossa) | 689 | 298 | 313 | 70 | 8 |
+| Soul (centro 102) | 497 | 232 | 194 | 36 | 35 |
+| Jazz (centro 103) | 11 | 0 | 0 | 0 | 11 |
+| Escritório Bossa (centros 3 e 135) | 3.090 | 1.250 | 1.353 | 138 | 349 |
+
+- "Item do acompanhamento": algum elo traz `itemMonitInputId`, `itemMonitoringId`,
+  `itemMonitContractId` ou `itemReference`. "Só serviço": apenas `serviceId` (vem de
+  `receipt.services[]`). "Nenhuma" é quase tudo tributo (Bossa 370 de 395, Flow 142 de 152).
+- Alcance por empresa do Koper (títulos): Flow — compra 3.608, ordem de compra 1.745,
+  solicitação de material 1.568, ordem de serviço 901; Alma — 608 / 190 / 176 / 257;
+  Bossa — 3.030 / 1.028 / 45 / 568.
+- Títulos que citam ordem de serviço ausente da staging: Flow 446, Bossa 349, Alma 28.
+  Causa conhecida para parte deles: a listagem sem `open` devolve só as finalizadas
+  (Bossa: 369 finalizadas + 29 abertas; ordens de compra 982 + 3). Corrigido no espelho
+  com as variantes `open=yes` e `open=no`; a carga entra na próxima rodada diária. Se
+  ainda sobrar ausência depois disso, a causa é outra e precisa ser investigada.
+
+### Contrato e medição
+
+- A ordem de serviço não devolve o id do contrato. O detalhe da medição traz `contractId`
+  e `supplierId`, mas não traz itens.
+- Itens da medição: `GET /engineering/v1/item_measurement?measurementId=&limit=&offset=&orderby=itemReference&orderFlag=asc`
+  → `services[]` com `contractId`, `itemMonitoringId`, `itemReference`, `serviceId`,
+  `itemMeasurementId` e valores. Entidade `mirror.measurement_items` criada (entra na
+  próxima rodada diária).
+- `fncReleaseId` / `fncStageReleaseId` do recibo **não são o id da medição**: no Flow,
+  47 e 40 dos 118 recibos com liberação têm um número que também existe como medição,
+  mas o fornecedor coincide em 0 e 4 casos. É coincidência de numeração.
+- Todo recibo com liberação é de fornecedor que tem contrato (Flow 118 de 118; Alma 23
+  de 23; Bossa não tem recibo com liberação). Títulos que citam liberação: Flow 154,
+  Alma 33.
+- Vínculo inferido ordem de serviço ↔ contrato por fornecedor + `itemMonitoringId`:
+  Flow 43 títulos (todos em contrato com medição); Alma e Bossa 0.
+- Em aberto: qual entidade do Koper é a "liberação" (`fncReleaseId`) e como ela aponta
+  para a medição. Sem isso, o título chega ao contrato pelo fornecedor, mas não a uma
+  medição específica.
+
+### Insumos do acompanhamento
+
+`GET /engineering/v1/monitoring_input?itemMonitoringId=` devolve os insumos de um item
+(`inputId`, `baseInputId`, `inputName`, `inputType`, …). Ainda não confirmado se `inputId`
+é o `itemMonitInputId` citado nas ordens de compra e solicitações. Não está no espelho.
