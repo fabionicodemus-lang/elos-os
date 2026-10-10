@@ -268,3 +268,70 @@ Melhor evidência por título (quantidade de títulos; pais de agrupamento e cr�
 `GET /engineering/v1/monitoring_input?itemMonitoringId=` devolve os insumos de um item
 (`inputId`, `baseInputId`, `inputName`, `inputType`, …). Ainda não confirmado se `inputId`
 é o `itemMonitInputId` citado nas ordens de compra e solicitações. Não está no espelho.
+
+## 12. Orçamento e rateio por serviço — Alma (2026-10-10)
+
+### Como o Elos OS mostra custo por serviço
+
+- A tela Engenharia › Custo x Orçamento (`lib/cost-vs-budget/server.ts`, branch `main`) agrupa
+  por **serviço** (`engineering_services`, o "centro de custo" do Elos OS): soma o orçamento
+  pelos `engineering_budget_items.service_id` e o custo pelos `payable_cost_allocations`
+  com `source_system = koper_native_resolution`.
+- **Trava conhecida:** essa tela (e `lib/cost-vs-budget/title-details.ts`) lê só títulos com
+  `source_system = koper_flow`. Enquanto isso não for ampliado para `koper_alma` e
+  `koper_bossa`, o rateio do Alma fica gravado mas não aparece na tela. A mudança são duas
+  linhas na `main` (app em produção) e depende de aprovação do Fábio.
+- Catálogo: os serviços do Koper já estão no Elos OS como `KOPER-S<serviceId>`
+  (`source_system = koper`, `source_id = <serviceId>`); o catálogo é o mesmo nas três
+  empresas do Koper. Faltavam 3 dos 89 serviços citados pelo Alma.
+- Formato do rateio já usado no Flow (2.919 títulos): `source_id = <billId>:<n>`, método
+  `koper_receipt_purchase` (nota manual) ou `koper_invoice_purchase_order` (nota eletrônica),
+  evidência em `evidence.nativeEvidence`.
+
+### Orçamento do Alma no Koper
+
+- Acompanhamento de obra 133 ("Alma Seahouses Obra"): 129 itens, 62 folhas com serviço.
+- O previsto está lançado **por etapa**: só 9,4% do total está em folhas com serviço; o resto
+  está em 8 etapas cujo previsto é maior que a soma dos filhos (uma delas concentra 81% do
+  total). Não há previsto negativo.
+- Regra adotada em `src/promote-mirror-budget.ts`: folha com serviço vira item com serviço;
+  a diferença "previsto da etapa − soma dos filhos" vira item **sem serviço** na etapa
+  (marcador `Koper etapa itemMonitoringId=<id>`). O total fecha ao centavo com o do Koper e
+  nada é distribuído por conta própria. Orçamento: `KOPER-ACOMP-133`,
+  `source_id = monitoring:133`.
+
+### Rateio dos títulos (`src/promote-mirror-allocations.ts`)
+
+Plano para os 689 títulos do Alma (empresa Alma + centros 201/202 da empresa Bossa):
+
+| Situação | Títulos | % do valor |
+| --- | ---: | ---: |
+| Resolvido pela nota manual com serviço (grava já) | 473 | 85,6% |
+| Material: depende do de-para de insumos (entra na rodada diária) | 127 | 7,4% |
+| Ordem de compra ainda fora da staging (ordens abertas, rodada diária) | 8 | 0,2% |
+| Produto de nota sem vínculo com item do acompanhamento | 59 | 2,6% |
+| Nota manual com produto e sem ordem de compra | 7 | 2,6% |
+| Sem documento, tributo, devolução, produto fora da ordem | 15 | 1,6% |
+
+- 468 dos 473 têm destino único (um serviço); nos 5 com mais de um serviço o peso
+  "valor × quantidade" fechou com o total da nota.
+- O Koper não liga guia de tributo a serviço; esses títulos continuam "À Apropriar".
+
+### De-para de insumos (materiais)
+
+- Produto de solicitação / ordem de compra cita `itemMonitInputId`. A consulta
+  `GET /engineering/v1/monitoring_input?services=yes&inputId=&buildMonitoringId=&page=stockRequest`
+  devolve `[{ itemMonitInputId, itemMonitoringId, monitItemReference, serviceName, … }]`.
+  Entidade `mirror.monitoring_input_services` (id `<buildMonitoringId>-<inputId>`), derivada
+  dos detalhes de solicitação e ordem de compra já na staging.
+- Catálogo de serviços: `GET /engineering/v1/service?orderFlag=asc&orderby=serviceName&limit=&offset=`
+  → `services[]` com `serviceId`, `serviceName`, `categoryId`, `categoryName`, `unitName`.
+  Entidade `mirror.service`. (`/supply/v2/services` exige cabeçalho `Authorization` e não é usado.)
+
+### Serviço `koper-mirror-tools`
+
+Comando fixo `node dist/tools.js`; ferramenta em `KOPER_TOOL` (`chain-audit`, `inspect-elos`,
+`budget`, `allocations`, ou várias separadas por vírgula), obra em `KOPER_TOOL_TARGET`,
+gravação só com `KOPER_TOOL_WRITE=true`, piloto com `KOPER_ALLOC_LIMIT`. Não tem credencial
+do Koper. Em 2026-10-10 rodou apenas em modo plano: **nenhum orçamento ou rateio do Alma foi
+gravado ainda**.
