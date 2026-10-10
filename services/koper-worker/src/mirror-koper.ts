@@ -578,7 +578,8 @@ async function koperGet(session: KoperSession, path: string, params: Record<stri
     url.searchParams.set("cb", `${Date.now()}-${attempt}`);
     try {
       const response = await fetch(url, { method: "GET", headers: session.headers, signal: AbortSignal.timeout(60_000) });
-      if (response.status === 404) throw new KoperHttpError(404, path);
+      // 400 e 404 são respostas definitivas do Koper (registro não existe neste contexto): não adianta repetir.
+      if (response.status === 400 || response.status === 404) throw new KoperHttpError(response.status, path);
       if (response.status === 401 || response.status === 403) throw new KoperHttpError(response.status, path);
       if (!response.ok) {
         lastError = new KoperHttpError(response.status, path);
@@ -586,7 +587,7 @@ async function koperGet(session: KoperSession, path: string, params: Record<stri
         return await response.json();
       }
     } catch (error) {
-      if (error instanceof KoperHttpError && [401, 403, 404].includes(error.status)) throw error;
+      if (error instanceof KoperHttpError && [400, 401, 403, 404].includes(error.status)) throw error;
       lastError = error;
     }
     await sleep(1_000 * 2 ** attempt);
@@ -648,8 +649,9 @@ async function readDetails(
   spec: DetailSpec,
   ids: string[],
   concurrency: number,
-): Promise<{ details: Map<string, Json>; failures: number; notFound: number }> {
+): Promise<{ details: Map<string, Json>; failures: number; notFound: number; failureSamples: string[] }> {
   const details = new Map<string, Json>();
+  const failureSamples: string[] = [];
   let failures = 0;
   let notFound = 0;
   let cursor = 0;
@@ -673,14 +675,20 @@ async function readDetails(
         else failures += 1;
       } catch (error) {
         if (error instanceof KoperHttpError && (error.status === 401 || error.status === 403)) authError = error;
-        else if (error instanceof KoperHttpError && error.status === 404) notFound += 1;
-        else failures += 1;
+        else if (error instanceof KoperHttpError && (error.status === 404 || error.status === 400)) {
+          // O Koper recusa o detalhe (ex.: nota referenciada por uma compra, mas de outro contexto).
+          notFound += 1;
+          if (failureSamples.length < 10) failureSamples.push(`${id}:HTTP_${error.status}`);
+        } else {
+          failures += 1;
+          if (failureSamples.length < 10) failureSamples.push(`${id}:${error instanceof Error ? error.message.slice(0, 60) : "erro"}`);
+        }
       }
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, Math.max(ids.length, 1)) }, worker));
   if (authError) throw authError;
-  return { details, failures, notFound };
+  return { details, failures, notFound, failureSamples };
 }
 
 // ---------------------------------------------------------------------------
@@ -831,6 +839,7 @@ type EntityReport = {
   detailsRead: number;
   detailFailures: number;
   detailNotFound: number;
+  detailProblemSamples: string[];
   detail: SaveSummary | null;
   seconds: number;
 };
@@ -894,6 +903,7 @@ export async function mirrorEntity(
     detailsRead: 0,
     detailFailures: 0,
     detailNotFound: 0,
+    detailProblemSamples: [],
     detail: null,
     seconds: 0,
   };
@@ -937,6 +947,7 @@ export async function mirrorEntity(
     report.detailsRead = result.details.size;
     report.detailFailures = result.failures;
     report.detailNotFound = result.notFound;
+    report.detailProblemSamples = result.failureSamples;
     const detailRecords = buildRecords(detailEntity, company, result.details, seenAt, spec.derivedFrom ? undefined : (id) => `${company}:${id}`);
     report.detail = await saveStaging(detailEntity, company, detailRecords, detailIndex, {
       write: options.write,
