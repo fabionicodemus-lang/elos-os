@@ -4,7 +4,8 @@
  * O comando do serviço fica fixo (`node dist/tools.js`); a ferramenta é escolhida pela
  * variável `KOPER_TOOL` e a gravação só acontece com `KOPER_TOOL_WRITE=true`. Assim um
  * push qualquer na branch nunca grava nada por acidente: sem a variável, tudo roda em
- * modo plano (somente leitura).
+ * modo plano (somente leitura). Este serviço só fala com o banco do Elos OS: não tem
+ * credencial do Koper e nunca chama o Koper (isso é papel do serviço `koper-mirror`).
  *
  *   KOPER_TOOL=chain-audit        mede a cadeia de apropriação (leitura)
  *   KOPER_TOOL=inspect-elos       inspeciona orçamento / serviços / rateios (leitura)

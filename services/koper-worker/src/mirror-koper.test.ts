@@ -181,3 +181,51 @@ test("sanitização e allowlist de troca de empresa", () => {
   assert.equal(isAllowedCompanySwitch(new URL("https://api.koper.com.br/financial/v1/bills_to_pay"), "POST", ok), false);
   assert.equal(isAllowedCompanySwitch(u, "PUT", ok), false);
 });
+
+test("de-para de insumos do acompanhamento: id composto, staging + rodada, só produtos com vínculo", async () => {
+  const seen: Array<Record<string, string>> = [];
+  globalThis.fetch = (async (input: URL | string, init?: RequestInit) => {
+    const url = new URL(String(input));
+    assert.equal(init?.method, "GET");
+    assert.equal(url.pathname, "/engineering/v1/monitoring_input");
+    const params = Object.fromEntries(url.searchParams);
+    seen.push(params);
+    if (params.inputId === "404") return new Response(JSON.stringify({ code: 404 }), { status: 404 });
+    return new Response(JSON.stringify([{ itemMonitInputId: 10775, itemMonitoringId: 3467, monitItemReference: "23.5", serviceName: "Serviço" }]), { status: 200 });
+  }) as typeof fetch;
+  const db = fakeSupabase();
+  const staged = (entity: string, id: string, data: Row) => db.table.push({
+    company_id: process.env.BOSSA_COMPANY_ID, source: "koper", entity, koper_id: `bossa:${id}`, sync_state: "present", payload: { data },
+  });
+  // Já na staging (rodadas anteriores): um par novo (133-700) e um de outra empresa, que não entra.
+  staged("mirror.stock_request_detail", "50", { buildMonitoringId: 133, products: [{ inputId: 700, services: [{ itemMonitInputId: 5 }] }] });
+  db.table.push({ company_id: process.env.BOSSA_COMPANY_ID, source: "koper", entity: "mirror.stock_request_detail", koper_id: "flow:51", sync_state: "present", payload: { data: { buildMonitoringId: 67, products: [{ inputId: 800, services: [{ itemMonitInputId: 6 }] }] } } });
+  const memory = new Map([
+    ["stock_request", { list: new Map(), details: new Map<string, Row>([
+      ["1", { buildMonitoringId: 133, products: [
+        { inputId: 5373, services: [{ itemMonitInputId: 10775 }] },
+        { inputId: 5374, services: [] },
+        { inputId: null, services: [{ itemMonitInputId: 1 }] },
+      ] }],
+      ["2", { buildMonitoringId: null, products: [{ inputId: 9, services: [{ itemMonitInputId: 2 }] }] }],
+    ]) }],
+    ["purchase_order", { list: new Map(), details: new Map<string, Row>([
+      ["7", { buildMonitoringId: 133, products: [{ inputId: 5373, services: [{ itemMonitInputId: 10775 }] }, { inputId: 404, services: [{ itemMonitInputId: 3 }] }] }],
+    ]) }],
+  ]);
+  const report = await mirrorEntity(session, spec("monitoring_input_services"), opts, memory as never, db.request);
+  assert.equal(report.listed, 3, "133-5373 (uma vez só), 133-404 e 133-700 da staging");
+  assert.deepEqual([report.detailsRead, report.detailNotFound, report.detailFailures], [2, 1, 0]);
+  const call = seen.find((item) => item.inputId === "5373")!;
+  assert.deepEqual([call.buildMonitoringId, call.services, call.page], ["133", "yes", "stockRequest"]);
+  const stored = db.table.filter((row) => row.entity === "mirror.monitoring_input_services").map((row) => row.koper_id).sort();
+  assert.deepEqual(stored, ["bossa:133-5373", "bossa:133-700"]);
+  const first = db.table.find((row) => row.koper_id === "bossa:133-5373" && row.entity === "mirror.monitoring_input_services")!;
+  assert.equal((first.payload as { data: { items: Row[] } }).data.items[0]!.itemMonitoringId, 3467);
+
+  // Rodada seguinte sem documentos alterados: o que já está na staging não é relido; o 404 é tentado de novo.
+  seen.length = 0;
+  const again = await mirrorEntity(session, spec("monitoring_input_services"), opts, new Map() as never, db.request);
+  assert.equal(again.listed, 1, "só o par vindo da staging de solicitações");
+  assert.equal(seen.length, 0);
+});

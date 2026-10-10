@@ -94,13 +94,26 @@ type DetailSpec = {
   path: string | ((id: string) => string);
   idParam?: string;
   params?: Record<string, string>;
+  /** Para ids compostos: devolve os parâmetros da chamada a partir do id. */
+  idParams?: (id: string) => Record<string, string>;
 };
 
 type DerivedSource = { entity: string; level: "list" | "detail"; path: string[] };
 
 export type EntitySpec =
   | { name: string; list: ListSpec; detail?: DetailSpec; derivedFrom?: undefined; alwaysRefresh?: boolean }
-  | { name: string; list?: undefined; detail: DetailSpec; derivedFrom: DerivedSource[]; alwaysRefresh?: boolean };
+  | {
+      name: string;
+      list?: undefined;
+      detail: DetailSpec;
+      derivedFrom: DerivedSource[];
+      /**
+       * Quando o id não está num campo só (ex.: par acompanhamento + insumo). `all` são todos
+       * os ids conhecidos; `changed` os que vieram de documentos lidos nesta rodada (relidos).
+       */
+      deriveIds?: (context: DeriveContext) => Promise<{ all: string[]; changed: string[] }>;
+      alwaysRefresh?: boolean;
+    };
 
 export const ENTITIES: EntitySpec[] = [
   // --- Cadastros-base -----------------------------------------------------
@@ -288,6 +301,19 @@ export const ENTITIES: EntitySpec[] = [
   },
   // --- Engenharia ----------------------------------------------------------
   {
+    // Catálogo de serviços (centros de custo): nome, categoria e unidade de cada `serviceId`.
+    name: "service",
+    list: {
+      path: "/engineering/v1/service",
+      params: { orderFlag: "asc", orderby: "serviceName" },
+      arrayKey: "services",
+      totalKey: "itemsAmount",
+      pageSize: 200,
+      idKey: "serviceId",
+      emptyOn404: true,
+    },
+  },
+  {
     name: "building",
     list: {
       path: "/engineering/v1/building",
@@ -383,7 +409,51 @@ export const ENTITIES: EntitySpec[] = [
     },
     alwaysRefresh: true,
   },
+  {
+    // De-para do rateio de materiais: cada produto de solicitação / ordem de compra cita
+    // `itemMonitInputId`; esta consulta diz a qual item do acompanhamento (`itemMonitoringId`,
+    // `monitItemReference`) cada um pertence. Id composto: "<buildMonitoringId>-<inputId>".
+    // Os ids saem dos detalhes de solicitação e ordem de compra já gravados na staging (carga
+    // inicial e autocorreção) e dos lidos nesta rodada (documentos novos ou alterados, relidos).
+    name: "monitoring_input_services",
+    derivedFrom: [],
+    deriveIds: (context) => monitoringInputIds(context),
+    detail: {
+      path: "/engineering/v1/monitoring_input",
+      params: { services: "yes", page: "stockRequest" },
+      idParams: (id) => {
+        const [buildMonitoringId = "", inputId = ""] = id.split("-");
+        return { buildMonitoringId, inputId };
+      },
+    },
+  },
 ];
+
+type DeriveContext = { memory: RunMemory; company: CompanyKey; request: Requester };
+
+/** Pares acompanhamento + insumo citados por produtos que têm vínculo `services[]`. */
+async function monitoringInputIds({ memory, company, request }: DeriveContext): Promise<{ all: string[]; changed: string[] }> {
+  const all = new Set<string>();
+  const changed = new Set<string>();
+  const collect = (detail: Json, into: Set<string>) => {
+    const monitoring = asId(detail.buildMonitoringId);
+    if (!monitoring || monitoring === "0" || !/^\d+$/.test(monitoring)) return;
+    for (const product of Array.isArray(detail.products) ? detail.products : []) {
+      const row = asObject(product);
+      const input = asId(row?.inputId);
+      if (!row || !input || !/^\d+$/.test(input) || input === "0") continue;
+      if (Array.isArray(row.services) && row.services.length > 0) into.add(`${monitoring}-${input}`);
+    }
+  };
+  for (const entity of ["stock_request", "purchase_order"]) {
+    for (const detail of memory.get(entity)?.details.values() ?? []) {
+      collect(detail, changed);
+      collect(detail, all);
+    }
+    for (const detail of await loadStagedData(`mirror.${entity}_detail`, company, request)) collect(detail, all);
+  }
+  return { all: [...all], changed: [...changed] };
+}
 
 // ---------------------------------------------------------------------------
 // Utilitários
@@ -683,6 +753,7 @@ async function readDetails(
       const params: Record<string, string> = {};
       for (const [key, value] of Object.entries(spec.params ?? {})) params[key] = value === "{today}" ? today : value;
       if (spec.idParam) params[spec.idParam] = id;
+      if (spec.idParams) Object.assign(params, spec.idParams(id));
       try {
         const body = await koperGet(session, path, params);
         const object = asObject(body);
@@ -736,6 +807,33 @@ async function loadStagingIndex(entity: string, company: CompanyKey, request: Re
 }
 
 type SaveSummary = { inserted: number; updated: number; unchanged: number; missingAtSource: number };
+
+/** Conteúdo (`payload.data`) dos registros presentes de uma entidade do espelho. */
+async function loadStagedData(entity: string, company: CompanyKey, request: Requester): Promise<Json[]> {
+  const out: Json[] = [];
+  const pageSize = 200;
+  for (let offset = 0; ; offset += pageSize) {
+    const rows = await request<Array<{ koper_id: string; payload: unknown }>>("koper_staging_records", {
+      query: new URLSearchParams({
+        select: "koper_id,payload",
+        company_id: `eq.${env.BOSSA_COMPANY_ID}`,
+        source: "eq.koper",
+        entity: `eq.${entity}`,
+        koper_id: `like.${company}:*`,
+        sync_state: "eq.present",
+        order: "koper_id.asc",
+        limit: String(pageSize),
+        offset: String(offset),
+      }),
+      timeoutMs: 110_000,
+    });
+    for (const row of rows) {
+      const data = asObject(asObject(row.payload)?.data);
+      if (data) out.push(data);
+    }
+    if (rows.length < pageSize) return out;
+  }
+}
 
 function buildRecords(entity: string, company: CompanyKey, rows: Map<string, Json>, seenAt: Date, parentOf?: (id: string) => string | null): KoperStagingRecord[] {
   const enterpriseId = COMPANIES[company].enterpriseId;
@@ -949,7 +1047,13 @@ export async function mirrorEntity(
     report.listComplete = list.complete;
     candidateIds = [...list.rows.keys()];
   } else {
-    candidateIds = derivedIds(spec.derivedFrom, memory);
+    if (spec.deriveIds) {
+      const derived = await spec.deriveIds({ memory, company, request });
+      candidateIds = derived.all;
+      changedIds = new Set(derived.changed);
+    } else {
+      candidateIds = derivedIds(spec.derivedFrom, memory);
+    }
     report.listed = candidateIds.length;
   }
 
