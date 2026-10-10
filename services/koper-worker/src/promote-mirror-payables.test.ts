@@ -141,3 +141,20 @@ test("piloto com limite cria só N títulos e só os fornecedores deles", async 
   assert.equal(db.payables.length, 3);
   assert.equal(db.suppliers.length, 1 + 3);
 });
+
+test("fornecedor sem id do Koper cadastrado reaproveita o único de mesmo nome", async () => {
+  const db = fakeDb({
+    bossa: [
+      ["1", bill(1), detail({ supplier_id: 900, supplier_name: "Concreteira São João" })],
+      ["2", bill(2), detail({ supplier_id: 901, supplier_name: "Nome Repetido" })],
+    ],
+    alma: [],
+  });
+  db.suppliers.push({ id: "old-1", source_id: null, source_system: null, legal_name: "concreteira  sao joao" });
+  db.suppliers.push({ id: "dup-a", source_id: null, source_system: null, legal_name: "Nome Repetido" });
+  db.suppliers.push({ id: "dup-b", source_id: null, source_system: null, legal_name: "Nome Repetido" });
+  await promoteMirrorPayables({ write: true, limit: 0 }, db.request);
+  assert.equal(db.payables.find((p) => p.source_id === "koper_bill:1")!.supplier_id, "old-1", "nome único: reaproveita");
+  assert.equal(db.payables.find((p) => p.source_id === "koper_bill:2")!.supplier_id, stableUuid("elos:koper:supplier:901"), "nome ambíguo: cria pelo id do Koper");
+  assert.equal(db.suppliers.length, 5);
+});

@@ -245,6 +245,14 @@ export async function promoteMirrorPayables(options: { write: boolean; limit: nu
 
   const suppliers = await all<Supplier>(request, "suppliers", { select: "id,source_id,source_system,legal_name", company_id: companyFilter, order: "id.asc" });
   const supplierBySource = new Map(suppliers.filter((row) => row.source_system === "koper" && row.source_id).map((row) => [row.source_id as string, row]));
+  // Mesmo critério da rotina do Flow: sem cadastro pelo id do Koper, aproveita o fornecedor
+  // já existente quando há exatamente um com o mesmo nome; assim não nasce cadastro repetido.
+  const suppliersByName = new Map<string, Supplier[]>();
+  for (const row of suppliers) {
+    const key = normalizeName(row.legal_name);
+    suppliersByName.set(key, [...(suppliersByName.get(key) ?? []), row]);
+  }
+  let reusedByName = 0;
   const newSuppliers = new Map<string, Json>();
 
   const summary: Json = { write: options.write, limit: options.limit };
@@ -314,6 +322,15 @@ export async function promoteMirrorPayables(options: { write: boolean; limit: nu
 
       let supplier = supplierBySource.get(decision.beneficiary.sourceId);
       if (!supplier) {
+        const sameName = suppliersByName.get(normalizeName(decision.beneficiary.name)) ?? [];
+        const only = sameName.length === 1 ? sameName[0] : undefined;
+        if (only) {
+          supplier = only;
+          supplierBySource.set(decision.beneficiary.sourceId, only);
+          reusedByName += 1;
+        }
+      }
+      if (!supplier) {
         const id = stableUuid(`elos:koper:supplier:${decision.beneficiary.sourceId}`);
         newSuppliers.set(decision.beneficiary.sourceId, {
           id,
@@ -347,10 +364,10 @@ export async function promoteMirrorPayables(options: { write: boolean; limit: nu
     };
   }
 
-  // Nomes repetidos entre cadastros novos e existentes são só informados; a chave é o id do Koper.
   const existingNames = new Set(suppliers.map((row) => normalizeName(row.legal_name)));
   summary.newSuppliers = newSuppliers.size;
-  summary.newSuppliersWithExistingName = [...newSuppliers.values()].filter((row) => existingNames.has(normalizeName(String(row.legal_name)))).length;
+  summary.suppliersReusedByUniqueName = reusedByName;
+  summary.newSuppliersWithAmbiguousExistingName = [...newSuppliers.values()].filter((row) => existingNames.has(normalizeName(String(row.legal_name)))).length;
   summary.toCreateTotal = creates.length;
   summary.paymentUpdatesTotal = paymentUpdates.length;
   summary.exceptionsTotal = exceptionRows.length;
