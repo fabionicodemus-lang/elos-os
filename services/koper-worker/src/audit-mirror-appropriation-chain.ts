@@ -166,6 +166,27 @@ export function measureChain(data: ChainData) {
     if (invoiceId) purchaseByInvoice.set(invoiceId, purchaseId);
   }
   const contractIds = new Set(data.contracts.keys());
+  const measurementIds = new Set(data.measurements.keys());
+  // Contrato por fornecedor + item do acompanhamento (vínculo inferido: o Koper não devolve
+  // o id do contrato na ordem de serviço).
+  const contractBySupplierItem = new Map<string, string>();
+  for (const [contractId, contract] of data.contracts) {
+    const supplierId = text(contract.supplierId);
+    for (const service of asArray(contract.services)) {
+      const itemId = text(asObject(service).itemMonitoringId);
+      if (supplierId && itemId) contractBySupplierItem.set(`${supplierId}:${itemId}`, contractId);
+    }
+  }
+  const measuredContracts = new Set([...data.measurements.values()].map((row) => text(row.contractId)).filter((id): id is string => id !== null));
+  const release = { receiptsWithRelease: 0, releaseIdIsMeasurement: 0, stageReleaseIdIsMeasurement: 0 };
+  for (const receipt of data.receipts.values()) {
+    const releaseId = text(receipt.fncReleaseId);
+    const stageReleaseId = text(receipt.fncStageReleaseId);
+    if (!releaseId && !stageReleaseId) continue;
+    release.receiptsWithRelease += 1;
+    if (releaseId && measurementIds.has(releaseId)) release.releaseIdIsMeasurement += 1;
+    if (stageReleaseId && measurementIds.has(stageReleaseId)) release.stageReleaseIdIsMeasurement += 1;
+  }
 
   const byDocument = new Map<string, Bucket>();
   const byEvidence = new Map<string, Bucket>();
@@ -269,6 +290,17 @@ export function measureChain(data: ChainData) {
     if (serviceOrderDetails.length) bump(reach, "chega à ordem de serviço", valueCents);
     if (serviceOrderIds.size && !serviceOrderDetails.length) bump(reach, "cita ordem de serviço que não está na staging", valueCents);
     if (contractsFound.length) bump(reach, "chega ao contrato", valueCents);
+    const inferredContracts = new Set<string>();
+    for (const order of serviceOrderDetails) {
+      const supplierId = text(order.supplierId);
+      for (const service of asArray(order.services)) {
+        const itemId = text(asObject(service).itemMonitoringId);
+        const contractId = supplierId && itemId ? contractBySupplierItem.get(`${supplierId}:${itemId}`) : undefined;
+        if (contractId) inferredContracts.add(contractId);
+      }
+    }
+    if (inferredContracts.size) bump(reach, "ordem de serviço bate com contrato (fornecedor + item)", valueCents);
+    if ([...inferredContracts].some((id) => measuredContracts.has(id))) bump(reach, "contrato inferido tem medição", valueCents);
     if (measurementRefs.size) bump(reach, "cita medição / liberação", valueCents);
     if (evidence === "nenhuma" && noEvidenceExamples.length < 15) noEvidenceExamples.push(`${billId}:${document}`);
   }
@@ -283,6 +315,7 @@ export function measureChain(data: ChainData) {
     byDocumentEvidence: dump(byDocumentEvidence),
     reach: dump(reach),
     byCostCenterEvidence: dump(byCostCenter),
+    release,
     noEvidenceExamples,
   };
 }

@@ -171,6 +171,8 @@ export const ENTITIES: EntitySpec[] = [
     list: {
       path: "/purchase/v1/purchase_order",
       params: { orderId: "all", orderFlag: "desc", orderby: "orderDate", typeDate: "orderDate" },
+      // Sem `open` o Koper devolve só as finalizadas; as abertas vêm com open=yes.
+      variants: [{ open: "yes" }, { open: "no" }],
       arrayKey: "orders",
       totalKey: "ordersAmount",
       pageSize: 100,
@@ -184,6 +186,8 @@ export const ENTITIES: EntitySpec[] = [
     list: {
       path: "/purchase/v1/service_order",
       params: { orderId: "all", orderFlag: "desc", orderby: "orderDate" },
+      // Sem `open` o Koper devolve só as finalizadas; as abertas vêm com open=yes.
+      variants: [{ open: "yes" }, { open: "no" }],
       arrayKey: "orders",
       totalKey: "itemsAmount",
       pageSize: 100,
