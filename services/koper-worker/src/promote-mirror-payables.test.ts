@@ -43,6 +43,8 @@ test("regras de obra, agrupamento, crédito e beneficiário", () => {
   assert.deepEqual(resolveBeneficiary({ beneficiary: { employee_id: 7, employee_name: "Fulano" } }), { sourceId: "employee:7", name: "Fulano" });
   assert.deepEqual(resolveBeneficiary({ supplier_id: 5 }, "Nome da lista"), { sourceId: "5", name: "Nome da lista" });
   assert.equal(resolveBeneficiary({ beneficiary: { employee_name: "sem id" } }, "Nome"), null, "nome sozinho nunca é chave");
+  assert.deepEqual(resolveBeneficiary({ origins: { tax_type_id: 5, tax_abbreviation: "PIS", tax_name: "Programa de Integração Social" } }), { sourceId: "tax:5", name: "PIS — Programa de Integração Social" });
+  assert.deepEqual(resolveBeneficiary({ origins: { payroll_model_id: 3, payroll_name: "Folha mensal" } }), { sourceId: "payroll:3", name: "Folha mensal" });
 });
 
 test("pagamento: valor líquido e filho de agrupamento herda a baixa do pai", () => {

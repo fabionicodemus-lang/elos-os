@@ -18,6 +18,10 @@
  *   - título sem centro de custo mapeado, sem beneficiário identificável, sem vencimento
  *     ou pago sem data de pagamento.
  *
+ * Beneficiário: fornecedor do Koper; se não houver, funcionário, cliente ou comissionado;
+ * guia de tributo entra com um cadastro por tipo de tributo (`tax:<id>`), e folha por
+ * modelo de folha (`payroll:<id>`). Nome sozinho nunca é usado como chave.
+ *
  * Garantias: identidade estável (`source_system` + `source_id = koper_bill:<billId>` e UUID
  * determinístico), então reexecutar não duplica; nunca apaga; título já existente só recebe
  * baixa de pagamento (aberto → pago); divergência de valor ou vencimento vira exceção para
@@ -129,6 +133,15 @@ export function resolveBeneficiary(detail: Json, fallbackName: string | null = n
     const name = text(beneficiary[nameKey]);
     if (id && name) return { sourceId: `${kind}:${id}`, name };
   }
+  // Guia de tributo não tem fornecedor no Koper: o beneficiário é o próprio tributo
+  // (um cadastro por tipo, ex.: "PIS — Programa de Integração Social").
+  const origins = asObject(detail.origins);
+  const taxTypeId = text(origins.tax_type_id);
+  const taxLabel = [text(origins.tax_abbreviation), text(origins.tax_name)].filter(Boolean).join(" — ");
+  if (taxTypeId && taxLabel) return { sourceId: `tax:${taxTypeId}`, name: taxLabel };
+  const payrollId = text(origins.payroll_model_id) ?? text(origins.payroll_id);
+  const payrollName = text(origins.payroll_name);
+  if (payrollId && payrollName) return { sourceId: `payroll:${payrollId}`, name: payrollName };
   return null;
 }
 
