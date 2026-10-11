@@ -359,3 +359,52 @@ do Koper.
    Alma entra "À Apropriar" até a ferramenta ser rodada de novo.
 5. Soul, Jazz e Escritório Bossa: mesma ferramenta, falta configurar o alvo (`TARGETS` em
    `src/mirror-shared.ts`) e decidir qual acompanhamento do Koper é o orçamento de cada um.
+
+## 13. Flow — conferência dos títulos e rateio que faltava (2026-10-10 / 11)
+
+Ferramentas novas no `koper-mirror-tools` (alvo `KOPER_TOOL_TARGET=flow`):
+`reconcile` (`src/reconcile-mirror-payables.ts`, leitura), `payable-corrections`
+(`src/plan-payable-corrections.ts`, leitura) e `allocations` com o alvo `flow`. O orçamento
+do Flow nunca é criado nem alterado por estas ferramentas (`budgetFromMonitoring: false`).
+
+### Títulos: Elos OS × Koper
+
+- Os 4.079 títulos do Flow no Koper estão todos no Elos OS (nada a importar). Tipos no
+  Koper: `Original`, `Parcela`, `Crédito`, `Grupo`.
+- O Elos OS tem 4.113 títulos `koper_flow`. A diferença de valor para o Koper fecha ao centavo:
+  30 títulos que não existem mais no Koper (27 já rateados; vários são previsões de
+  recebimento, vistos pela última vez entre agosto e outubro), 28 créditos de fornecedor
+  lançados como despesa, 19 pais de agrupamento com todos os filhos também lançados e 4
+  registros `koper_bill:missing-…`; mais 28 títulos com valor diferente.
+- Também: 7 pagos no Koper e abertos no Elos OS; 49 com vencimento diferente.
+- Nada disso foi alterado. O ensaio lista 140 títulos com a ação proposta (cancelar com
+  `status = cancelled`, atualizar valor / vencimento, dar baixa); a planilha foi entregue ao
+  Fábio para decisão título a título. A rotina diária antiga do Flow
+  (`sync-koper-payables-daily.ts`) segue intocada.
+
+### Rateio
+
+- **Validação da régua:** nos títulos do Flow já rateados que a cadeia do espelho também
+  resolve (1.929), o serviço coincide em 100%; em 1.888 o resultado é idêntico (serviço, item
+  do orçamento e valor). Nos outros 41 o rateio gravado é menor que o valor atual do título
+  (o título mudou de valor depois de rateado).
+- **De-para de serviço:** no Flow os rateios foram reapontados para o orçamento oficial, então
+  o serviço do Koper nem sempre é o `KOPER-S<id>`. O de-para é aprendido do histórico
+  (`learnCrosswalk`): título com um único serviço do Koper na cadeia e um único serviço no
+  rateio gravado dá um voto; só vale serviço com votos unânimes. Resultado: 108 serviços,
+  1.911 votos, nenhum conflito (70 apontam para o próprio serviço do catálogo, 38 para
+  serviço do orçamento oficial). Serviço sem histórico cai no catálogo. Casar por nome
+  idêntico foi testado e descartado (errou 3 de 21).
+- **Item do orçamento:** regra já usada pelo Flow — item de código único para o serviço entre
+  os orçamentos aprovados da obra.
+- **Gravado:** 158 títulos (piloto de 5 e depois 153), todos de nota manual com serviço,
+  conferidos linha a linha; 1 serviço novo no catálogo. O Flow passou de 2.919 para 3.077
+  títulos rateados. Nenhum rateio existente foi alterado.
+- **Fica de fora, por motivo:** 652 de material (dependem de `mirror.monitoring_input_services`
+  e das ordens abertas), 142 guias de tributo, 71 sem documento / devolução / comissão, 160
+  notas de produto sem vínculo com item do acompanhamento ou sem ordem de compra, 7 que
+  sumiram do Koper ou têm valor zero.
+- **A investigar no caminho de material:** 96 títulos já rateados pela rotina antiga caem em
+  "produto não encontrado na ordem de compra" pela régua nova — provável diferença entre
+  produto genérico e produto específico (`mainProductId`). Validar contra o histórico depois
+  que o de-para de insumos estiver carregado, antes de gravar material do Flow.
