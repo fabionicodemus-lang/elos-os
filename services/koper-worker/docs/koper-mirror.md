@@ -486,8 +486,9 @@ Censo dos títulos nessa situação (`KOPER_ALLOC_DEBUG=true`, somente leitura):
 - Validação contra o histórico: dos 120 títulos comparáveis já rateados pela rotina antiga
   (métodos `koper_nfe_stock_entry_single_service` e `koper_invoice_purchase_order`), 118
   ficaram idênticos e 2 diferem em 1 centavo.
-- Resultado do ensaio: 124 títulos novos resolvidos por essa regra. **Não gravado**: aguarda
-  o ok do Fábio.
+- Resultado: 124 títulos novos resolvidos por essa regra. Gravados com autorização do Fábio
+  (piloto de 5 e depois 119, 234 linhas, conferidos linha a linha). O Flow passou a 3.751
+  títulos com rateio (3.724 depois do cancelamento abaixo).
 
 ### O que continua sem solução (e por quê)
 
@@ -513,5 +514,24 @@ antigo da staging (`bill_to_pay`):
 - 2 eram títulos reais que no Koper viraram dois cada (as duas partes somam exatamente o
   valor original, estão pagas e já estão no Elos OS): o original ficou duplicado.
 
-Todos estão em aberto no Elos OS e 27 têm rateio. Nada foi alterado: a planilha de
-divergências (140 títulos) foi reemitida com essa observação e aguarda SIM / NÃO.
+Todos estavam em aberto no Elos OS e 27 tinham rateio.
+
+**Cancelados com autorização do Fábio em 2026-10-11** pela ferramenta `payable-cancel`
+(`src/cancel-missing-payables.ts`), piloto de 5 e depois 25:
+
+- nada é apagado: `payables.status` passa de `open` a `cancelled` e `notes` ganha a data e o
+  motivo; `source_system` / `source_id` e as linhas de rateio ficam como estão. As telas só
+  leem títulos `open` e `paid` (`lib/cost-vs-budget/server.ts`), então o rateio do título
+  cancelado deixa de contar;
+- lista fechada em `TARGETS.flow.approvedCancellations` (30 números): título que sumir do
+  Koper depois não é cancelado sozinho;
+- travas por título: está na lista, está `open` (pago nunca é cancelado), não aparece na
+  listagem espelhada do Koper e essa listagem tem pelo menos 1.000 títulos;
+- conferência depois de gravar: os 30 ficaram `cancelled`, valores iguais, as 27 linhas de
+  rateio intactas, nenhum outro título mudou de situação;
+- para desfazer um: voltar `status` para `open` (a anotação em `notes` mostra a data).
+
+Depois disso o Flow tem 4.079 títulos ativos vindos do Koper — o mesmo número do Koper — e a
+lista de divergências caiu de 140 para 110 títulos (crédito de fornecedor como despesa, pai
+de agrupamento, valor, baixa e vencimento), que continuam aguardando SIM / NÃO na planilha.
+O rateio e o ensaio de correções passaram a ignorar título cancelado.
