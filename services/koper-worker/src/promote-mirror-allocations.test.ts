@@ -9,6 +9,7 @@ process.env.BOSSA_COMPANY_ID = "11111111-1111-4111-8111-111111111111";
 
 const { buildContext, distribute, learnCrosswalk, lineTotals, productTargets, resolveBill } = await import("./promote-mirror-allocations.js");
 const { comparePayables, readKoperBills } = await import("./reconcile-mirror-payables.js");
+const { checkCancellation } = await import("./cancel-missing-payables.js");
 const { exactQuantity, planBudget, readMonitoringItems } = await import("./promote-mirror-budget.js");
 type Row = Record<string, unknown>;
 const map = (entries: Array<[string, Row]>) => new Map<string, Row>(entries);
@@ -192,4 +193,13 @@ test("conferência de títulos: nos dois lados, só no Elos OS, só no Koper; fi
   assert.deepEqual(result.both.map((item) => item.billId), ["1", "9"]);
   assert.deepEqual(result.onlyElos.map((item) => item.source_id), ["koper_bill:777", "koper_bill:missing-5"]);
   assert.deepEqual(result.onlyKoper.map((item) => item.billId), ["2", "3"]);
+});
+
+test("cancelamento: só título em aberto, fora do Koper e com a listagem inteira", () => {
+  assert.deepEqual(checkCancellation({ status: "open" }, false, 4000), { ok: true });
+  assert.deepEqual(checkCancellation({ status: "paid" }, false, 4000), { ok: false, reason: "título está paid: só título em aberto é cancelado" });
+  assert.deepEqual(checkCancellation({ status: "open" }, true, 4000), { ok: false, reason: "título voltou a existir no Koper" });
+  assert.deepEqual(checkCancellation({ status: "open" }, false, 12), { ok: false, reason: "listagem espelhada do Koper incompleta" });
+  assert.deepEqual(checkCancellation({ status: "cancelled" }, false, 4000), { ok: false, reason: "já está cancelado" });
+  assert.deepEqual(checkCancellation(undefined, false, 4000), { ok: false, reason: "título não encontrado no Elos OS para esta obra" });
 });

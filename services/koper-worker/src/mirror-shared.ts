@@ -101,6 +101,11 @@ export type Target = {
    * código do item no orçamento aprovado da obra. Valem acima do histórico.
    */
   serviceDecisions?: Record<string, { budgetCode: string; note: string }>;
+  /**
+   * Títulos (número da parcela no Koper) que o Fábio autorizou cancelar no Elos OS por não
+   * existirem mais no Koper. Lista fechada: sumiço novo não entra sozinho.
+   */
+  approvedCancellations?: { note: string; billIds: string[] };
 };
 
 export const TARGETS: Record<TargetKey, Target> = {
@@ -125,6 +130,13 @@ export const TARGETS: Record<TargetKey, Target> = {
     serviceDecisions: {
       // "Pisos em Porcelanato": o histórico tinha 2 votos para a linha 15.04 e 2 para o serviço avulso.
       "336": { budgetCode: "15.04", note: "Fábio, 2026-10-11: juntar na linha 15.04" },
+    },
+    // 28 previsões apagadas no Koper (recorrência, tributo e "PREVISÃO" lançada à mão) e 2 títulos
+    // que o Koper dividiu em dois (as partes já estão no Elos OS). Ver docs/koper-mirror.md §15.
+    approvedCancellations: {
+      note: "autorizado pelo Fábio em 2026-10-11",
+      billIds: ["9507", "10035", "10396", "11141", "11845", "12430", "13282", "13807", "14302", "14614", "14965", "14966", "15032", "15511", "15852", "15853",
+        "15854", "15855", "15856", "15862", "15863", "15864", "15865", "16030", "16032", "16074", "16075", "16076", "16231", "16650"],
     },
   },
 };

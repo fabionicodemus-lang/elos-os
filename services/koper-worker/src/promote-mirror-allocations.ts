@@ -526,7 +526,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     company_id: company,
     project_id: `eq.${project.id}`,
     order: "id.asc",
-  })).filter((payable) => payable.source_system !== null && payable.source_system in target.payableSources && /^koper_bill:\d+$/.test(payable.source_id ?? ""));
+  })).filter((payable) => payable.status !== "cancelled" && payable.source_system !== null && payable.source_system in target.payableSources && /^koper_bill:\d+$/.test(payable.source_id ?? ""));
   const existing = await allRows<ExistingAllocation>(request, "payable_cost_allocations", {
     select: "id,payable_id,service_id,budget_item_id,allocation_amount,source_system,source_id,evidence",
     company_id: company,

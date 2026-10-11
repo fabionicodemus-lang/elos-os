@@ -12,11 +12,13 @@
  *   KOPER_TOOL=reconcile          confere os títulos da obra alvo: Elos OS × Koper (leitura)
  *   KOPER_TOOL=payable-corrections lista, título a título, o que diverge do Koper e a
  *                                 correção proposta (leitura; não grava)
+ *   KOPER_TOOL=payable-cancel     cancela (status `cancelled`, sem apagar) os títulos da lista
+ *                                 aprovada pelo Fábio que não existem mais no Koper
  *   KOPER_TOOL=budget             promove o orçamento (acompanhamento do Koper) da obra alvo
  *   KOPER_TOOL=allocations        promove o rateio dos títulos por serviço da obra alvo
  *   KOPER_TOOL=budget,allocations várias ferramentas, em ordem
  *   KOPER_TOOL_TARGET=alma|flow   obra alvo
- *   KOPER_ALLOC_LIMIT=5           piloto do rateio: nº de títulos gravados
+ *   KOPER_ALLOC_LIMIT=5           piloto (rateio ou cancelamento): nº de títulos gravados
  */
 import { pathToFileURL } from "node:url";
 
@@ -39,6 +41,10 @@ export async function runTool(tool: string) {
   } else if (tool === "payable-corrections") {
     const { planPayableCorrections } = await import("./plan-payable-corrections.js");
     await planPayableCorrections({ target });
+  } else if (tool === "payable-cancel") {
+    const { cancelMissingPayables } = await import("./cancel-missing-payables.js");
+    const limit = Math.max(0, Number(process.env.KOPER_ALLOC_LIMIT ?? "0") || 0);
+    await cancelMissingPayables({ write, target, limit });
   } else if (tool === "budget") {
     const { promoteMirrorBudget } = await import("./promote-mirror-budget.js");
     await promoteMirrorBudget({ write, target });
