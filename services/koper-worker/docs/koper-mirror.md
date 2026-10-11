@@ -535,3 +535,36 @@ Depois disso o Flow tem 4.079 títulos ativos vindos do Koper — o mesmo númer
 lista de divergências caiu de 140 para 110 títulos (crédito de fornecedor como despesa, pai
 de agrupamento, valor, baixa e vencimento), que continuam aguardando SIM / NÃO na planilha.
 O rateio e o ensaio de correções passaram a ignorar título cancelado.
+
+## 16. Exceção à regra "nunca escrever no Koper" — serviços no orçamento do Alma (2026-10-11)
+
+A regra continua valendo para o worker: ele só lê o Koper. Em 2026-10-11 o Fábio pediu, pela
+conversa, que a base do orçamento do Flow fosse copiada para o Alma **dentro do Koper**, para
+gerar os centros de custo. Foi feito uma única vez, à mão assistida, pela tela do próprio
+Koper com o login dele (Engenharia › Orçamentos de obra › "Adicionar serviço") — nada passou
+pelo worker nem por chamada direta à API fora da tela.
+
+- Origem: orçamento "Flow Aptos - OBRA" (#100, empresa Flow Aptos - Bossa), 108 serviços em
+  28 etapas. O orçamento "Flow Aptos - INDIRETOS" (#166) ficou de fora.
+- Destino: orçamento "Alma Seahouses - OBRA" (#298, empresa Alma Seahouses - Bossa), que
+  tinha só as 28 etapas e 38 subetapas, sem serviço. Passou a 174 itens (66 de estrutura,
+  intocados, e 108 serviços novos, `itemBudgetId` 826 a 933).
+- Cada serviço entrou na etapa de mesmo número do Flow; os de "Estaca Hélice Contínua" e
+  "Bloco" dentro das subetapas 2.1 e 2.2, que existem nos dois orçamentos. Mesmo serviço
+  (`serviceId`) e mesma composição (`compositionId`) do Flow: os dois cadastros são comuns
+  às empresas.
+- Quantidade: o Koper recusa zero ("preencha uma quantidade maior que zero") e o valor
+  unitário vem travado da composição. Por decisão do Fábio todos entraram com quantidade 1,
+  só para existir o centro de custo; o total do orçamento é provisório até o levantamento.
+  Em 3 serviços de forma (lajes, vigas, pilares) o valor unitário da composição hoje difere
+  em centavos do que está gravado no orçamento do Flow.
+- Conferência: antes de cada gravação a tela foi conferida (serviço, composição, etapa,
+  quantidade) e depois o orçamento foi relido inteiro: cada serviço do Flow aparece
+  exatamente uma vez, na etapa esperada, com quantidade 1; foram 108 gravações, todas de
+  criação de item, nenhuma alteração ou exclusão.
+- O acompanhamento "Alma Seahouses Obra" (#133), onde as compras são apropriadas hoje, **não
+  foi alterado** (129 itens antes e depois). Os serviços novos só chegam a ele quando o
+  Fábio gerar planejamento / acompanhamento a partir do orçamento.
+- No Elos OS nada mudou: o orçamento `KOPER-ACOMP-133` do Alma vem do acompanhamento, não do
+  orçamento #298. A rotina diária passa a espelhar os itens novos em
+  `mirror.construction_budget_items`.
