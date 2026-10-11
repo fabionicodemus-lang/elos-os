@@ -408,3 +408,48 @@ do Flow nunca é criado nem alterado por estas ferramentas (`budgetFromMonitorin
   "produto não encontrado na ordem de compra" pela régua nova — provável diferença entre
   produto genérico e produto específico (`mainProductId`). Validar contra o histórico depois
   que o de-para de insumos estiver carregado, antes de gravar material do Flow.
+
+## 14. Primeira rodada diária completa e materiais (2026-10-11)
+
+### Rotina diária `koper-mirror` (08:00 UTC)
+
+- Rodou em 8 minutos: 75 entidades lidas nas três empresas, nenhuma entidade com falha,
+  nenhuma listagem incompleta, 4.221 registros novos na staging.
+- Entidades novas carregadas: `mirror.service` (401 por empresa),
+  `mirror.measurement_items` (7 / 143 / 25 — Bossa / Flow / Alma),
+  `mirror.monitoring_input_services` (902 / 1.659 / 120) e ordens abertas (ordens de compra
+  +3 / +5 / +8; ordens de serviço +29 / +33 / +3).
+- Promoção de títulos: nada novo a criar, conferência ok.
+- O Railway marcou a rodada como falha porque duas notas eletrônicas do Flow (as mesmas de
+  sempre) devolveram erro 500 no detalhe. A partir desta data a rodada só é dada como falha
+  quando uma entidade inteira falha, uma listagem vem incompleta ou os detalhes com erro
+  passam de 1% do pedido (mínimo de 5); falha isolada continua no relatório
+  (`detailProblemSamples`, `detailFailuresTolerated`).
+
+### Caminho de material validado contra o histórico do Flow
+
+Com o de-para de insumos carregado, a régua foi comparada com os títulos de nota eletrônica
+do Flow já rateados pela rotina antiga: 761 de 771 comparáveis ficaram idênticos (serviço,
+item do orçamento e valor). Dos 10 restantes, 8 têm no gravado o marcador legado
+`KOPER-SR-LEGACY` onde a régua acha o serviço real e 2 diferem em 1 centavo de
+arredondamento.
+
+### Alma — materiais gravados
+
+Autorizado pelo Fábio em 2026-10-10. Piloto de 5 títulos e depois 120: 125 títulos de
+material (115 de nota eletrônica, 10 de nota manual), todos ligados a item do orçamento,
+conferidos linha a linha. O Alma passou a 598 de 689 títulos rateados (93% do valor). Ficam
+"À Apropriar": 66 notas de produto sem vínculo com item do acompanhamento, 7 notas manuais
+com produto sem ordem de compra, 4 com produto não encontrado na ordem e 14 sem documento,
+tributo ou devolução.
+
+### Flow — materiais só ensaiados
+
+- 540 títulos de material ficariam rateados (428 no item do orçamento). **Não gravado**:
+  aguarda o ok do Fábio.
+- De-para aprendido agora com 134 serviços e 1 conflito: serviço 336 "Pisos em Porcelanato"
+  tem 2 votos para o item 15.04 do orçamento oficial e 2 para o próprio `KOPER-S336`.
+  Títulos com esse serviço ficam de fora até o Fábio decidir.
+- Ainda sem solução pela régua: 181 títulos sem rateio e 121 já rateados caem em "produto não
+  encontrado na ordem de compra" (hipótese a testar: produto genérico × específico,
+  `mainProductId`).
