@@ -133,7 +133,7 @@ export type Resolution =
       route: "receipt" | "invoice";
       method: "koper_receipt_purchase" | "koper_invoice_purchase_order";
       lines: Weighted[];
-      evidence: { receiptId: string | null; invoiceId: string | null; purchaseIds: string[]; orderSourceIds: string[]; serviceOrderIds: string[]; weightBasis: string };
+      evidence: { receiptId: string | null; invoiceId: string | null; purchaseIds: string[]; orderSourceIds: string[]; serviceOrderIds: string[]; weightBasis: string; lineSource: "nota" | "entrada de estoque" };
     }
   | { ok: false; document: string; reason: string };
 
@@ -325,28 +325,51 @@ export function resolveBill(ctx: KoperContext, billId: string, detail: Json): Re
     return [...items];
   };
   type Target = { serviceId: string; itemMonitoringId: string | null; itemResolution: string | null; share: number };
-  const targetsPerLine: Target[][] = [];
-  for (const line of raw) {
-    if (line.kind === "service") {
-      if (!line.serviceId) return { ok: false, document, reason: "linha de serviço sem serviço" };
-      const viaOrder = serviceOrderItems(line.serviceId);
-      const single = monitoringId ? ctx.itemsByService.get(`${monitoringId}:${line.serviceId}`) ?? [] : [];
-      const item = viaOrder.length === 1 ? { id: viaOrder[0]!, how: "ordem de serviço" }
-        : single.length === 1 ? { id: single[0]!, how: "serviço com item único no acompanhamento" }
-          : null;
-      targetsPerLine.push([{ serviceId: line.serviceId, itemMonitoringId: item?.id ?? null, itemResolution: item?.how ?? null, share: 1 }]);
-      continue;
+  const targetLines = (lines: RawLine[]): { ok: true; targets: Target[][] } | { ok: false; reason: string } => {
+    const out: Target[][] = [];
+    for (const line of lines) {
+      if (line.kind === "service") {
+        if (!line.serviceId) return { ok: false, reason: "linha de serviço sem serviço" };
+        const viaOrder = serviceOrderItems(line.serviceId);
+        const single = monitoringId ? ctx.itemsByService.get(`${monitoringId}:${line.serviceId}`) ?? [] : [];
+        const item = viaOrder.length === 1 ? { id: viaOrder[0]!, how: "ordem de serviço" }
+          : single.length === 1 ? { id: single[0]!, how: "serviço com item único no acompanhamento" }
+            : null;
+        out.push([{ serviceId: line.serviceId, itemMonitoringId: item?.id ?? null, itemResolution: item?.how ?? null, share: 1 }]);
+        continue;
+      }
+      const found = productTargets(ctx, { productId: line.productId, inputId: line.inputId }, purchaseOrderIds);
+      if (!found.ok) return { ok: false, reason: found.reason };
+      const targets: Target[] = [];
+      for (const share of found.shares) {
+        const serviceId = ctx.monitoringItems.get(share.itemMonitoringId)?.serviceId;
+        if (!serviceId) return { ok: false, reason: "item do acompanhamento sem serviço" };
+        targets.push({ serviceId, itemMonitoringId: share.itemMonitoringId, itemResolution: "ordem de compra → solicitação → insumo", share: share.weight });
+      }
+      out.push(targets);
     }
-    const found = productTargets(ctx, { productId: line.productId, inputId: line.inputId }, purchaseOrderIds);
-    if (!found.ok) return { ok: false, document, reason: found.reason };
-    const targets: Target[] = [];
-    for (const share of found.shares) {
-      const serviceId = ctx.monitoringItems.get(share.itemMonitoringId)?.serviceId;
-      if (!serviceId) return { ok: false, document, reason: "item do acompanhamento sem serviço" };
-      targets.push({ serviceId, itemMonitoringId: share.itemMonitoringId, itemResolution: "ordem de compra → solicitação → insumo", share: share.weight });
+    return { ok: true, targets: out };
+  };
+  let lineSource: "nota" | "entrada de estoque" = "nota";
+  let targeted = targetLines(raw);
+  if (!targeted.ok && route === "invoice" && targeted.reason === "produto não encontrado na ordem de compra" && purchase) {
+    // O produto lançado na nota eletrônica não é o da ordem de compra (ou veio sem código): a
+    // entrada de estoque da mesma nota (a "compra" do Koper) é quem liga cada linha ao produto
+    // pedido. Usa as linhas dela, com os valores dela.
+    const stockLines: RawLine[] = asArray(purchase.products).map(asObject).map((row) => ({
+      kind: "product" as const, unit: num(row.price), amount: num(row.productAmount), explicitTotal: null, serviceId: null, productId: idOf(row.productId), inputId: idOf(row.inputId),
+    }));
+    if (stockLines.length) {
+      const viaStock = targetLines(stockLines);
+      if (viaStock.ok) {
+        raw = stockLines;
+        targeted = viaStock;
+        lineSource = "entrada de estoque";
+      }
     }
-    targetsPerLine.push(targets);
   }
+  if (!targeted.ok) return { ok: false, document, reason: targeted.reason };
+  const targetsPerLine = targeted.targets;
 
   // Pesos: só importam quando há mais de um destino.
   const distinct = new Set(targetsPerLine.flat().map((target) => `${target.serviceId}|${target.itemMonitoringId ?? ""}`));
@@ -356,9 +379,20 @@ export function resolveBill(ctx: KoperContext, billId: string, detail: Json): Re
     totals = raw.map(() => 1);
     weightBasis = "destino único";
   } else {
-    if (route === "invoice") documentTotal = raw.reduce((sum, line) => sum + (line.explicitTotal ?? line.unit * (line.amount || 1)), 0);
-    const chosen = lineTotals(raw, documentTotal);
-    if (route !== "invoice" && (documentTotal <= 0 || chosen.relativeError > 0.1)) return { ok: false, document, reason: "valores das linhas não fecham com o total da nota" };
+    let chosen: ReturnType<typeof lineTotals>;
+    if (lineSource === "entrada de estoque") {
+      // O total da entrada pode estar antes ou depois do desconto: vale a leitura que fecha melhor.
+      const value = num(purchase!.purchaseValue);
+      const discount = num(purchase!.discountValue);
+      const candidates = [value, value - discount, value + discount].filter((total) => total > 0).map((total) => lineTotals(raw, total));
+      const best = candidates.sort((a, b) => a.relativeError - b.relativeError)[0];
+      if (!best || best.relativeError > 0.1) return { ok: false, document, reason: "valores da entrada de estoque não fecham com o total dela" };
+      chosen = best;
+    } else {
+      if (route === "invoice") documentTotal = raw.reduce((sum, line) => sum + (line.explicitTotal ?? line.unit * (line.amount || 1)), 0);
+      chosen = lineTotals(raw, documentTotal);
+      if (route !== "invoice" && (documentTotal <= 0 || chosen.relativeError > 0.1)) return { ok: false, document, reason: "valores das linhas não fecham com o total da nota" };
+    }
     totals = chosen.totals;
     weightBasis = chosen.basis;
   }
@@ -380,7 +414,7 @@ export function resolveBill(ctx: KoperContext, billId: string, detail: Json): Re
     route,
     method: route === "invoice" ? "koper_invoice_purchase_order" : "koper_receipt_purchase",
     lines,
-    evidence: { receiptId, invoiceId, purchaseIds: purchaseId ? [purchaseId] : [], orderSourceIds: purchaseOrderIds, serviceOrderIds, weightBasis },
+    evidence: { receiptId, invoiceId, purchaseIds: purchaseId ? [purchaseId] : [], orderSourceIds: purchaseOrderIds, serviceOrderIds, weightBasis, lineSource },
   };
 }
 
@@ -628,7 +662,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
   for (const item of planned) {
     const amountCents = cents(item.payable.amount);
     const loaded = contexts.get(item.koperCompany)!;
-    const label = item.resolution.route === "invoice" ? "nota eletrônica" : "nota manual / recibo";
+    const label = item.resolution.route === "invoice" ? (item.resolution.evidence.lineSource === "entrada de estoque" ? "nota eletrônica via entrada de estoque" : "nota eletrônica") : "nota manual / recibo";
     if (amountCents <= 0) { fail(item.payable, item.billId, "título com valor zero"); continue; }
 
     // Destinos no Elos OS; serviços do Koper que caem no mesmo serviço do Elos OS são somados.
@@ -680,6 +714,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
           nativeMethod: item.resolution.method,
           nativeEvidence: {
             source: item.resolution.route,
+            lineSource: item.resolution.evidence.lineSource,
             receiptId: item.resolution.evidence.receiptId,
             invoiceId: item.resolution.evidence.invoiceId,
             purchaseIds: item.resolution.evidence.purchaseIds,

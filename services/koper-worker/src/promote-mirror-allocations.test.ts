@@ -33,8 +33,16 @@ function context(inputServices: Array<[string, Row]> = [["133-70", { items: [{ i
     ]),
     invoices: map([
       ["nf1", { invoiceId: "nf1", buildMonitoringId: 133, bill: { duplicates: [{ billId: 501 }] }, purchaseOrders: [{ orderId: 40 }], products: [{ productId: 70, inputId: 70, totalValue: 300, amount: 6, unitValue: 50 }] }],
+      // Nota cujo produto não é o da ordem (um sem código, outro de outra variação).
+      ["nf2", { invoiceId: "nf2", buildMonitoringId: 133, bill: { duplicates: [{ billId: 601 }] }, products: [{ totalValue: 90, amount: 1, unitValue: 90 }, { productId: 71, inputId: 71, totalValue: 10, amount: 1, unitValue: 10 }] }],
+      // Idem, mas a entrada de estoque também traz produto fora da ordem.
+      ["nf3", { invoiceId: "nf3", buildMonitoringId: 133, bill: { duplicates: [{ billId: 701 }] }, products: [{ productId: 71, inputId: 71, totalValue: 10, amount: 1, unitValue: 10 }] }],
     ]),
-    purchases: map([["30", { purchaseId: 30, receiptId: 3, purchaseOrders: [{ purchaseOrderId: 40 }], bills: [{ billId: 301 }] }]]),
+    purchases: map([
+      ["30", { purchaseId: 30, receiptId: 3, purchaseOrders: [{ purchaseOrderId: 40 }], bills: [{ billId: 301 }] }],
+      ["31", { purchaseId: 31, xmlInvoiceId: "nf2", purchaseValue: 100, discountValue: 10, purchaseOrders: [{ purchaseOrderId: 40 }], products: [{ productId: 70, price: 50, productAmount: 2 }] }],
+      ["32", { purchaseId: 32, xmlInvoiceId: "nf3", purchaseValue: 10, purchaseOrders: [{ purchaseOrderId: 40 }], products: [{ productId: 72, price: 10, productAmount: 1 }] }],
+    ]),
     purchaseOrders: map([["40", { orderId: 40, buildMonitoringId: 133, products: [{ productId: 70, inputId: 70, requests: [{ requestId: 80, productRequestId: 81 }] }] }]]),
     serviceOrders: map([["7", { orderId: 7, services: [{ serviceId: 600, itemMonitoringId: 12 }] }]]),
     requests: map([["80", { requestId: 80, buildMonitoringId: 133, products: [{ productRequestId: 81, inputId: 70, services: [{ itemMonitInputId: 900, inputAmount: 3 }, { itemMonitInputId: 901, inputAmount: 1 }] }] }]]),
@@ -92,6 +100,21 @@ test("material: produto → ordem de compra → solicitação → insumo → ite
   if (!invoice.ok) return;
   assert.equal(invoice.method, "koper_invoice_purchase_order");
   assert.deepEqual(invoice.lines.map((line) => [line.serviceId, line.weight]).sort(), [["500", 75], ["600", 225]]);
+});
+
+test("nota eletrônica com produto diferente do pedido: vale a entrada de estoque da mesma nota", () => {
+  const ctx = context();
+  const viaStock = resolveBill(ctx, "601", { origins: {} });
+  assert.equal(viaStock.ok, true);
+  if (!viaStock.ok) return;
+  assert.equal(viaStock.evidence.lineSource, "entrada de estoque");
+  assert.deepEqual(viaStock.evidence.purchaseIds, ["31"]);
+  assert.deepEqual(viaStock.lines.map((line) => [line.serviceId, line.itemMonitoringId, line.weight]).sort(), [["500", "10", 25], ["600", "11", 75]]);
+  // A nota comum continua lida pelos produtos da própria nota.
+  const direct = resolveBill(ctx, "501", { origins: {} });
+  assert.equal(direct.ok && direct.evidence.lineSource, "nota");
+  // Se nem a entrada de estoque casa com a ordem, o título continua pendente.
+  assert.deepEqual(resolveBill(ctx, "701", { origins: {} }), { ok: false, document: "nota eletrônica", reason: "produto não encontrado na ordem de compra" });
 });
 
 test("material sem de-para carregado ou sem ordem de compra fica pendente com motivo", () => {
