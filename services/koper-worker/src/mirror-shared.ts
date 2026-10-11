@@ -96,6 +96,11 @@ export type Target = {
    *    reapontado para o orçamento oficial); sem histórico, cai no catálogo.
    */
   serviceCrosswalk: "catalog" | "history";
+  /**
+   * Decisões do Fábio para serviço do Koper cujo histórico diverge: serviço do Koper →
+   * código do item no orçamento aprovado da obra. Valem acima do histórico.
+   */
+  serviceDecisions?: Record<string, { budgetCode: string; note: string }>;
 };
 
 export const TARGETS: Record<TargetKey, Target> = {
@@ -117,6 +122,10 @@ export const TARGETS: Record<TargetKey, Target> = {
     // O Flow já tem orçamento oficial no Elos OS; esta ferramenta nunca cria nem altera orçamento dele.
     budgetFromMonitoring: false,
     serviceCrosswalk: "history",
+    serviceDecisions: {
+      // "Pisos em Porcelanato": o histórico tinha 2 votos para a linha 15.04 e 2 para o serviço avulso.
+      "336": { budgetCode: "15.04", note: "Fábio, 2026-10-11: juntar na linha 15.04" },
+    },
   },
 };
 

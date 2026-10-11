@@ -222,6 +222,36 @@ export function lineTotals(lines: RawLine[], documentTotal: number): { totals: n
   return { totals: best.totals, basis: best.basis, relativeError: bestError };
 }
 
+/** Retrato compacto do casamento produto da nota × ordens de compra ligadas (para diagnóstico). */
+export function describeProductMatch(ctx: KoperContext, billId: string, detail: Json): Json {
+  const origins = asObject(detail.origins);
+  const invoiceId = idOf(origins.invoice_id) ?? ctx.invoiceByBill.get(billId) ?? null;
+  const receiptId = idOf(origins.receipt_id) ?? ctx.receiptByBill.get(billId) ?? null;
+  const invoice = invoiceId ? ctx.invoices.get(invoiceId) : undefined;
+  const receipt = receiptId ? ctx.receipts.get(receiptId) : undefined;
+  const purchaseId = ctx.purchaseByBill.get(billId) ?? (receipt ? idOf(receipt.purchaseId) : null) ?? (receiptId ? ctx.purchaseByReceipt.get(receiptId) : undefined) ?? (invoiceId ? ctx.purchaseByInvoice.get(invoiceId) : undefined) ?? null;
+  const purchase = purchaseId ? ctx.purchases.get(purchaseId) : undefined;
+  const brief = (row: Json) => ({
+    p: idOf(row.productId), main: idOf(row.mainProductId), input: idOf(row.inputId), seq: idOf(row.genericProdSeq), ref: text(row.prodReference),
+    name: (text(row.productFullName) ?? text(row.productName) ?? "").slice(0, 26),
+  });
+  const orderIds = [...new Set([...idsFrom(purchase?.purchaseOrders, ["purchaseOrderId", "orderId"]), ...idsFrom(invoice?.purchaseOrders, ["orderId", "purchaseOrderId"])])];
+  return {
+    doc: invoice ? "nota eletrônica" : "nota manual",
+    docProducts: asArray((invoice ?? receipt)?.products).map(asObject).slice(0, 6).map(brief),
+    invoiceOrders: asArray(invoice?.purchaseOrders).map(asObject).slice(0, 4).map((order) => ({ order: idOf(order.orderId), products: asArray(order.products).map(asObject).slice(0, 6).map(brief) })),
+    purchaseProducts: asArray(purchase?.products).map(asObject).slice(0, 6).map(brief),
+    orders: orderIds.slice(0, 4).map((orderId) => {
+      const order = ctx.purchaseOrders.get(orderId);
+      return {
+        order: orderId,
+        staged: Boolean(order),
+        products: asArray(order?.products).map(asObject).slice(0, 8).map((row) => ({ ...brief(row), services: asArray(row.services).length, requests: asArray(row.requests).length })),
+      };
+    }),
+  };
+}
+
 export function resolveBill(ctx: KoperContext, billId: string, detail: Json): Resolution {
   const origins = asObject(detail.origins);
   const invoiceId = idOf(origins.invoice_id) ?? ctx.invoiceByBill.get(billId) ?? null;
@@ -375,7 +405,7 @@ export function distribute(amountCents: number, weights: number[]): number[] {
 // ---------------------------------------------------------------------------
 
 type Payable = { id: string; source_system: string | null; source_id: string | null; amount: number; status: string; notes: string | null };
-type ExistingAllocation = { id: string; payable_id: string; service_id: string | null; budget_item_id: string | null; allocation_amount: number; source_system: string | null; source_id: string | null };
+type ExistingAllocation = { id: string; payable_id: string; service_id: string | null; budget_item_id: string | null; allocation_amount: number; source_system: string | null; source_id: string | null; evidence?: unknown };
 type Bucket = { count: number; cents: number };
 const bump = (map: Map<string, Bucket>, key: string, valueCents: number) => {
   const bucket = map.get(key) ?? { count: 0, cents: 0 };
@@ -452,7 +482,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     order: "id.asc",
   })).filter((payable) => payable.source_system !== null && payable.source_system in target.payableSources && /^koper_bill:\d+$/.test(payable.source_id ?? ""));
   const existing = await allRows<ExistingAllocation>(request, "payable_cost_allocations", {
-    select: "id,payable_id,service_id,budget_item_id,allocation_amount,source_system,source_id",
+    select: "id,payable_id,service_id,budget_item_id,allocation_amount,source_system,source_id,evidence",
     company_id: company,
     project_id: `eq.${project.id}`,
     order: "id.asc",
@@ -533,6 +563,38 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     const stored = [...new Set(current.map((row) => row.service_id).filter((id): id is string => Boolean(id)))];
     return mine.length === 1 && stored.length === 1 && mine[0] && stored[0] ? [{ koperServiceId: mine[0], elosServiceId: stored[0] }] : [];
   }));
+  // Decisões do Fábio valem acima do histórico: serviço do Koper → item do orçamento aprovado.
+  const decided = new Map<string, string>();
+  type Repoint = { id: string; payableId: string; amountCents: number; patch: Json };
+  const repoints: Repoint[] = [];
+  for (const [koperServiceId, decision] of Object.entries(target.serviceDecisions ?? {})) {
+    const owners = [...approvedItemsByService].filter(([, items]) => items.some((item) => item.code === decision.budgetCode)).map(([serviceId]) => serviceId);
+    const elosServiceId = owners[0];
+    if (owners.length !== 1 || !elosServiceId) throw new Error(`KOPER_ALLOC_DECISION_CODE_NOT_UNIQUE_${koperServiceId}_${decision.budgetCode}`);
+    crosswalk.agreed.set(koperServiceId, { elosServiceId, votes: crosswalk.agreed.get(koperServiceId)?.votes ?? 0 });
+    crosswalk.conflicts.delete(koperServiceId);
+    decided.set(koperServiceId, decision.note);
+    // Linhas que esta ferramenta gravou no serviço avulso do catálogo antes da decisão são reapontadas.
+    const catalogService = allServices.find((service) => service.source_system === "koper" && service.source_id === koperServiceId);
+    const budgetItem = approvedItemFor(elosServiceId);
+    for (const row of existing) {
+      const evidence = asObject(row.evidence);
+      if (!catalogService || row.service_id !== catalogService.id || row.source_system !== ALLOCATION_SOURCE_SYSTEM || evidence.origin !== "mirror") continue;
+      const patch: Json = {
+        service_id: elosServiceId,
+        budget_item_id: budgetItem?.id ?? null,
+        wbs_code_snapshot: budgetItem?.code ?? null,
+        service_name_snapshot: serviceById.get(elosServiceId)?.description ?? null,
+        evidence: { ...evidence, nativeEvidence: { ...asObject(evidence.nativeEvidence), serviceCrosswalk: "decisão do Fábio" }, repointedFromServiceId: catalogService.id, repointNote: decision.note },
+        updated_at: new Date().toISOString(),
+      };
+      repoints.push({ id: row.id, payableId: row.payable_id, amountCents: cents(row.allocation_amount), patch });
+      // A comparação abaixo já enxerga a linha como ficará depois do reapontamento.
+      row.service_id = elosServiceId;
+      row.budget_item_id = budgetItem?.id ?? null;
+    }
+  }
+
   const needed = new Map<string, KoperServiceInfo>();
   for (const item of planned) {
     const loaded = contexts.get(item.koperCompany)!;
@@ -543,10 +605,10 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     }
   }
   const services = await ensureKoperServices(request, needed, write);
-  type ElosTarget = { id: string; name: string | null; how: "histórico" | "catálogo Koper" } | { conflict: true } | null;
+  type ElosTarget = { id: string; name: string | null; how: "histórico" | "catálogo Koper" | "decisão do Fábio" } | { conflict: true } | null;
   const elosServiceFor = (koperServiceId: string): ElosTarget => {
     const learned = crosswalk.agreed.get(koperServiceId);
-    if (learned) return { id: learned.elosServiceId, name: serviceById.get(learned.elosServiceId)?.description ?? null, how: "histórico" };
+    if (learned) return { id: learned.elosServiceId, name: serviceById.get(learned.elosServiceId)?.description ?? null, how: decided.has(koperServiceId) ? "decisão do Fábio" : "histórico" };
     if (crosswalk.conflicts.has(koperServiceId)) return { conflict: true };
     const catalog = services.byKoperId.get(koperServiceId);
     if (catalog) return { id: catalog.id, name: catalog.description, how: "catálogo Koper" };
@@ -751,6 +813,9 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     comparedWithExisting: dump(stats.comparison),
     existingButChainDoesNotResolve: dump(existingButUnresolved),
     allocatedByOtherOrigin: dump(stats.otherOrigin),
+    serviceDecisions: Object.fromEntries(decided),
+    repointRows: repoints.length,
+    repointTotal: money(repoints.reduce((sum, item) => sum + item.amountCents, 0)),
     serviceOriginLines: Object.fromEntries([...stats.serviceOrigin].map(([key, bucket]) => [key, bucket.count])),
     unresolved: dump(unresolved),
     unresolvedExamples: Object.fromEntries(unresolvedExamples),
@@ -766,10 +831,37 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     title: money(item.amountCents),
     rows: item.rows.map((row) => ({ source_id: row.source_id, service: row.service_name_snapshot, wbs: row.wbs_code_snapshot, item: row.budget_item_id ? "sim" : "não", amount: row.allocation_amount, percent: row.allocation_percent, method: row.resolution_method })),
   }))));
-  if (!write || rowsToInsert.length === 0) return { ...plan, inserted: 0, verified: !write ? null : true };
+  if (process.env.KOPER_ALLOC_DEBUG === "true") {
+    // Diagnóstico do casamento produto da nota × ordem de compra (só nomes de produto e ids).
+    let shown = 0;
+    for (const payable of payables) {
+      if (shown >= 16) break;
+      const loaded = contexts.get(target.payableSources[payable.source_system ?? ""]!)!;
+      const billId = (payable.source_id ?? "").slice("koper_bill:".length);
+      const detail = loaded.billDetails.get(billId);
+      if (!detail) continue;
+      const resolution = resolveBill(loaded.ctx, billId, detail);
+      if (resolution.ok || resolution.reason !== "produto não encontrado na ordem de compra") continue;
+      shown += 1;
+      console.log("KOPER_ALLOC_DEBUG_PRODUCT", JSON.stringify({ bill: billId, allocated: (existingByPayable.get(payable.id) ?? []).length > 0, ...describeProductMatch(loaded.ctx, billId, detail) }).slice(0, 6000));
+    }
+  }
+  if (!write || (rowsToInsert.length === 0 && repoints.length === 0)) return { ...plan, inserted: 0, verified: !write ? null : true };
   if (rowsToInsert.some((row) => String(row.service_id).startsWith("novo:"))) throw new Error("KOPER_ALLOC_SERVICE_NOT_CREATED");
 
-  // 4) Grava (lote inteiro por título; nunca atualiza nem apaga linha existente).
+  // 4a) Reapontamento decidido pelo Fábio (só linhas que esta ferramenta gravou no serviço avulso).
+  for (const item of repoints) {
+    const updated = await request<Array<{ id: string }>>("payable_cost_allocations", {
+      method: "PATCH",
+      body: item.patch,
+      prefer: "return=representation",
+      query: new URLSearchParams({ id: `eq.${item.id}`, company_id: company, project_id: `eq.${project.id}`, source_system: `eq.${ALLOCATION_SOURCE_SYSTEM}`, select: "id" }),
+    });
+    if (updated.length !== 1) throw new Error(`KOPER_ALLOC_REPOINT_NOT_CONFIRMED_${item.id}`);
+  }
+  if (repoints.length) console.log("KOPER_ALLOC_REPOINT_RESULT", JSON.stringify({ rows: repoints.length, total: money(repoints.reduce((sum, item) => sum + item.amountCents, 0)) }));
+
+  // 4) Grava (lote inteiro por título; nunca atualiza nem apaga linha existente, salvo o reapontamento acima).
   const batches: Row[][] = [];
   let currentBatch: Row[] = [];
   for (const item of selected) {

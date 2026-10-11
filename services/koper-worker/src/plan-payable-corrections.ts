@@ -24,7 +24,7 @@ import { type Json, type KoperCompany, type Requester, type TargetKey, TARGETS, 
 import { readKoperBills } from "./reconcile-mirror-payables.js";
 
 type Payable = {
-  id: string; source_system: string | null; source_id: string | null; document: string | null; amount: number; status: string;
+  id: string; source_system: string | null; source_id: string | null; supplier_id: string | null; document: string | null; amount: number; status: string;
   due_date: string | null; paid_at: string | null; paid_amount: number | null; suppliers: { legal_name: string } | Array<{ legal_name: string }> | null;
 };
 type Bucket = { count: number; cents: number };
@@ -65,7 +65,7 @@ export async function planPayableCorrections(options: { target: TargetKey }, req
   const dump = (map: Map<string, Bucket>) => Object.fromEntries([...map].sort((a, b) => b[1].cents - a[1].cents).map(([key, bucket]) => [key, { count: bucket.count, total: money(bucket.cents) }]));
 
   const payables = (await allRows<Payable>(request, "payables", {
-    select: "id,source_system,source_id,document,amount,status,due_date,paid_at,paid_amount,suppliers(legal_name)",
+    select: "id,source_system,source_id,supplier_id,document,amount,status,due_date,paid_at,paid_amount,suppliers(legal_name)",
     company_id: company,
     project_id: `eq.${project.id}`,
     order: "id.asc",
@@ -130,7 +130,13 @@ export async function planPayableCorrections(options: { target: TargetKey }, req
       } else if (!bill) {
         categories.push("não existe mais no Koper");
         actions.push(allocation.rows ? "cancelar no Elos OS (o rateio deixa de contar)" : "cancelar no Elos OS");
-        detail = lastSeen.get(billId) ?? "nunca visto pela rotina antiga";
+        // Outro título da obra com o mesmo fornecedor e o mesmo valor pode ser o que substituiu este no Koper.
+        const twins = mine.filter((other) => other.id !== payable.id && other.supplier_id && other.supplier_id === payable.supplier_id
+          && cents(other.amount) === amount && /^koper_bill:\d+$/.test(other.source_id ?? "") && koper.has((other.source_id ?? "").slice("koper_bill:".length)));
+        const twinText = twins.length
+          ? `possível substituto no Koper: parcela ${twins.slice(0, 3).map((other) => `${(other.source_id ?? "").slice("koper_bill:".length)} (venc. ${String(other.due_date ?? "?").slice(0, 10)}, ${other.status === "paid" ? "pago" : "em aberto"})`).join(", ")}${twins.length > 3 ? ` e mais ${twins.length - 3}` : ""}`
+          : "nenhum título de mesmo fornecedor e valor no Koper";
+        detail = `${lastSeen.get(billId) ?? "nunca visto pela rotina antiga"} | ${twinText}`;
       } else {
         if (bill.type === "Crédito") {
           categories.push("crédito de fornecedor lançado como despesa");
