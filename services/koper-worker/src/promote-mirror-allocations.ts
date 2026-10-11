@@ -63,6 +63,8 @@ export type KoperContext = {
   itemsByService: Map<string, string[]>;
   /** `itemMonitInputId` → `itemMonitoringId` (de-para de insumos). */
   inputItem: Map<string, string>;
+  /** `<buildMonitoringId>-<inputId>` → itens do acompanhamento que usam aquele insumo. */
+  itemsByInputPair: Map<string, string[]>;
   inputMapLoaded: boolean;
 };
 
@@ -111,17 +113,21 @@ export function buildContext(data: ContextData): KoperContext {
     }
   }
   const inputItem = new Map<string, string>();
-  for (const payload of data.inputServices.values()) {
+  const itemsByInputPair = new Map<string, string[]>();
+  for (const [pair, payload] of data.inputServices) {
+    const items = new Set<string>();
     for (const row of asArray(payload.items)) {
       const link = idOf(asObject(row).itemMonitInputId);
       const item = idOf(asObject(row).itemMonitoringId);
       if (link && item) inputItem.set(link, item);
+      if (item) items.add(item);
     }
+    itemsByInputPair.set(pair, [...items]);
   }
   return {
     company: data.company, receipts: data.receipts, invoices: data.invoices, purchases: data.purchases, purchaseOrders: data.purchaseOrders,
     serviceOrders: data.serviceOrders, requests: data.requests, receiptByBill, invoiceByBill, purchaseByBill, purchaseByReceipt, purchaseByInvoice,
-    monitoringItems, itemsByService, inputItem, inputMapLoaded: data.inputServices.size > 0,
+    monitoringItems, itemsByService, inputItem, itemsByInputPair, inputMapLoaded: data.inputServices.size > 0,
   };
 }
 
@@ -878,6 +884,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     const census = new Map<string, Bucket>();
     const links = new Map<string, Bucket>();
     const linkBreaks = new Map<string, Bucket>();
+    const uniqueInput = new Map<string, Bucket>();
     const storedSignature = new Map<string, Bucket>();
     const storedSamples: Json[] = [];
     const rawSamples: Json[] = [];
@@ -939,6 +946,45 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
       };
       const breaks = [...new Set(docRows.map(breakOf).filter((item): item is string => item !== null))].sort();
       if (breaks.length) bump(linkBreaks, `${side} · ${breaks.join(" + ")}`, amountCents);
+      // Hipótese (só medição): linha sem vínculo cujo insumo aparece em um único item do acompanhamento.
+      if (breaks.length) {
+        const kinds = new Set<string>();
+        const predicted = new Set<string>();
+        let complete = true;
+        for (const row of docRows) {
+          const productId = idOf(row.productId);
+          const inputId = idOf(row.inputId);
+          const found = productTargets(ctx, { productId, inputId }, orderIds);
+          if (found.ok) {
+            for (const share of found.shares) { const serviceId = ctx.monitoringItems.get(share.itemMonitoringId)?.serviceId; if (serviceId) predicted.add(serviceId); }
+            continue;
+          }
+          const matched = orderIds.flatMap((orderId) => {
+            const order = ctx.purchaseOrders.get(orderId);
+            return asArray(order?.products).map(asObject)
+              .filter((orderRow) => (productId && idOf(orderRow.productId) === productId) || (inputId && idOf(orderRow.inputId) === inputId))
+              .map((orderRow) => ({ monitoringId: idOf(order?.buildMonitoringId) ?? idOf(invoice?.buildMonitoringId) ?? idOf(receipt?.buildMonitoringId), inputId: idOf(orderRow.inputId) ?? inputId }));
+          });
+          if (matched.length === 0) { kinds.add("produto fora da ordem"); complete = false; continue; }
+          for (const entry of matched) {
+            const items = entry.monitoringId && entry.inputId ? ctx.itemsByInputPair.get(`${entry.monitoringId}-${entry.inputId}`) : undefined;
+            if (!items) { kinds.add(entry.monitoringId ? "insumo ainda não consultado" : "ordem sem acompanhamento"); complete = false; continue; }
+            const services = [...new Set(items.map((item) => ctx.monitoringItems.get(item)?.serviceId).filter((id): id is string => Boolean(id)))];
+            if (items.length === 0) { kinds.add("insumo fora do orçamento"); complete = false; }
+            else if (items.length === 1) { kinds.add("insumo em 1 item"); for (const id of services) predicted.add(id); }
+            else if (services.length === 1) { kinds.add("insumo em vários itens do mesmo serviço"); for (const id of services) predicted.add(id); }
+            else { kinds.add("insumo em itens de serviços diferentes"); complete = false; }
+          }
+        }
+        let verdict = "";
+        if (current.length) {
+          const stored = new Set(current.map((row) => row.service_id).filter((id): id is string => Boolean(id)));
+          const mapped = new Set([...predicted].map((id) => crosswalk.agreed.get(id)?.elosServiceId ?? services.byKoperId.get(id)?.id ?? `koper:${id}`));
+          verdict = !complete ? " · gravado × hipótese: não dá para comparar"
+            : stored.size === mapped.size && [...stored].every((id) => mapped.has(id)) ? " · gravado × hipótese: mesmos serviços" : " · gravado × hipótese: serviços diferentes";
+        }
+        bump(uniqueInput, `${side} · ${[...kinds].sort().join(" + ")}${verdict}`, amountCents);
+      }
       const classes = [...new Set(docRows.map(classify))].filter((item) => item !== "igual").sort();
       bump(census, `${side} · ${invoice ? "NF-e" : "manual"} · ${classes.join(" + ") || "todos iguais?"}`, amountCents);
 
@@ -976,7 +1022,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
         console.log("KOPER_ALLOC_DEBUG_PRODUCT", JSON.stringify({ bill: billId, allocated: current.length > 0, ...describeProductMatch(ctx, billId, detail) }).slice(0, 6000));
       }
     }
-    console.log("KOPER_ALLOC_DEBUG_CENSUS", JSON.stringify({ byMismatch: dump(census), whereLinkBreaks: dump(linkBreaks), alternativeLinks: dump(links), storedEvidence: dump(storedSignature) }));
+    console.log("KOPER_ALLOC_DEBUG_CENSUS", JSON.stringify({ byMismatch: dump(census), whereLinkBreaks: dump(linkBreaks), uniqueInputHypothesis: dump(uniqueInput), alternativeLinks: dump(links), storedEvidence: dump(storedSignature) }));
     for (const sample of storedSamples) console.log("KOPER_ALLOC_DEBUG_STORED", JSON.stringify(sample));
     for (const sample of rawSamples) console.log("KOPER_ALLOC_DEBUG_RAW", JSON.stringify(sample));
   }

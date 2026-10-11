@@ -104,12 +104,26 @@ export async function planPayableCorrections(options: { target: TargetKey }, req
       return match?.[1] && !koper.has(match[1]) ? [match[1]] : [];
     });
     const lastSeen = new Map<string, string>();
+    const goneShapes: Json[] = [];
     for (const batch of chunks(goneIds, 60)) {
-      const staged = await request<Array<{ koper_id: string; sync_state: string; last_seen_at: string | null }>>("koper_staging_records", {
-        query: new URLSearchParams({ select: "koper_id,sync_state,last_seen_at", company_id: company, source: "eq.koper", entity: "eq.bill_to_pay", koper_id: `in.(${batch.join(",")})`, limit: "200" }),
+      const staged = await request<Array<{ koper_id: string; sync_state: string; last_seen_at: string | null; payload: unknown }>>("koper_staging_records", {
+        query: new URLSearchParams({ select: "koper_id,sync_state,last_seen_at,payload", company_id: company, source: "eq.koper", entity: "eq.bill_to_pay", koper_id: `in.(${batch.join(",")})`, limit: "200" }),
       });
-      for (const row of staged) lastSeen.set(row.koper_id, `${row.sync_state} · visto por último em ${(row.last_seen_at ?? "?").slice(0, 10)}`);
+      for (const row of staged) {
+        lastSeen.set(row.koper_id, `${row.sync_state} · visto por último em ${(row.last_seen_at ?? "?").slice(0, 10)}`);
+        // Como o título era quando foi visto (só campos de tipo / origem; números longos mascarados).
+        if (goneShapes.length < 6) {
+          const data = asObject(asObject(row.payload).data ?? row.payload);
+          const flat: Json = {};
+          for (const [key, value] of Object.entries({ ...data, ...Object.fromEntries(Object.entries(asObject(data.origins)).map(([k, v]) => [`origins.${k}`, v])) })) {
+            if (value === null || typeof value === "object") continue;
+            if (/type|forecast|prev|origin|contract|receipt|invoice|order|status|recurr|descr|history|paid|parcel|install|join|number/i.test(key)) flat[key] = String(value).replace(/\d{11,}/g, "***").slice(0, 60);
+          }
+          goneShapes.push({ bill: row.koper_id, keys: Object.keys(data).slice(0, 60).join(","), fields: flat });
+        }
+      }
     }
+    if (goneShapes.length) console.log("KOPER_FIX_GONE_SHAPE", JSON.stringify(goneShapes).slice(0, 7000));
 
     for (const payable of mine) {
       const amount = cents(payable.amount);
@@ -136,7 +150,15 @@ export async function planPayableCorrections(options: { target: TargetKey }, req
         const twinText = twins.length
           ? `possível substituto no Koper: parcela ${twins.slice(0, 3).map((other) => `${(other.source_id ?? "").slice("koper_bill:".length)} (venc. ${String(other.due_date ?? "?").slice(0, 10)}, ${other.status === "paid" ? "pago" : "em aberto"})`).join(", ")}${twins.length > 3 ? ` e mais ${twins.length - 3}` : ""}`
           : "nenhum título de mesmo fornecedor e valor no Koper";
-        detail = `${lastSeen.get(billId) ?? "nunca visto pela rotina antiga"} | ${twinText}`;
+        // O que o mesmo fornecedor ainda tem em aberto no Koper (pode ser o cronograma que substituiu a previsão).
+        const stillOpen = mine.filter((other) => other.id !== payable.id && other.supplier_id && other.supplier_id === payable.supplier_id && other.status !== "paid"
+          && /^koper_bill:\d+$/.test(other.source_id ?? "") && koper.has((other.source_id ?? "").slice("koper_bill:".length)))
+          .sort((a, b) => String(a.due_date ?? "").localeCompare(String(b.due_date ?? "")));
+        const paidCount = mine.filter((other) => other.id !== payable.id && other.supplier_id && other.supplier_id === payable.supplier_id && other.status === "paid").length;
+        const openText = stillOpen.length
+          ? `fornecedor ainda tem ${stillOpen.length} título(s) em aberto no Koper, total ${money(stillOpen.reduce((sum, other) => sum + cents(other.amount), 0))}: ${stillOpen.slice(0, 4).map((other) => `${(other.source_id ?? "").slice("koper_bill:".length)} (venc. ${String(other.due_date ?? "?").slice(0, 10)}, ${money(cents(other.amount))})`).join(", ")}${stillOpen.length > 4 ? "…" : ""}`
+          : "fornecedor sem nenhum título em aberto no Koper";
+        detail = `${lastSeen.get(billId) ?? "nunca visto pela rotina antiga"} | ${twinText} | ${openText} | ${paidCount} título(s) pago(s) do fornecedor na obra`;
       } else {
         if (bill.type === "Crédito") {
           categories.push("crédito de fornecedor lançado como despesa");
