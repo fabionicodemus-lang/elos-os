@@ -1144,8 +1144,15 @@ export async function runKoperMirror(flags: { write: boolean; full: boolean }): 
     },
     { listed: 0, inserted: 0, updated: 0, missingAtSource: 0, detailFailures: 0, incompleteLists: 0 },
   );
-  console.log("KOPER_MIRROR_RESULT", JSON.stringify({ write, full, entitiesOk: reports.length, entitiesFailed: errors.length, ...totals, errors }));
-  return { ok: errors.length === 0 && totals.incompleteLists === 0 && totals.detailFailures === 0 };
+  // Falha isolada de detalhe (o Koper responde erro para um registro específico, sempre o mesmo)
+  // não derruba a rodada: fica no relatório com o id em `detailProblemSamples`. A rodada só é
+  // dada como falha quando uma entidade inteira falha, uma listagem vem incompleta ou os
+  // detalhes com erro passam de 1% do que foi pedido (mínimo de 5).
+  const detailsRequested = reports.reduce((sum, report) => sum + report.detailsRequested, 0);
+  const detailFailureLimit = Math.max(5, Math.ceil(detailsRequested * 0.01));
+  const detailFailuresTolerated = totals.detailFailures > 0 && totals.detailFailures <= detailFailureLimit;
+  console.log("KOPER_MIRROR_RESULT", JSON.stringify({ write, full, entitiesOk: reports.length, entitiesFailed: errors.length, ...totals, detailFailureLimit, detailFailuresTolerated, errors }));
+  return { ok: errors.length === 0 && totals.incompleteLists === 0 && totals.detailFailures <= detailFailureLimit };
 }
 
 // Só executa quando chamado diretamente (node dist/mirror-koper.js), não ao ser importado.
