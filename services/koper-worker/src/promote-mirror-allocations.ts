@@ -832,19 +832,85 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     rows: item.rows.map((row) => ({ source_id: row.source_id, service: row.service_name_snapshot, wbs: row.wbs_code_snapshot, item: row.budget_item_id ? "sim" : "não", amount: row.allocation_amount, percent: row.allocation_percent, method: row.resolution_method })),
   }))));
   if (process.env.KOPER_ALLOC_DEBUG === "true") {
-    // Diagnóstico do casamento produto da nota × ordem de compra (só nomes de produto e ids).
+    // Diagnóstico (somente leitura) dos títulos em que o produto da nota não casa com a ordem de
+    // compra: censo por tipo de descasamento, vínculos alternativos e a evidência do rateio antigo.
+    const census = new Map<string, Bucket>();
+    const links = new Map<string, Bucket>();
+    const storedSignature = new Map<string, Bucket>();
+    const storedSamples: Json[] = [];
+    const rawSamples: Json[] = [];
     let shown = 0;
     for (const payable of payables) {
-      if (shown >= 16) break;
       const loaded = contexts.get(target.payableSources[payable.source_system ?? ""]!)!;
+      const ctx = loaded.ctx;
       const billId = (payable.source_id ?? "").slice("koper_bill:".length);
       const detail = loaded.billDetails.get(billId);
       if (!detail) continue;
-      const resolution = resolveBill(loaded.ctx, billId, detail);
+      const resolution = resolveBill(ctx, billId, detail);
       if (resolution.ok || resolution.reason !== "produto não encontrado na ordem de compra") continue;
-      shown += 1;
-      console.log("KOPER_ALLOC_DEBUG_PRODUCT", JSON.stringify({ bill: billId, allocated: (existingByPayable.get(payable.id) ?? []).length > 0, ...describeProductMatch(loaded.ctx, billId, detail) }).slice(0, 6000));
+      const amountCents = cents(payable.amount);
+      const current = existingByPayable.get(payable.id) ?? [];
+      const side = current.length ? "já rateado" : "sem rateio";
+      const origins = asObject(detail.origins);
+      const invoiceId = idOf(origins.invoice_id) ?? ctx.invoiceByBill.get(billId) ?? null;
+      const receiptId = idOf(origins.receipt_id) ?? ctx.receiptByBill.get(billId) ?? null;
+      const invoice = invoiceId ? ctx.invoices.get(invoiceId) : undefined;
+      const receipt = receiptId ? ctx.receipts.get(receiptId) : undefined;
+      const purchaseId = ctx.purchaseByBill.get(billId) ?? (receipt ? idOf(receipt.purchaseId) : null) ?? (receiptId ? ctx.purchaseByReceipt.get(receiptId) : undefined) ?? (invoiceId ? ctx.purchaseByInvoice.get(invoiceId) : undefined) ?? null;
+      const purchase = purchaseId ? ctx.purchases.get(purchaseId) : undefined;
+      const orderIds = [...new Set([...idsFrom(purchase?.purchaseOrders, ["purchaseOrderId", "orderId"]), ...idsFrom(invoice?.purchaseOrders, ["orderId", "purchaseOrderId"])])];
+      const orderRows = orderIds.flatMap((orderId) => asArray(ctx.purchaseOrders.get(orderId)?.products).map(asObject));
+      const classify = (row: Json): string => {
+        const productId = idOf(row.productId);
+        const inputId = idOf(row.inputId);
+        const main = idOf(row.mainProductId);
+        if (!productId && !inputId) return "sem código";
+        if (orderRows.some((order) => (productId && idOf(order.productId) === productId) || (inputId && idOf(order.inputId) === inputId))) return "igual";
+        if (orderRows.some((order) => (main && idOf(order.productId) === main) || (productId && idOf(order.mainProductId) === productId))) return "genérico↔variação";
+        if (main && orderRows.some((order) => idOf(order.mainProductId) === main)) return "mesma família";
+        return "ausente";
+      };
+      const docRows = asArray((invoice ?? receipt)?.products).map(asObject);
+      const classes = [...new Set(docRows.map(classify))].filter((item) => item !== "igual").sort();
+      bump(census, `${side} · ${invoice ? "NF-e" : "manual"} · ${classes.join(" + ") || "todos iguais?"}`, amountCents);
+
+      // Vínculos alternativos.
+      const purchaseRows = asArray(purchase?.products).map(asObject);
+      const purchaseClasses = [...new Set(purchaseRows.map(classify))].filter((item) => item !== "igual").sort();
+      const linkedReceiptId = receiptId ?? (purchase ? idOf(purchase.receiptId) : null);
+      const linkedReceipt = linkedReceiptId ? ctx.receipts.get(linkedReceiptId) : undefined;
+      const receiptRows = asArray(linkedReceipt?.products).map(asObject);
+      const orderProductIds = new Set(orderRows.map((order) => idOf(order.orderProductId)).filter(Boolean));
+      const receiptLinked = receiptRows.length > 0 && receiptRows.every((row) => asArray(row.orders).map(asObject).some((order) => orderProductIds.has(idOf(order.orderProductId))));
+      const apportioned = docRows.length > 0 && docRows.every((row) => asArray(row.apportionment).length > 0 || Object.keys(asObject(row.apportionment)).length > 0);
+      bump(links, `${side} · compra:${purchase ? (purchaseRows.length ? (purchaseClasses.length ? `produtos ${purchaseClasses.join("+")}` : "produtos todos na ordem") : "sem produtos") : "não"} · recibo:${linkedReceipt ? (receiptRows.length ? (receiptLinked ? "linhas ligadas à ordem" : "linhas sem ligação") : "sem produtos") : linkedReceiptId ? "fora da espera" : "não"} · rateio na nota:${apportioned ? "sim" : "não"} · linhasNota=${docRows.length === purchaseRows.length ? "=compra" : "≠compra"}`, amountCents);
+
+      if (current.length) {
+        const first = asObject(asObject(current[0]?.evidence).nativeEvidence);
+        const top = asObject(current[0]?.evidence);
+        bump(storedSignature, `origem=${String(top.origin ?? "antiga")} · v=${String(top.resolutionVersion ?? "?")} · método=${String(top.nativeMethod ?? "?")} · source=${String(first.source ?? "?")} · item=${String(first.itemResolution ?? "—")} · base=${String(first.weightBasis ?? "—")} · linhas=${current.length > 1 ? "várias" : "uma"}`, amountCents);
+        if (storedSamples.length < 4) storedSamples.push({ bill: billId, rows: current.length, evidence: JSON.stringify(current[0]?.evidence ?? null).slice(0, 1400) });
+      }
+      if (rawSamples.length < 4 && invoice) {
+        rawSamples.push({
+          bill: billId,
+          side,
+          invoiceProduct: JSON.stringify(docRows[0] ?? null).slice(0, 900),
+          purchase: purchase ? JSON.stringify(Object.fromEntries(Object.entries(purchase).filter(([, value]) => !Array.isArray(value)))).slice(0, 500) : null,
+          purchaseProduct: JSON.stringify(purchaseRows[0] ?? null).slice(0, 500),
+          purchaseOrdersOfPurchase: JSON.stringify(asArray(purchase?.purchaseOrders).slice(0, 2)).slice(0, 400),
+          receiptProduct: JSON.stringify(receiptRows[0] ?? null).slice(0, 700),
+          orderProduct: JSON.stringify(orderRows[0] ?? null).slice(0, 900),
+        });
+      }
+      if (shown < 6) {
+        shown += 1;
+        console.log("KOPER_ALLOC_DEBUG_PRODUCT", JSON.stringify({ bill: billId, allocated: current.length > 0, ...describeProductMatch(ctx, billId, detail) }).slice(0, 6000));
+      }
     }
+    console.log("KOPER_ALLOC_DEBUG_CENSUS", JSON.stringify({ byMismatch: dump(census), alternativeLinks: dump(links), storedEvidence: dump(storedSignature) }));
+    for (const sample of storedSamples) console.log("KOPER_ALLOC_DEBUG_STORED", JSON.stringify(sample));
+    for (const sample of rawSamples) console.log("KOPER_ALLOC_DEBUG_RAW", JSON.stringify(sample));
   }
   if (!write || (rowsToInsert.length === 0 && repoints.length === 0)) return { ...plan, inserted: 0, verified: !write ? null : true };
   if (rowsToInsert.some((row) => String(row.service_id).startsWith("novo:"))) throw new Error("KOPER_ALLOC_SERVICE_NOT_CREATED");
