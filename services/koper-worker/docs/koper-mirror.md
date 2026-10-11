@@ -333,5 +333,29 @@ Plano para os 689 títulos do Alma (empresa Alma + centros 201/202 da empresa Bo
 Comando fixo `node dist/tools.js`; ferramenta em `KOPER_TOOL` (`chain-audit`, `inspect-elos`,
 `budget`, `allocations`, ou várias separadas por vírgula), obra em `KOPER_TOOL_TARGET`,
 gravação só com `KOPER_TOOL_WRITE=true`, piloto com `KOPER_ALLOC_LIMIT`. Não tem credencial
-do Koper. Em 2026-10-10 rodou apenas em modo plano: **nenhum orçamento ou rateio do Alma foi
-gravado ainda**.
+do Koper.
+
+### Gravado em 2026-10-10 (autorizado pelo Fábio)
+
+- Orçamento `KOPER-ACOMP-133` na obra Alma Seahouses: 67 grupos e 70 itens (62 com serviço,
+  8 de etapa sem serviço); total conferido igual ao do Koper. 3 serviços novos no catálogo
+  (`KOPER-S4190`, `KOPER-S4192`, `KOPER-S4218`).
+- Rateio: piloto de 5 títulos e depois o restante — 473 títulos, 478 linhas em
+  `payable_cost_allocations`, soma de cada título conferida com o valor do título. Metade
+  dos títulos ficou ligada a um item do orçamento, a outra metade só ao serviço.
+- Tela: PR #299 na `main` (commit `5dcae2b`) — `lib/cost-vs-budget/server.ts` e
+  `title-details.ts` passam a ler títulos `koper_alma` e `koper_bossa`. Deploy do app
+  concluído. O check `Vercel – crm-elos` já falhava na `main` antes dessa mudança.
+- Depois de gravar, `KOPER_TOOL_WRITE` voltou para `false`.
+
+### Pendências do rateio do Alma
+
+1. Materiais (135 títulos): rodar `KOPER_TOOL=allocations` em modo plano depois da primeira
+   rodada diária que carregar `mirror.monitoring_input_services` e as ordens abertas; conferir
+   o plano antes de gravar, porque o caminho de material ainda não foi exercitado com dado real.
+2. O texto "À Apropriar" continua nas observações dos títulos já rateados (`payables.notes`).
+3. Guias de tributo retido: verificar se o Koper tem alguma ligação com a nota de origem.
+4. Rateio ainda não entra na rotina diária (`sync-koper-mirror-daily.ts`); título novo do
+   Alma entra "À Apropriar" até a ferramenta ser rodada de novo.
+5. Soul, Jazz e Escritório Bossa: mesma ferramenta, falta configurar o alvo (`TARGETS` em
+   `src/mirror-shared.ts`) e decidir qual acompanhamento do Koper é o orçamento de cada um.
