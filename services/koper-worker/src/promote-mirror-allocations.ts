@@ -195,6 +195,9 @@ export function productTargets(
   return { ok: true, shares: [...shares].map(([itemMonitoringId, weight]) => ({ itemMonitoringId, weight })) };
 }
 
+/** Motivos em que a nota eletrônica é relida pelas linhas da entrada de estoque. */
+const STOCK_ENTRY_REASONS = new Set(["produto não encontrado na ordem de compra", "produto sem vínculo com item do acompanhamento"]);
+
 type RawLine = { kind: "service" | "product"; unit: number; amount: number; explicitTotal: number | null; serviceId: string | null; productId: string | null; inputId: string | null };
 
 /** Escolhe, entre "valor × quantidade" e "valor já é o total", a leitura que fecha com o total da nota. */
@@ -352,7 +355,8 @@ export function resolveBill(ctx: KoperContext, billId: string, detail: Json): Re
   };
   let lineSource: "nota" | "entrada de estoque" = "nota";
   let targeted = targetLines(raw);
-  if (!targeted.ok && route === "invoice" && targeted.reason === "produto não encontrado na ordem de compra" && purchase) {
+  let stockReason: string | null = null;
+  if (!targeted.ok && route === "invoice" && STOCK_ENTRY_REASONS.has(targeted.reason) && purchase) {
     // O produto lançado na nota eletrônica não é o da ordem de compra (ou veio sem código): a
     // entrada de estoque da mesma nota (a "compra" do Koper) é quem liga cada linha ao produto
     // pedido. Usa as linhas dela, com os valores dela.
@@ -365,10 +369,12 @@ export function resolveBill(ctx: KoperContext, billId: string, detail: Json): Re
         raw = stockLines;
         targeted = viaStock;
         lineSource = "entrada de estoque";
+      } else if (viaStock.reason !== targeted.reason) {
+        stockReason = viaStock.reason;
       }
     }
   }
-  if (!targeted.ok) return { ok: false, document, reason: targeted.reason };
+  if (!targeted.ok) return { ok: false, document, reason: stockReason ? `${targeted.reason} (na entrada de estoque: ${stockReason})` : targeted.reason };
   const targetsPerLine = targeted.targets;
 
   // Pesos: só importam quando há mais de um destino.
@@ -871,6 +877,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     // compra: censo por tipo de descasamento, vínculos alternativos e a evidência do rateio antigo.
     const census = new Map<string, Bucket>();
     const links = new Map<string, Bucket>();
+    const linkBreaks = new Map<string, Bucket>();
     const storedSignature = new Map<string, Bucket>();
     const storedSamples: Json[] = [];
     const rawSamples: Json[] = [];
@@ -882,10 +889,10 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
       const detail = loaded.billDetails.get(billId);
       if (!detail) continue;
       const resolution = resolveBill(ctx, billId, detail);
-      if (resolution.ok || resolution.reason !== "produto não encontrado na ordem de compra") continue;
+      if (resolution.ok || !/^produto (não encontrado na ordem de compra|sem vínculo com item do acompanhamento)/.test(resolution.reason)) continue;
       const amountCents = cents(payable.amount);
       const current = existingByPayable.get(payable.id) ?? [];
-      const side = current.length ? "já rateado" : "sem rateio";
+      const side = `${current.length ? "já rateado" : "sem rateio"} · ${resolution.reason.startsWith("produto sem vínculo") ? "sem vínculo" : "não encontrado"}`;
       const origins = asObject(detail.origins);
       const invoiceId = idOf(origins.invoice_id) ?? ctx.invoiceByBill.get(billId) ?? null;
       const receiptId = idOf(origins.receipt_id) ?? ctx.receiptByBill.get(billId) ?? null;
@@ -906,6 +913,32 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
         return "ausente";
       };
       const docRows = asArray((invoice ?? receipt)?.products).map(asObject);
+      // Onde a ligação se perde, para as linhas cujo produto está na ordem.
+      const breakOf = (row: Json): string | null => {
+        const productId = idOf(row.productId);
+        const inputId = idOf(row.inputId);
+        const matched = orderRows.filter((order) => (productId && idOf(order.productId) === productId) || (inputId && idOf(order.inputId) === inputId));
+        if (matched.length === 0) return null;
+        const found: string[] = [];
+        for (const order of matched) {
+          const direct = asArray(order.services).map(asObject);
+          if (direct.some((source) => idOf(source.itemMonitInputId))) return null;
+          const requested = asArray(order.requests).map(asObject);
+          if (direct.length === 0 && requested.length === 0) { found.push("linha da ordem sem solicitação"); continue; }
+          for (const entry of requested) {
+            const request = ctx.requests.get(idOf(entry.requestId) ?? "");
+            if (!request) { found.push("solicitação fora da área de espera"); continue; }
+            const product = asArray(request.products).map(asObject).find((item) => idOf(item.productRequestId) === idOf(entry.productRequestId));
+            if (!product) { found.push("produto não está na solicitação"); continue; }
+            const sources = asArray(product.services).map(asObject);
+            if (sources.some((source) => idOf(source.itemMonitInputId))) return null;
+            found.push(sources.length ? "solicitação com serviço sem insumo" : `solicitação sem serviço (acompanhamento ${idOf(request.buildMonitoringId) ? "informado" : "em branco"})`);
+          }
+        }
+        return [...new Set(found)].sort().join(" / ") || "sem ligação";
+      };
+      const breaks = [...new Set(docRows.map(breakOf).filter((item): item is string => item !== null))].sort();
+      if (breaks.length) bump(linkBreaks, `${side} · ${breaks.join(" + ")}`, amountCents);
       const classes = [...new Set(docRows.map(classify))].filter((item) => item !== "igual").sort();
       bump(census, `${side} · ${invoice ? "NF-e" : "manual"} · ${classes.join(" + ") || "todos iguais?"}`, amountCents);
 
@@ -924,7 +957,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
         const first = asObject(asObject(current[0]?.evidence).nativeEvidence);
         const top = asObject(current[0]?.evidence);
         bump(storedSignature, `origem=${String(top.origin ?? "antiga")} · v=${String(top.resolutionVersion ?? "?")} · método=${String(top.nativeMethod ?? "?")} · source=${String(first.source ?? "?")} · item=${String(first.itemResolution ?? "—")} · base=${String(first.weightBasis ?? "—")} · linhas=${current.length > 1 ? "várias" : "uma"}`, amountCents);
-        if (storedSamples.length < 4) storedSamples.push({ bill: billId, rows: current.length, evidence: JSON.stringify(current[0]?.evidence ?? null).slice(0, 1400) });
+        if (storedSamples.length < 6 && !storedSamples.some((sample) => sample.method === String(top.nativeMethod ?? "?") && sample.reason === resolution.reason)) storedSamples.push({ method: String(top.nativeMethod ?? "?"), reason: resolution.reason, ...({ bill: billId, rows: current.length, evidence: JSON.stringify(current[0]?.evidence ?? null).slice(0, 1400) }) });
       }
       if (rawSamples.length < 4 && invoice) {
         rawSamples.push({
@@ -943,7 +976,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
         console.log("KOPER_ALLOC_DEBUG_PRODUCT", JSON.stringify({ bill: billId, allocated: current.length > 0, ...describeProductMatch(ctx, billId, detail) }).slice(0, 6000));
       }
     }
-    console.log("KOPER_ALLOC_DEBUG_CENSUS", JSON.stringify({ byMismatch: dump(census), alternativeLinks: dump(links), storedEvidence: dump(storedSignature) }));
+    console.log("KOPER_ALLOC_DEBUG_CENSUS", JSON.stringify({ byMismatch: dump(census), whereLinkBreaks: dump(linkBreaks), alternativeLinks: dump(links), storedEvidence: dump(storedSignature) }));
     for (const sample of storedSamples) console.log("KOPER_ALLOC_DEBUG_STORED", JSON.stringify(sample));
     for (const sample of rawSamples) console.log("KOPER_ALLOC_DEBUG_RAW", JSON.stringify(sample));
   }
