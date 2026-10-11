@@ -7,7 +7,8 @@ process.env.KOPER_USERNAME = "u";
 process.env.KOPER_PASSWORD = "p";
 process.env.BOSSA_COMPANY_ID = "11111111-1111-4111-8111-111111111111";
 
-const { buildContext, distribute, lineTotals, productTargets, resolveBill } = await import("./promote-mirror-allocations.js");
+const { buildContext, distribute, learnCrosswalk, lineTotals, productTargets, resolveBill } = await import("./promote-mirror-allocations.js");
+const { comparePayables, readKoperBills } = await import("./reconcile-mirror-payables.js");
 const { exactQuantity, planBudget, readMonitoringItems } = await import("./promote-mirror-budget.js");
 type Row = Record<string, unknown>;
 const map = (entries: Array<[string, Row]>) => new Map<string, Row>(entries);
@@ -139,4 +140,33 @@ test("orçamento: grupos, folhas e quantidade exata", () => {
   assert.deepEqual(exactQuantity(3, 10000), { quantity: 1, unitCost: 100, keptQuantity: false });
   assert.deepEqual(exactQuantity(0, 10000), { quantity: 1, unitCost: 100, keptQuantity: false });
   assert.deepEqual(exactQuantity(1, 12345), { quantity: 1, unitCost: 123.45, keptQuantity: true });
+});
+
+test("de-para aprendido do histórico: só vale quando todos os votos concordam", () => {
+  const learned = learnCrosswalk([
+    { koperServiceId: "10", elosServiceId: "A" }, { koperServiceId: "10", elosServiceId: "A" },
+    { koperServiceId: "20", elosServiceId: "B" }, { koperServiceId: "20", elosServiceId: "C" }, { koperServiceId: "20", elosServiceId: "B" },
+  ]);
+  assert.deepEqual([...learned.agreed], [["10", { elosServiceId: "A", votes: 2 }]]);
+  assert.deepEqual([...learned.conflicts], [["20", [{ elosServiceId: "B", votes: 2 }, { elosServiceId: "C", votes: 1 }]]]);
+});
+
+test("conferência de títulos: nos dois lados, só no Elos OS, só no Koper; filho herda a baixa do pai", () => {
+  const bills = map([
+    ["1", { billId: 1, billValue: 100, isPaid: true, dueDate: "2026-01-10" }],
+    ["2", { billId: 2, billValue: 50, isPaid: false, dueDate: "2026-02-10" }],
+    ["3", { billId: 3, billValue: 70, isPaid: false, dueDate: "2026-02-10" }],
+    ["9", { billId: 9, billValue: 120, isPaid: true, dueDate: "2026-02-10" }],
+  ]);
+  const details = map([
+    ["1", { bill_type: "Normal" }], ["2", { bill_type: "Normal", join_bill_id: 9 }], ["3", { bill_type: "Crédito" }], ["9", { bill_type: "Grupo" }],
+  ]);
+  const koper = readKoperBills(bills, details);
+  assert.deepEqual(koper.get("2"), { type: "Normal", amountCents: 5000, paid: true, dueDate: "2026-02-10", parentId: "9" });
+  assert.equal(koper.get("9")!.type, "Grupo");
+  const payable = (sourceId: string) => ({ id: sourceId, source_system: "koper_flow", source_id: sourceId, amount: 1, status: "open", due_date: null, paid_at: null, paid_amount: null });
+  const result = comparePayables([payable("koper_bill:1"), payable("koper_bill:9"), payable("koper_bill:777"), payable("koper_bill:missing-5")], koper);
+  assert.deepEqual(result.both.map((item) => item.billId), ["1", "9"]);
+  assert.deepEqual(result.onlyElos.map((item) => item.source_id), ["koper_bill:777", "koper_bill:missing-5"]);
+  assert.deepEqual(result.onlyKoper.map((item) => item.billId), ["2", "3"]);
 });

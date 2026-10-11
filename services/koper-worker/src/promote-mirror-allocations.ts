@@ -30,7 +30,7 @@ import { env } from "./config/env.js";
 import { requestSupabase } from "./elos/supabase.js";
 import {
   type Json, type KoperCompany, type KoperServiceInfo, type Requester, type TargetKey,
-  PAYABLE_SOURCE_COMPANY, TARGETS, allRows, asArray, asObject, cents, chunks, ensureKoperServices, idOf, loadMirror, money, num,
+  TARGETS, allRows, asArray, asObject, cents, chunks, ensureKoperServices, idOf, loadMirror, money, num,
   resolveProject, serviceInfoFromCatalog, text,
 } from "./mirror-shared.js";
 import { budgetSourceId, readMonitoringItems } from "./promote-mirror-budget.js";
@@ -415,6 +415,30 @@ async function loadContext(request: Requester, company: KoperCompany): Promise<{
   return { ctx: buildContext(data), billDetails, catalog, serviceNames };
 }
 
+const normalizeName = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/**
+ * De-para serviço do Koper → serviço do Elos OS aprendido dos rateios já homologados da obra:
+ * só entra título em que a régua acha um único serviço do Koper e o rateio gravado tem um único
+ * serviço. Vale apenas quando todos os votos de um serviço concordam.
+ */
+export function learnCrosswalk(samples: Array<{ koperServiceId: string; elosServiceId: string }>) {
+  const votes = new Map<string, Map<string, number>>();
+  for (const sample of samples) {
+    const inner = votes.get(sample.koperServiceId) ?? new Map<string, number>();
+    inner.set(sample.elosServiceId, (inner.get(sample.elosServiceId) ?? 0) + 1);
+    votes.set(sample.koperServiceId, inner);
+  }
+  const agreed = new Map<string, { elosServiceId: string; votes: number }>();
+  const conflicts = new Map<string, Array<{ elosServiceId: string; votes: number }>>();
+  for (const [koperServiceId, inner] of votes) {
+    const ranked = [...inner].map(([elosServiceId, count]) => ({ elosServiceId, votes: count })).sort((a, b) => b.votes - a.votes);
+    if (ranked.length === 1 && ranked[0]) agreed.set(koperServiceId, ranked[0]);
+    else conflicts.set(koperServiceId, ranked);
+  }
+  return { agreed, conflicts };
+}
+
 export async function promoteMirrorAllocations(options: { write: boolean; target: TargetKey; limit: number }, request: Requester = requestSupabase) {
   const { write } = options;
   const target = TARGETS[options.target];
@@ -426,7 +450,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     company_id: company,
     project_id: `eq.${project.id}`,
     order: "id.asc",
-  })).filter((payable) => payable.source_system !== null && payable.source_system in PAYABLE_SOURCE_COMPANY && /^koper_bill:\d+$/.test(payable.source_id ?? ""));
+  })).filter((payable) => payable.source_system !== null && payable.source_system in target.payableSources && /^koper_bill:\d+$/.test(payable.source_id ?? ""));
   const existing = await allRows<ExistingAllocation>(request, "payable_cost_allocations", {
     select: "id,payable_id,service_id,budget_item_id,allocation_amount,source_system,source_id",
     company_id: company,
@@ -436,95 +460,152 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
   const existingByPayable = new Map<string, ExistingAllocation[]>();
   for (const row of existing) existingByPayable.set(row.payable_id, [...(existingByPayable.get(row.payable_id) ?? []), row]);
 
-  // Itens do orçamento da obra criados a partir do acompanhamento (para `budget_item_id`).
-  const budgets = await allRows<{ id: string; source_id: string | null }>(request, "engineering_budgets", {
-    select: "id,source_id", company_id: company, project_id: `eq.${project.id}`, source_system: "eq.koper", order: "id.asc",
+  const allServices = await allRows<{ id: string; code: string; description: string; source_system: string | null; source_id: string | null }>(request, "engineering_services", {
+    select: "id,code,description,source_system,source_id", company_id: company, order: "id.asc",
+  });
+  const serviceById = new Map(allServices.map((service) => [service.id, service]));
+  const serviceCode = (id: string | null | undefined) => (id ? serviceById.get(id)?.code ?? id.slice(0, 8) : "—");
+
+  // Orçamentos da obra: itens criados a partir do acompanhamento (marcador no item) e, para a
+  // regra do Flow, o item de código único por serviço entre os orçamentos aprovados.
+  const budgets = await allRows<{ id: string; source_id: string | null; source_system: string | null; status: string }>(request, "engineering_budgets", {
+    select: "id,source_id,source_system,status", company_id: company, project_id: `eq.${project.id}`, order: "id.asc",
   });
   const budgetItemByKoper = new Map<string, { id: string; code: string | null }>();
   const targetMonitorings = new Set<string>();
+  const approvedItemsByService = new Map<string, Array<{ id: string; code: string | null }>>();
   for (const budget of budgets) {
-    if (!budget.source_id?.startsWith("monitoring:")) continue;
-    targetMonitorings.add(budget.source_id.slice("monitoring:".length));
-    const items = await allRows<{ id: string; code: string | null; notes: string | null; status: string }>(request, "engineering_budget_items", {
-      select: "id,code,notes,status", company_id: company, budget_id: `eq.${budget.id}`, order: "id.asc",
+    const fromMonitoring = budget.source_system === "koper" && Boolean(budget.source_id?.startsWith("monitoring:"));
+    if (!fromMonitoring && budget.status !== "approved") continue;
+    if (fromMonitoring) targetMonitorings.add((budget.source_id ?? "").slice("monitoring:".length));
+    const items = await allRows<{ id: string; code: string | null; notes: string | null; status: string; service_id: string | null }>(request, "engineering_budget_items", {
+      select: "id,code,notes,status,service_id", company_id: company, budget_id: `eq.${budget.id}`, order: "id.asc",
     });
     for (const item of items) {
-      const match = item.notes?.match(/Koper itemMonitoringId=(\d+)/);
-      if (match?.[1] && item.status === "active") budgetItemByKoper.set(match[1], { id: item.id, code: item.code });
+      if (item.status !== "active") continue;
+      const match = fromMonitoring ? item.notes?.match(/Koper itemMonitoringId=(\d+)/) : null;
+      if (match?.[1]) budgetItemByKoper.set(match[1], { id: item.id, code: item.code });
+      if (budget.status === "approved" && item.service_id) approvedItemsByService.set(item.service_id, [...(approvedItemsByService.get(item.service_id) ?? []), { id: item.id, code: item.code }]);
     }
   }
+  /** Item do orçamento aprovado quando o serviço tem um único código nele (regra já usada no Flow). */
+  const approvedItemFor = (serviceId: string): { id: string; code: string | null } | undefined => {
+    const items = approvedItemsByService.get(serviceId) ?? [];
+    const codes = [...new Set(items.map((item) => item.code).filter((code): code is string => Boolean(code)))];
+    return codes.length === 1 ? items.find((item) => item.code === codes[0]) : undefined;
+  };
 
-  const companies = [...new Set(payables.map((payable) => PAYABLE_SOURCE_COMPANY[payable.source_system ?? ""]).filter((item): item is KoperCompany => item !== undefined))];
+  const companies = [...new Set(payables.map((payable) => target.payableSources[payable.source_system ?? ""]).filter((item): item is KoperCompany => item !== undefined))];
   const contexts = new Map<KoperCompany, Awaited<ReturnType<typeof loadContext>>>();
   for (const koperCompany of companies) contexts.set(koperCompany, await loadContext(request, koperCompany));
 
-  // 1) Resolve cada título.
+  // 1) Resolve cada título pela cadeia do Koper.
   type Planned = { payable: Payable; billId: string; koperCompany: KoperCompany; resolution: Extract<Resolution, { ok: true }> };
   const planned: Planned[] = [];
   const unresolved = new Map<string, Bucket>();
   const unresolvedExamples = new Map<string, string[]>();
+  const existingButUnresolved = new Map<string, Bucket>();
   const weightBases = new Map<string, Bucket>();
-  const needed = new Map<string, KoperServiceInfo>();
+  const isNative = (rows: ExistingAllocation[]) => rows.length > 0 && rows.every((row) => row.source_system === ALLOCATION_SOURCE_SYSTEM);
+  const fail = (payable: Payable, billId: string, key: string) => {
+    const amountCents = cents(payable.amount);
+    if ((existingByPayable.get(payable.id) ?? []).length) { bump(existingButUnresolved, key, amountCents); return; }
+    bump(unresolved, key, amountCents);
+    const examples = unresolvedExamples.get(key) ?? [];
+    if (examples.length < 5) unresolvedExamples.set(key, [...examples, billId]);
+  };
   for (const payable of payables) {
-    const koperCompany = PAYABLE_SOURCE_COMPANY[payable.source_system ?? ""]!;
+    const koperCompany = target.payableSources[payable.source_system ?? ""]!;
     const loaded = contexts.get(koperCompany)!;
     const billId = (payable.source_id ?? "").slice("koper_bill:".length);
-    const amountCents = cents(payable.amount);
     const detail = loaded.billDetails.get(billId);
     const resolution: Resolution = detail ? resolveBill(loaded.ctx, billId, detail) : { ok: false, document: "título fora da área de espera", reason: "título não está mais na área de espera" };
-    if (!resolution.ok) {
-      const key = `${resolution.document} · ${resolution.reason}`;
-      bump(unresolved, key, amountCents);
-      const examples = unresolvedExamples.get(key) ?? [];
-      if (examples.length < 5) unresolvedExamples.set(key, [...examples, billId]);
-      continue;
-    }
-    bump(weightBases, resolution.evidence.weightBasis, amountCents);
-    for (const line of resolution.lines) {
-      if (needed.has(line.serviceId)) continue;
-      needed.set(line.serviceId, serviceInfoFromCatalog(loaded.catalog, line.serviceId)
-        ?? { name: loaded.serviceNames.get(line.serviceId) ?? loaded.ctx.monitoringItems.get(line.itemMonitoringId ?? "")?.name ?? null, unit: null, categoryId: null, categoryName: null });
-    }
+    if (!resolution.ok) { fail(payable, billId, `${resolution.document} · ${resolution.reason}`); continue; }
+    bump(weightBases, resolution.evidence.weightBasis, cents(payable.amount));
     planned.push({ payable, billId, koperCompany, resolution });
   }
 
-  // 2) Serviços no catálogo do Elos OS.
+  // 2) Serviço do Koper → serviço do Elos OS.
+  const crosswalk = learnCrosswalk(target.serviceCrosswalk !== "history" ? [] : planned.flatMap((item) => {
+    const current = existingByPayable.get(item.payable.id) ?? [];
+    if (!isNative(current)) return [];
+    const mine = [...new Set(item.resolution.lines.map((line) => line.serviceId))];
+    const stored = [...new Set(current.map((row) => row.service_id).filter((id): id is string => Boolean(id)))];
+    return mine.length === 1 && stored.length === 1 && mine[0] && stored[0] ? [{ koperServiceId: mine[0], elosServiceId: stored[0] }] : [];
+  }));
+  const needed = new Map<string, KoperServiceInfo>();
+  for (const item of planned) {
+    const loaded = contexts.get(item.koperCompany)!;
+    for (const line of item.resolution.lines) {
+      if (needed.has(line.serviceId) || crosswalk.agreed.has(line.serviceId) || crosswalk.conflicts.has(line.serviceId)) continue;
+      needed.set(line.serviceId, serviceInfoFromCatalog(loaded.catalog, line.serviceId)
+        ?? { name: loaded.serviceNames.get(line.serviceId) ?? loaded.ctx.monitoringItems.get(line.itemMonitoringId ?? "")?.name ?? null, unit: null, categoryId: null, categoryName: null });
+    }
+  }
   const services = await ensureKoperServices(request, needed, write);
+  type ElosTarget = { id: string; name: string | null; how: "histórico" | "catálogo Koper" } | { conflict: true } | null;
+  const elosServiceFor = (koperServiceId: string): ElosTarget => {
+    const learned = crosswalk.agreed.get(koperServiceId);
+    if (learned) return { id: learned.elosServiceId, name: serviceById.get(learned.elosServiceId)?.description ?? null, how: "histórico" };
+    if (crosswalk.conflicts.has(koperServiceId)) return { conflict: true };
+    const catalog = services.byKoperId.get(koperServiceId);
+    if (catalog) return { id: catalog.id, name: catalog.description, how: "catálogo Koper" };
+    if (services.wouldCreate.includes(koperServiceId)) return { id: `novo:${koperServiceId}`, name: needed.get(koperServiceId)?.name ?? null, how: "catálogo Koper" };
+    return null;
+  };
 
   // 3) Monta as linhas e compara com o que já existe.
-  type Row = Json & { id: string; payable_id: string; source_id: string; allocation_amount: number; service_id: string };
+  type Row = Json & { id: string; payable_id: string; source_id: string; allocation_amount: number; service_id: string; budget_item_id: string | null };
   const rowsToInsert: Row[] = [];
-  const stats = { alreadyAllocatedSame: new Map<string, Bucket>(), divergent: new Map<string, Bucket>(), otherOrigin: new Map<string, Bucket>(), toWrite: new Map<string, Bucket>(), level: new Map<string, Bucket>(), byService: new Map<string, Bucket>() };
-  const divergentExamples: string[] = [];
+  const stats = {
+    comparison: new Map<string, Bucket>(), otherOrigin: new Map<string, Bucket>(), toWrite: new Map<string, Bucket>(), level: new Map<string, Bucket>(),
+    byService: new Map<string, Bucket>(), serviceOrigin: new Map<string, Bucket>(),
+  };
+  const comparisonExamples: Record<string, Json[]> = {};
   const plannedPayables: Array<{ payableId: string; amountCents: number; rows: Row[] }> = [];
   for (const item of planned) {
     const amountCents = cents(item.payable.amount);
     const loaded = contexts.get(item.koperCompany)!;
-    const missingService = item.resolution.lines.find((line) => !services.byKoperId.has(line.serviceId) && !services.wouldCreate.includes(line.serviceId));
-    if (missingService) {
-      bump(unresolved, `${item.resolution.route === "invoice" ? "nota eletrônica" : "nota manual / recibo"} · serviço ${missingService.serviceId} sem nome para cadastrar`, amountCents);
-      continue;
+    const label = item.resolution.route === "invoice" ? "nota eletrônica" : "nota manual / recibo";
+    if (amountCents <= 0) { fail(item.payable, item.billId, "título com valor zero"); continue; }
+
+    // Destinos no Elos OS; serviços do Koper que caem no mesmo serviço do Elos OS são somados.
+    type Merged = { serviceId: string; serviceName: string | null; budgetItem: { id: string; code: string | null } | undefined; weight: number; koperServiceIds: string[]; itemMonitoringIds: string[]; itemResolutions: string[]; refs: string[]; how: string };
+    const merged = new Map<string, Merged>();
+    let failure: string | null = null;
+    for (const line of item.resolution.lines) {
+      const elos = elosServiceFor(line.serviceId);
+      if (!elos) { failure = `${label} · serviço ${line.serviceId} sem nome para cadastrar`; break; }
+      if ("conflict" in elos) { failure = `${label} · serviço do Koper com de-para divergente no histórico`; break; }
+      const itemRef = line.itemMonitoringId ? loaded.ctx.monitoringItems.get(line.itemMonitoringId) : undefined;
+      const fromMonitoring = itemRef && line.itemMonitoringId && targetMonitorings.has(itemRef.monitoringId) ? budgetItemByKoper.get(line.itemMonitoringId) : undefined;
+      const budgetItem = fromMonitoring ?? (target.serviceCrosswalk === "history" ? approvedItemFor(elos.id) : undefined);
+      const key = `${elos.id}|${budgetItem?.id ?? ""}`;
+      const current = merged.get(key) ?? { serviceId: elos.id, serviceName: elos.name, budgetItem, weight: 0, koperServiceIds: [], itemMonitoringIds: [], itemResolutions: [], refs: [], how: elos.how };
+      current.weight += line.weight;
+      if (!current.koperServiceIds.includes(line.serviceId)) current.koperServiceIds.push(line.serviceId);
+      if (line.itemMonitoringId && !current.itemMonitoringIds.includes(line.itemMonitoringId)) current.itemMonitoringIds.push(line.itemMonitoringId);
+      if (line.itemResolution && !current.itemResolutions.includes(line.itemResolution)) current.itemResolutions.push(line.itemResolution);
+      if (itemRef?.reference && !current.refs.includes(itemRef.reference)) current.refs.push(itemRef.reference);
+      merged.set(key, current);
     }
-    if (amountCents <= 0) { bump(unresolved, "título com valor zero", amountCents); continue; }
-    const parts = distribute(amountCents, item.resolution.lines.map((line) => line.weight));
+    if (failure) { fail(item.payable, item.billId, failure); continue; }
+    const targets = [...merged.values()];
+    const parts = distribute(amountCents, targets.map((entry) => entry.weight));
     const rows: Row[] = [];
-    item.resolution.lines.forEach((line, lineIndex) => {
-      const part = parts[lineIndex] ?? 0;
+    targets.forEach((entry, entryIndex) => {
+      const part = parts[entryIndex] ?? 0;
       if (part <= 0) return;
       const index = rows.length;
-      const service = services.byKoperId.get(line.serviceId);
-      const itemRef = line.itemMonitoringId ? loaded.ctx.monitoringItems.get(line.itemMonitoringId) : undefined;
-      const inTargetBudget = Boolean(itemRef && targetMonitorings.has(itemRef.monitoringId));
-      const budgetItem = inTargetBudget && line.itemMonitoringId ? budgetItemByKoper.get(line.itemMonitoringId) : undefined;
       rows.push({
         id: stableUuid(`elos:koper:payable-allocation:${item.billId}:${index}`),
         company_id: env.BOSSA_COMPANY_ID,
         project_id: project.id,
         payable_id: item.payable.id,
-        service_id: service?.id ?? `novo:${line.serviceId}`,
-        budget_item_id: budgetItem?.id ?? null,
-        wbs_code_snapshot: budgetItem ? budgetItem.code ?? itemRef?.reference ?? null : null,
-        service_name_snapshot: service?.description ?? needed.get(line.serviceId)?.name ?? null,
+        service_id: entry.serviceId,
+        budget_item_id: entry.budgetItem?.id ?? null,
+        wbs_code_snapshot: entry.budgetItem ? entry.budgetItem.code ?? entry.refs[0] ?? null : null,
+        service_name_snapshot: entry.serviceName,
         allocation_amount: part / 100,
         allocation_percent: Math.min(100, Math.max(0.00000001, Math.round(part / amountCents * 100 * 1e8) / 1e8)),
         resolution_method: item.resolution.method,
@@ -542,12 +623,14 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
             purchaseIds: item.resolution.evidence.purchaseIds,
             orderSourceIds: item.resolution.evidence.orderSourceIds,
             serviceOrderIds: item.resolution.evidence.serviceOrderIds,
-            historicalWbsRefs: itemRef?.reference ? [itemRef.reference] : [],
-            koperServiceId: line.serviceId,
-            itemMonitoringId: line.itemMonitoringId,
-            itemResolution: line.itemResolution,
+            historicalWbsRefs: entry.refs,
+            koperServiceId: entry.koperServiceIds[0] ?? null,
+            koperServiceIds: entry.koperServiceIds,
+            itemMonitoringId: entry.itemMonitoringIds[0] ?? null,
+            itemResolution: entry.itemResolutions[0] ?? null,
+            serviceCrosswalk: entry.how,
             weightBasis: item.resolution.evidence.weightBasis,
-            sourceWeight: Math.round(line.weight * 100) / 100,
+            sourceWeight: Math.round(entry.weight * 100) / 100,
           },
           resolutionVersion: RESOLUTION_VERSION,
           origin: "mirror",
@@ -559,22 +642,89 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     if (rows.reduce((sum, row) => sum + cents(row.allocation_amount), 0) !== amountCents) throw new Error(`KOPER_ALLOC_SUM_GUARD_${item.billId}`);
 
     const current = existingByPayable.get(item.payable.id) ?? [];
-    const label = `${item.resolution.route === "invoice" ? "nota eletrônica" : "nota manual / recibo"}`;
     if (current.length) {
-      if (current.some((row) => row.source_system !== ALLOCATION_SOURCE_SYSTEM)) { bump(stats.otherOrigin, label, amountCents); continue; }
-      const signature = (list: Array<{ service_id: string | null; budget_item_id: string | null; allocation_amount: number }>) =>
-        list.map((row) => `${row.service_id}|${row.budget_item_id ?? ""}|${cents(row.allocation_amount)}`).sort().join(";");
-      if (signature(current) === signature(rows as never)) bump(stats.alreadyAllocatedSame, label, amountCents);
-      else {
-        bump(stats.divergent, label, amountCents);
-        if (divergentExamples.length < 10) divergentExamples.push(item.billId);
+      if (!isNative(current)) { bump(stats.otherOrigin, label, amountCents); continue; }
+      const group = (list: Array<{ service_id: string | null; budget_item_id: string | null; allocation_amount: number }>, withItem: boolean) => {
+        const sums = new Map<string, number>();
+        for (const row of list) {
+          const key = withItem ? `${row.service_id}|${row.budget_item_id ?? ""}` : String(row.service_id);
+          sums.set(key, (sums.get(key) ?? 0) + cents(row.allocation_amount));
+        }
+        return sums;
+      };
+      const same = (a: Map<string, number>, b: Map<string, number>, tolerance: number) => a.size === b.size && [...a].every(([key, value]) => b.has(key) && Math.abs((b.get(key) ?? 0) - value) <= tolerance);
+      const sameKeys = (a: Map<string, number>, b: Map<string, number>) => a.size === b.size && [...a.keys()].every((key) => b.has(key));
+      const verdict = same(group(current, true), group(rows, true), 0) ? "igual ao gravado"
+        : same(group(current, false), group(rows, false), 1) ? "mesmo serviço e valor; item do orçamento diferente"
+          : sameKeys(group(current, false), group(rows, false)) ? "mesmos serviços; divisão de valor diferente"
+            : "serviços diferentes do gravado";
+      bump(stats.comparison, `${verdict} · ${label}`, amountCents);
+      if (verdict !== "igual ao gravado") {
+        const list = comparisonExamples[verdict] ?? [];
+        if (list.length < 6) {
+          comparisonExamples[verdict] = [...list, {
+            bill: item.billId,
+            title: money(amountCents),
+            koper: item.resolution.lines.map((line) => `${line.serviceId}:${Math.round(line.weight)}`).join(","),
+            regua: rows.map((row) => `${serviceCode(row.service_id)}${row.budget_item_id ? "+item" : ""}=${row.allocation_amount}`).join(" | "),
+            gravado: current.map((row) => `${serviceCode(row.service_id)}${row.budget_item_id ? "+item" : ""}=${row.allocation_amount}`).join(" | "),
+            base: item.resolution.evidence.weightBasis,
+          }];
+        }
       }
       continue;
     }
     bump(stats.toWrite, `${label} · ${item.payable.status === "paid" ? "pago" : "em aberto"}`, amountCents);
     bump(stats.level, rows.every((row) => row.budget_item_id) ? "item do orçamento" : rows.some((row) => row.budget_item_id) ? "misto" : "serviço", amountCents);
-    for (const row of rows) bump(stats.byService, String(row.service_name_snapshot ?? row.service_id).slice(0, 40), cents(row.allocation_amount));
+    for (const entry of targets) bump(stats.serviceOrigin, entry.how, 0);
+    for (const row of rows) bump(stats.byService, `${serviceCode(row.service_id)} ${String(row.service_name_snapshot ?? "")}`.slice(0, 44), cents(row.allocation_amount));
     plannedPayables.push({ payableId: item.payable.id, amountCents, rows });
+  }
+
+  // Diagnóstico do de-para (só quando a obra usa o histórico).
+  if (target.serviceCrosswalk === "history") {
+    const catalogByKoper = new Map(allServices.filter((service) => service.source_system === "koper" && service.source_id).map((service) => [String(service.source_id), service]));
+    const officialByName = new Map<string, string[]>();
+    for (const serviceId of approvedItemsByService.keys()) {
+      const name = normalizeName(serviceById.get(serviceId)?.description ?? "");
+      if (name) officialByName.set(name, [...(officialByName.get(name) ?? []), serviceId]);
+    }
+    const koperName = (koperServiceId: string): string => {
+      for (const loaded of contexts.values()) {
+        const name = serviceInfoFromCatalog(loaded.catalog, koperServiceId)?.name ?? loaded.serviceNames.get(koperServiceId);
+        if (name) return name;
+      }
+      return catalogByKoper.get(koperServiceId)?.description ?? "";
+    };
+    let toSelf = 0;
+    let toOfficial = 0;
+    let nameRuleRight = 0;
+    let nameRuleWrong = 0;
+    let nameRuleSilent = 0;
+    for (const [koperServiceId, learned] of crosswalk.agreed) {
+      if (catalogByKoper.get(koperServiceId)?.id === learned.elosServiceId) toSelf += 1; else toOfficial += 1;
+      const candidates = officialByName.get(normalizeName(koperName(koperServiceId))) ?? [];
+      if (candidates.length !== 1) nameRuleSilent += 1;
+      else if (candidates[0] === learned.elosServiceId) nameRuleRight += 1;
+      else nameRuleWrong += 1;
+    }
+    const unseen = [...needed.keys()];
+    const unseenWithNameMatch = unseen.filter((koperServiceId) => (officialByName.get(normalizeName(koperName(koperServiceId))) ?? []).length === 1);
+    console.log("KOPER_ALLOC_CROSSWALK", JSON.stringify({
+      target: options.target,
+      learnedServices: crosswalk.agreed.size,
+      learnedVotes: [...crosswalk.agreed.values()].reduce((sum, entry) => sum + entry.votes, 0),
+      mapsToOwnCatalogService: toSelf,
+      mapsToOtherService: toOfficial,
+      conflicts: [...crosswalk.conflicts].slice(0, 12).map(([koperServiceId, ranked]) => ({ koper: koperServiceId, name: koperName(koperServiceId).slice(0, 30), votes: ranked.slice(0, 3).map((entry) => `${serviceCode(entry.elosServiceId)}×${entry.votes}`) })),
+      conflictCount: crosswalk.conflicts.size,
+      servicesWithoutHistory: unseen.length,
+      servicesWithoutHistorySample: unseen.slice(0, 15).map((koperServiceId) => `${koperServiceId}:${koperName(koperServiceId).slice(0, 28)}`),
+      nameRuleOnLearned: { right: nameRuleRight, wrong: nameRuleWrong, noUniqueMatch: nameRuleSilent },
+      withoutHistoryButSameNameAsBudgetService: unseenWithNameMatch.length,
+      approvedBudgetServices: approvedItemsByService.size,
+      learnedSample: [...crosswalk.agreed].slice(0, 12).map(([koperServiceId, entry]) => `${koperServiceId} ${koperName(koperServiceId).slice(0, 22)} → ${serviceCode(entry.elosServiceId)} ×${entry.votes}`),
+    }));
   }
 
   const selected = options.limit > 0 ? plannedPayables.slice(0, options.limit) : plannedPayables;
@@ -598,10 +748,10 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     thisRunRows: rowsToInsert.length,
     level: dump(stats.level),
     weightBasis: dump(weightBases),
-    alreadyAllocatedSame: dump(stats.alreadyAllocatedSame),
-    divergentFromExisting: dump(stats.divergent),
-    divergentExamples,
+    comparedWithExisting: dump(stats.comparison),
+    existingButChainDoesNotResolve: dump(existingButUnresolved),
     allocatedByOtherOrigin: dump(stats.otherOrigin),
+    serviceOriginLines: Object.fromEntries([...stats.serviceOrigin].map(([key, bucket]) => [key, bucket.count])),
     unresolved: dump(unresolved),
     unresolvedExamples: Object.fromEntries(unresolvedExamples),
     servicesNeeded: needed.size,
@@ -610,6 +760,7 @@ export async function promoteMirrorAllocations(options: { write: boolean; target
     servicesWithoutName: services.unnamed,
   };
   console.log("KOPER_ALLOC_PLAN", JSON.stringify(plan));
+  if (Object.keys(comparisonExamples).length) console.log("KOPER_ALLOC_COMPARE_EXAMPLES", JSON.stringify(comparisonExamples).slice(0, 9000));
   console.log("KOPER_ALLOC_PLAN_SERVICES", JSON.stringify({ top: Object.fromEntries(Object.entries(dump(stats.byService)).slice(0, 40)) }));
   console.log("KOPER_ALLOC_PLAN_SAMPLE", JSON.stringify(selected.slice(0, 4).map((item) => ({
     title: money(item.amountCents),

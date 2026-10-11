@@ -128,6 +128,10 @@ type ExistingItem = { id: string; group_id: string | null; service_id: string | 
 export async function promoteMirrorBudget(options: { write: boolean; target: TargetKey }, request: Requester = requestSupabase) {
   const { write } = options;
   const target = TARGETS[options.target];
+  if (!target.budgetFromMonitoring) {
+    console.log("KOPER_BUDGET_SKIPPED", JSON.stringify({ target: options.target, reason: "a obra já tem orçamento próprio no Elos OS; esta ferramenta não cria nem altera" }));
+    return [];
+  }
   const project = await resolveProject(request, target);
   const summary: Json[] = [];
 

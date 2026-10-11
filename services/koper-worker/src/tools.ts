@@ -9,10 +9,11 @@
  *
  *   KOPER_TOOL=chain-audit        mede a cadeia de apropriação (leitura)
  *   KOPER_TOOL=inspect-elos       inspeciona orçamento / serviços / rateios (leitura)
+ *   KOPER_TOOL=reconcile          confere os títulos da obra alvo: Elos OS × Koper (leitura)
  *   KOPER_TOOL=budget             promove o orçamento (acompanhamento do Koper) da obra alvo
  *   KOPER_TOOL=allocations        promove o rateio dos títulos por serviço da obra alvo
  *   KOPER_TOOL=budget,allocations várias ferramentas, em ordem
- *   KOPER_TOOL_TARGET=alma        obra alvo
+ *   KOPER_TOOL_TARGET=alma|flow   obra alvo
  *   KOPER_ALLOC_LIMIT=5           piloto do rateio: nº de títulos gravados
  */
 import { pathToFileURL } from "node:url";
@@ -30,6 +31,9 @@ export async function runTool(tool: string) {
   } else if (tool === "inspect-elos") {
     const { inspectElos } = await import("./inspect-elos-allocation-base.js");
     await inspectElos();
+  } else if (tool === "reconcile") {
+    const { reconcilePayables } = await import("./reconcile-mirror-payables.js");
+    await reconcilePayables({ target });
   } else if (tool === "budget") {
     const { promoteMirrorBudget } = await import("./promote-mirror-budget.js");
     await promoteMirrorBudget({ write, target });

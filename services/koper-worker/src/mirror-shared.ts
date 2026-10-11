@@ -75,18 +75,49 @@ export async function loadMirror(request: Requester, entity: string, company: Ko
 // Obras alvo
 // ---------------------------------------------------------------------------
 
-export type TargetKey = "alma";
+export type TargetKey = "alma" | "flow";
 
 export type Target = {
   label: string;
   /** Como reconhecer a obra no Elos OS pelo nome. */
   projectMatch: RegExp;
+  /** Origem dos títulos no Elos OS (`payables.source_system`) → empresa do Koper. */
+  payableSources: Record<string, KoperCompany>;
+  /** Empresas do Koper em que todo título pertence a esta obra (permite listar o que falta importar). */
+  exclusiveCompanies: KoperCompany[];
   /** Empresas do Koper cujos acompanhamentos de obra viram o orçamento desta obra. */
   monitoringCompanies: KoperCompany[];
+  /** Cria o orçamento da obra a partir do acompanhamento do Koper (`promote-mirror-budget`). */
+  budgetFromMonitoring: boolean;
+  /**
+   * Como o serviço do Koper vira serviço do Elos OS:
+   *  - "catalog": o próprio serviço do catálogo (`KOPER-S<id>`);
+   *  - "history": o de-para já homologado nos rateios existentes da obra (o Flow foi
+   *    reapontado para o orçamento oficial); sem histórico, cai no catálogo.
+   */
+  serviceCrosswalk: "catalog" | "history";
 };
 
 export const TARGETS: Record<TargetKey, Target> = {
-  alma: { label: "Alma Seahouses", projectMatch: /\balma\b/i, monitoringCompanies: ["alma"] },
+  alma: {
+    label: "Alma Seahouses",
+    projectMatch: /\balma\b/i,
+    payableSources: { koper_alma: "alma", koper_bossa: "bossa" },
+    exclusiveCompanies: ["alma"],
+    monitoringCompanies: ["alma"],
+    budgetFromMonitoring: true,
+    serviceCrosswalk: "catalog",
+  },
+  flow: {
+    label: "Flow Aptos",
+    projectMatch: /\bflow\b/i,
+    payableSources: { koper_flow: "flow" },
+    exclusiveCompanies: ["flow"],
+    monitoringCompanies: ["flow"],
+    // O Flow já tem orçamento oficial no Elos OS; esta ferramenta nunca cria nem altera orçamento dele.
+    budgetFromMonitoring: false,
+    serviceCrosswalk: "history",
+  },
 };
 
 export function parseTarget(raw: string | undefined): TargetKey {
@@ -94,9 +125,6 @@ export function parseTarget(raw: string | undefined): TargetKey {
   if (!(key in TARGETS)) throw new Error(`KOPER_TARGET_UNKNOWN_${key}`);
   return key as TargetKey;
 }
-
-/** Origem dos títulos no Elos OS → empresa do Koper. O Flow tem rotina própria e não entra aqui. */
-export const PAYABLE_SOURCE_COMPANY: Record<string, KoperCompany> = { koper_alma: "alma", koper_bossa: "bossa" };
 
 export type Project = { id: string; name: string; status: string };
 
