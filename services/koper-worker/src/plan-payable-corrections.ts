@@ -110,7 +110,11 @@ export async function planPayableCorrections(options: { target: TargetKey }, req
         query: new URLSearchParams({ select: "koper_id,sync_state,last_seen_at,payload", company_id: company, source: "eq.koper", entity: "eq.bill_to_pay", koper_id: `in.(${batch.join(",")})`, limit: "200" }),
       });
       for (const row of staged) {
-        lastSeen.set(row.koper_id, `${row.sync_state} · visto por último em ${(row.last_seen_at ?? "?").slice(0, 10)}`);
+        const seen = asObject(asObject(row.payload).data ?? row.payload);
+        const nature = seen.receiptDraft === true ? `previsão (rascunho de recibo${seen.hasRecurrence === true ? ", gerado por recorrência" : ""})`
+          : seen.taxDraft === true ? "previsão (rascunho de tributo)"
+            : seen.hasRecurrence === true ? "título de recorrência" : "título lançado (não era rascunho)";
+        lastSeen.set(row.koper_id, `${row.sync_state} · visto por último em ${(row.last_seen_at ?? "?").slice(0, 10)} · ${nature}`);
         // Como o título era quando foi visto (só campos de tipo / origem; números longos mascarados).
         if (goneShapes.length < 6) {
           const data = asObject(asObject(row.payload).data ?? row.payload);
