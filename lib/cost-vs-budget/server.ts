@@ -419,7 +419,7 @@ export async function loadCostVsBudget({
         .select("id, status, source_id, amount")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
-        .eq("source_system", "koper_flow")
+        .in("source_system", ["koper_flow", "koper_alma", "koper_bossa"])
         .in("status", ["open", "paid"])
         .range(from, to);
       return { data: (data ?? []) as KoperPayable[], error };

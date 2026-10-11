@@ -114,7 +114,7 @@ export async function loadCostVsBudgetTitles({
         .select("id, document, due_date, amount, status, installment_label, notes, paid_at, paid_amount, source_id, beneficiary_name, suppliers(legal_name, trade_name)")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
-        .eq("source_system", "koper_flow")
+        .in("source_system", ["koper_flow", "koper_alma", "koper_bossa"])
         .in("status", ["open", "paid"])
         .range(from, to);
       return { data: (data ?? []) as unknown as Payable[], error };
