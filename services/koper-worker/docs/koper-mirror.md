@@ -453,3 +453,65 @@ tributo ou devolução.
 - Ainda sem solução pela régua: 181 títulos sem rateio e 121 já rateados caem em "produto não
   encontrado na ordem de compra" (hipótese a testar: produto genérico × específico,
   `mainProductId`).
+
+## 15. Flow — materiais gravados, decisão do Porcelanato e investigação (2026-10-11)
+
+### Gravado (autorizado pelo Fábio em 2026-10-11)
+
+- Materiais do Flow: piloto de 5 títulos e depois 545 — 550 títulos, 830 linhas, conferidos
+  linha a linha (nenhuma linha faltando, nenhum título desbalanceado). O Flow passou a 3.627
+  títulos rateados.
+- Decisão do Fábio: serviço 336 "Pisos em Porcelanato" do Koper vai para a linha 15.04 do
+  orçamento oficial. Fica registrada em `TARGETS.flow.serviceDecisions`
+  (`src/mirror-shared.ts`) e vale acima do histórico. As 2 linhas que esta ferramenta tinha
+  gravado no serviço avulso `KOPER-S336` foram reapontadas (evidência guarda
+  `repointedFromServiceId` e `repointNote`). É a única exceção à regra de nunca alterar linha
+  existente, e só alcança linhas com `evidence.origin = "mirror"`.
+
+### "Produto não encontrado na ordem de compra" — o que era
+
+Censo dos títulos nessa situação (`KOPER_ALLOC_DEBUG=true`, somente leitura):
+
+- A nota eletrônica (`mirror.xml_invoice`) guarda o produto como o XML foi associado: às vezes
+  sem código do Koper, às vezes outra variação do produto pedido.
+- A **entrada de estoque** da mesma nota (`mirror.purchase_detail`, ligada por
+  `xmlInvoiceId`) guarda o produto como o comprador deu entrada contra a ordem de compra. Em
+  todos os 121 títulos que a rotina antiga já tinha rateado e em 130 dos 184 sem rateio, os
+  produtos da entrada de estoque estão todos na ordem.
+- Regra nova (`resolveBill`): quando a leitura pelos produtos da nota falha por "produto não
+  encontrado" ou "sem vínculo", a nota é relida pelas linhas da entrada de estoque (produto,
+  preço × quantidade; total com ou sem desconto, o que fechar melhor, tolerância de 10%). A
+  evidência grava `lineSource: "entrada de estoque"`. Nota que resolve pelos próprios
+  produtos continua como antes.
+- Validação contra o histórico: dos 120 títulos comparáveis já rateados pela rotina antiga
+  (métodos `koper_nfe_stock_entry_single_service` e `koper_invoice_purchase_order`), 118
+  ficaram idênticos e 2 diferem em 1 centavo.
+- Resultado do ensaio: 124 títulos novos resolvidos por essa regra. **Não gravado**: aguarda
+  o ok do Fábio.
+
+### O que continua sem solução (e por quê)
+
+- Produto fora da ordem mesmo na entrada de estoque (item comprado junto, sem pedido): 51
+  notas eletrônicas e 3 manuais. Só sai com regra de negócio (por exemplo, seguir o rateio do
+  resto da nota) — decisão do Fábio.
+- Solicitação de material feita no Koper sem apropriação (o produto da solicitação não tem
+  `services[]`): 46 notas eletrônicas e 7 manuais sem rateio; a rotina antiga rateou outras
+  36 assim, por método que a evidência gravada não explica.
+- Hipótese testada e **descartada**: usar o item do acompanhamento quando o insumo aparece em
+  um único item. Nos 7 títulos em que dava para comparar com o rateio antigo, o serviço saiu
+  diferente em todos. Não foi implementada.
+
+### Títulos do Elos OS que não existem mais no Koper (30)
+
+Ensaio `payable-corrections` (somente leitura) com a natureza de cada um, lida do registro
+antigo da staging (`bill_to_pay`):
+
+- 12 eram previsão automática de recorrência (`receiptDraft` + `hasRecurrence`) e 1 era
+  rascunho de tributo: o Koper apagou, não há substituto.
+- 15 eram previsão lançada à mão (documento "PREVISÃO…"), apagada no Koper; em um caso dois
+  títulos reais pagos somam exatamente o valor previsto.
+- 2 eram títulos reais que no Koper viraram dois cada (as duas partes somam exatamente o
+  valor original, estão pagas e já estão no Elos OS): o original ficou duplicado.
+
+Todos estão em aberto no Elos OS e 27 têm rateio. Nada foi alterado: a planilha de
+divergências (140 títulos) foi reemitida com essa observação e aguarda SIM / NÃO.
