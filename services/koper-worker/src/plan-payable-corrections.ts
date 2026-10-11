@@ -162,7 +162,16 @@ export async function planPayableCorrections(options: { target: TargetKey }, req
         const openText = stillOpen.length
           ? `fornecedor ainda tem ${stillOpen.length} título(s) em aberto no Koper, total ${money(stillOpen.reduce((sum, other) => sum + cents(other.amount), 0))}: ${stillOpen.slice(0, 4).map((other) => `${(other.source_id ?? "").slice("koper_bill:".length)} (venc. ${String(other.due_date ?? "?").slice(0, 10)}, ${money(cents(other.amount))})`).join(", ")}${stillOpen.length > 4 ? "…" : ""}`
           : "fornecedor sem nenhum título em aberto no Koper";
-        detail = `${lastSeen.get(billId) ?? "nunca visto pela rotina antiga"} | ${twinText} | ${openText} | ${paidCount} título(s) pago(s) do fornecedor na obra`;
+        // Títulos do mesmo fornecedor que continuam no Koper com vencimento a até 45 dias deste (possível relançamento).
+        const dueTime = Date.parse(String(payable.due_date ?? ""));
+        const near = Number.isFinite(dueTime) ? mine.filter((other) => other.id !== payable.id && other.supplier_id && other.supplier_id === payable.supplier_id
+          && /^koper_bill:\d+$/.test(other.source_id ?? "") && koper.has((other.source_id ?? "").slice("koper_bill:".length))
+          && Math.abs(Date.parse(String(other.due_date ?? "")) - dueTime) <= 45 * 86_400_000)
+          .sort((a, b) => Math.abs(cents(a.amount) - amount) - Math.abs(cents(b.amount) - amount)) : [];
+        const nearText = near.length
+          ? `vizinhos no Koper (±45 dias): ${near.slice(0, 5).map((other) => `${(other.source_id ?? "").slice("koper_bill:".length)} (venc. ${String(other.due_date ?? "?").slice(0, 10)}, ${money(cents(other.amount))}, ${other.status === "paid" ? "pago" : "em aberto"})`).join(", ")}${near.length > 5 ? ` e mais ${near.length - 5}` : ""}`
+          : "nenhum título do fornecedor no Koper com vencimento a até 45 dias";
+        detail = `${lastSeen.get(billId) ?? "nunca visto pela rotina antiga"} | ${twinText} | ${openText} | ${paidCount} título(s) pago(s) do fornecedor na obra | ${nearText}`;
       } else {
         if (bill.type === "Crédito") {
           categories.push("crédito de fornecedor lançado como despesa");
