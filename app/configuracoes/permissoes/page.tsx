@@ -55,6 +55,7 @@ type Audit = {
 };
 
 const MODULE_LABELS: Record<string, string> = {
+  ai: "Elos IA",
   admin: "Sistema e administração",
   projects: "Empreendimentos",
   suppliers: "Fornecedores",
@@ -101,6 +102,8 @@ const MODULE_LABELS: Record<string, string> = {
 };
 
 const ACTION_LABELS: Record<string, string> = {
+  use: "Usar",
+  view_usage: "Ver consumo da empresa",
   view: "Visualizar",
   manage: "Gerenciar",
   approve: "Aprovar",

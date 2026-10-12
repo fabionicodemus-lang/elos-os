@@ -113,9 +113,14 @@ function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string)
 export function ShellNavigation({
   groups,
   homeActive,
+  assistantHref,
+  assistantActive,
 }: {
   groups: ShellNavigationGroup[];
   homeActive?: boolean;
+  /** Link do Elos IA; ausente quando o usuário não tem a permissão. */
+  assistantHref?: string;
+  assistantActive?: boolean;
 }) {
   const pathname = usePathname();
   const navigationGroups = buildNavigationGroups(groups, pathname);
@@ -164,6 +169,13 @@ export function ShellNavigation({
             <span className="elos-icon">⌂</span>
             <span>Início</span>
           </Link>
+
+          {assistantHref ? (
+            <Link className={`elos-main-item ${assistantActive ? "active" : ""}`} href={assistantHref} onClick={closeMobile}>
+              <span className="elos-icon">✦</span>
+              <span>Elos IA</span>
+            </Link>
+          ) : null}
 
           {navigationGroups.map((group) => {
             const open = openGroups.has(group.key) || Boolean(group.active);

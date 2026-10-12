@@ -15,7 +15,7 @@ function initials(value: string) {
 }
 
 export async function AppShell({ activeGroup, activeItem, eyebrow, title, description, actions, children }: {
-  activeGroup: "home" | "system" | "projects" | "engineering" | "execution" | "procurement" | "hr" | "finance" | "commercial" | "postwork";
+  activeGroup: "home" | "ai" | "system" | "projects" | "engineering" | "execution" | "procurement" | "hr" | "finance" | "commercial" | "postwork";
   activeItem?: string; eyebrow: string; title: string; description?: string; actions?: ReactNode; children: ReactNode;
 }) {
   const { supabase, userId, email, company, companyId, projectId, role } = await resolveActiveWorkspace();
@@ -39,6 +39,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const can = (permission: string) => privileged || permissions.has(permission);
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
   const activeProject = projects.find((project) => project.id === projectId) ?? projects[0] ?? null;
+  const assistantHref = can("ai.assistant.use") ? "/elos-ia" : undefined;
   const permissionsHref = privileged || can("admin.roles.view") || can("admin.roles.manage") ? "/configuracoes/permissoes" : undefined;
   const dataBackupHref = privileged || can("admin.data.view") || can("admin.data.export") || can("admin.data.restore") || can("admin.data.manage") ? "/configuracoes/dados-backup" : undefined;
   const legalEntitiesHref = can("projects.view") ? "/empreendimentos/empresas" : undefined;
@@ -176,11 +177,11 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Garantias", href: warrantiesHref, active: activeItem === "warranties", disabled: !warrantiesHref },
     ]},
   ];
-  const groupLabel = groups.find((group) => group.key === activeGroup)?.label ?? "Início";
+  const groupLabel = activeGroup === "ai" ? "Elos IA" : groups.find((group) => group.key === activeGroup)?.label ?? "Início";
 
   return <div className="elos-app-shell">
     <BankAccountPaymentSelector />
-    <ShellNavigation groups={groups} homeActive={activeGroup === "home"} />
+    <ShellNavigation groups={groups} homeActive={activeGroup === "home"} assistantHref={assistantHref} assistantActive={activeGroup === "ai"} />
     <main className="elos-main">
       <header className="elos-header">
         <div className="elos-org"><span className="elos-org-icon">▥</span><span className="elos-org-text"><strong>{company.name}</strong><span>{role.name}</span></span></div>
