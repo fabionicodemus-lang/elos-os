@@ -55,13 +55,9 @@ type GroupSummary = {
   code: string;
   name: string;
   budgetAmount: number;
-  materialCost: number;
-  serviceCost: number;
-  directCost: number;
   payablePaidCost: number;
-  payableOpenCost: number;
-  purchaseOrderCost: number;
-  openCommitment: number;
+  unpaidCost: number;
+  stockValue: number;
   forecastCost: number;
   balance: number;
   consumptionPercent: number;
@@ -122,25 +118,17 @@ function summarizeGroup(group: BudgetGroup, children: DisplayRow[]): GroupSummar
   const totals = children.reduce(
     (summary, row) => {
       summary.budgetAmount += row.budgetAmount;
-      summary.materialCost += row.materialCost;
-      summary.serviceCost += row.serviceCost;
-      summary.directCost += row.directCost;
       summary.payablePaidCost += row.payablePaidCost;
-      summary.payableOpenCost += row.payableOpenCost;
-      summary.purchaseOrderCost += row.purchaseOrderCost;
-      summary.openCommitment += row.openCommitment;
+      summary.unpaidCost += row.unpaidCost;
+      summary.stockValue += row.stockValue;
       summary.forecastCost += row.forecastCost;
       return summary;
     },
     {
       budgetAmount: 0,
-      materialCost: 0,
-      serviceCost: 0,
-      directCost: 0,
       payablePaidCost: 0,
-      payableOpenCost: 0,
-      purchaseOrderCost: 0,
-      openCommitment: 0,
+      unpaidCost: 0,
+      stockValue: 0,
       forecastCost: 0,
     },
   );
@@ -286,15 +274,11 @@ export default async function CostVsBudgetPage({
     .filter((entry) => entry.children.length > 0);
   const ungroupedRows = rows.filter((row) => !row.groupId);
 
-  const comparableRows = context.rows.filter((row) => row.status !== "unallocated");
   const projectLabel = context.project
     ? `${context.project.code ? `${context.project.code} · ` : ""}${context.project.name}`
     : "Selecione uma obra";
   const balanceIsNegative = context.totals.balance < -0.01;
-  const purchaseOrderTotal = comparableRows.reduce((sum, row) => sum + row.purchaseOrderCost, 0);
-  const materialTotal = comparableRows.reduce((sum, row) => sum + row.materialCost, 0);
-  const serviceTotal = comparableRows.reduce((sum, row) => sum + row.serviceCost, 0);
-  const directTotal = comparableRows.reduce((sum, row) => sum + row.directCost, 0);
+  const totalStatus = classifySummary(context.totals.budget, context.totals.forecast);
   const allErrors = [...context.errors, ...hierarchyErrors];
   const stickyHeaderStyle = {
     position: "sticky" as const,
@@ -347,42 +331,43 @@ export default async function CostVsBudgetPage({
               <small>total da revisão selecionada</small>
             </article>
             <article className="actual">
-              <span>Títulos apropriados</span>
-              <strong>{money(context.totals.payableAllocated)}</strong>
-              <small>{money(context.totals.payablePaid)} pagos · {money(context.totals.payableOpen)} em aberto</small>
-            </article>
-            <article className="actual">
-              <span>Custo realizado</span>
-              <strong>{money(context.totals.allocated)}</strong>
-              <small>inclui títulos pagos, consumos, medições e despesas diretas</small>
+              <span>Total pago</span>
+              <strong>{money(context.totals.paid)}</strong>
+              <small>títulos já pagos</small>
             </article>
             <article className="committed">
-              <span>Comprometido pendente</span>
-              <strong>{money(context.totals.committed)}</strong>
-              <small>títulos em aberto e saldo dos pedidos ainda não realizado</small>
+              <span>Total comprometido</span>
+              <strong>{money(context.totals.unpaid)}</strong>
+              <small>títulos em aberto, pedidos, medições e consumos ainda não pagos</small>
             </article>
-            <article className={context.totals.consumptionPercent > 100 ? "danger" : "committed"}>
-              <span>Custo total previsto</span>
-              <strong>{money(context.totals.forecast)}</strong>
-              <small>{percent(context.totals.consumptionPercent)} do orçamento</small>
-            </article>
-            <article className={balanceIsNegative ? "danger" : "ok"}>
-              <span>Saldo do orçamento</span>
-              <strong>{money(context.totals.balance)}</strong>
-              <small>{balanceIsNegative ? "previsão acima do orçamento" : "valor ainda disponível"}</small>
-            </article>
-            <article className={context.totals.unallocated > 0 ? "danger" : "ok"}>
-              <span>Sem apropriação operacional</span>
-              <strong>{money(context.totals.unallocated)}</strong>
+            <article>
+              <span>Estoque</span>
+              <strong>{money(context.totals.stockOnHand)}</strong>
               <small>
-                {context.totals.overBudgetCount + context.totals.withoutBudgetCount} centro(s) crítico(s)
+                {context.totals.stockWithoutService > 0.01
+                  ? `material não aplicado · ${money(context.totals.stockWithoutService)} sem serviço definido`
+                  : "material no almoxarifado, ainda não aplicado"}
               </small>
             </article>
-            <article className={context.totals.payableUnallocated > 0 ? "danger" : "ok"}>
-              <span>Títulos sem apropriação</span>
-              <strong>{money(context.totals.payableUnallocated)}</strong>
-              <small>contas do Koper pendentes para tratamento manual</small>
+            <article className={balanceIsNegative ? "danger" : "ok"}>
+              <span>Saldo</span>
+              <strong>{money(context.totals.balance)}</strong>
+              <small>{percent(context.totals.consumptionPercent)} do orçamento consumido</small>
             </article>
+            {context.totals.unallocated > 0.01 ? (
+              <article className="danger">
+                <span>Sem apropriação</span>
+                <strong>{money(context.totals.unallocated)}</strong>
+                <small>custos sem serviço do orçamento; fora do saldo</small>
+              </article>
+            ) : null}
+            {context.totals.payableUnallocated > 0.01 ? (
+              <article className="danger">
+                <span>Títulos sem apropriação</span>
+                <strong>{money(context.totals.payableUnallocated)}</strong>
+                <small>contas do Koper pendentes para tratamento manual</small>
+              </article>
+            ) : null}
           </section>
 
           <section className="registry-toolbar cashflow-toolbar">
@@ -433,20 +418,15 @@ export default async function CostVsBudgetPage({
               style={{ maxHeight: "calc(100vh - 140px)", overflow: "auto", position: "relative" }}
             >
               <CostVsBudgetExpansionProvider>
-                <table className="registry-table forecast-service-table" style={{ minWidth: 2060 }}>
+                <table className="registry-table forecast-service-table" style={{ minWidth: 1240 }}>
                   <thead>
                     <tr>
                       <th style={stickyHeaderStyle}>Grupo / Centro de custo · Serviço</th>
                       <th style={stickyHeaderStyle}>Orçamento</th>
-                      <th style={stickyHeaderStyle}>Materiais realizados</th>
-                      <th style={stickyHeaderStyle}>Serviços medidos</th>
-                      <th style={stickyHeaderStyle}>Despesas diretas</th>
-                      <th style={stickyHeaderStyle}>Títulos pagos</th>
-                      <th style={stickyHeaderStyle}>Títulos em aberto</th>
-                      <th style={stickyHeaderStyle}>Pedidos emitidos</th>
-                      <th style={stickyHeaderStyle}>Comprometido pendente</th>
-                      <th style={stickyHeaderStyle}>Custo previsto</th>
-                      <th style={stickyHeaderStyle}>Saldo</th>
+                      <th style={stickyHeaderStyle} title="Títulos já pagos">Total pago</th>
+                      <th style={stickyHeaderStyle} title="Títulos em aberto, saldo de pedidos, medições e consumos ainda não pagos">Total comprometido</th>
+                      <th style={stickyHeaderStyle} title="Material no almoxarifado para este serviço, ainda não aplicado. Só informativo: já está no pago ou no comprometido.">Estoque</th>
+                      <th style={stickyHeaderStyle} title="Orçamento − Total pago − Total comprometido">Saldo</th>
                       <th style={stickyHeaderStyle}>Consumo</th>
                       <th style={stickyHeaderStyle}>Situação</th>
                     </tr>
@@ -463,21 +443,16 @@ export default async function CostVsBudgetPage({
                         </small>
                       </td>
                       <td><strong>{money(context.totals.budget)}</strong></td>
-                      <td><strong>{money(materialTotal)}</strong></td>
-                      <td><strong>{money(serviceTotal)}</strong></td>
-                      <td><strong>{money(directTotal)}</strong></td>
-                      <td><strong>{money(context.totals.payablePaid)}</strong></td>
-                      <td><strong>{money(context.totals.payableOpen)}</strong></td>
-                      <td><strong>{money(purchaseOrderTotal)}</strong></td>
-                      <td><strong>{money(context.totals.committed)}</strong></td>
-                      <td><strong>{money(context.totals.forecast)}</strong></td>
+                      <td><strong>{money(context.totals.paid)}</strong></td>
+                      <td><strong>{money(context.totals.unpaid)}</strong></td>
+                      <td><strong>{money(context.totals.stockOnHand)}</strong></td>
                       <td>
                         <strong className={balanceIsNegative ? "forecast-danger" : context.totals.balance > 0 ? "forecast-positive" : ""}>
                           {money(context.totals.balance)}
                         </strong>
                       </td>
-                      <td>{consumptionBar(classifySummary(context.totals.budget, context.totals.forecast), context.totals.consumptionPercent)}</td>
-                      <td>{statusBadge(classifySummary(context.totals.budget, context.totals.forecast))}</td>
+                      <td>{consumptionBar(totalStatus, context.totals.consumptionPercent)}</td>
+                      <td>{statusBadge(totalStatus)}</td>
                     </tr>
 
                     {visibleGroups.map(({ group, children, summary }) => (
@@ -491,14 +466,9 @@ export default async function CostVsBudgetPage({
                             <small style={{ color: "var(--muted)", fontWeight: 700 }}>{children.length} serviço(s)</small>
                           </td>
                           <td><strong>{money(summary.budgetAmount)}</strong></td>
-                          <td><strong>{money(summary.materialCost)}</strong></td>
-                          <td><strong>{money(summary.serviceCost)}</strong></td>
-                          <td><strong>{money(summary.directCost)}</strong></td>
                           <td><strong>{money(summary.payablePaidCost)}</strong></td>
-                          <td><strong>{money(summary.payableOpenCost)}</strong></td>
-                          <td><strong>{money(summary.purchaseOrderCost)}</strong></td>
-                          <td><strong>{money(summary.openCommitment)}</strong></td>
-                          <td><strong>{money(summary.forecastCost)}</strong></td>
+                          <td><strong>{money(summary.unpaidCost)}</strong></td>
+                          <td><strong>{money(summary.stockValue)}</strong></td>
                           <td>
                             <strong className={summary.balance < 0 ? "forecast-danger" : summary.balance > 0 ? "forecast-positive" : ""}>
                               {money(summary.balance)}
@@ -519,7 +489,7 @@ export default async function CostVsBudgetPage({
 
                     {ungroupedRows.length > 0 ? (
                       <tr style={{ background: "#f5f7f7", borderTop: "2px solid #dfe6e5" }}>
-                        <td colSpan={13}><strong>Sem grupo no orçamento</strong></td>
+                        <td colSpan={8}><strong>Sem grupo no orçamento</strong></td>
                       </tr>
                     ) : null}
                     {ungroupedRows.map((row) => (
@@ -531,7 +501,7 @@ export default async function CostVsBudgetPage({
                     ))}
 
                     {rows.length === 0 ? (
-                      <tr><td colSpan={13} className="budget-empty-state"><strong>Nenhum centro de custo encontrado.</strong><span>Revise os filtros aplicados.</span></td></tr>
+                      <tr><td colSpan={8} className="budget-empty-state"><strong>Nenhum centro de custo encontrado.</strong><span>Revise os filtros aplicados.</span></td></tr>
                     ) : null}
                   </tbody>
                 </table>

@@ -39,7 +39,11 @@ type InventoryMovement = {
   cost_center_service_id: string | null;
   cost_center_code: string | null;
   cost_center_name: string | null;
-  movement_type: "issue" | "adjustment_out" | "return_to_stock";
+  movement_type: "receipt" | "adjustment_in" | "issue" | "adjustment_out" | "return_to_stock" | "return_to_supplier";
+  total_value: number;
+};
+
+type InventoryBalance = {
   total_value: number;
 };
 
@@ -132,12 +136,16 @@ type WorkingRow = {
   coveredPurchaseOrderCost: number;
   payablePaidCost: number;
   payableOpenCost: number;
+  /** Material que entrou no estoque da obra para este serviço e ainda não foi aplicado. */
+  stockValue: number;
 };
 
 export type CostVsBudgetStatus = "ok" | "attention" | "over" | "no_budget" | "unallocated";
 
 export type CostVsBudgetRow = WorkingRow & {
   allocatedCost: number;
+  /** Tudo o que compõe o custo previsto e ainda não foi pago (custo previsto − títulos pagos). */
+  unpaidCost: number;
   openCommitment: number;
   forecastCost: number;
   balance: number;
@@ -162,6 +170,14 @@ export type CostVsBudgetTotals = {
   payablePaid: number;
   payableOpen: number;
   payableUnallocated: number;
+  /** Títulos pagos dos centros de custo comparáveis. */
+  paid: number;
+  /** Custo previsto ainda não pago (previsto − pago). */
+  unpaid: number;
+  /** Valor total em estoque na obra (saldo do almoxarifado). */
+  stockOnHand: number;
+  /** Parte do estoque que não pôde ser ligada a um serviço. */
+  stockWithoutService: number;
 };
 
 export type CostVsBudgetContext = {
@@ -220,6 +236,10 @@ function emptyTotals(): CostVsBudgetTotals {
     payablePaid: 0,
     payableOpen: 0,
     payableUnallocated: 0,
+    paid: 0,
+    unpaid: 0,
+    stockOnHand: 0,
+    stockWithoutService: 0,
   };
 }
 
@@ -315,6 +335,7 @@ export async function loadCostVsBudget({
     electronicInvoiceItemsResult,
     koperPayablesResult,
     payableAllocationsResult,
+    inventoryBalancesResult,
   ] = await Promise.all([
     fetchAllRows<BudgetItem>(async (from, to) => {
       const { data, error } = await supabase
@@ -333,7 +354,7 @@ export async function loadCostVsBudget({
         .select("cost_center_service_id, cost_center_code, cost_center_name, movement_type, total_value")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
-        .in("movement_type", ["issue", "adjustment_out", "return_to_stock"])
+        .in("movement_type", ["receipt", "adjustment_in", "issue", "adjustment_out", "return_to_stock", "return_to_supplier"])
         .range(from, to);
       return { data: (data ?? []) as InventoryMovement[], error };
     }),
@@ -434,6 +455,17 @@ export async function loadCostVsBudget({
         .range(from, to);
       return { data: (data ?? []) as PayableCostAllocation[], error };
     }),
+    fetchAllRows<InventoryBalance>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("procurement_inventory_balances")
+        .select("id, total_value")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .gt("quantity_on_hand", 0)
+        .order("id")
+        .range(from, to);
+      return { data: (data ?? []) as InventoryBalance[], error };
+    }),
   ]);
 
   const errors = [
@@ -450,6 +482,7 @@ export async function loadCostVsBudget({
     electronicInvoiceItemsResult.error?.message,
     koperPayablesResult.error?.message,
     payableAllocationsResult.error?.message,
+    inventoryBalancesResult.error?.message,
   ].filter(Boolean) as string[];
 
   const serviceById = new Map(servicesResult.data.map((service) => [service.id, service]));
@@ -472,6 +505,7 @@ export async function loadCostVsBudget({
       coveredPurchaseOrderCost: 0,
       payablePaidCost: 0,
       payableOpenCost: 0,
+      stockValue: 0,
     };
     rows.set(id, next);
     return next;
@@ -496,8 +530,13 @@ export async function loadCostVsBudget({
       movement.cost_center_code ?? "SEM-APROPRIAÇÃO",
       movement.cost_center_name ?? "Materiais consumidos sem centro de custo",
     );
-    const sign = movement.movement_type === "return_to_stock" ? -1 : 1;
-    row.materialCost += sign * number(movement.total_value);
+    const value = number(movement.total_value);
+    // Consumo: saídas para a obra (devolução ao estoque estorna o consumo).
+    if (movement.movement_type === "issue" || movement.movement_type === "adjustment_out") row.materialCost += value;
+    if (movement.movement_type === "return_to_stock") row.materialCost -= value;
+    // Estoque do serviço: entradas menos saídas com o mesmo centro de custo.
+    if (["receipt", "adjustment_in", "return_to_stock"].includes(movement.movement_type)) row.stockValue += value;
+    else row.stockValue -= value;
   }
 
   const activePurchaseOrderIds = new Set(purchaseOrdersResult.data.map((order) => order.id));
@@ -618,12 +657,15 @@ export async function loadCostVsBudget({
       const openCommitment = row.payableOpenCost + residualPurchaseOrder;
       const forecastCost = allocatedCost + openCommitment;
       const balance = row.budgetAmount - forecastCost;
+      const unpaidCost = forecastCost - row.payablePaidCost;
       const consumptionPercent = row.budgetAmount > 0
         ? forecastCost / row.budgetAmount * 100
         : forecastCost > 0 ? 100 : 0;
       return {
         ...row,
+        stockValue: Math.max(0, row.stockValue),
         allocatedCost,
+        unpaidCost,
         openCommitment,
         forecastCost,
         balance,
@@ -660,6 +702,15 @@ export async function loadCostVsBudget({
 
   totals.forecast = totals.allocated + totals.committed;
   totals.balance = totals.budget - totals.forecast;
+  totals.paid = resultRows
+    .filter((row) => row.id !== UNALLOCATED_COST_ID)
+    .reduce((sum, row) => sum + row.payablePaidCost, 0);
+  totals.unpaid = totals.forecast - totals.paid;
+  totals.stockOnHand = inventoryBalancesResult.data.reduce((sum, balance) => sum + Math.max(0, number(balance.total_value)), 0);
+  const stockByService = resultRows
+    .filter((row) => row.id !== UNALLOCATED_COST_ID)
+    .reduce((sum, row) => sum + row.stockValue, 0);
+  totals.stockWithoutService = Math.max(0, totals.stockOnHand - stockByService);
   totals.consumptionPercent = totals.budget > 0 ? totals.forecast / totals.budget * 100 : 0;
 
   return {
