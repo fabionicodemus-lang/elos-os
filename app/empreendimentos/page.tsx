@@ -7,6 +7,7 @@ import {
   type LegalEntityOption,
   type ProjectRegistryData,
 } from "./project-dialogs";
+import { ProjectDeleteDialog } from "./project-delete-dialog";
 
 const IMAGE_BUCKET = "project-images";
 
@@ -164,6 +165,7 @@ export default async function ProjectsRegistryPage({
                     <td>
                       <div className="project-table-actions">
                         {canManage ? <ProjectEditDialog project={project} legalEntities={legalEntities} /> : null}
+                        {canManage ? <ProjectDeleteDialog project={project} /> : null}
                         <form action={selectProjectFromRegistry}>
                           <input type="hidden" name="project_id" value={project.id} />
                           <button className="project-table-action project-table-open" type="submit">Abrir</button>
