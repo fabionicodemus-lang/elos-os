@@ -119,7 +119,7 @@ function TitlesDetail({ row, titles }: { row: ServiceDisplayRow; titles: CostVsB
   const allocatedTotal = titles.reduce((sum, title) => sum + title.allocatedAmount, 0);
   return (
     <tr style={{ background: "#f8fbfa" }}>
-      <td colSpan={13} style={{ padding: "0 16px 18px 46px", borderTop: 0 }}>
+      <td colSpan={8} style={{ padding: "0 16px 18px 46px", borderTop: 0 }}>
         <div
           onClick={(event) => event.stopPropagation()}
           style={{
@@ -232,14 +232,9 @@ export function CostVsBudgetServiceRow({
           </small>
         </td>
         <td>{money(row.budgetAmount)}</td>
-        <td>{money(row.materialCost)}</td>
-        <td>{money(row.serviceCost)}</td>
-        <td>{money(row.directCost)}</td>
         <td>{money(row.payablePaidCost)}</td>
-        <td>{money(row.payableOpenCost)}</td>
-        <td>{money(row.purchaseOrderCost)}</td>
-        <td>{money(row.openCommitment)}</td>
-        <td><strong>{money(row.forecastCost)}</strong></td>
+        <td>{money(row.unpaidCost)}</td>
+        <td>{money(row.stockValue)}</td>
         <td>
           <strong className={row.balance < 0 ? "forecast-danger" : row.balance > 0 ? "forecast-positive" : ""}>
             {money(row.balance)}
