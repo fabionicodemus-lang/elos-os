@@ -159,9 +159,9 @@ export default async function EngineeringCurvesPage({
       description={`${company.name} · ${contextLabel} · previsão financeira unificada.`}
       actions={
         <>
-          <Link className="elos-button" href={baseline ? `/engenharia/cronograma?baseline=${baseline.id}` : "/engenharia/cronograma"}>Voltar ao cronograma</Link>
-          <Link className="elos-button" href="/engenharia/previsao-financeira">Previsão por serviço</Link>
-          <Link className="elos-button elos-button-primary" href="/engenharia/contratos">Contratos</Link>
+          <Link prefetch={false} className="elos-button" href={baseline ? `/engenharia/cronograma?baseline=${baseline.id}` : "/engenharia/cronograma"}>Voltar ao cronograma</Link>
+          <Link prefetch={false} className="elos-button" href="/engenharia/previsao-financeira">Previsão por serviço</Link>
+          <Link prefetch={false} className="elos-button elos-button-primary" href="/engenharia/contratos">Contratos</Link>
         </>
       }
     >
@@ -277,7 +277,7 @@ export default async function EngineeringCurvesPage({
               <section className="curves-chart-card">
                 <div className="curves-section-head">
                   <div><span>Composição financeira</span><h2>Realizado, comprometido e a comprometer</h2></div>
-                  <Link className="elos-button" href="/engenharia/previsao-financeira">Abrir por serviço</Link>
+                  <Link prefetch={false} className="elos-button" href="/engenharia/previsao-financeira">Abrir por serviço</Link>
                 </div>
                 <div className="forecast-composition-bars">
                   {rows.map((row) => {

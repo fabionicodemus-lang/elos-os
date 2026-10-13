@@ -189,12 +189,12 @@ export default async function MaterialRequestsPage({ searchParams }: {
     </section>
 
     <nav className="material-request-tabs">
-      <Link className={view === "pending" ? "active" : ""} href="/execucao/solicitacoes-materiais">Solicitações pendentes</Link>
-      <Link className={view === "history" ? "active" : ""} href="/execucao/solicitacoes-materiais?view=history">Atendidas e canceladas</Link>
+      <Link prefetch={false} className={view === "pending" ? "active" : ""} href="/execucao/solicitacoes-materiais">Solicitações pendentes</Link>
+      <Link prefetch={false} className={view === "history" ? "active" : ""} href="/execucao/solicitacoes-materiais?view=history">Atendidas e canceladas</Link>
     </nav>
 
     <section className="material-request-toolbar">
-      <form method="get"><input type="hidden" name="view" value={view} /><input name="q" defaultValue={params.q ?? ""} placeholder="Buscar número, solicitante, código ou material" /><select name="status" defaultValue={statusFilter}><option value="">Todos os status</option>{Object.entries(statusLabels).filter(([key]) => view === "history" ? ["attended", "cancelled"].includes(key) : !["attended", "cancelled"].includes(key)).map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select><button type="submit">Filtrar</button><Link href={view === "history" ? "?view=history" : "/execucao/solicitacoes-materiais"}>Limpar</Link></form>
+      <form method="get"><input type="hidden" name="view" value={view} /><input name="q" defaultValue={params.q ?? ""} placeholder="Buscar número, solicitante, código ou material" /><select name="status" defaultValue={statusFilter}><option value="">Todos os status</option>{Object.entries(statusLabels).filter(([key]) => view === "history" ? ["attended", "cancelled"].includes(key) : !["attended", "cancelled"].includes(key)).map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select><button type="submit">Filtrar</button><Link prefetch={false} href={view === "history" ? "?view=history" : "/execucao/solicitacoes-materiais"}>Limpar</Link></form>
     </section>
 
     <section className="material-request-table-card">

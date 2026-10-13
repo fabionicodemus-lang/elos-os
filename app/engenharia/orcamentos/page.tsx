@@ -266,7 +266,7 @@ export default async function BudgetsPage({
             {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
           <button type="submit">Filtrar</button>
-          <Link href="/engenharia/orcamentos">Limpar</Link>
+          <Link prefetch={false} href="/engenharia/orcamentos">Limpar</Link>
         </form>
       </section>
 
@@ -315,7 +315,7 @@ export default async function BudgetsPage({
                     <td><strong>{money(metrics.direct)}</strong></td>
                     <td>{Number(budget.area_m2) > 0 ? money(costPerM2) : "—"}</td>
                     <td>{dateBR(budget.updated_at)}</td>
-                    <td><Link className="table-action" href={`/engenharia/orcamentos/${budget.id}`}>Abrir orçamento</Link></td>
+                    <td><Link prefetch={false} className="table-action" href={`/engenharia/orcamentos/${budget.id}`}>Abrir orçamento</Link></td>
                   </tr>
                 );
               })}
@@ -333,8 +333,8 @@ export default async function BudgetsPage({
         <div className="registry-pagination">
           <span>Página {page} de {totalPages}</span>
           <div>
-            {page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
-            {page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
+            {page > 1 ? <Link prefetch={false} href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
+            {page < totalPages ? <Link prefetch={false} href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
           </div>
         </div>
       </section>

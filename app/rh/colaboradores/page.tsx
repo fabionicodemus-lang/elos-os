@@ -134,7 +134,7 @@ export default async function EmployeesPage({ searchParams }: {
       eyebrow="Recursos Humanos"
       title="Colaboradores"
       description={`${company.name} · cadastro, vínculo, alocação, salário-base e dados de pagamento.`}
-      actions={<Link className="elos-button primary" href="/rh/folha">Abrir folha de pagamento</Link>}
+      actions={<Link prefetch={false} className="elos-button primary" href="/rh/folha">Abrir folha de pagamento</Link>}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
@@ -168,7 +168,7 @@ export default async function EmployeesPage({ searchParams }: {
                 {projects.map((project) => <option key={project.id} value={project.id}>{project.code ? `${project.code} · ` : ""}{project.name}</option>)}
               </select>
               <button type="submit">Filtrar</button>
-              <Link href="/rh/colaboradores">Limpar</Link>
+              <Link prefetch={false} href="/rh/colaboradores">Limpar</Link>
             </form>
             {canManage ? <details className="hr-create-panel"><summary>+ Novo colaborador</summary><EmployeeForm projects={projects} /></details> : null}
           </section>

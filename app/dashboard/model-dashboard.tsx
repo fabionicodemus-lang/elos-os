@@ -634,7 +634,7 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
     description="Visão consolidada de todos os módulos, empreendimentos e atividades do Elos OS."
     actions={<>
       <DashboardPrintButton label="🖨 Imprimir relatório" className="elos-button" />
-      {canBackup ? <Link className="elos-button" href="/configuracoes/dados-backup">Exportar backup</Link> : null}
+      {canBackup ? <Link prefetch={false} className="elos-button" href="/configuracoes/dados-backup">Exportar backup</Link> : null}
     </>}
   >
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
@@ -697,22 +697,22 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
         /> : null}
 
         {can("execution.quality.view") ? <>
-          <Link className="v20-kpi v20-span3" href="/execucao/qualidade">
+          <Link prefetch={false} className="v20-kpi v20-span3" href="/execucao/qualidade">
             <div className="v20-kpi-top"><span className="v20-kpi-icon green">★</span><span className="v20-kpi-label">Qualidade · nota acumulada</span></div>
             <div className="v20-kpi-value">{qualityScore === null ? "—" : qualityScore.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</div>
             <div className="v20-kpi-foot">Notas da obra — 1ª inspeção</div>
           </Link>
-          <Link className="v20-kpi v20-span3" href="/execucao/qualidade?tab=indicators">
+          <Link prefetch={false} className="v20-kpi v20-span3" href="/execucao/qualidade?tab=indicators">
             <div className="v20-kpi-top"><span className="v20-kpi-icon blue">✓</span><span className="v20-kpi-label">Aprovação 1ª inspeção</span></div>
             <div className="v20-kpi-value">{qualityFirstApproval === null ? "—" : `${qualityFirstApproval.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`}</div>
             <div className="v20-kpi-foot">{qualityFirstApproval === null ? "Sem vistorias concluídas" : "Aprovação na primeira vistoria"}</div>
           </Link>
-          <Link className="v20-kpi v20-span3" href="/execucao/qualidade?tab=all&status=pending">
+          <Link prefetch={false} className="v20-kpi v20-span3" href="/execucao/qualidade?tab=all&status=pending">
             <div className="v20-kpi-top"><span className="v20-kpi-icon amber">◷</span><span className="v20-kpi-label">Vistorias pendentes</span></div>
             <div className="v20-kpi-value">{pendingQuality.length}</div>
             <div className="v20-kpi-foot">Aguardando conclusão</div>
           </Link>
-          <Link className="v20-kpi v20-span3" href="/execucao/qualidade?tab=blocked">
+          <Link prefetch={false} className="v20-kpi v20-span3" href="/execucao/qualidade?tab=blocked">
             <div className="v20-kpi-top"><span className="v20-kpi-icon red">⚠</span><span className="v20-kpi-label">Serviços bloqueados</span></div>
             <div className="v20-kpi-value">{blockedQuality.length}</div>
             <div className="v20-kpi-foot">{blockedQuality.length ? `${blockedQuality.length} bloqueio(s) ativo(s)` : "Nenhum bloqueio ativo"}</div>

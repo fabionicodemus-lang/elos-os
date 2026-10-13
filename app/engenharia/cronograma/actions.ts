@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { linkBudgetItemsToCatalog } from "@/lib/budget-service-link";
-import { planScheduleFromBudget } from "./schedule-generation.mjs";
+import { defaultStageWindow, planScheduleFromBudget } from "./schedule-generation.mjs";
 import { extractSchedulePayload } from "./schedule-portable.mjs";
 import { rescheduleFromMove } from "./schedule-cascade.mjs";
 
@@ -350,6 +350,27 @@ export async function updateScheduleBaselineStatus(formData: FormData) {
   redirect(resultUrl(status === "approved" ? "Linha de base aprovada e oficializada." : "Status da linha de base atualizado.", "success", references.baseline.id));
 }
 
+// Aprova de uma vez todas as atividades ativas da linha de base (antes era preciso
+// abrir e aprovar atividade por atividade para poder oficializar a linha de base).
+export async function approveAllScheduleActivities(formData: FormData) {
+  const references = await loadBaseline(formData);
+  if (references.baseline.status === "approved") {
+    redirect(resultUrl("A linha de base já está oficializada.", "error", references.baseline.id));
+  }
+  const { data, error } = await references.supabase
+    .from("engineering_schedule_activities")
+    .update({ planning_status: "approved", updated_at: new Date().toISOString() })
+    .eq("baseline_id", references.baseline.id)
+    .eq("company_id", references.companyId)
+    .eq("project_id", references.projectId)
+    .eq("record_status", "active")
+    .neq("planning_status", "approved")
+    .select("id");
+  if (error) redirect(resultUrl(error.message, "error", references.baseline.id));
+  revalidatePath(LIST_PATH);
+  redirect(resultUrl(`${data?.length ?? 0} atividade(s) aprovada(s).`, "success", references.baseline.id));
+}
+
 export async function generateScheduleFromTakeoffs(formData: FormData) {
   const references = await loadBaseline(formData);
   const { supabase, companyId, projectId, userId, baseline } = references;
@@ -404,7 +425,7 @@ export async function generateScheduleFromTakeoffs(formData: FormData) {
     fetchAllRows<BudgetItem>(async (from, to) => {
       const { data, error } = await supabase
         .from("engineering_budget_items")
-        .select("service_id, total_direct_cost, status")
+        .select("service_id, total_direct_cost, quantity, status")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .eq("budget_id", baseline.budget_id)
@@ -438,15 +459,34 @@ export async function generateScheduleFromTakeoffs(formData: FormData) {
 
   if (plan.activities.length === 0) redirect(resultUrl("Nenhuma atividade pôde ser gerada.", "error", baseline.id));
 
-  // Datas: 5 dias úteis com 1 equipe como premissa; cada serviço encadeia seus locais no tempo.
-  const duration = 5;
-  const currentByService = new Map<string, Date>();
+  // Datas: cada serviço recebe uma janela típica da sua etapa (fundação, estrutura,
+  // alvenaria, acabamentos...) proporcional ao prazo da obra (início da linha de
+  // base até a entrega prevista do empreendimento; sem entrega, 30 meses). Os
+  // locais de um mesmo serviço dividem a janela em sequência.
+  const saturday = baseline.work_on_saturday;
+  const baselineStart = normalizeStartDate(parseIsoDate(baseline.start_date)!, saturday);
+  const { data: projectDates } = await supabase.from("projects").select("delivery_date").eq("id", projectId).eq("company_id", companyId).maybeSingle();
+  const delivery = parseIsoDate(String(projectDates?.delivery_date ?? "").slice(0, 10));
+  let totalWorkdays = 0;
+  if (delivery && delivery > baselineStart) {
+    const cursor = new Date(baselineStart);
+    while (cursor <= delivery) { if (isWorkday(cursor, saturday)) totalWorkdays += 1; cursor.setUTCDate(cursor.getUTCDate() + 1); }
+  }
+  if (totalWorkdays < 20) totalWorkdays = saturday ? 780 : 650;
+  const serviceCodeById = new Map(servicesResult.data.map((service) => [service.id, service.code]));
+  const partsByService = new Map<string, number>();
+  plan.activities.forEach((activity) => partsByService.set(activity.serviceId, (partsByService.get(activity.serviceId) ?? 0) + 1));
+  const partIndexByService = new Map<string, number>();
   const generatedActivities = plan.activities.map((activity, index) => {
-    const start = currentByService.get(activity.serviceId) ?? normalizeStartDate(parseIsoDate(baseline.start_date)!, baseline.work_on_saturday);
-    const finish = addWorkdays(start, duration, baseline.work_on_saturday);
-    const nextStart = new Date(finish);
-    nextStart.setUTCDate(nextStart.getUTCDate() + 1);
-    currentByService.set(activity.serviceId, normalizeStartDate(nextStart, baseline.work_on_saturday));
+    const [startFraction, durationFraction] = defaultStageWindow(serviceCodeById.get(activity.serviceId));
+    const parts = partsByService.get(activity.serviceId) ?? 1;
+    const partIndex = partIndexByService.get(activity.serviceId) ?? 0;
+    partIndexByService.set(activity.serviceId, partIndex + 1);
+    const windowDays = Math.max(parts * 5, Math.round(durationFraction * totalWorkdays));
+    const duration = Math.max(5, Math.floor(windowDays / parts));
+    const offset = Math.round(startFraction * totalWorkdays) + partIndex * duration;
+    const start = offset > 0 ? addWorkdays(baselineStart, offset + 1, saturday) : new Date(baselineStart);
+    const finish = addWorkdays(start, duration, saturday);
     const quantity = Math.max(0, Number(activity.quantity));
     return {
       company_id: companyId,
@@ -467,7 +507,7 @@ export async function generateScheduleFromTakeoffs(formData: FormData) {
       sort_order: index + 1,
       planning_status: "draft",
       source: "takeoff",
-      notes: "Premissa inicial: 5 dias úteis com 1 equipe. Valor ancorado no orçamento. Revisar produtividade, equipe e predecessora.",
+      notes: "Premissa inicial: janela típica da etapa proporcional ao prazo da obra, 1 equipe. Valor ancorado no orçamento. Revisar produtividade, equipe e predecessora.",
       record_status: "active",
       created_by: userId,
     };

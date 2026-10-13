@@ -97,7 +97,7 @@ export default async function ProjectCharacteristicsPage() {
         <section className="project-details-empty">
           <strong>Nenhum empreendimento selecionado.</strong>
           <span>Cadastre ou selecione um empreendimento para visualizar suas características.</span>
-          <Link href="/empreendimentos">Abrir cadastro de empreendimentos</Link>
+          <Link prefetch={false} href="/empreendimentos">Abrir cadastro de empreendimentos</Link>
         </section>
       ) : (
         <section className="project-details-view">

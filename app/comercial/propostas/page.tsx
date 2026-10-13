@@ -132,7 +132,7 @@ export default async function ProposalsPage({ searchParams }: {
     eyebrow="Comercial"
     title="Propostas"
     description={`${company.name}${project ? ` · ${project.code ? `${project.code} · ` : ""}${project.name}` : " · todos os empreendimentos"} · negociações antes da venda.`}
-    actions={<><Link className="elos-button" href="/comercial/corretores">Abrir corretores</Link><Link className="elos-button" href="/comercial/vendas">Abrir vendas</Link><Link className="elos-button" href="/cadastros/clientes">Abrir clientes</Link></>}
+    actions={<><Link prefetch={false} className="elos-button" href="/comercial/corretores">Abrir corretores</Link><Link prefetch={false} className="elos-button" href="/comercial/vendas">Abrir vendas</Link><Link prefetch={false} className="elos-button" href="/cadastros/clientes">Abrir clientes</Link></>}
   >
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
@@ -151,7 +151,7 @@ export default async function ProposalsPage({ searchParams }: {
           <select name="status" defaultValue={status}><option value="">Todos os status</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           <select name="client" defaultValue={clientId}><option value="">Todos os clientes</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select>
           <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateRange.from} defaultTo={dateRange.to} />
-          <button type="submit">Filtrar</button><Link href="/comercial/propostas">Limpar</Link>
+          <button type="submit">Filtrar</button><Link prefetch={false} href="/comercial/propostas">Limpar</Link>
         </form>
 
         {canManage && projectId ? <details className="registry-create proposal-create">
@@ -192,11 +192,11 @@ export default async function ProposalsPage({ searchParams }: {
               <td><span>{money(proposal.discount_amount)}</span><small>{Number(proposal.discount_percentage).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%</small></td>
               <td>{proposal.broker_name || "—"}</td>
               <td><span className={`proposal-status ${overdue ? "expired" : proposal.status}`}>{overdue ? "Vencida" : statusLabels[proposal.status] || proposal.status}</span></td>
-              <td><Link className="table-action table-action-link" href={`/comercial/propostas/${proposal.id}`}>{proposal.converted_sale_id ? "Ver proposta" : "Abrir"}</Link></td>
+              <td><Link prefetch={false} className="table-action table-action-link" href={`/comercial/propostas/${proposal.id}`}>{proposal.converted_sale_id ? "Ver proposta" : "Abrir"}</Link></td>
             </tr>;
           })}{!proposals.length ? <tr><td className="empty-table" colSpan={10}>Nenhuma proposta encontrada.</td></tr> : null}</tbody>
         </table></div>
-        <div className="registry-pagination"><span>Página {page} de {totalPages}</span><div>{page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}{page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}</div></div>
+        <div className="registry-pagination"><span>Página {page} de {totalPages}</span><div>{page > 1 ? <Link prefetch={false} href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}{page < totalPages ? <Link prefetch={false} href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}</div></div>
       </section>
     </>}
   </AppShell>;

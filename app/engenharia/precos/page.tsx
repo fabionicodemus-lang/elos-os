@@ -254,12 +254,12 @@ export default async function EngineeringPricesPage({
       ) : null}
 
       <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">
-        <Link href="/engenharia/orcamentos">▦ Visão geral</Link>
-        <Link href="/engenharia/servicos">≡ Serviços</Link>
-        <Link href="/engenharia/insumos">◈ Insumos</Link>
+        <Link prefetch={false} href="/engenharia/orcamentos">▦ Visão geral</Link>
+        <Link prefetch={false} href="/engenharia/servicos">≡ Serviços</Link>
+        <Link prefetch={false} href="/engenharia/insumos">◈ Insumos</Link>
         <span className="active">$ Preços e cotações</span>
-        <Link href="/engenharia/levantamento">∑ Levantamento</Link>
-        <Link href="/engenharia/orcamento-analitico">R$ Orçamento analítico</Link>
+        <Link prefetch={false} href="/engenharia/levantamento">∑ Levantamento</Link>
+        <Link prefetch={false} href="/engenharia/orcamento-analitico">R$ Orçamento analítico</Link>
       </nav>
 
       <section className="price-kpi-grid">
@@ -310,7 +310,7 @@ export default async function EngineeringPricesPage({
           </select>
           <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateRange.from} defaultTo={dateRange.to} />
           <button type="submit">Filtrar</button>
-          <Link href="/engenharia/precos">Limpar</Link>
+          <Link prefetch={false} href="/engenharia/precos">Limpar</Link>
         </form>
       </section>
 
@@ -370,8 +370,8 @@ export default async function EngineeringPricesPage({
         <div className="registry-pagination">
           <span>Página {page} de {totalPages}</span>
           <div>
-            {page > 1 ? <Link href={buildQuery(filterParams, page - 1)}>Anterior</Link> : null}
-            {page < totalPages ? <Link href={buildQuery(filterParams, page + 1)}>Próxima</Link> : null}
+            {page > 1 ? <Link prefetch={false} href={buildQuery(filterParams, page - 1)}>Anterior</Link> : null}
+            {page < totalPages ? <Link prefetch={false} href={buildQuery(filterParams, page + 1)}>Próxima</Link> : null}
           </div>
         </div>
       </section>

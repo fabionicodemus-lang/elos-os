@@ -307,7 +307,7 @@ export default async function DataBackupPage({
                     <code className="backup-checksum" title={record.checksum_sha256 || undefined}>SHA-256 {shortChecksum(record.checksum_sha256)}</code>
                   </div>
                   <div className="backup-export-actions">
-                    {status === "ready" ? <Link className="data-backup-primary" href={`/configuracoes/dados-backup/download/${record.id}`}>Baixar</Link> : null}
+                    {status === "ready" ? <Link prefetch={false} className="data-backup-primary" href={`/configuracoes/dados-backup/download/${record.id}`}>Baixar</Link> : null}
                     {canRestore && status === "ready" ? (
                       <details className="backup-action-details">
                         <summary>Solicitar restauração</summary>

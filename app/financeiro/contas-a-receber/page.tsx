@@ -179,9 +179,9 @@ export default async function AccountsReceivablePage({
       description={`${company.name}${project ? ` · ${project.code ? `${project.code} · ` : ""}${project.name}` : " · todas as obras"}`}
       actions={
         <>
-          <Link className="elos-button" href="/comercial/planos-de-pagamento">Planos de Pagamento</Link>
-          <Link className="elos-button" href="/comercial/vendas">Vendas</Link>
-          <Link className="elos-button" href="/financeiro/indices-de-correcao">Índices de correção</Link>
+          <Link prefetch={false} className="elos-button" href="/comercial/planos-de-pagamento">Planos de Pagamento</Link>
+          <Link prefetch={false} className="elos-button" href="/comercial/vendas">Vendas</Link>
+          <Link prefetch={false} className="elos-button" href="/financeiro/indices-de-correcao">Índices de correção</Link>
         </>
       }
     >
@@ -215,7 +215,7 @@ export default async function AccountsReceivablePage({
           </select>
           <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateFrom} defaultTo={dateTo} />
           <button type="submit">Filtrar</button>
-          <Link href="/financeiro/contas-a-receber">Limpar</Link>
+          <Link prefetch={false} href="/financeiro/contas-a-receber">Limpar</Link>
         </form>
       </section>
 
@@ -253,7 +253,7 @@ export default async function AccountsReceivablePage({
                     <td><span>{receivable.adjustment_index || "Sem correção"}</span><small>{correctionDetails}</small></td>
                     <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{overdue ? "Vencida" : receivable.status === "open" ? "Em aberto" : receivable.status === "paid" ? "Recebida" : "Cancelada"}</span></td>
                     <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : "—"}</span><small>{receivable.paid_at ? `${money(receivable.paid_amount ?? updatedValue)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
-                    <td><Link className="table-action" href={`/comercial/vendas/${receivable.sale_id}`}>Abrir venda</Link></td>
+                    <td><Link prefetch={false} className="table-action" href={`/comercial/vendas/${receivable.sale_id}`}>Abrir venda</Link></td>
                   </tr>
                 );
               })}
@@ -264,8 +264,8 @@ export default async function AccountsReceivablePage({
         <div className="registry-pagination">
           <span>Página {page} de {totalPages}</span>
           <div>
-            {page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
-            {page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
+            {page > 1 ? <Link prefetch={false} href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
+            {page < totalPages ? <Link prefetch={false} href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
           </div>
         </div>
       </section>

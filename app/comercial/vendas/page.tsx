@@ -150,8 +150,8 @@ export default async function SalesPage({
       description={`${company.name}${project ? ` · ${project.code ? `${project.code} · ` : ""}${project.name}` : " · todas as obras"}`}
       actions={
         <>
-          <Link className="elos-button" href="/comercial/planos-de-pagamento">Planos de pagamento</Link>
-          <Link className="elos-button" href="/cadastros/clientes">Abrir clientes</Link>
+          <Link prefetch={false} className="elos-button" href="/comercial/planos-de-pagamento">Planos de pagamento</Link>
+          <Link prefetch={false} className="elos-button" href="/cadastros/clientes">Abrir clientes</Link>
         </>
       }
     >
@@ -190,7 +190,7 @@ export default async function SalesPage({
               </select>
               <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateFrom} defaultTo={dateTo} />
               <button type="submit">Filtrar</button>
-              <Link href="/comercial/vendas">Limpar</Link>
+              <Link prefetch={false} href="/comercial/vendas">Limpar</Link>
             </form>
           </section>
 
@@ -219,7 +219,7 @@ export default async function SalesPage({
                         <td>{sale.broker_name || "—"}</td>
                         <td><span className={`status-badge ${sale.status}`}>{sale.status === "active" ? "Ativa" : "Cancelada"}</span></td>
                         <td><span className={`status-badge ${sale.payment_plan_available ? "active" : "inactive"}`}>{sale.payment_plan_available ? "Disponível" : "A detalhar"}</span></td>
-                        <td><Link className="table-action table-action-link" href={`/comercial/vendas/${sale.id}`}>Editar venda</Link></td>
+                        <td><Link prefetch={false} className="table-action table-action-link" href={`/comercial/vendas/${sale.id}`}>Editar venda</Link></td>
                       </tr>
                     );
                   })}
@@ -231,8 +231,8 @@ export default async function SalesPage({
             <div className="registry-pagination">
               <span>Página {page} de {totalPages}</span>
               <div>
-                {page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
-                {page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
+                {page > 1 ? <Link prefetch={false} href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
+                {page < totalPages ? <Link prefetch={false} href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
               </div>
             </div>
           </section>

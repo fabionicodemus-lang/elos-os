@@ -18,7 +18,7 @@ export default async function EngineeringServicesImportPage({
       eyebrow="Engenharia · Orçamento de Obras"
       title="Importar Serviços"
       description={`${company.name} · sincronização em lote do catálogo técnico de serviços.`}
-      actions={<Link className="elos-button" href="/engenharia/servicos">← Voltar aos serviços</Link>}
+      actions={<Link prefetch={false} className="elos-button" href="/engenharia/servicos">← Voltar aos serviços</Link>}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
@@ -60,7 +60,7 @@ export default async function EngineeringServicesImportPage({
             <small>Use o XLSX preparado a partir da Base Master de Serviços do Elos Engenharia.</small>
           </label>
           <div className="budget-modal-foot">
-            <Link className="budget-secondary-button" href="/engenharia/servicos">Cancelar</Link>
+            <Link prefetch={false} className="budget-secondary-button" href="/engenharia/servicos">Cancelar</Link>
             <button className="budget-primary-button" type="submit">Importar serviços</button>
           </div>
         </form>

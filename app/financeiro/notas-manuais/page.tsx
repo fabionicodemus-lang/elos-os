@@ -253,7 +253,7 @@ export default async function ManualInvoicesPage({ searchParams }: { searchParam
           <input name="q" defaultValue={params.q ?? ""} placeholder="Fornecedor, documento ou registro" />
           <select name="type" defaultValue={params.type ?? ""}><option value="">Todos os tipos</option>{Object.entries(TYPES).map(([key, text]) => <option key={key} value={key}>{text}</option>)}</select>
           <select name="status" defaultValue={params.status ?? ""}><option value="">Todos os status</option>{Object.entries(STATUS).map(([key, text]) => <option key={key} value={key}>{text}</option>)}</select>
-          <button type="submit">Filtrar</button><Link href="/financeiro/notas-manuais">Limpar</Link>
+          <button type="submit">Filtrar</button><Link prefetch={false} href="/financeiro/notas-manuais">Limpar</Link>
         </form>
       </section>
 
@@ -264,7 +264,7 @@ export default async function ManualInvoicesPage({ searchParams }: { searchParam
             const supplier = relatedOne(invoice.suppliers); const contract = relatedOne(invoice.execution_service_contracts); const measurement = relatedOne(invoice.execution_contract_measurements);
             return <tr key={invoice.id}>
               <td>{dateBR(invoice.issue_date)}<span>{invoice.registry_number}</span></td>
-              <td><Link href={`?invoice=${invoice.id}`}><strong>{invoice.document_number}{invoice.series ? `/${invoice.series}` : ""}</strong><span>{TYPES[invoice.document_type] ?? invoice.document_type}</span><small>{invoice.item_count} item(ns)</small></Link></td>
+              <td><Link prefetch={false} href={`?invoice=${invoice.id}`}><strong>{invoice.document_number}{invoice.series ? `/${invoice.series}` : ""}</strong><span>{TYPES[invoice.document_type] ?? invoice.document_type}</span><small>{invoice.item_count} item(ns)</small></Link></td>
               <td><strong>{supplier?.trade_name || supplier?.legal_name || "Fornecedor"}</strong><span>{supplier?.tax_id || "—"}</span></td>
               <td>{invoice.material_receipt_id ? <span className="manual-origin-pill measurement">Recebimento</span> : measurement ? <span className="manual-origin-pill measurement">{measurement.measurement_number}</span> : contract ? <span className="manual-origin-pill">{contract.contract_number}</span> : "Sem vínculo"}</td>
               <td>{money(invoice.gross_amount)}</td><td>{money(invoice.total_retention_amount)}</td><td><strong>{money(invoice.net_amount)}</strong></td>
@@ -308,7 +308,7 @@ function ManualInvoiceDetail({ invoice, items, installments, documents, taxOblig
   const editable = canManage && mutability.mutable;
 
   return <>
-    <div className="manual-back"><Link href="/financeiro/notas-manuais">← Voltar às notas</Link><span>{invoice.registry_number}</span></div>
+    <div className="manual-back"><Link prefetch={false} href="/financeiro/notas-manuais">← Voltar às notas</Link><span>{invoice.registry_number}</span></div>
     <section className="manual-detail-hero">
       <div><span>{TYPES[invoice.document_type] ?? invoice.document_type}</span><h2>{invoice.document_number}{invoice.series ? `/${invoice.series}` : ""} · {supplier?.trade_name || supplier?.legal_name || "Fornecedor"}</h2><p>Emissão {dateBR(invoice.issue_date)} · competência {dateBR(invoice.competence_date)} · lançada {dateTimeBR(invoice.posted_at || invoice.approved_at)}</p></div>
       <div>
@@ -348,13 +348,13 @@ function ManualInvoiceDetail({ invoice, items, installments, documents, taxOblig
 
     <section className="manual-detail-grid">
       <article className="manual-card"><div className="manual-card-title"><div><span>Fornecedor</span><h3>Parcelas no Contas a Pagar</h3></div><strong>{money(invoice.payment_total)}</strong></div><div className="manual-installment-detail-list">
-        {installments.map((row) => { const payable = relatedOne(row.payables); return <div key={row.id}><div><strong>{row.installment_label}</strong><span>Vencimento {dateBR(row.due_date)}</span></div><div><strong>{money(row.amount)}</strong><span>{row.payment_method || "Não informado"}</span></div>{payable ? <Link href="/financeiro/contas-a-pagar">{payable.status === "paid" ? `Pago em ${dateBR(payable.paid_at)}` : payable.status === "open" ? "Em aberto" : "Cancelado"}</Link> : <span className="manual-pending-label">Título ainda não gerado</span>}</div>; })}
+        {installments.map((row) => { const payable = relatedOne(row.payables); return <div key={row.id}><div><strong>{row.installment_label}</strong><span>Vencimento {dateBR(row.due_date)}</span></div><div><strong>{money(row.amount)}</strong><span>{row.payment_method || "Não informado"}</span></div>{payable ? <Link prefetch={false} href="/financeiro/contas-a-pagar">{payable.status === "paid" ? `Pago em ${dateBR(payable.paid_at)}` : payable.status === "open" ? "Em aberto" : "Cancelado"}</Link> : <span className="manual-pending-label">Título ainda não gerado</span>}</div>; })}
       </div></article>
 
       <article className="manual-card"><div className="manual-card-title"><div><span>Tributos</span><h3>Obrigações dos impostos retidos</h3></div><strong>{money(taxObligations.reduce((sum, row) => sum + Number(row.total_amount), 0))}</strong></div><div className="manual-installment-detail-list">
         {taxObligations.map((obligation) => {
           const type = relatedOne(obligation.finance_tax_types); const authority = relatedOne(type?.suppliers ?? null); const payable = relatedOne(obligation.payables);
-          return <div key={obligation.id}><div><strong>{type?.code || RETENTION_LABELS[obligation.retention_key ?? ""] || "Imposto"}</strong><span>{type?.name || RETENTION_LABELS[obligation.retention_key ?? ""]} · competência {monthBR(obligation.competence_date)}</span><small>{authority?.trade_name || authority?.legal_name || "Órgão não informado"}</small></div><div><strong>{money(obligation.total_amount)}</strong><span>Vencimento {dateBR(obligation.due_date)}</span></div><Link href="/financeiro/impostos">{payable?.status === "paid" || obligation.status === "paid" ? "Pago" : TAX_STATUS[obligation.status] ?? obligation.status}</Link></div>;
+          return <div key={obligation.id}><div><strong>{type?.code || RETENTION_LABELS[obligation.retention_key ?? ""] || "Imposto"}</strong><span>{type?.name || RETENTION_LABELS[obligation.retention_key ?? ""]} · competência {monthBR(obligation.competence_date)}</span><small>{authority?.trade_name || authority?.legal_name || "Órgão não informado"}</small></div><div><strong>{money(obligation.total_amount)}</strong><span>Vencimento {dateBR(obligation.due_date)}</span></div><Link prefetch={false} href="/financeiro/impostos">{payable?.status === "paid" || obligation.status === "paid" ? "Pago" : TAX_STATUS[obligation.status] ?? obligation.status}</Link></div>;
         })}
         {!taxObligations.length ? <p className="manual-muted">A nota não possui impostos retidos.</p> : null}
       </div></article>

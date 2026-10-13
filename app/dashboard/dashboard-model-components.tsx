@@ -69,7 +69,7 @@ export function ModelKpi({
   </>;
 
   return href
-    ? <Link className="v20-kpi v20-span2" href={href}>{content}</Link>
+    ? <Link prefetch={false} className="v20-kpi v20-span2" href={href}>{content}</Link>
     : <article className="v20-kpi v20-span2">{content}</article>;
 }
 
@@ -91,7 +91,7 @@ export function ModelCard({
   return <section className={`v20-card v20-span${span}`}>
     <header className="v20-card-head">
       <div><h3>{title}</h3><small>{subtitle}</small></div>
-      {href ? <Link className="v20-link" href={href}>{linkLabel ?? "Abrir módulo"}</Link> : null}
+      {href ? <Link prefetch={false} className="v20-link" href={href}>{linkLabel ?? "Abrir módulo"}</Link> : null}
     </header>
     {children}
   </section>;
@@ -270,7 +270,7 @@ export function CriticalPoints({ risks }: { risks: DashboardRisk[] }) {
       <div className="v20-risk-head"><b>{risk.title}</b><span className="v20-risk-tag">{risk.severity === "high" ? "Alto" : risk.severity === "medium" ? "Atenção" : "Ok"}</span></div>
       <p>{risk.description}</p>
     </div>;
-    return risk.href ? <Link className="v20-risk-link" key={risk.id} href={risk.href}>{content}</Link> : <div key={risk.id}>{content}</div>;
+    return risk.href ? <Link prefetch={false} className="v20-risk-link" key={risk.id} href={risk.href}>{content}</Link> : <div key={risk.id}>{content}</div>;
   })}</div>;
 }
 

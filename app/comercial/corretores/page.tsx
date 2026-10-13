@@ -237,7 +237,7 @@ export default async function BrokersPage({ searchParams }: {
     eyebrow="Comercial"
     title="Corretores"
     description={`${company.name}${project ? ` · ${project.code ? `${project.code} · ` : ""}${project.name}` : " · todos os empreendimentos"} · cadastro e comissões de vendas.`}
-    actions={<><Link className="elos-button" href="/comercial/propostas">Abrir propostas</Link><Link className="elos-button" href="/comercial/vendas">Abrir vendas</Link><Link className="elos-button" href="/financeiro/contas-a-pagar">Contas a pagar</Link></>}
+    actions={<><Link prefetch={false} className="elos-button" href="/comercial/propostas">Abrir propostas</Link><Link prefetch={false} className="elos-button" href="/comercial/vendas">Abrir vendas</Link><Link prefetch={false} className="elos-button" href="/financeiro/contas-a-pagar">Contas a pagar</Link></>}
   >
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
@@ -257,7 +257,7 @@ export default async function BrokersPage({ searchParams }: {
           <select name="broker_status" defaultValue={brokerStatus}><option value="">Ativos e inativos</option><option value="active">Ativos</option><option value="inactive">Inativos</option></select>
           <select name="commission_status" defaultValue={commissionStatus}><option value="">Todas as comissões</option>{Object.entries(commissionStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateRange.from} defaultTo={dateRange.to} />
-          <button type="submit">Filtrar</button><Link href="/comercial/corretores">Limpar</Link>
+          <button type="submit">Filtrar</button><Link prefetch={false} href="/comercial/corretores">Limpar</Link>
         </form>
 
         {canManage ? <details className="registry-create broker-create">
@@ -323,7 +323,7 @@ export default async function BrokersPage({ searchParams }: {
                 {commission.status === "planned" && canApprove ? <form action={setCommissionStatus}><input type="hidden" name="commission_id" value={commission.id} /><input type="hidden" name="status" value="approved" /><input type="hidden" name="due_date" value={commission.due_date} /><button type="submit">Aprovar</button></form> : null}
                 {commission.status === "approved" && canFinance ? <form action={generateCommissionPayable}><input type="hidden" name="commission_id" value={commission.id} /><button type="submit">Gerar conta</button></form> : null}
                 {["planned", "approved"].includes(commission.status) && canManage ? <form action={setCommissionStatus}><input type="hidden" name="commission_id" value={commission.id} /><input type="hidden" name="status" value="cancelled" /><button className="danger" type="submit">Cancelar</button></form> : null}
-                {commission.payable_id ? <Link href={`/financeiro/contas-a-pagar?q=${encodeURIComponent(`COM-${sale?.number || ""}`)}`}>Ver conta</Link> : null}
+                {commission.payable_id ? <Link prefetch={false} href={`/financeiro/contas-a-pagar?q=${encodeURIComponent(`COM-${sale?.number || ""}`)}`}>Ver conta</Link> : null}
               </div></td>
             </tr>;
           })}{!commissions.length ? <tr><td className="empty-table" colSpan={9}>Nenhuma comissão encontrada.</td></tr> : null}</tbody>

@@ -57,7 +57,7 @@ export function ExecutiveKpi({
     </>
   );
 
-  return href ? <Link className={`executive-kpi ${tone}`} href={href}>{content}</Link> : <article className={`executive-kpi ${tone}`}>{content}</article>;
+  return href ? <Link prefetch={false} className={`executive-kpi ${tone}`} href={href}>{content}</Link> : <article className={`executive-kpi ${tone}`}>{content}</article>;
 }
 
 export function DashboardSection({
@@ -238,7 +238,7 @@ export function AttentionList({ alerts }: { alerts: DashboardAlert[] }) {
   return alerts.length ? (
     <div className="attention-list">
       {alerts.map((alert) => (
-        <Link key={alert.id} href={alert.href} className={`attention-item ${alert.severity}`}>
+        <Link prefetch={false} key={alert.id} href={alert.href} className={`attention-item ${alert.severity}`}>
           <i aria-hidden="true">{alert.severity === "critical" ? "!" : alert.severity === "warning" ? "△" : "i"}</i>
           <div><strong>{alert.title}</strong><span>{alert.description}</span></div>
           {alert.value ? <b>{alert.value}</b> : null}
@@ -253,7 +253,7 @@ export function RecentActivity({ activities }: { activities: DashboardActivity[]
   return activities.length ? (
     <div className="activity-list">
       {activities.map((activity) => (
-        <Link key={activity.id} href={activity.href} className="activity-item">
+        <Link prefetch={false} key={activity.id} href={activity.href} className="activity-item">
           <i>{activity.icon}</i>
           <div><span>{activity.kind}</span><strong>{activity.title}</strong><small>{activity.description}</small></div>
           <time>{activity.date}</time>

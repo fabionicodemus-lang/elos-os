@@ -223,9 +223,9 @@ export default async function PaymentPlansPage({
       description={`${company.name}${project ? ` · ${project.code ? `${project.code} · ` : ""}${project.name}` : " · todas as obras"}`}
       actions={
         <>
-          <Link className="elos-button" href="/comercial/vendas">Vendas</Link>
-          <Link className="elos-button" href="/cadastros/clientes">Clientes</Link>
-          <Link className="elos-button" href="/financeiro/indices-de-correcao">Índices de correção</Link>
+          <Link prefetch={false} className="elos-button" href="/comercial/vendas">Vendas</Link>
+          <Link prefetch={false} className="elos-button" href="/cadastros/clientes">Clientes</Link>
+          <Link prefetch={false} className="elos-button" href="/financeiro/indices-de-correcao">Índices de correção</Link>
         </>
       }
     >
@@ -285,7 +285,7 @@ export default async function PaymentPlansPage({
               </select>
               <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateFrom} defaultTo={dateTo} />
               <button type="submit">Filtrar</button>
-              <Link href="/comercial/planos-de-pagamento">Limpar</Link>
+              <Link prefetch={false} href="/comercial/planos-de-pagamento">Limpar</Link>
             </form>
 
             {canManage && projectId ? (
@@ -365,8 +365,8 @@ export default async function PaymentPlansPage({
             <div className="registry-pagination">
               <span>Página {page} de {totalPages}</span>
               <div>
-                {page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
-                {page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
+                {page > 1 ? <Link prefetch={false} href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
+                {page < totalPages ? <Link prefetch={false} href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
               </div>
             </div>
           </section>

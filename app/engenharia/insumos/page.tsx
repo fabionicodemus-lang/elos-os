@@ -139,11 +139,11 @@ export default async function EngineeringInputsPage({
       {inputsResult.error ? <div className="auth-message error workspace-message">A estrutura do catálogo de insumos ainda não está instalada no Supabase. Execute a migration <strong>20260724_0016_engineering_inputs.sql</strong>.</div> : null}
 
       <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">
-        <Link href="/engenharia/orcamentos">▦ Visão geral</Link>
-        <Link href="/engenharia/servicos">≡ Serviços</Link>
+        <Link prefetch={false} href="/engenharia/orcamentos">▦ Visão geral</Link>
+        <Link prefetch={false} href="/engenharia/servicos">≡ Serviços</Link>
         <span className="active">◈ Insumos</span>
-        <Link href="/engenharia/precos">$ Preços e cotações</Link>
-        <Link href="/engenharia/composicoes">⌘ Composições</Link>
+        <Link prefetch={false} href="/engenharia/precos">$ Preços e cotações</Link>
+        <Link prefetch={false} href="/engenharia/composicoes">⌘ Composições</Link>
         <span>∑ Levantamento</span>
         <span>R$ Orçamento analítico</span>
       </nav>
@@ -177,7 +177,7 @@ export default async function EngineeringInputsPage({
           <select name="category" defaultValue={category}><option value="">Todas as naturezas</option>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           <select name="status" defaultValue={status}><option value="">Ativos e inativos</option><option value="active">Somente ativos</option><option value="inactive">Somente inativos</option></select>
           <button type="submit">Filtrar</button>
-          <Link href="/engenharia/insumos">Limpar</Link>
+          <Link prefetch={false} href="/engenharia/insumos">Limpar</Link>
         </form>
       </section>
 
@@ -207,7 +207,7 @@ export default async function EngineeringInputsPage({
             </tbody>
           </table>
         </div>
-        <div className="registry-pagination"><span>Página {page} de {totalPages}</span><div>{page > 1 ? <Link href={buildQuery(filterParams, page - 1)}>Anterior</Link> : null}{page < totalPages ? <Link href={buildQuery(filterParams, page + 1)}>Próxima</Link> : null}</div></div>
+        <div className="registry-pagination"><span>Página {page} de {totalPages}</span><div>{page > 1 ? <Link prefetch={false} href={buildQuery(filterParams, page - 1)}>Anterior</Link> : null}{page < totalPages ? <Link prefetch={false} href={buildQuery(filterParams, page + 1)}>Próxima</Link> : null}</div></div>
       </section>
     </AppShell>
   );

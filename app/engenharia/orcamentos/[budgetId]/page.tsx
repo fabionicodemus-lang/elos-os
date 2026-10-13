@@ -275,7 +275,7 @@ export default async function BudgetDetailPage({
       description={`${company.name} · ${context} · ${budget.code} · ${budget.version} · ${budget.name}.`}
       actions={
         <>
-          <Link className="elos-button" href="/engenharia/orcamentos">Voltar</Link>
+          <Link prefetch={false} className="elos-button" href="/engenharia/orcamentos">Voltar</Link>
           {canManage ? <BudgetRevisionDialogs budget={budget} groups={groups} units={units} itemCount={items.length} hasCostCenterTransactions={hasCostCenterTransactions} /> : null}
           {canManage && budget.status !== "archived" && !budget.is_base ? (
             <form action={archiveBudget}>
@@ -296,7 +296,7 @@ export default async function BudgetDetailPage({
       {structureError ? <div className="auth-message error workspace-message">Não foi possível carregar todos os dados da revisão.</div> : null}
 
       <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">
-        <Link href="/engenharia/orcamentos">▦ Orçamentos</Link>
+        <Link prefetch={false} href="/engenharia/orcamentos">▦ Orçamentos</Link>
         <span>≡ Serviços</span>
         <span>◈ Insumos</span>
         <span>$ Preços e cotações</span>
@@ -336,7 +336,7 @@ export default async function BudgetDetailPage({
           <select name="group" defaultValue={groupFilter}><option value="">Todos os grupos</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.code} · {group.name}</option>)}</select>
           <select name="incomplete" defaultValue={incompleteOnly ? "1" : ""}><option value="">Todos os serviços</option><option value="1">Somente itens a revisar</option></select>
           <button type="submit">Filtrar</button>
-          <Link href={`/engenharia/orcamentos/${budget.id}`}>Limpar</Link>
+          <Link prefetch={false} href={`/engenharia/orcamentos/${budget.id}`}>Limpar</Link>
         </form>
       </section>
 

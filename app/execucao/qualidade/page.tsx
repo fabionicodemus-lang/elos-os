@@ -579,7 +579,7 @@ export default async function QualityPage({
                   (key !== "indicators" || canIndicators),
               )
               .map(([key, label]) => (
-                <Link
+                <Link prefetch={false}
                   className={tab === key ? "active" : ""}
                   href={`?tab=${key}`}
                   key={key}
@@ -596,14 +596,14 @@ export default async function QualityPage({
                 Até a configuração, novas vistorias serão atribuídas ao usuário
                 que executar a sincronização.
               </span>
-              {canSettings ? <Link href="?tab=settings">Configurar agora</Link> : null}
+              {canSettings ? <Link prefetch={false} href="?tab=settings">Configurar agora</Link> : null}
             </div>
           ) : null}
 
           {selectedInspection ? (
             <>
               <div className="quality-back">
-                <Link href={`?tab=${tab}`}>← Voltar</Link>
+                <Link prefetch={false} href={`?tab=${tab}`}>← Voltar</Link>
                 <span>{selectedInspection.inspection_number}</span>
               </div>
               <InspectionEditor
@@ -635,7 +635,7 @@ export default async function QualityPage({
           ) : selectedNc ? (
             <>
               <div className="quality-back">
-                <Link href="?tab=nc">← Voltar às não conformidades</Link>
+                <Link prefetch={false} href="?tab=nc">← Voltar às não conformidades</Link>
                 <span>{selectedNc.nc_number}</span>
               </div>
               <NonconformityDetail
@@ -849,10 +849,10 @@ function Overview({
         <article>
           <header>
             <div><span>Prioridade</span><h2>Vistorias que exigem atenção</h2></div>
-            <Link href="?tab=my">Ver minhas vistorias</Link>
+            <Link prefetch={false} href="?tab=my">Ver minhas vistorias</Link>
           </header>
           {priorities.slice(0, 8).map((row) => (
-            <Link
+            <Link prefetch={false}
               className="quality-task"
               href={inspectionHref(row.id, "overview")}
               key={row.id}
@@ -884,10 +884,10 @@ function Overview({
         <article>
           <header>
             <div><span>Não conformidades</span><h2>Correções e bloqueios</h2></div>
-            <Link href="?tab=nc">Abrir painel</Link>
+            <Link prefetch={false} href="?tab=nc">Abrir painel</Link>
           </header>
           {openNc.slice(0, 8).map((row) => (
-            <Link
+            <Link prefetch={false}
               className="quality-task"
               href={`?tab=nc&nc=${row.id}`}
               key={row.id}
@@ -968,7 +968,7 @@ function InspectionList({
             ))}
           </select>
           <button type="submit">Filtrar</button>
-          <Link href={`?tab=${tab}`}>Limpar</Link>
+          <Link prefetch={false} href={`?tab=${tab}`}>Limpar</Link>
         </form>
       </section>
       <section className="quality-table-card">
@@ -996,7 +996,7 @@ function InspectionList({
                     className={row.release_status === "blocked" ? "blocked-row" : ""}
                   >
                     <td>
-                      <Link href={inspectionHref(row.id, tab)}>
+                      <Link prefetch={false} href={inspectionHref(row.id, tab)}>
                         <strong>{row.inspection_number}</strong>
                         <span>{row.origin}</span>
                       </Link>
@@ -1095,7 +1095,7 @@ function NonconformityList({
               return (
                 <tr key={row.id} className={row.is_blocking ? "blocked-row" : ""}>
                   <td>
-                    <Link href={`?tab=nc&nc=${row.id}`}>
+                    <Link prefetch={false} href={`?tab=nc&nc=${row.id}`}>
                       <strong>{row.nc_number}</strong>
                       <span>{inspection?.inspection_number}</span>
                     </Link>
@@ -1292,7 +1292,7 @@ function BlockedList({
                 <span>{row.severity} · prazo {dateTimeBR(row.due_at)}</span>
               </div>
             ))}
-            <Link href={inspectionHref(inspection.id, "blocked")}>
+            <Link prefetch={false} href={inspectionHref(inspection.id, "blocked")}>
               Abrir vistoria e bloqueio
             </Link>
           </article>

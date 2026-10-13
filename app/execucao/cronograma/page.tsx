@@ -145,7 +145,7 @@ export default async function ExecutionSchedulePage({
       eyebrow="Execução · Controle da Obra"
       title="Controle do Cronograma"
       description={`${company.name} · ${context} · avanço físico, desvios e reprogramação do cronograma atual.`}
-      actions={<Link className="elos-button secondary" href={selectedBaseline ? `/engenharia/cronograma?baseline=${selectedBaseline.id}` : "/engenharia/cronograma"}>Abrir linha de base</Link>}
+      actions={<Link prefetch={false} className="elos-button secondary" href={selectedBaseline ? `/engenharia/cronograma?baseline=${selectedBaseline.id}` : "/engenharia/cronograma"}>Abrir linha de base</Link>}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}

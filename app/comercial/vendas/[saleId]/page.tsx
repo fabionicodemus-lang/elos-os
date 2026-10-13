@@ -242,9 +242,9 @@ export default async function SaleDetailPage({
       description={`${company.name}${project ? ` · ${project.code ? `${project.code} · ` : ""}${project.name}` : ""}`}
       actions={
         <>
-          <Link className="elos-button" href="/comercial/vendas">Voltar às vendas</Link>
-          <Link className="elos-button" href={`/comercial/planos-de-pagamento?sale=${sale.id}`}>Visão financeira</Link>
-          <Link className="elos-button" href="/financeiro/indices-de-correcao">Índices de correção</Link>
+          <Link prefetch={false} className="elos-button" href="/comercial/vendas">Voltar às vendas</Link>
+          <Link prefetch={false} className="elos-button" href={`/comercial/planos-de-pagamento?sale=${sale.id}`}>Visão financeira</Link>
+          <Link prefetch={false} className="elos-button" href="/financeiro/indices-de-correcao">Índices de correção</Link>
         </>
       }
     >

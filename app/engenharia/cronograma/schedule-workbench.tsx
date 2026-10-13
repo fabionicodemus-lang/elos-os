@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useState, useTransition, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import {
   generateScheduleFromTakeoffs,
   moveScheduleActivity,
   updateScheduleBaselineStatus,
+  approveAllScheduleActivities,
 } from "./actions";
 import { rescheduleFromMove } from "./schedule-cascade.mjs";
 import {
@@ -357,6 +358,7 @@ export function SchedulePrevisionWorkbench({
   services,
   locations,
   canManage,
+  defaultStartDate = null,
 }: {
   projectName: string;
   baselines: ScheduleWorkbenchBaseline[];
@@ -367,12 +369,28 @@ export function SchedulePrevisionWorkbench({
   services: ScheduleServiceOption[];
   locations: ScheduleLocationOption[];
   canManage: boolean;
+  defaultStartDate?: string | null;
 }) {
   const [tab, setTab] = useState<"gantt" | "lob" | "teams" | "finance" | "calendar">("gantt");
   const [query, setQuery] = useState("");
-  const [groupMode, setGroupMode] = useState<"location" | "service">("location");
+  // Sem nenhuma atividade vinculada a local, a visão "Só pavimentos" fica vazia:
+  // nesse caso o padrão passa a ser por serviço, com as atividades visíveis.
+  const hasLocatedActivity = activities.some((activity) => Boolean(activity.location_id));
+  const [groupMode, setGroupMode] = useState<"location" | "service">(hasLocatedActivity ? "location" : "service");
   const [serviceFilter, setServiceFilter] = useState("");
-  const [locationView, setLocationView] = useState<"compact" | "expanded">("compact");
+  const [locationView, setLocationView] = useState<"compact" | "expanded">(hasLocatedActivity ? "compact" : "expanded");
+  // Mantém a visão escolhida depois de salvar uma atividade (o salvamento recarrega a tela).
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem("elos-schedule-view") ?? "null") as { groupMode?: string; locationView?: string } | null;
+      if (!hasLocatedActivity) return;
+      if (saved?.groupMode === "location" || saved?.groupMode === "service") setGroupMode(saved.groupMode);
+      if (saved?.locationView === "compact" || saved?.locationView === "expanded") setLocationView(saved.locationView);
+    } catch {}
+  }, [hasLocatedActivity]);
+  useEffect(() => {
+    try { sessionStorage.setItem("elos-schedule-view", JSON.stringify({ groupMode, locationView })); } catch {}
+  }, [groupMode, locationView]);
   const [weekWidth, setWeekWidth] = useState(34);
   const [cascade, setCascade] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -555,13 +573,14 @@ export function SchedulePrevisionWorkbench({
           <button key={item} type="button" className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item === "gantt" ? "Cronograma" : item === "lob" ? "Linha de Balanço" : item === "teams" ? "Equipes" : item === "finance" ? "Financeiro" : "Calendário"}</button>
         ))}</nav>
         <div className="prevision-top-actions">
-          {canManage && !selectedBaseline ? <ScheduleBaselineCreateDialog budgets={budgets} /> : null}
+          {canManage && !selectedBaseline ? <ScheduleBaselineCreateDialog budgets={budgets} defaultStartDate={defaultStartDate} /> : null}
           {canManage && selectedBaseline ? <form action={generateScheduleFromTakeoffs}><input type="hidden" name="baseline_id" value={selectedBaseline.id} /><button type="submit">Gerar do orçamento</button></form> : null}
           <button type="button" onClick={exportHtml} disabled={!selectedBaseline}>Exportar HTML</button>
           {canManage && selectedBaseline ? <ScheduleImportHtmlDialog baselineId={selectedBaseline.id} /> : null}
           <button type="button" onClick={() => downloadJson(`cronograma-${selectedBaseline?.code ?? "elos"}.json`, { baseline: selectedBaseline, activities, dependencies, locations, services })}>Exportar JSON</button>
+          {canManage && selectedBaseline && selectedBaseline.status !== "approved" && activities.some((activity) => activity.record_status === "active" && activity.planning_status !== "approved") ? <form action={approveAllScheduleActivities} onSubmit={(event) => { if (!window.confirm("Aprovar todas as atividades desta linha de base?")) event.preventDefault(); }}><input type="hidden" name="baseline_id" value={selectedBaseline.id} /><button type="submit">Aprovar todas as atividades</button></form> : null}
           {canManage && selectedBaseline && selectedBaseline.status !== "approved" ? <form action={updateScheduleBaselineStatus}><input type="hidden" name="baseline_id" value={selectedBaseline.id} /><input type="hidden" name="status" value="approved" /><button type="submit">Salvar linha de base</button></form> : null}
-          <Link href={selectedBaseline ? `?baseline=${selectedBaseline.id}` : "/engenharia/cronograma"}>Restaurar linha de base</Link>
+          <Link prefetch={false} href={selectedBaseline ? `?baseline=${selectedBaseline.id}` : "/engenharia/cronograma"}>Restaurar linha de base</Link>
         </div>
       </header>
 
@@ -572,7 +591,7 @@ export function SchedulePrevisionWorkbench({
             <label><span>Agrupar</span><select value={groupMode} onChange={(event) => setGroupMode(event.target.value as "location" | "service")}><option value="location">Por pavimento/local</option><option value="service">Por serviço</option></select></label>
             <label><span>Serviço</span><select value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}><option value="">Todos</option>{services.map((service) => <option key={service.id} value={service.id}>{serviceVisual(service).abbreviation} · {service.description}</option>)}</select></label>
             <label><span>Visualização</span><select value={locationView} onChange={(event) => setLocationView(event.target.value as "compact" | "expanded")}><option value="compact">Só pavimentos</option><option value="expanded">Pavimentos + serviços</option></select></label>
-            <Link className="prevision-button prominent" href="/engenharia/levantamento" title="Pavimentos e locais são cadastrados em Levantamento de Quantitativos (Locais, pavimentos e repetições).">＋ Pavimentos (Levantamento)</Link>
+            <Link prefetch={false} className="prevision-button prominent" href="/engenharia/levantamento" title="Pavimentos e locais são cadastrados em Levantamento de Quantitativos (Locais, pavimentos e repetições).">＋ Pavimentos (Levantamento)</Link>
             {canManage && selectedBaseline ? <ScheduleActivityCreateDialog baselineId={selectedBaseline.id} services={services} locations={locations} activities={activities} /> : null}
             <button className="prevision-button" type="button" onClick={printGantt}>Imprimir A1</button>
             <span className="prevision-divider" />
@@ -635,7 +654,7 @@ export function SchedulePrevisionWorkbench({
       {tab === "calendar" ? <CalendarView baseline={selectedBaseline} /> : null}
 
       {!selectedBaseline ? (
-        <div className="prevision-empty-state"><strong>Nenhuma linha de base cadastrada.</strong><span>Crie a primeira linha de base para iniciar o planejamento.</span>{canManage ? <ScheduleBaselineCreateDialog budgets={budgets} /> : null}</div>
+        <div className="prevision-empty-state"><strong>Nenhuma linha de base cadastrada.</strong><span>Crie a primeira linha de base para iniciar o planejamento.</span>{canManage ? <ScheduleBaselineCreateDialog budgets={budgets} defaultStartDate={defaultStartDate} /> : null}</div>
       ) : null}
     </section>
   );

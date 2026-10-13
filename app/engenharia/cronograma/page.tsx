@@ -17,13 +17,13 @@ export default async function EngineeringSchedulePage({ searchParams }: {
 }) {
   const params = await searchParams;
   const { supabase, company, companyId, projectId, roleKey } = await requireCompanyPermission("schedule.view");
-  const projectPromise = projectId ? supabase.from("projects").select("id, code, name").eq("id", projectId).maybeSingle() : Promise.resolve({ data: null, error: null });
+  const projectPromise = projectId ? supabase.from("projects").select("id, code, name, construction_start_date").eq("id", projectId).maybeSingle() : Promise.resolve({ data: null, error: null });
   const managePromise = roleKey === "owner" || roleKey === "admin" ? Promise.resolve({ data: true, error: null }) : supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "schedule.manage" });
 
   const [projectResult, budgetsResult, baselinesResult, activitiesResult, dependenciesResult, servicesResult, locationsResult, manageResult] = await Promise.all([
     projectPromise,
     projectId ? fetchAllRows<ScheduleBudgetOption>(async (from, to) => {
-      const { data, error } = await supabase.from("engineering_budgets").select("id, code, name, version").eq("company_id", companyId).eq("project_id", projectId).neq("status", "archived").order("updated_at", { ascending: false }).range(from, to);
+      const { data, error } = await supabase.from("engineering_budgets").select("id, code, name, version, is_base").eq("company_id", companyId).eq("project_id", projectId).neq("status", "archived").order("updated_at", { ascending: false }).range(from, to);
       return { data: (data ?? []) as ScheduleBudgetOption[], error };
     }) : Promise.resolve({ data: [] as ScheduleBudgetOption[], error: null }),
     projectId ? fetchAllRows<ScheduleWorkbenchBaseline>(async (from, to) => {
@@ -61,12 +61,12 @@ export default async function EngineeringSchedulePage({ searchParams }: {
   return (
     <AppShell activeGroup="engineering" activeItem="schedule" eyebrow="Engenharia · Planejamento da Obra" title="Cronograma Físico"
       description={`${company.name} · ${context} · linha de balanço, equipes e planejamento físico da obra.`}
-      actions={<><Link className="elos-button secondary" href={selectedBaseline ? `/engenharia/curvas?baseline=${selectedBaseline.id}` : "/engenharia/curvas"}>Curvas física e financeira</Link><Link className="elos-button secondary" href={selectedBaseline ? `/engenharia/plano-contratacoes?baseline=${selectedBaseline.id}` : "/engenharia/plano-contratacoes"}>Plano de contratações</Link><Link className="elos-button" href={selectedBaseline ? `/engenharia/planejamento-suprimentos?baseline=${selectedBaseline.id}` : "/engenharia/planejamento-suprimentos"}>Planejamento de suprimentos</Link></>}>
+      actions={<><Link prefetch={false} className="elos-button secondary" href={selectedBaseline ? `/engenharia/curvas?baseline=${selectedBaseline.id}` : "/engenharia/curvas"}>Curvas física e financeira</Link><Link prefetch={false} className="elos-button secondary" href={selectedBaseline ? `/engenharia/plano-contratacoes?baseline=${selectedBaseline.id}` : "/engenharia/plano-contratacoes"}>Plano de contratações</Link><Link prefetch={false} className="elos-button" href={selectedBaseline ? `/engenharia/planejamento-suprimentos?baseline=${selectedBaseline.id}` : "/engenharia/planejamento-suprimentos"}>Planejamento de suprimentos</Link></>}>
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
       {structureError ? <div className="auth-message error workspace-message">A estrutura do cronograma ainda não está instalada. Execute a migration <strong>20260726_0023_engineering_schedule_baseline.sql</strong> no Supabase.</div> : null}
       {!projectId ? <div className="schedule-empty">Selecione uma obra no topo para acessar o cronograma.</div> : null}
-      {projectId ? <SchedulePrevisionWorkbench projectName={project?.name ?? "Obra selecionada"} baselines={baselines} selectedBaseline={selectedBaseline} budgets={budgetsResult.data} activities={activities} dependencies={dependencies} services={servicesResult.data} locations={locationsResult.data} canManage={canManage} /> : null}
+      {projectId ? <SchedulePrevisionWorkbench projectName={project?.name ?? "Obra selecionada"} baselines={baselines} selectedBaseline={selectedBaseline} budgets={budgetsResult.data} activities={activities} dependencies={dependencies} services={servicesResult.data} locations={locationsResult.data} canManage={canManage} defaultStartDate={(project as { construction_start_date?: string | null } | null)?.construction_start_date ?? null} /> : null}
     </AppShell>
   );
 }

@@ -194,7 +194,7 @@ export default async function ReferenceDashboard({
       eyebrow="Início"
       title="Dashboard"
       description="Acompanhe os empreendimentos e acesse rapidamente o contexto de cada obra."
-      actions={canManageProjects ? <Link className="approved-dashboard-new" href="/empreendimentos">+ Novo empreendimento</Link> : undefined}
+      actions={canManageProjects ? <Link prefetch={false} className="approved-dashboard-new" href="/empreendimentos">+ Novo empreendimento</Link> : undefined}
     >
       {visibleError ? <div className="auth-message error workspace-message">{visibleError}</div> : null}
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}

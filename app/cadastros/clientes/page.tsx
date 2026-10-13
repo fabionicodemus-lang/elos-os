@@ -65,7 +65,7 @@ export default async function ClientsPage({
       eyebrow="Comercial · Cadastros"
       title="Clientes"
       description={`${company.name} · base central usada por propostas, vendas, contratos e contas a receber.`}
-      actions={<Link className="elos-button" href="/cadastros/fornecedores">Abrir fornecedores</Link>}
+      actions={<Link prefetch={false} className="elos-button" href="/cadastros/fornecedores">Abrir fornecedores</Link>}
     >
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
@@ -86,7 +86,7 @@ export default async function ClientsPage({
             <option value="inactive">Inativos</option>
           </select>
           <button type="submit">Filtrar</button>
-          {(queryText || status) ? <Link href="/cadastros/clientes">Limpar</Link> : <span />}
+          {(queryText || status) ? <Link prefetch={false} href="/cadastros/clientes">Limpar</Link> : <span />}
         </form>
 
         {canManage ? (
@@ -151,8 +151,8 @@ export default async function ClientsPage({
         <div className="registry-pagination">
           <span>Página {page} de {totalPages}</span>
           <div>
-            {page > 1 ? <Link href={`?q=${encodeURIComponent(queryText)}&status=${status}&page=${page - 1}`}>Anterior</Link> : null}
-            {page < totalPages ? <Link href={`?q=${encodeURIComponent(queryText)}&status=${status}&page=${page + 1}`}>Próxima</Link> : null}
+            {page > 1 ? <Link prefetch={false} href={`?q=${encodeURIComponent(queryText)}&status=${status}&page=${page - 1}`}>Anterior</Link> : null}
+            {page < totalPages ? <Link prefetch={false} href={`?q=${encodeURIComponent(queryText)}&status=${status}&page=${page + 1}`}>Próxima</Link> : null}
           </div>
         </div>
       </section>

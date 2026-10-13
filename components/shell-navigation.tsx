@@ -165,13 +165,13 @@ export function ShellNavigation({
         </div>
 
         <nav className="elos-module-menu" aria-label="Menu principal do Elos OS">
-          <Link className={`elos-main-item ${homeActive ? "active" : ""}`} href="/dashboard" onClick={closeMobile}>
+          <Link prefetch={false} className={`elos-main-item ${homeActive ? "active" : ""}`} href="/dashboard" onClick={closeMobile}>
             <span className="elos-icon">⌂</span>
             <span>Início</span>
           </Link>
 
           {assistantHref ? (
-            <Link className={`elos-main-item ${assistantActive ? "active" : ""}`} href={assistantHref} onClick={closeMobile}>
+            <Link prefetch={false} className={`elos-main-item ${assistantActive ? "active" : ""}`} href={assistantHref} onClick={closeMobile}>
               <span className="elos-icon">✦</span>
               <span>Elos IA</span>
             </Link>
@@ -195,7 +195,7 @@ export function ShellNavigation({
                     item.sectionLabel ? (
                       <div className="elos-subtitle" key={`${group.key}-section-${index}`}>{item.sectionLabel}</div>
                     ) : item.href && !item.disabled ? (
-                      <Link
+                      <Link prefetch={false}
                         className={item.active ? "active" : ""}
                         href={item.href}
                         key={`${group.key}-${item.label}`}

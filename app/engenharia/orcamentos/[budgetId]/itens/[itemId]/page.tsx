@@ -326,7 +326,7 @@ export default async function BudgetItemCompositionPage({
       eyebrow="Engenharia · Orçamento de Obras"
       title={serviceName}
       description={`${company.name} · ${projectLabel} · ${budget.code} ${budget.version} · composição exclusiva desta revisão.`}
-      actions={<Link className="elos-button" href={`/engenharia/orcamentos/${budgetId}`}>Voltar ao orçamento</Link>}
+      actions={<Link prefetch={false} className="elos-button" href={`/engenharia/orcamentos/${budgetId}`}>Voltar ao orçamento</Link>}
     >
       {queryParams.success ? <div className="auth-message success workspace-message">{queryParams.success}</div> : null}
       {queryParams.error ? <div className="auth-message error workspace-message">{queryParams.error}</div> : null}

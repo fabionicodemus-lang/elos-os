@@ -398,11 +398,11 @@ export default async function EngineeringTakeoffsPage({
       ) : null}
 
       <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">
-        <Link href="/engenharia/orcamentos">▦ Visão geral</Link>
-        <Link href="/engenharia/servicos">≡ Serviços</Link>
-        <Link href="/engenharia/insumos">◈ Insumos</Link>
-        <Link href="/engenharia/precos">$ Preços e cotações</Link>
-        <Link href="/engenharia/composicoes">⌘ Composições</Link>
+        <Link prefetch={false} href="/engenharia/orcamentos">▦ Visão geral</Link>
+        <Link prefetch={false} href="/engenharia/servicos">≡ Serviços</Link>
+        <Link prefetch={false} href="/engenharia/insumos">◈ Insumos</Link>
+        <Link prefetch={false} href="/engenharia/precos">$ Preços e cotações</Link>
+        <Link prefetch={false} href="/engenharia/composicoes">⌘ Composições</Link>
         <span className="active">∑ Levantamento</span>
         <span>R$ Orçamento analítico</span>
       </nav>
@@ -418,7 +418,7 @@ export default async function EngineeringTakeoffsPage({
         <section className="takeoff-empty-card">
           <strong>Crie uma revisão de orçamento antes de iniciar as memórias.</strong>
           <span>Cada quantidade deve ficar vinculada a uma revisão técnica específica.</span>
-          <Link href="/engenharia/orcamentos">Abrir Cadastro de Orçamentos</Link>
+          <Link prefetch={false} href="/engenharia/orcamentos">Abrir Cadastro de Orçamentos</Link>
         </section>
       ) : null}
 
@@ -482,7 +482,7 @@ export default async function EngineeringTakeoffsPage({
           {services.length === 0 ? (
             <section className="takeoff-empty-card compact">
               <strong>O catálogo ainda não possui serviços ativos.</strong>
-              <Link href="/engenharia/servicos">Cadastrar serviços</Link>
+              <Link prefetch={false} href="/engenharia/servicos">Cadastrar serviços</Link>
             </section>
           ) : null}
 
@@ -533,7 +533,7 @@ export default async function EngineeringTakeoffsPage({
                 <option value="inactive">Retiradas da revisão</option>
               </select>
               <button type="submit">Filtrar</button>
-              <Link href={`?budget=${selectedBudget.id}`}>Limpar</Link>
+              <Link prefetch={false} href={`?budget=${selectedBudget.id}`}>Limpar</Link>
             </form>
           </section>
 
@@ -601,8 +601,8 @@ export default async function EngineeringTakeoffsPage({
             <div className="registry-pagination">
               <span>Página {page} de {totalPages}</span>
               <div>
-                {page > 1 ? <Link href={buildQuery(filterParams, page - 1)}>Anterior</Link> : null}
-                {page < totalPages ? <Link href={buildQuery(filterParams, page + 1)}>Próxima</Link> : null}
+                {page > 1 ? <Link prefetch={false} href={buildQuery(filterParams, page - 1)}>Anterior</Link> : null}
+                {page < totalPages ? <Link prefetch={false} href={buildQuery(filterParams, page + 1)}>Próxima</Link> : null}
               </div>
             </div>
           </section>

@@ -178,7 +178,7 @@ export default async function BankAccountsPage({ searchParams }: {
             <p>{accountNumber(account)} · {accountTypeLabels[account.account_type] || account.account_type}</p>
             <small>{entity ? entity.trade_name || entity.legal_name : "Conta corporativa"}{account.pix_key ? ` · PIX ${account.pix_key}` : ""}</small>
             <div className="bank-account-balance"><span>Saldo atual</span><strong className={account.balance < 0 ? "negative" : ""}>{money(account.balance)}</strong></div>
-            <div className="bank-account-card-actions"><Link href={`?account=${account.id}&project=${params.project ?? ""}&period=${dateRange.preset}&from=${dateRange.from}&to=${dateRange.to}`}>Ver extrato</Link>{canManage ? <BankAccountDialog legalEntities={legalEntities} initial={account} /> : null}</div>
+            <div className="bank-account-card-actions"><Link prefetch={false} href={`?account=${account.id}&project=${params.project ?? ""}&period=${dateRange.preset}&from=${dateRange.from}&to=${dateRange.to}`}>Ver extrato</Link>{canManage ? <BankAccountDialog legalEntities={legalEntities} initial={account} /> : null}</div>
           </article>;
         })}
         {!accounts.length ? <article className="bank-empty-account"><span>Primeira conta</span><h2>Cadastre a conta bancária da empresa ou SPE</h2><p>Depois do cadastro, pagamentos e recebimentos passam a atualizar o extrato automaticamente.</p>{canManage ? <BankAccountDialog legalEntities={legalEntities} label="Cadastrar primeira conta" /> : null}</article> : null}
@@ -192,7 +192,7 @@ export default async function BankAccountsPage({ searchParams }: {
           <select name="direction" defaultValue={direction}><option value="">Entradas e saídas</option><option value="credit">Entradas</option><option value="debit">Saídas</option></select>
           <select name="status" defaultValue={status}><option value="">Todos os status</option><option value="posted">A conciliar</option><option value="reconciled">Conciliadas</option><option value="cancelled">Canceladas</option></select>
           <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateRange.from} defaultTo={dateRange.to} />
-          <button type="submit">Filtrar</button><Link href="/financeiro/contas-bancarias">Limpar</Link>
+          <button type="submit">Filtrar</button><Link prefetch={false} href="/financeiro/contas-bancarias">Limpar</Link>
         </form>
       </section>
 
@@ -216,7 +216,7 @@ export default async function BankAccountsPage({ searchParams }: {
           })}
           {!transactions.length ? <tr><td colSpan={9} className="empty-table">Nenhuma movimentação encontrada.</td></tr> : null}
         </tbody></table></div>
-        <div className="registry-pagination"><span>Página {page} de {totalPages}</span><div>{page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}{page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}</div></div>
+        <div className="registry-pagination"><span>Página {page} de {totalPages}</span><div>{page > 1 ? <Link prefetch={false} href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}{page < totalPages ? <Link prefetch={false} href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}</div></div>
       </section>
     </>}
   </AppShell>;

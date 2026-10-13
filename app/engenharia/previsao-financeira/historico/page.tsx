@@ -216,8 +216,8 @@ export default async function ForecastHistoryPage({
       description={`${company.name} · ${projectLabel} · compare o que era previsto com o que aconteceu.`}
       actions={
         <>
-          <Link className="elos-button elos-button-primary" href="/engenharia/previsao-financeira">Previsão atual</Link>
-          <Link className="elos-button" href="/engenharia/curvas">Curvas</Link>
+          <Link prefetch={false} className="elos-button elos-button-primary" href="/engenharia/previsao-financeira">Previsão atual</Link>
+          <Link prefetch={false} className="elos-button" href="/engenharia/curvas">Curvas</Link>
         </>
       }
     >

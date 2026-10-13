@@ -144,7 +144,7 @@ export default async function AssistancePage({ searchParams }: { searchParams: P
             <label className="registry-wide">Orientações de acesso<textarea name="access_notes" rows={2} /></label>
             <label className="assistance-check"><input name="warranty_claimed" type="checkbox" defaultChecked /> Cliente solicita atendimento em garantia</label>
           </div>
-          <div className="assistance-form-actions"><button className="auth-primary" type="submit">Abrir chamado</button><Link href="/pos-obra/assistencias">Cancelar</Link></div>
+          <div className="assistance-form-actions"><button className="auth-primary" type="submit">Abrir chamado</button><Link prefetch={false} href="/pos-obra/assistencias">Cancelar</Link></div>
         </form>
       </details> : null}
 
@@ -154,7 +154,7 @@ export default async function AssistancePage({ searchParams }: { searchParams: P
           <select name="status" defaultValue={params.status ?? ""}><option value="">Todas as etapas</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           <select name="priority" defaultValue={params.priority ?? ""}><option value="">Todas as prioridades</option>{Object.entries(priorityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           <select name="category" defaultValue={params.category ?? ""}><option value="">Todas as categorias</option>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-          <button type="submit">Filtrar</button><Link href="/pos-obra/assistencias">Limpar</Link>
+          <button type="submit">Filtrar</button><Link prefetch={false} href="/pos-obra/assistencias">Limpar</Link>
         </form>
       </section>
 
@@ -170,7 +170,7 @@ export default async function AssistancePage({ searchParams }: { searchParams: P
             <td><span className={overdue ? "assistance-deadline overdue" : "assistance-deadline"}>{ticket.scheduled_at ? dateTimeBR(ticket.scheduled_at) : dateTimeBR(ticket.sla_due_at)}</span><small>{ticket.scheduled_at ? "Visita" : overdue ? "SLA vencido" : "SLA"}</small></td>
             <td><span className={`assistance-warranty ${ticket.warranty_status}`}>{warrantyLabels[ticket.warranty_status] || ticket.warranty_status}</span></td>
             <td><span className={`assistance-status ${ticket.status}`}>{statusLabels[ticket.status] || ticket.status}</span></td>
-            <td><Link className="table-action table-action-link" href={`?ticket=${ticket.id}`}>Abrir</Link></td>
+            <td><Link prefetch={false} className="table-action table-action-link" href={`?ticket=${ticket.id}`}>Abrir</Link></td>
           </tr>; })}
           {!filtered.length ? <tr><td className="empty-table" colSpan={9}>Nenhum chamado encontrado.</td></tr> : null}
         </tbody></table></div>

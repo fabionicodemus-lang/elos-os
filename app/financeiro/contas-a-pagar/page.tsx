@@ -159,8 +159,8 @@ export default async function PayablesPage({
       title="Contas a Pagar"
       description={`${company.name} · ${context} · compromissos, pagamentos, fornecedores e folha de pagamento.`}
       actions={<>
-        <Link className="elos-button" href="/rh/folha">Abrir RH</Link>
-        <Link className="elos-button" href="/cadastros/fornecedores">Abrir fornecedores</Link>
+        <Link prefetch={false} className="elos-button" href="/rh/folha">Abrir RH</Link>
+        <Link prefetch={false} className="elos-button" href="/cadastros/fornecedores">Abrir fornecedores</Link>
       </>}
     >
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
@@ -196,7 +196,7 @@ export default async function PayablesPage({
               </select>
               <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateFrom} defaultTo={dateTo} />
               <button type="submit">Filtrar</button>
-              <Link href="/financeiro/contas-a-pagar">Limpar</Link>
+              <Link prefetch={false} href="/financeiro/contas-a-pagar">Limpar</Link>
             </form>
 
             {canManage && projectId ? (
@@ -257,8 +257,8 @@ export default async function PayablesPage({
             <div className="registry-pagination">
               <span>Página {page} de {totalPages}</span>
               <div>
-                {page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
-                {page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
+                {page > 1 ? <Link prefetch={false} href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}
+                {page < totalPages ? <Link prefetch={false} href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}
               </div>
             </div>
           </section>

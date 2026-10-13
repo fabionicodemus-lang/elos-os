@@ -298,8 +298,8 @@ export default async function CostVsBudgetPage({
       description={`${company.name} · ${projectLabel}`}
       actions={
         <>
-          <Link className="elos-button" href="/engenharia/orcamentos">Abrir orçamentos</Link>
-          <Link className="elos-button" href="/engenharia/previsao-financeira">Previsão financeira</Link>
+          <Link prefetch={false} className="elos-button" href="/engenharia/orcamentos">Abrir orçamentos</Link>
+          <Link prefetch={false} className="elos-button" href="/engenharia/previsao-financeira">Previsão financeira</Link>
         </>
       }
     >
@@ -353,7 +353,7 @@ export default async function CostVsBudgetPage({
                 {rows.length} serviço(s) · {visibleGroups.length} grupo(s)
               </div>
               <button type="submit">Filtrar</button>
-              <Link href={`/engenharia/custo-orcamento?budget=${context.budget.id}`}>Limpar</Link>
+              <Link prefetch={false} href={`/engenharia/custo-orcamento?budget=${context.budget.id}`}>Limpar</Link>
             </form>
           </section>
 

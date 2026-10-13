@@ -88,7 +88,7 @@ export default async function ProjectLocationsPage({
         <section className="location-empty-state">
           <strong>Nenhum empreendimento selecionado.</strong>
           <span>Cadastre ou selecione uma obra antes de organizar seus locais e pavimentos.</span>
-          <Link href="/empreendimentos">Abrir cadastro de empreendimentos</Link>
+          <Link prefetch={false} href="/empreendimentos">Abrir cadastro de empreendimentos</Link>
         </section>
       ) : (
         <section className="location-page">

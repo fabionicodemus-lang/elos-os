@@ -119,7 +119,7 @@ export default async function ProjectUnitsPage({
         <section className="unit-empty-state">
           <strong>Nenhum empreendimento selecionado.</strong>
           <span>Cadastre ou selecione uma obra antes de gerenciar as unidades privativas.</span>
-          <Link href="/empreendimentos">Abrir cadastro de empreendimentos</Link>
+          <Link prefetch={false} href="/empreendimentos">Abrir cadastro de empreendimentos</Link>
         </section>
       ) : (
         <section className="unit-page">
