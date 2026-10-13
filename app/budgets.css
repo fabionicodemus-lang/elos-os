@@ -910,3 +910,10 @@
   cursor: not-allowed;
   opacity: 0.46;
 }
+
+/* Modais nativos (<dialog>) perdiam a centralização por causa do reset global de margens. */
+dialog.budget-modal[open] {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+}

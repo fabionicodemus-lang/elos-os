@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { TakeoffImportGlobal } from "@/components/takeoff-import-global";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { fetchAllRows } from "@/lib/supabase-pagination";
@@ -281,6 +283,29 @@ export default async function EngineeringTakeoffsPage({
     });
   });
 
+  // Fallback: sem composição precificada, usa o custo unitário lançado no próprio
+  // orçamento (material + M.O. + equipamento + outros).
+  const budgetUnitCostByService = new Map<string, number>();
+  if (selectedBudget) {
+    const { data: budgetCostRows } = await supabase
+      .from("engineering_budget_items")
+      .select("service_id, unit_direct_cost")
+      .eq("company_id", companyId)
+      .eq("budget_id", selectedBudget.id)
+      .eq("status", "active")
+      .not("service_id", "is", null)
+      .limit(5000);
+    (budgetCostRows ?? []).forEach((row) => {
+      if (row.service_id && !budgetUnitCostByService.has(row.service_id)) budgetUnitCostByService.set(row.service_id, Number(row.unit_direct_cost));
+    });
+  }
+  budgetUnitCostByService.forEach((unitCost, serviceId) => {
+    const current = serviceCostMap.get(serviceId);
+    if (!current || current.unitCost == null) {
+      serviceCostMap.set(serviceId, { unitCost, missingPrices: current?.missingPrices ?? 0, itemCount: current?.itemCount ?? 0 });
+    }
+  });
+
   const activeRevisionTakeoffs = selectedTakeoffs.filter((takeoff) => takeoff.record_status === "active");
   const consolidatedMap = new Map<string, ConsolidatedRow>();
   activeRevisionTakeoffs.forEach((takeoff) => {
@@ -356,6 +381,7 @@ export default async function EngineeringTakeoffsPage({
       description={`${company.name} · memórias de cálculo rastreáveis por serviço e local. Obra atual: ${projectLabel}.`}
       actions={canManage && selectedBudget ? (
         <>
+          <Suspense fallback={null}><TakeoffImportGlobal /></Suspense>
           <TakeoffLocationCreateDialog locations={locations} budgetId={selectedBudget.id} />
           {activeLocations.length > 0 && services.length > 0 ? (
             <TakeoffCreateDialog budget={selectedBudget} locations={activeLocations} services={services} />

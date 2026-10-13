@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Suspense } from "react";
+import { APP_VERSION } from "@/lib/version";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import { BudgetAnalyticalDetails } from "@/components/budget-analytical-details";
 import { CurvesBarValues } from "@/components/curves-bar-values";
 import { GlobalSearchableSelect } from "@/components/global-searchable-select";
 import { SefazNfeLauncher } from "@/components/sefaz-nfe-launcher";
 import { ServiceInlineComposition } from "@/components/service-inline-composition";
-import { TakeoffImportGlobal } from "@/components/takeoff-import-global";
 import "./globals.css";
 import "./workspace.css";
 import "./registry.css";
@@ -49,7 +48,6 @@ import "./brokers.css";
 import "./sefaz-nfe.css";
 import "./financial-installments.css";
 import "./elos-theme.css";
-import "./version-marker.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
   variable: "--font-ibm-plex",
@@ -64,7 +62,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Elos OS · V0.72.6",
+  title: `Elos OS · ${APP_VERSION}`,
   description: "Sistema integrado de gestão para construtoras e incorporadoras.",
 };
 
@@ -89,9 +87,6 @@ export default function RootLayout({
         <CurvesBarValues />
         <GlobalSearchableSelect />
         <SefazNfeLauncher />
-        <Suspense fallback={null}>
-          <TakeoffImportGlobal />
-        </Suspense>
       </body>
     </html>
   );

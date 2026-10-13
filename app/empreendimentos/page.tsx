@@ -7,6 +7,7 @@ import {
   type LegalEntityOption,
   type ProjectRegistryData,
 } from "./project-dialogs";
+import { hasValidCnpj } from "@/lib/cnpj";
 import { ProjectDeleteDialog } from "./project-delete-dialog";
 
 const IMAGE_BUCKET = "project-images";
@@ -112,7 +113,7 @@ export default async function ProjectsRegistryPage({
         {canManage ? <ProjectCreateDialog legalEntities={legalEntities} /> : null}
       </section>
 
-      {!structureMissing && legalEntities.filter((entity) => entity.status === "active").length === 0 ? (
+      {!structureMissing && legalEntities.filter((entity) => entity.status === "active" && hasValidCnpj(entity.cnpj)).length === 0 ? (
         <div className="auth-message error workspace-message">
           Cadastre uma empresa ativa com CNPJ válido em <strong>Empresas / SPEs</strong> antes de criar um novo empreendimento.
         </div>

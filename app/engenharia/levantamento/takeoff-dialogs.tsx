@@ -169,7 +169,7 @@ function LocationFields({
       </label>
       <label>
         <span>Repetições oficiais</span>
-        <input name="repetitions" type="number" min="0.000001" step="0.0001" defaultValue={location?.repetitions ?? 1} required />
+        <input name="repetitions" type="number" min="0.000001" step="any" defaultValue={location?.repetitions ?? 1} required />
       </label>
       <label>
         <span>Ordem</span>
@@ -329,7 +329,7 @@ function TakeoffFields({
         </label>
         <label>
           <span>Override de repetição</span>
-          <input name="repetition_override" type="number" min="0.000001" step="0.0001" value={override} onChange={(event) => setOverride(event.target.value)} placeholder="Opcional" />
+          <input name="repetition_override" type="number" min="0.000001" step="any" value={override} onChange={(event) => setOverride(event.target.value)} placeholder="Opcional" />
         </label>
         <label>
           <span>Justificativa do override</span>

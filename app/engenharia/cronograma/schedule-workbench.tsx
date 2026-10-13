@@ -572,7 +572,7 @@ export function SchedulePrevisionWorkbench({
             <label><span>Agrupar</span><select value={groupMode} onChange={(event) => setGroupMode(event.target.value as "location" | "service")}><option value="location">Por pavimento/local</option><option value="service">Por serviço</option></select></label>
             <label><span>Serviço</span><select value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}><option value="">Todos</option>{services.map((service) => <option key={service.id} value={service.id}>{serviceVisual(service).abbreviation} · {service.description}</option>)}</select></label>
             <label><span>Visualização</span><select value={locationView} onChange={(event) => setLocationView(event.target.value as "compact" | "expanded")}><option value="compact">Só pavimentos</option><option value="expanded">Pavimentos + serviços</option></select></label>
-            <Link className="prevision-button prominent" href="/engenharia/levantamento">＋ Novo pavimento</Link>
+            <Link className="prevision-button prominent" href="/engenharia/levantamento" title="Pavimentos e locais são cadastrados em Levantamento de Quantitativos (Locais, pavimentos e repetições).">＋ Pavimentos (Levantamento)</Link>
             {canManage && selectedBaseline ? <ScheduleActivityCreateDialog baselineId={selectedBaseline.id} services={services} locations={locations} activities={activities} /> : null}
             <button className="prevision-button" type="button" onClick={printGantt}>Imprimir A1</button>
             <span className="prevision-divider" />

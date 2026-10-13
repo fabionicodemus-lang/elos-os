@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createProject, updateProject } from "./actions";
+import { hasValidCnpj } from "@/lib/cnpj";
 
 export type LegalEntityOption = {
   id: string;
@@ -70,6 +71,10 @@ function formatCnpj(value: string | null | undefined) {
   return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 }
 
+function selectOnFocus(event: React.FocusEvent<HTMLInputElement>) {
+  event.currentTarget.select();
+}
+
 function ProjectCoverField({ project }: { project?: ProjectRegistryData }) {
   const initialPreview = project?.cover_image_url ?? null;
   const [preview, setPreview] = useState<string | null>(initialPreview);
@@ -126,7 +131,7 @@ function ProjectFields({ project, legalEntities }: { project?: ProjectRegistryDa
       <ProjectCoverField project={project} />
       <label className="project-span-2"><span>Nome do empreendimento</span><input name="name" defaultValue={project?.name ?? ""} required autoFocus /></label>
       <label><span>Código</span><input name="code" defaultValue={project?.code ?? ""} placeholder="FLOW" /></label>
-      <label className="project-span-2"><span>Empresa / SPE responsável</span><select name="legal_entity_id" defaultValue={project?.legal_entity_id ?? ""} required><option value="">Selecione a empresa fiscal…</option>{options.map((entity) => <option key={entity.id} value={entity.id}>{entity.trade_name || entity.legal_name} · {formatCnpj(entity.cnpj)}{entity.status === "inactive" ? " · INATIVA" : ""}</option>)}</select><small className="project-field-help">O CNPJ da empresa selecionada será a referência fiscal oficial da obra.</small></label>
+      <label className="project-span-2"><span>Empresa / SPE responsável</span><select name="legal_entity_id" defaultValue={project?.legal_entity_id ?? ""} required><option value="">Selecione a empresa fiscal…</option>{options.map((entity) => { const cnpjOk = hasValidCnpj(entity.cnpj); return <option key={entity.id} value={entity.id} disabled={!cnpjOk && entity.id !== project?.legal_entity_id}>{entity.trade_name || entity.legal_name} · {formatCnpj(entity.cnpj)}{entity.status === "inactive" ? " · INATIVA" : ""}{cnpjOk ? "" : " · complete o CNPJ em Empresas / SPEs"}</option>; })}</select><small className="project-field-help">O CNPJ da empresa selecionada será a referência fiscal oficial da obra. Empresas com CNPJ pendente aparecem bloqueadas até o CNPJ ser cadastrado em Empresas / SPEs.</small></label>
       <label><span>Tipo</span><select name="project_type" defaultValue={project?.project_type ?? "residential"}>{Object.entries(projectTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label><span>Status</span><select name="status" defaultValue={project?.status ?? "planning"}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label><span>Matrícula / incorporação</span><input name="registration_number" defaultValue={project?.registration_number ?? ""} /></label>
@@ -142,14 +147,14 @@ function ProjectFields({ project, legalEntities }: { project?: ProjectRegistryDa
       <label><span>UF</span><input name="state" maxLength={2} defaultValue={project?.state ?? "SC"} /></label>
 
       <div className="project-form-section project-span-3"><strong>Dimensões e produto</strong><span>Áreas, pavimentos, unidades e vagas</span></div>
-      <label><span>Área do terreno (m²)</span><input name="land_area_m2" inputMode="decimal" defaultValue={project?.land_area_m2 ?? 0} /></label>
-      <label><span>Área construída (m²)</span><input name="built_area_m2" inputMode="decimal" defaultValue={project?.built_area_m2 ?? 0} /></label>
-      <label><span>Área privativa total (m²)</span><input name="private_area_m2" inputMode="decimal" defaultValue={project?.private_area_m2 ?? 0} /></label>
-      <label><span>Área comum total (m²)</span><input name="common_area_m2" inputMode="decimal" defaultValue={project?.common_area_m2 ?? 0} /></label>
-      <label><span>Unidades privativas</span><input name="total_units" type="number" min="0" defaultValue={project?.total_units ?? 0} /></label>
-      <label><span>Torres</span><input name="total_towers" type="number" min="0" defaultValue={project?.total_towers ?? 1} /></label>
-      <label><span>Pavimentos</span><input name="total_floors" type="number" min="0" defaultValue={project?.total_floors ?? 0} /></label>
-      <label><span>Vagas de garagem</span><input name="parking_spaces" type="number" min="0" defaultValue={project?.parking_spaces ?? 0} /></label>
+      <label><span>Área do terreno (m²)</span><input name="land_area_m2" inputMode="decimal" defaultValue={project ? project.land_area_m2 : ""} placeholder="0" onFocus={selectOnFocus} /></label>
+      <label><span>Área construída (m²)</span><input name="built_area_m2" inputMode="decimal" defaultValue={project ? project.built_area_m2 : ""} placeholder="0" onFocus={selectOnFocus} /></label>
+      <label><span>Área privativa total (m²)</span><input name="private_area_m2" inputMode="decimal" defaultValue={project ? project.private_area_m2 : ""} placeholder="0" onFocus={selectOnFocus} /></label>
+      <label><span>Área comum total (m²)</span><input name="common_area_m2" inputMode="decimal" defaultValue={project ? project.common_area_m2 : ""} placeholder="0" onFocus={selectOnFocus} /></label>
+      <label><span>Unidades privativas</span><input name="total_units" type="number" min="0" defaultValue={project ? project.total_units : ""} placeholder="0" onFocus={selectOnFocus} /></label>
+      <label><span>Torres</span><input name="total_towers" type="number" min="0" defaultValue={project ? project.total_towers : ""} placeholder="1" onFocus={selectOnFocus} /></label>
+      <label><span>Pavimentos</span><input name="total_floors" type="number" min="0" defaultValue={project ? project.total_floors : ""} placeholder="0" onFocus={selectOnFocus} /></label>
+      <label><span>Vagas de garagem</span><input name="parking_spaces" type="number" min="0" defaultValue={project ? project.parking_spaces : ""} placeholder="0" onFocus={selectOnFocus} /></label>
 
       <div className="project-form-section project-span-3"><strong>Datas principais</strong><span>Lançamento, início da obra e entrega</span></div>
       <label><span>Lançamento</span><input name="launch_date" type="date" defaultValue={iso(project?.launch_date)} /></label>
