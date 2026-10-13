@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, type FormEvent } from "react";
+import { APP_VERSION } from "@/lib/version";
+import { useMemo, type FormEvent } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 export type ProjectSwitcherOption = {
@@ -28,12 +29,6 @@ export function ProjectSwitcher({
     return query ? `${pathname}?${query}` : pathname;
   }, [pathname, searchParams]);
 
-  useEffect(() => {
-    document.querySelectorAll<HTMLElement>(".elos-module-version").forEach((element) => {
-      element.textContent = "V0.71.6 · sistema integrado";
-    });
-  }, [pathname]);
-
   function submitOnChange(event: FormEvent<HTMLSelectElement>) {
     event.currentTarget.form?.requestSubmit();
   }
@@ -45,7 +40,7 @@ export function ProjectSwitcher({
       className="elos-project-switcher"
       action="/api/workspace/select"
       method="post"
-      data-build-version="V0.71.6"
+      data-build-version={APP_VERSION}
     >
       <input type="hidden" name="company_id" value={companyId} />
       <input type="hidden" name="return_to" value={returnTo} />

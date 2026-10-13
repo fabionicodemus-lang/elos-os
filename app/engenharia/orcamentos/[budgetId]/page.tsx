@@ -189,6 +189,19 @@ export default async function BudgetDetailPage({
     transactionsQuery,
   ]);
 
+  if (!budgetResult.data && projectId) {
+    // A revisão pode ser de outra obra (aba antiga ou link direto): troca a obra e volta.
+    const { data: otherBudget } = await supabase
+      .from("engineering_budgets")
+      .select("project_id")
+      .eq("id", budgetId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (otherBudget?.project_id && otherBudget.project_id !== projectId) {
+      const switchParams = new URLSearchParams({ company_id: companyId, project_id: otherBudget.project_id, return_to: `/engenharia/orcamentos/${budgetId}` });
+      redirect(`/api/workspace/select?${switchParams.toString()}`);
+    }
+  }
   if (!budgetResult.data) redirect("/engenharia/orcamentos?error=Revisão%20não%20localizada.");
 
   const budget = budgetResult.data as Budget;
@@ -275,6 +288,11 @@ export default async function BudgetDetailPage({
     >
       {queryParams.success ? <div className="auth-message success workspace-message">{queryParams.success}</div> : null}
       {queryParams.error ? <div className="auth-message error workspace-message">{queryParams.error}</div> : null}
+      {budget.status === "approved" && canManage ? (
+        <div className="auth-message warning workspace-message">
+          Revisão aprovada{budget.is_base ? " e definida como orçamento base" : ""}. Alterações em grupos e serviços mudam valores já oficializados — para mudanças de escopo, prefira criar uma nova revisão.
+        </div>
+      ) : null}
       {structureError ? <div className="auth-message error workspace-message">Não foi possível carregar todos os dados da revisão.</div> : null}
 
       <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">

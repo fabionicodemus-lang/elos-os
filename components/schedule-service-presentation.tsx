@@ -174,8 +174,6 @@ function applyPresentation(root: HTMLElement) {
   });
 
   buildLegend(root, services);
-  const version = document.querySelector<HTMLElement>(".elos-module-version");
-  if (version) version.textContent = "V0.32.2 · sistema integrado";
 }
 
 export function ScheduleServicePresentation() {

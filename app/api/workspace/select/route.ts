@@ -24,8 +24,22 @@ function redirectTo(request: NextRequest, returnTo: string, message?: string) {
   return NextResponse.redirect(url, 303);
 }
 
+// GET: usado quando um link aponta para um registro de outra obra (ex.: aba antiga
+// ou link direto). Troca a obra selecionada e volta para o registro.
+export async function GET(request: NextRequest) {
+  const params = request.nextUrl.searchParams;
+  const formData = new FormData();
+  formData.set("company_id", params.get("company_id") ?? "");
+  formData.set("project_id", params.get("project_id") ?? "");
+  formData.set("return_to", params.get("return_to") ?? "/dashboard");
+  return selectWorkspace(request, formData);
+}
+
 export async function POST(request: NextRequest) {
-  const formData = await request.formData();
+  return selectWorkspace(request, await request.formData());
+}
+
+async function selectWorkspace(request: NextRequest, formData: FormData) {
   const companyId = String(formData.get("company_id") ?? "").trim();
   const projectId = String(formData.get("project_id") ?? "").trim();
   const returnTo = safeReturnPath(formData.get("return_to"));

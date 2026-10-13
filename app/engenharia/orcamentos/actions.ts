@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { linkBudgetItemsToCatalog } from "@/lib/budget-service-link";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const LIST_PATH = "/engenharia/orcamentos";
@@ -44,17 +45,19 @@ function detailUrl(budgetId: string, message: string, type: "error" | "success" 
 async function findBudget(budgetId: string, manage = false) {
   const permission = manage ? "budgets.manage" : "budgets.view";
   const workspace = await requireCompanyPermission(permission);
-  const { supabase, companyId, projectId } = workspace;
+  const { supabase, companyId } = workspace;
 
-  let query = supabase
+  const query = supabase
     .from("engineering_budgets")
     .select("id, project_id, status, is_base")
     .eq("id", budgetId)
     .eq("company_id", companyId);
 
-  if (projectId) query = query.eq("project_id", projectId);
+  // A revisão é localizada pelo id dentro da empresa, e não pela obra selecionada
+  // no momento: com várias abas abertas, o seletor de obra pode ter mudado em
+  // outra aba. As gravações passam a usar a obra da própria revisão.
   const { data: budget } = await query.maybeSingle();
-  return { ...workspace, budget };
+  return { ...workspace, projectId: budget?.project_id ?? workspace.projectId, budget };
 }
 
 export async function createBudget(formData: FormData) {
@@ -326,9 +329,10 @@ export async function createBudgetItem(formData: FormData) {
   });
 
   if (error) redirect(detailUrl(budgetId, error.message));
+  const link = await linkBudgetItemsToCatalog({ supabase, companyId, budgetId, userId });
   revalidatePath(detailPath(budgetId));
   revalidatePath(LIST_PATH);
-  redirect(detailUrl(budgetId, "Serviço incluído no orçamento.", "success"));
+  redirect(detailUrl(budgetId, link.error ? `Serviço incluído, mas não foi vinculado ao catálogo: ${link.error}` : "Serviço incluído no orçamento.", link.error ? "error" : "success"));
 }
 
 export async function updateBudgetItem(formData: FormData) {

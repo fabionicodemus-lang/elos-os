@@ -175,6 +175,12 @@ input {
   border: 1px solid #f1cccc;
 }
 
+.auth-message.warning {
+  color: #765400;
+  background: #fff8e1;
+  border: 1px solid #f1dfa6;
+}
+
 .auth-message.success {
   color: var(--success);
   background: #ebf8f1;

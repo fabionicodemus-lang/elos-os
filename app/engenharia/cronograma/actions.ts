@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
+import { linkBudgetItemsToCatalog } from "@/lib/budget-service-link";
 import { planScheduleFromBudget } from "./schedule-generation.mjs";
 import { extractSchedulePayload } from "./schedule-portable.mjs";
 import { rescheduleFromMove } from "./schedule-cascade.mjs";
@@ -90,14 +91,14 @@ async function loadBaseline(formData: FormData, permission = "schedule.manage") 
     .select("id, project_id, budget_id, start_date, work_on_saturday, status")
     .eq("id", baselineId)
     .eq("company_id", companyId)
-    .eq("project_id", projectId)
     .maybeSingle();
 
   if (!baseline || baseline.status === "archived") {
     redirect(resultUrl("A linha de base selecionada não está disponível."));
   }
 
-  return { supabase, companyId, projectId, userId, baseline };
+  // Usa a obra da própria linha de base (o seletor pode ter mudado em outra aba).
+  return { supabase, companyId, projectId: baseline.project_id as string, userId, baseline };
 }
 
 export async function createScheduleBaseline(formData: FormData) {
@@ -361,6 +362,9 @@ export async function generateScheduleFromTakeoffs(formData: FormData) {
   if ((existingCountResult.count ?? 0) > 0) {
     redirect(resultUrl("Esta linha de base já possui atividades. Use outra revisão para gerar novamente.", "error", baseline.id));
   }
+
+  const linkResult = await linkBudgetItemsToCatalog({ supabase, companyId, budgetId: baseline.budget_id, userId });
+  if (linkResult.error) redirect(resultUrl(`Não foi possível vincular os serviços do orçamento ao catálogo: ${linkResult.error}`, "error", baseline.id));
 
   const [takeoffsResult, servicesResult, locationsResult, budgetItemsResult] = await Promise.all([
     fetchAllRows<Takeoff>(async (from, to) => {

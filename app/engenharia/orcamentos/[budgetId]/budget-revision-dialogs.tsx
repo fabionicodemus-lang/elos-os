@@ -71,7 +71,12 @@ export function BudgetRevisionDialogs({
         </>
       ) : null}
       {!['approved', 'archived'].includes(budget.status) ? (
-        <form action={closeBudgetRevision}>
+        <form
+          action={closeBudgetRevision}
+          onSubmit={(event) => {
+            if (!window.confirm(`Aprovar o orçamento ${budget.code} · ${budget.version}? Depois de aprovado, ele poderá ser salvo como orçamento base da obra.`)) event.preventDefault();
+          }}
+        >
           <input type="hidden" name="budget_id" value={budget.id} />
           <button className="elos-button budget-close-revision-button" type="submit">
             Aprovar orçamento
@@ -79,7 +84,12 @@ export function BudgetRevisionDialogs({
         </form>
       ) : null}
       {budget.status === "approved" && !budget.is_base ? (
-        <form action={setBudgetAsBase}>
+        <form
+          action={setBudgetAsBase}
+          onSubmit={(event) => {
+            if (!window.confirm(`Salvar ${budget.code} · ${budget.version} como orçamento base da obra? Os centros de custo serão gerados a partir desta revisão.`)) event.preventDefault();
+          }}
+        >
           <input type="hidden" name="budget_id" value={budget.id} />
           <button className="elos-button budget-base-button" type="submit">Salvar como orçamento base</button>
         </form>
