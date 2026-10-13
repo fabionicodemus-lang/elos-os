@@ -157,14 +157,14 @@ export default async function DailyLogsPage({ searchParams }: {
 
     {projectId ? <>
       <nav className="daily-log-tabs">
-        <Link className={tab === "calendar" ? "active" : ""} href={`?month=${month}&tab=calendar`}>Calendário</Link>
-        <Link className={tab === "list" ? "active" : ""} href={`?month=${month}&tab=list`}>Lista de diários</Link>
-        <Link className={tab === "indicators" ? "active" : ""} href={`?month=${month}&tab=indicators`}>Indicadores</Link>
-        <Link className={tab === "settings" ? "active" : ""} href={`?month=${month}&tab=settings`}>Configurações</Link>
+        <Link prefetch={false} className={tab === "calendar" ? "active" : ""} href={`?month=${month}&tab=calendar`}>Calendário</Link>
+        <Link prefetch={false} className={tab === "list" ? "active" : ""} href={`?month=${month}&tab=list`}>Lista de diários</Link>
+        <Link prefetch={false} className={tab === "indicators" ? "active" : ""} href={`?month=${month}&tab=indicators`}>Indicadores</Link>
+        <Link prefetch={false} className={tab === "settings" ? "active" : ""} href={`?month=${month}&tab=settings`}>Configurações</Link>
       </nav>
 
       {selectedDiary ? <>
-        <div className="daily-log-back"><Link href={`?month=${selectedDiary.log_date.slice(0, 7)}&tab=${tab}`}>← Voltar</Link><span>{diaries.filter((item) => item.log_number === selectedDiary.log_number).length} versão(ões) preservada(s)</span></div>
+        <div className="daily-log-back"><Link prefetch={false} href={`?month=${selectedDiary.log_date.slice(0, 7)}&tab=${tab}`}>← Voltar</Link><span>{diaries.filter((item) => item.log_number === selectedDiary.log_number).length} versão(ões) preservada(s)</span></div>
         <DailyLogEditor
           diary={selectedDiary}
           initialWeather={weatherMap.get(selectedDiary.id) ?? []}

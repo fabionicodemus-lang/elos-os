@@ -118,8 +118,8 @@ export default async function CorrectionIndicesPage({
       description={`${company.name} · cadastro mensal usado nos planos de pagamento e contratos.`}
       actions={
         <>
-          <Link className="elos-button" href="/comercial/vendas">Vendas</Link>
-          <Link className="elos-button" href="/comercial/planos-de-pagamento">Contas a receber</Link>
+          <Link prefetch={false} className="elos-button" href="/comercial/vendas">Vendas</Link>
+          <Link prefetch={false} className="elos-button" href="/comercial/planos-de-pagamento">Contas a receber</Link>
         </>
       }
     >
@@ -161,7 +161,7 @@ export default async function CorrectionIndicesPage({
                 {years.map((year) => <option key={year} value={year}>{year}</option>)}
               </select>
               <button type="submit">Filtrar</button>
-              <Link href="/financeiro/indices-de-correcao">Limpar</Link>
+              <Link prefetch={false} href="/financeiro/indices-de-correcao">Limpar</Link>
             </form>
 
             {canManage ? (

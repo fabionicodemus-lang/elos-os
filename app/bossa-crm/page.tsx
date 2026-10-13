@@ -44,7 +44,7 @@ export default function BossaCrmPublicPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link className={styles.brand} href="/bossa-crm" aria-label="Bossa CRM">
+        <Link prefetch={false} className={styles.brand} href="/bossa-crm" aria-label="Bossa CRM">
           <span className={styles.mark}>B.</span>
           <span>
             <span className={styles.brandTitle}>
@@ -55,7 +55,7 @@ export default function BossaCrmPublicPage() {
         </Link>
 
         <nav className={styles.nav} aria-label="Navegação principal">
-          <Link href="/bossa-crm/legal/privacidade">Privacidade</Link>
+          <Link prefetch={false} href="/bossa-crm/legal/privacidade">Privacidade</Link>
           <a className={styles.login} href="https://bossa-crm-phi.vercel.app/login">
             Acessar o sistema
           </a>
@@ -73,7 +73,7 @@ export default function BossaCrmPublicPage() {
           <a className={styles.primary} href="https://bossa-crm-phi.vercel.app/login">
             Entrar no Bossa CRM
           </a>
-          <Link className={styles.secondary} href="/bossa-crm/legal/privacidade">
+          <Link prefetch={false} className={styles.secondary} href="/bossa-crm/legal/privacidade">
             Como tratamos os dados
           </Link>
         </div>
@@ -184,10 +184,10 @@ export default function BossaCrmPublicPage() {
       <footer className={styles.footer}>
         <span>© 2026 Elos Engenharia · Bossa CRM</span>
         <nav className={styles.footerNav} aria-label="Documentos legais">
-          <Link href="/bossa-crm">Sobre</Link>
-          <Link href="/bossa-crm/legal/privacidade">Política de Privacidade</Link>
-          <Link href="/bossa-crm/legal/termos">Termos de Uso</Link>
-          <Link href="/bossa-crm/legal/exclusao-de-dados">Exclusão de Dados</Link>
+          <Link prefetch={false} href="/bossa-crm">Sobre</Link>
+          <Link prefetch={false} href="/bossa-crm/legal/privacidade">Política de Privacidade</Link>
+          <Link prefetch={false} href="/bossa-crm/legal/termos">Termos de Uso</Link>
+          <Link prefetch={false} href="/bossa-crm/legal/exclusao-de-dados">Exclusão de Dados</Link>
         </nav>
       </footer>
     </main>

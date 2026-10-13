@@ -288,7 +288,7 @@ export function ExecutionScheduleWorkbench({
       <header className="prevision-appbar">
         <div className="prevision-brand"><b>E</b><div><strong>Controle do Cronograma</strong><small>{projectName} · previsto, realizado e desvios</small></div></div>
         <nav><button type="button" className={tab === "gantt" ? "active" : ""} onClick={() => setTab("gantt")}>Cronograma</button><button type="button" className={tab === "history" ? "active" : ""} onClick={() => setTab("history")}>Histórico de medições</button></nav>
-        <div className="prevision-top-actions"><button type="button" onClick={exportProgress}>Exportar avanço</button><Link href={selectedBaseline ? `/engenharia/cronograma?baseline=${selectedBaseline.id}` : "/engenharia/cronograma"}>Abrir planejamento</Link></div>
+        <div className="prevision-top-actions"><button type="button" onClick={exportProgress}>Exportar avanço</button><Link prefetch={false} href={selectedBaseline ? `/engenharia/cronograma?baseline=${selectedBaseline.id}` : "/engenharia/cronograma"}>Abrir planejamento</Link></div>
       </header>
 
       <section className="execution-schedule-kpis">

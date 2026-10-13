@@ -352,8 +352,8 @@ export default async function FinancialReportsPage({
       description={`${company.name} · ${context} · ${periodDescription}.`}
       actions={
         <>
-          <Link className="elos-button" href="/financeiro/fluxo-de-caixa">Fluxo de Caixa</Link>
-          <Link className="elos-button" href="/financeiro/contas-a-receber">Contas a Receber</Link>
+          <Link prefetch={false} className="elos-button" href="/financeiro/fluxo-de-caixa">Fluxo de Caixa</Link>
+          <Link prefetch={false} className="elos-button" href="/financeiro/contas-a-receber">Contas a Receber</Link>
         </>
       }
     >
@@ -370,7 +370,7 @@ export default async function FinancialReportsPage({
           </select>
           <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateFrom} defaultTo={dateTo} />
           <button type="submit">Atualizar relatório</button>
-          <Link href="/financeiro/relatorios">Limpar</Link>
+          <Link prefetch={false} href="/financeiro/relatorios">Limpar</Link>
         </form>
       </section>
 

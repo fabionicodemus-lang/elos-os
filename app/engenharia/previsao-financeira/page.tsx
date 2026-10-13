@@ -69,9 +69,9 @@ export default async function ForecastByServicePage({
       description={`${company.name} · ${projectLabel} · realizado, comprometido e a comprometer sem dupla contagem.`}
       actions={
         <>
-          <Link className="elos-button" href="/engenharia/previsao-financeira/historico">Histórico de previsões</Link>
-          <Link className="elos-button" href="/engenharia/curvas">Curvas</Link>
-          <Link className="elos-button" href="/financeiro/fluxo-de-caixa">Fluxo de Caixa</Link>
+          <Link prefetch={false} className="elos-button" href="/engenharia/previsao-financeira/historico">Histórico de previsões</Link>
+          <Link prefetch={false} className="elos-button" href="/engenharia/curvas">Curvas</Link>
+          <Link prefetch={false} className="elos-button" href="/financeiro/fluxo-de-caixa">Fluxo de Caixa</Link>
           {context.baseline && forecast ? (
             <form action={createForecastSnapshot} style={{ display: "inline-flex" }}>
               <input type="hidden" name="baseline_id" value={context.baseline.id} />

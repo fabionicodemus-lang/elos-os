@@ -316,12 +316,12 @@ export default async function EngineeringServicesPage({
       ) : null}
 
       <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">
-        <Link href="/engenharia/orcamentos">▦ Visão geral</Link>
+        <Link prefetch={false} href="/engenharia/orcamentos">▦ Visão geral</Link>
         <span className="active">≡ Serviços</span>
-        <Link href="/engenharia/insumos">◈ Insumos</Link>
-        <Link href="/engenharia/precos">$ Preços e cotações</Link>
-        <Link href="/engenharia/levantamento">∑ Levantamento</Link>
-        <Link href="/engenharia/orcamento-analitico">R$ Orçamento analítico</Link>
+        <Link prefetch={false} href="/engenharia/insumos">◈ Insumos</Link>
+        <Link prefetch={false} href="/engenharia/precos">$ Preços e cotações</Link>
+        <Link prefetch={false} href="/engenharia/levantamento">∑ Levantamento</Link>
+        <Link prefetch={false} href="/engenharia/orcamento-analitico">R$ Orçamento analítico</Link>
       </nav>
 
       <section className="composition-kpi-grid services-composition-kpis">
@@ -370,7 +370,7 @@ export default async function EngineeringServicesPage({
             <option value="inactive">Somente inativos</option>
           </select>
           <button type="submit">Filtrar</button>
-          <Link href="/engenharia/servicos">Limpar</Link>
+          <Link prefetch={false} href="/engenharia/servicos">Limpar</Link>
         </form>
       </section>
 
@@ -407,7 +407,7 @@ export default async function EngineeringServicesPage({
                     </td>
                     <td>
                       <div className="service-row-actions merged-service-actions">
-                        <Link className="table-action composition-open-action" href={buildQuery(filterParams, page, service.id)}>Abrir</Link>
+                        <Link prefetch={false} className="table-action composition-open-action" href={buildQuery(filterParams, page, service.id)}>Abrir</Link>
                         {canManage ? <ServiceEditDialog service={service} groups={groups} units={units} /> : null}
                         {canManage ? (
                           <form action={toggleEngineeringServiceStatus}>
@@ -428,8 +428,8 @@ export default async function EngineeringServicesPage({
         <div className="registry-pagination">
           <span>Página {page} de {totalPages}</span>
           <div>
-            {page > 1 ? <Link href={buildQuery(filterParams, page - 1, selectedService?.id)}>Anterior</Link> : null}
-            {page < totalPages ? <Link href={buildQuery(filterParams, page + 1, selectedService?.id)}>Próxima</Link> : null}
+            {page > 1 ? <Link prefetch={false} href={buildQuery(filterParams, page - 1, selectedService?.id)}>Anterior</Link> : null}
+            {page < totalPages ? <Link prefetch={false} href={buildQuery(filterParams, page + 1, selectedService?.id)}>Próxima</Link> : null}
           </div>
         </div>
       </section>

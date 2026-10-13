@@ -291,7 +291,7 @@ export default async function PermissionsPage({
                   ? permissions.length
                   : mappings.filter((mapping) => mapping.role_id === role.id).length;
                 return (
-                  <Link className={`permission-role-item ${selectedRole?.id === role.id ? "active" : ""}`} href={`/configuracoes/permissoes?role=${role.id}`} key={role.id}>
+                  <Link prefetch={false} className={`permission-role-item ${selectedRole?.id === role.id ? "active" : ""}`} href={`/configuracoes/permissoes?role=${role.id}`} key={role.id}>
                     <div>
                       <span className={`permission-role-icon ${role.is_system ? "system" : "custom"}`}>{role.name.slice(0, 2).toUpperCase()}</span>
                       <span><strong>{role.name}</strong><small>{role.is_system ? "Padrão do sistema" : "Personalizado"} · {count} usuário(s)</small></span>

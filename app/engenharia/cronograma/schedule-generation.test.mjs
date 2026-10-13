@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { distributeByQuantity, planScheduleFromBudget } from "./schedule-generation.mjs";
+import { distributeByQuantity, planScheduleFromBudget, defaultStageWindow } from "./schedule-generation.mjs";
 
 function sum(values) {
   return values.reduce((total, value) => total + value, 0);
@@ -124,4 +124,19 @@ test("planScheduleFromBudget: gera códigos únicos quando o mesmo serviço/loca
   });
   const codes = result.activities.map((a) => a.code);
   assert.equal(new Set(codes).size, codes.length);
+});
+
+test("sem levantamento, a atividade herda a quantidade do orçamento", () => {
+  const result = planScheduleFromBudget({
+    services: [{ id: "alv", code: "05.18", description: "Alvenaria", unit: "m2" }],
+    budgetItems: [{ service_id: "alv", total_direct_cost: 1000, quantity: 250, status: "active" }],
+  });
+  assert.equal(result.activities.length, 1);
+  assert.equal(result.activities[0].quantity, 250);
+});
+
+test("janela padrão segue a etapa da obra", () => {
+  assert.deepEqual(defaultStageWindow("01.02"), [0, 0.08]);
+  assert.deepEqual(defaultStageWindow("04.13"), [0.13, 0.35]);
+  assert.deepEqual(defaultStageWindow("999.1"), [0, 1]);
 });

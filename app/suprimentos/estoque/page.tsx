@@ -332,10 +332,10 @@ export default async function InventoryPage({ searchParams }: {
         </section>
 
         <nav className="inventory-tabs">
-          <Link className={view === "balances" ? "active" : ""} href="?view=balances">Saldos</Link>
-          <Link className={view === "movements" ? "active" : ""} href="?view=movements">Movimentações</Link>
-          <Link className={view === "counts" ? "active" : ""} href="?view=counts">Inventários</Link>
-          <Link className={view === "locations" ? "active" : ""} href="?view=locations">Locais</Link>
+          <Link prefetch={false} className={view === "balances" ? "active" : ""} href="?view=balances">Saldos</Link>
+          <Link prefetch={false} className={view === "movements" ? "active" : ""} href="?view=movements">Movimentações</Link>
+          <Link prefetch={false} className={view === "counts" ? "active" : ""} href="?view=counts">Inventários</Link>
+          <Link prefetch={false} className={view === "locations" ? "active" : ""} href="?view=locations">Locais</Link>
         </nav>
 
         {view === "balances" ? <>
@@ -352,7 +352,7 @@ export default async function InventoryPage({ searchParams }: {
                 <option value="low">Abaixo do mínimo</option>
               </select>
               <button type="submit">Filtrar</button>
-              <Link href="?view=balances">Limpar</Link>
+              <Link prefetch={false} href="?view=balances">Limpar</Link>
             </form>
           </section>
           <section className="inventory-card">
@@ -397,7 +397,7 @@ export default async function InventoryPage({ searchParams }: {
                 {locations.map((location) => <option key={location.id} value={location.id}>{location.code} · {location.name}</option>)}
               </select>
               <button type="submit">Filtrar</button>
-              <Link href="?view=movements">Limpar</Link>
+              <Link prefetch={false} href="?view=movements">Limpar</Link>
             </form>
           </section>
           <section className="inventory-card">
@@ -424,7 +424,7 @@ export default async function InventoryPage({ searchParams }: {
         </> : null}
 
         {view === "counts" && selectedCount ? <>
-          <div className="inventory-back"><Link href="?view=counts">← Voltar aos inventários</Link><span>{selectedCount.count_number}</span></div>
+          <div className="inventory-back"><Link prefetch={false} href="?view=counts">← Voltar aos inventários</Link><span>{selectedCount.count_number}</span></div>
           <section className="inventory-count-hero">
             <div><span>Inventário físico</span><h2>{selectedCount.count_number} · {locationMap.get(selectedCount.location_id)?.name}</h2><p>Contagem de {dateBR(selectedCount.count_date)} · {selectedCount.counter_name ?? "Responsável não informado"}</p></div>
             <span className={`inventory-count-status ${selectedCount.status}`}>{countLabels[selectedCount.status]}</span>
@@ -465,7 +465,7 @@ export default async function InventoryPage({ searchParams }: {
                   const items = countItemMap.get(count.id) ?? [];
                   const differenceValue = items.reduce((sum, item) => sum + Number(item.difference_value), 0);
                   return <tr key={count.id}>
-                    <td><Link href={`?view=counts&count=${count.id}`}><strong>{count.count_number}</strong></Link></td>
+                    <td><Link prefetch={false} href={`?view=counts&count=${count.id}`}><strong>{count.count_number}</strong></Link></td>
                     <td>{locationMap.get(count.location_id)?.name ?? "—"}</td>
                     <td>{dateBR(count.count_date)}</td>
                     <td>{count.counter_name ?? "—"}</td>

@@ -207,7 +207,7 @@ export default async function TaxesPage({ searchParams }: {
           <select name="status" defaultValue={status}><option value="">Todos os status</option>{Object.entries(statusLabels).map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select>
           <DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateRange.from} defaultTo={dateRange.to} />
           <button type="submit">Filtrar</button>
-          <Link href="/financeiro/impostos">Limpar</Link>
+          <Link prefetch={false} href="/financeiro/impostos">Limpar</Link>
         </form>
       </section>
 
@@ -237,7 +237,7 @@ export default async function TaxesPage({ searchParams }: {
                       {obligation.status === "scheduled" ? <form action={generateTaxPayable}><input type="hidden" name="obligation_id" value={obligation.id} /><button className="table-action primary-action" type="submit" disabled={Number(obligation.total_amount) <= 0}>Gerar conta</button></form> : null}
                       {obligation.status === "scheduled" ? <form action={cancelTaxObligation}><input type="hidden" name="obligation_id" value={obligation.id} /><button className="table-action danger" type="submit">Cancelar</button></form> : null}
                       {obligation.status === "cancelled" ? <TaxObligationDialog projects={projects} taxTypes={taxTypes} activeProjectId={projectId} initial={obligation} label="Reativar" /> : null}
-                      {obligation.status === "payable_generated" ? <Link className="table-action" href={`/financeiro/contas-a-pagar?q=${encodeURIComponent(payable?.document || type?.code || "")}`}>Abrir conta</Link> : null}
+                      {obligation.status === "payable_generated" ? <Link prefetch={false} className="table-action" href={`/financeiro/contas-a-pagar?q=${encodeURIComponent(payable?.document || type?.code || "")}`}>Abrir conta</Link> : null}
                     </div> : "—"}
                   </td>
                 </tr>;
@@ -246,7 +246,7 @@ export default async function TaxesPage({ searchParams }: {
             </tbody>
           </table>
         </div>
-        <div className="registry-pagination"><span>Página {page} de {totalPages}</span><div>{page > 1 ? <Link href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}{page < totalPages ? <Link href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}</div></div>
+        <div className="registry-pagination"><span>Página {page} de {totalPages}</span><div>{page > 1 ? <Link prefetch={false} href={`?${paginationQuery}&page=${page - 1}`}>Anterior</Link> : null}{page < totalPages ? <Link prefetch={false} href={`?${paginationQuery}&page=${page + 1}`}>Próxima</Link> : null}</div></div>
       </section>
 
       <section className="tax-catalog-card">

@@ -8,6 +8,7 @@ export type ScheduleGenService = {
 export type ScheduleGenBudgetItem = {
   service_id: string | null;
   total_direct_cost: number;
+  quantity?: number;
   status?: "active" | "inactive";
 };
 
@@ -68,3 +69,5 @@ export function planScheduleFromBudget(input: {
   takeoffCells?: ScheduleGenTakeoffCell[];
   locations?: ScheduleGenLocation[];
 }): ScheduleGenResult;
+
+export function defaultStageWindow(serviceCode: string | null | undefined): [number, number];

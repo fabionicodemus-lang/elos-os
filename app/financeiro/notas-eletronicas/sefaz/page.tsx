@@ -22,7 +22,7 @@ export default async function SefazNfePage({ searchParams }: {
     eyebrow="Financeiro · Documentos fiscais"
     title="Importador NF-e · SEFAZ"
     description={`${company.name} · ${context} · documentos fiscais destinados à SPE pelo Ambiente Nacional da NF-e.`}
-    actions={<Link className="elos-button" href="/financeiro/notas-eletronicas">Voltar às notas</Link>}
+    actions={<Link prefetch={false} className="elos-button" href="/financeiro/notas-eletronicas">Voltar às notas</Link>}
   >
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}

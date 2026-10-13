@@ -14,6 +14,7 @@ export type ScheduleBudgetOption = {
   code: string;
   name: string;
   version: string;
+  is_base?: boolean;
 };
 
 export type ScheduleServiceOption = {
@@ -75,9 +76,11 @@ function DialogHeader({ eyebrow, title, onClose }: { eyebrow: string; title: str
   );
 }
 
-export function ScheduleBaselineCreateDialog({ budgets }: { budgets: ScheduleBudgetOption[] }) {
+export function ScheduleBaselineCreateDialog({ budgets, defaultStartDate }: { budgets: ScheduleBudgetOption[]; defaultStartDate?: string | null }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  // Início sugerido: início da construção cadastrado na obra; sem ele, hoje.
+  const initialStart = defaultStartDate?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+  const baseBudgetId = budgets.find((budget) => budget.is_base)?.id ?? "";
 
   return (
     <>
@@ -90,12 +93,12 @@ export function ScheduleBaselineCreateDialog({ budgets }: { budgets: ScheduleBud
             <label><span>Versão</span><input name="version" defaultValue="LB-00" required /></label>
             <label className="schedule-span-2"><span>Nome</span><input name="name" placeholder="Linha de base contratual da obra" required /></label>
             <label className="schedule-span-2"><span>Revisão do orçamento</span>
-              <select name="budget_id" required defaultValue="">
+              <select name="budget_id" required defaultValue={baseBudgetId}>
                 <option value="" disabled>Selecione a revisão</option>
-                {budgets.map((budget) => <option key={budget.id} value={budget.id}>{budget.code} · {budget.version} · {budget.name}</option>)}
+                {budgets.map((budget) => <option key={budget.id} value={budget.id}>{budget.code} · {budget.version} · {budget.name}{budget.is_base ? " · orçamento base" : ""}</option>)}
               </select>
             </label>
-            <label><span>Início planejado</span><input name="start_date" type="date" defaultValue={today} required /></label>
+            <label><span>Início planejado</span><input name="start_date" type="date" defaultValue={initialStart} required /></label>
             <label className="schedule-check"><input name="work_on_saturday" type="checkbox" /><span>Considerar sábado como dia útil</span></label>
             <label className="schedule-span-2"><span>Premissas</span><textarea name="notes" rows={3} placeholder="Calendário, restrições, metas e critérios desta linha de base." /></label>
           </div>

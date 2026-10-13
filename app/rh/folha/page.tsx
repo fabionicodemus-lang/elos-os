@@ -179,8 +179,8 @@ export default async function PayrollPage({ searchParams }: {
       title="Folha de Pagamento"
       description={`${company.name} · ${context} · salários, descontos, encargos, benefícios e integração financeira.`}
       actions={<>
-        <Link className="elos-button" href="/rh/colaboradores">Colaboradores</Link>
-        <Link className="elos-button" href="/financeiro/contas-a-pagar">Contas a pagar</Link>
+        <Link prefetch={false} className="elos-button" href="/rh/colaboradores">Colaboradores</Link>
+        <Link prefetch={false} className="elos-button" href="/financeiro/contas-a-pagar">Contas a pagar</Link>
       </>}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
@@ -222,7 +222,7 @@ export default async function PayrollPage({ searchParams }: {
               ) : null}
               <nav className="hr-run-list">
                 {runs.map((run) => (
-                  <Link key={run.id} href={`/rh/folha?run=${run.id}`} className={selectedRun?.id === run.id ? "active" : ""}>
+                  <Link prefetch={false} key={run.id} href={`/rh/folha?run=${run.id}`} className={selectedRun?.id === run.id ? "active" : ""}>
                     <span><strong>{competenceLabel(run.competence)}</strong><small>Pagamento {dateBR(run.salary_due_date)}</small></span>
                     <b className={`hr-status ${run.status}`}>{statusLabels[run.status]}</b>
                     <em>{money(run.total_company_cost)}</em>
@@ -267,7 +267,7 @@ export default async function PayrollPage({ searchParams }: {
                   {selectedRun.status === "posted" ? (
                     <section className="hr-finance-result">
                       <div><span>Integração financeira concluída</span><strong>{generatedPayables.length} conta(s) gerada(s)</strong><small>{openPayables.length} em aberto · {paidPayables.length} paga(s)</small></div>
-                      <Link className="elos-button primary" href={`/financeiro/contas-a-pagar?q=${encodeURIComponent(`FOLHA ${competenceLabel(selectedRun.competence)}`)}`}>Ver contas a pagar</Link>
+                      <Link prefetch={false} className="elos-button primary" href={`/financeiro/contas-a-pagar?q=${encodeURIComponent(`FOLHA ${competenceLabel(selectedRun.competence)}`)}`}>Ver contas a pagar</Link>
                     </section>
                   ) : null}
 

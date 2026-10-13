@@ -67,10 +67,12 @@ export function planScheduleFromBudget({ services = [], budgetItems = [], takeof
 
   // Valor do orçamento por serviço (em centavos), somando itens ativos.
   const serviceBudgetCents = new Map();
+  const serviceBudgetQuantity = new Map();
   budgetItems.forEach((item) => {
     if (item.status && item.status !== "active") return;
     if (!item.service_id) return;
     serviceBudgetCents.set(item.service_id, (serviceBudgetCents.get(item.service_id) ?? 0) + toCents(item.total_direct_cost));
+    serviceBudgetQuantity.set(item.service_id, (serviceBudgetQuantity.get(item.service_id) ?? 0) + Math.max(0, Number(item.quantity) || 0));
   });
 
   // Células do levantamento agrupadas por serviço → local.
@@ -113,7 +115,8 @@ export function planScheduleFromBudget({ services = [], budgetItems = [], takeof
 
     let parts = [...byLocation.values()];
     if (parts.length === 0) {
-      parts = [{ locationId: null, quantity: 0, unit: service?.unit ?? "un" }];
+      // Sem levantamento: usa a quantidade do próprio orçamento.
+      parts = [{ locationId: null, quantity: serviceBudgetQuantity.get(serviceId) ?? 0, unit: service?.unit ?? "un" }];
     }
 
     parts.sort((a, b) => {
@@ -175,4 +178,23 @@ export function planScheduleFromBudget({ services = [], budgetItems = [], takeof
       serviceCount: orderedServiceIds.length,
     },
   };
+}
+
+// Sequência típica de obra vertical por grupo do orçamento (código antes do
+// primeiro ponto). Valores em fração do prazo total: [início, duração].
+// Usada só como premissa inicial; o planejador ajusta depois.
+const STAGE_WINDOWS = {
+  "01": [0, 0.08], "02": [0.03, 0.06], "03": [0.06, 0.1], "04": [0.13, 0.35],
+  "05": [0.26, 0.32], "06": [0.3, 0.42], "07": [0.4, 0.33], "08": [0.3, 0.42],
+  "09": [0.73, 0.13], "10": [0.6, 0.2], "11": [0.8, 0.07], "12": [0.4, 0.36],
+  "13": [0.6, 0.2], "14": [0.46, 0.27], "15": [0.53, 0.3], "16": [0.53, 0.27],
+  "17": [0.5, 0.07], "18": [0.73, 0.13], "19": [0.66, 0.27], "20": [0.86, 0.07],
+  "21": [0.73, 0.13], "22": [0.8, 0.1], "23": [0.86, 0.07], "24": [0.06, 0.94],
+  "25": [0, 1], "26": [0, 1], "27": [0.73, 0.13], "28": [0.86, 0.1], "29": [0.95, 0.05],
+};
+
+/** Janela padrão [início, duração] (frações do prazo) para o código do serviço. */
+export function defaultStageWindow(serviceCode) {
+  const group = String(serviceCode ?? "").split(".")[0].replace(/\D/g, "").padStart(2, "0");
+  return STAGE_WINDOWS[group] ?? [0, 1];
 }
