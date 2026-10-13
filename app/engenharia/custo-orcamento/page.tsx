@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
+import "../../forecast.css";
 import { AppShell } from "@/components/app-shell";
 import {
   loadCostVsBudget,
@@ -324,52 +325,6 @@ export default async function CostVsBudgetPage({
 
       {projectId && context.budget ? (
         <>
-          <section className="forecast-kpis">
-            <article>
-              <span>Orçamento</span>
-              <strong>{money(context.totals.budget)}</strong>
-              <small>total da revisão selecionada</small>
-            </article>
-            <article className="actual">
-              <span>Total pago</span>
-              <strong>{money(context.totals.paid)}</strong>
-              <small>títulos já pagos</small>
-            </article>
-            <article className="committed">
-              <span>Total comprometido</span>
-              <strong>{money(context.totals.unpaid)}</strong>
-              <small>títulos em aberto, pedidos, medições e consumos ainda não pagos</small>
-            </article>
-            <article>
-              <span>Estoque</span>
-              <strong>{money(context.totals.stockOnHand)}</strong>
-              <small>
-                {context.totals.stockWithoutService > 0.01
-                  ? `material não aplicado · ${money(context.totals.stockWithoutService)} sem serviço definido`
-                  : "material no almoxarifado, ainda não aplicado"}
-              </small>
-            </article>
-            <article className={balanceIsNegative ? "danger" : "ok"}>
-              <span>Saldo</span>
-              <strong>{money(context.totals.balance)}</strong>
-              <small>{percent(context.totals.consumptionPercent)} do orçamento consumido</small>
-            </article>
-            {context.totals.unallocated > 0.01 ? (
-              <article className="danger">
-                <span>Sem apropriação</span>
-                <strong>{money(context.totals.unallocated)}</strong>
-                <small>custos sem serviço do orçamento; fora do saldo</small>
-              </article>
-            ) : null}
-            {context.totals.payableUnallocated > 0.01 ? (
-              <article className="danger">
-                <span>Títulos sem apropriação</span>
-                <strong>{money(context.totals.payableUnallocated)}</strong>
-                <small>contas do Koper pendentes para tratamento manual</small>
-              </article>
-            ) : null}
-          </section>
-
           <section className="registry-toolbar cashflow-toolbar">
             <form
               method="get"
@@ -507,6 +462,52 @@ export default async function CostVsBudgetPage({
                 </table>
               </CostVsBudgetExpansionProvider>
             </div>
+          </section>
+
+          <section className="forecast-kpis">
+            <article>
+              <span>Orçamento</span>
+              <strong>{money(context.totals.budget)}</strong>
+              <small>total da revisão selecionada</small>
+            </article>
+            <article className="actual">
+              <span>Total pago</span>
+              <strong>{money(context.totals.paid)}</strong>
+              <small>títulos já pagos</small>
+            </article>
+            <article className="committed">
+              <span>Total comprometido</span>
+              <strong>{money(context.totals.unpaid)}</strong>
+              <small>títulos em aberto, pedidos, medições e consumos ainda não pagos</small>
+            </article>
+            <article>
+              <span>Estoque</span>
+              <strong>{money(context.totals.stockOnHand)}</strong>
+              <small>
+                {context.totals.stockWithoutService > 0.01
+                  ? `material não aplicado · ${money(context.totals.stockWithoutService)} sem serviço definido`
+                  : "material no almoxarifado, ainda não aplicado"}
+              </small>
+            </article>
+            <article className={balanceIsNegative ? "danger" : "ok"}>
+              <span>Saldo</span>
+              <strong>{money(context.totals.balance)}</strong>
+              <small>{percent(context.totals.consumptionPercent)} do orçamento consumido</small>
+            </article>
+            {context.totals.unallocated > 0.01 ? (
+              <article className="danger">
+                <span>Sem apropriação</span>
+                <strong>{money(context.totals.unallocated)}</strong>
+                <small>custos sem serviço do orçamento; fora do saldo</small>
+              </article>
+            ) : null}
+            {context.totals.payableUnallocated > 0.01 ? (
+              <article className="danger">
+                <span>Títulos sem apropriação</span>
+                <strong>{money(context.totals.payableUnallocated)}</strong>
+                <small>contas do Koper pendentes para tratamento manual</small>
+              </article>
+            ) : null}
           </section>
         </>
       ) : null}
