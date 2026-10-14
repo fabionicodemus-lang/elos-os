@@ -1,0 +1,115 @@
+.bank-operations {
+  display: grid;
+  gap: 18px;
+}
+.bank-operations nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.bank-operations nav a {
+  padding: 10px 14px;
+  border-radius: 11px;
+  background: white;
+  color: #00615c;
+  border: 1px solid #e5eae8;
+}
+.bank-operations nav a[aria-current] {
+  background: #e2f1ef;
+  font-weight: 700;
+}
+.bank-op-panel {
+  background: white;
+  border: 1px solid #e5eae8;
+  border-radius: 16px;
+  padding: 22px;
+  min-width: 0;
+}
+.bank-op-panel h2,
+.bank-op-panel h3 {
+  margin: 0 0 10px;
+}
+.bank-operations form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: end;
+}
+.bank-operations label {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 180px;
+  font-size: 13px;
+}
+.bank-operations input,
+.bank-operations select,
+.bank-operations textarea {
+  max-width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #e5eae8;
+  border-radius: 11px;
+  background: white;
+  color: #16211f;
+}
+.bank-operations input:focus,
+.bank-operations select:focus,
+.bank-operations textarea:focus {
+  outline: 2px solid #008780;
+  outline-offset: 2px;
+}
+.bank-operations button {
+  padding: 11px 16px;
+  background: #008780;
+  color: white;
+  border: 0;
+  border-radius: 11px;
+  cursor: pointer;
+}
+.bank-op-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+.bank-op-panel p {
+  color: #5f7d79;
+  line-height: 1.6;
+}
+.bank-op-panel details {
+  padding: 12px 0;
+  border-top: 1px solid #e5eae8;
+}
+.bank-op-panel summary {
+  cursor: pointer;
+}
+.bank-op-panel table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.bank-op-panel td,
+.bank-op-panel th {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e5eae8;
+}
+.bank-op-panel pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.bank-operations .registry-table-wrap {
+  overflow: auto;
+}
+@media (max-width: 700px) {
+  .bank-op-panel {
+    padding: 16px;
+  }
+  .bank-op-heading {
+    flex-direction: column;
+  }
+  .bank-operations form {
+    align-items: stretch;
+  }
+  .bank-operations button {
+    width: 100%;
+  }
+}

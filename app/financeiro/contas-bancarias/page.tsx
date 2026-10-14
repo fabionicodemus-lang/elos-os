@@ -154,6 +154,7 @@ export default async function BankAccountsPage({ searchParams }: {
     title="Contas Bancárias"
     description={`${company.name} · carteira de contas, saldos, movimentações, transferências e conciliações.`}
     actions={<>
+      <Link href="/financeiro/contas-bancarias/operacoes">Extratos e conciliação</Link>
       {canManage ? <BankAccountDialog legalEntities={legalEntities} /> : null}
       <BankTransactionDialog accounts={accounts} projects={projects} activeProjectId={projectId} canManage={canManage} />
       <BankTransferDialog accounts={accounts} projects={projects} activeProjectId={projectId} canTransfer={canTransfer} />
