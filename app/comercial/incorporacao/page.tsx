@@ -49,6 +49,7 @@ export default async function IncorporationPage({ searchParams }: { searchParams
     title="Carteira da incorporadora"
     description={`${company.name} · contratos, recebíveis, permutas, repasses, cobrança, aditivos e distratos em uma única visão.`}
     actions={<>
+      <Link className="elos-button" prefetch={false} href="/comercial/incorporacao/resultado">Resultado do empreendimento</Link>
       <Link className="elos-button" prefetch={false} href="/comercial/incorporacao/viabilidade">Estudo de Viabilidade de Permuta</Link>
       <Link className="elos-button" prefetch={false} href="/comercial/incorporacao/tabelas">Tabelas de venda</Link>
       <Link className="elos-button" prefetch={false} href="/comercial/propostas">Propostas</Link>
