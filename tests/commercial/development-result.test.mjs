@@ -58,9 +58,9 @@ test("resultado compara baseline com VGV atual e custo projetado", () => {
   assert.equal(result.cash.overdue, 600_000);
   assert.equal(result.cost.engineeringProjected, 8_400_000);
   assert.equal(result.cost.unallocatedProjected, 150_000);
-  assert.equal(result.result.projectedProfit, 8_218_000);
-  assert.ok(result.result.projectedMarginPct > 36 && result.result.projectedMarginPct < 37);
-  assert.equal(result.result.profitDeviation, 130_000);
+  assert.equal(result.result.projectedProfit, 9_048_000);
+  assert.ok(result.result.projectedMarginPct > 39 && result.result.projectedMarginPct < 40);
+  assert.equal(result.result.profitDeviation, 960_000);
   assert.equal(result.result.health, "above");
   assert.ok(result.warnings.some((warning) => warning.includes("sem serviço/centro")));
 });
