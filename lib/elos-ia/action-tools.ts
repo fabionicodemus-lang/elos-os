@@ -1,6 +1,6 @@
 import type { ElosIaPersonaKey } from "./personas";
 import type { ElosIaToolContext } from "./tools";
-import { allocateSharedAmount, buildMeasurementPreview, matchUniqueCandidate, normalizeActionText } from "./action-utils.mjs";
+import { allocateSharedAmount, buildMeasurementPreview, matchUniqueCandidate } from "./action-utils.mjs";
 
 export type ElosIaActionToolName = "preparar_cotacao_fornecedor" | "preparar_medicao_contrato";
 export type ElosIaActionToolContext = ElosIaToolContext & {
@@ -82,7 +82,7 @@ const QUOTE_ITEM_SCHEMA=strictObject({
   imposto_percentual:{type:["number","null"],description:"Imposto acrescido ao item; null quando não informado."},
   marca:{type:["string","null"]},fabricante:{type:["string","null"]},
   prazo_entrega_dias:{type:["integer","null"]},
-  atende_especificacao:{type:["boolean","null"],description:"Use null se o documento não permite confirmar aderência técnica."},
+  atende_especificacao:{type:["boolean","null"],description:"Use true somente quando o documento comprovar aderência técnica; false quando divergir e null quando não for possível confirmar."},
   observacoes_tecnicas:{type:["string","null"]},
 });
 
@@ -158,12 +158,12 @@ async function prepareSupplierQuote(context:ElosIaActionToolContext,args:ToolArg
     quotation_item_id:row.item.id,quantity_offered:row.quantity,unit_price:row.unitPrice,
     discount_percent:row.discount,tax_percent:row.tax,freight_amount:freightParts[index],other_cost_amount:otherParts[index],
     brand:nullableText(row.raw.marca),manufacturer:nullableText(row.raw.fabricante),delivery_days:nullableInt(row.raw.prazo_entrega_dias),
-    meets_specification:row.raw.atende_especificacao==null?true:Boolean(row.raw.atende_especificacao),
+    meets_specification:row.raw.atende_especificacao===true,
     technical_notes:nullableText(row.raw.observacoes_tecnicas),
   }));
   const previewItems=prepared.map((row,index)=>{
     const total=money(row.subtotal+freightParts[index]+otherParts[index]);
-    return {id:row.item.id,code:row.item.input_code,name:row.item.input_name,unit:row.item.unit_snapshot,quantityToQuote:num(row.item.quantity_to_quote),quantity:row.quantity,unitPrice:row.unitPrice,discountPercent:row.discount,taxPercent:row.tax,freight:freightParts[index],otherCost:otherParts[index],deliveredUnitCost:money(total/row.quantity),total,brand:nullableText(row.raw.marca),deliveryDays:nullableInt(row.raw.prazo_entrega_dias)};
+    return {id:row.item.id,code:row.item.input_code,name:row.item.input_name,unit:row.item.unit_snapshot,quantityToQuote:num(row.item.quantity_to_quote),quantity:row.quantity,unitPrice:row.unitPrice,discountPercent:row.discount,taxPercent:row.tax,freight:freightParts[index],otherCost:otherParts[index],deliveredUnitCost:money(total/row.quantity),total,brand:nullableText(row.raw.marca),deliveryDays:nullableInt(row.raw.prazo_entrega_dias),meetsSpecification:row.raw.atende_especificacao===true};
   });
   const total=money(previewItems.reduce((sum,row)=>sum+row.total,0));
   const sourceFile=resolveSourceFile(context,args.arquivo_origem);
