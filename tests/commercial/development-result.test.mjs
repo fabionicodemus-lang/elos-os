@@ -58,9 +58,10 @@ test("resultado compara baseline com VGV atual e custo projetado", () => {
   assert.equal(result.cash.overdue, 600_000);
   assert.equal(result.cost.engineeringProjected, 8_400_000);
   assert.equal(result.cost.unallocatedProjected, 150_000);
-  assert.equal(result.result.projectedProfit, 9_048_000);
-  assert.ok(result.result.projectedMarginPct > 39 && result.result.projectedMarginPct < 40);
-  assert.equal(result.result.profitDeviation, 960_000);
+  assert.equal(result.cost.projectedOtherCost, 2_832_000);
+  assert.equal(result.result.projectedProfit, 9_198_000);
+  assert.ok(result.result.projectedMarginPct > 40 && result.result.projectedMarginPct < 41);
+  assert.equal(result.result.profitDeviation, 1_110_000);
   assert.equal(result.result.health, "above");
   assert.ok(result.warnings.some((warning) => warning.includes("sem serviço/centro")));
 });
@@ -84,6 +85,25 @@ test("sem previsão atual usa custo do baseline e estima estoque faltante", () =
   assert.equal(result.cost.engineeringProjected, 7_980_000);
   assert.equal(result.result.projectedProfit, baselineMetrics.profit);
   assert.ok(result.warnings.some((warning) => warning.includes("Sem previsão financeira atual")));
+});
+
+test("estoque disponível acima do baseline não volta a contar permutas ou unidades extras", () => {
+  const result = calculateDevelopmentResult({
+    baselineMetrics,
+    baselineStudy,
+    sales: [
+      { status: "active", unit_id: "u1", total_amount: 800_000 },
+      { status: "active", unit_id: "u2", total_amount: 900_000 },
+    ],
+    units: Array.from({ length: 34 }, () => ({ status: "available", list_price: 750_000 })),
+    forecast: null,
+    today: "2026-10-14",
+  });
+
+  assert.equal(result.commercial.availableUnits, 28);
+  assert.equal(result.commercial.inventoryVgv, 21_000_000);
+  assert.equal(result.commercial.projectedVgv, 22_700_000);
+  assert.ok(result.warnings.some((warning) => warning.includes("além do estoque comercializável")));
 });
 
 test("recebíveis vencidos e caixa realizado ficam separados do lucro projetado", () => {
