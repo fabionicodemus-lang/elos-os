@@ -21,6 +21,10 @@ async function officialDocumentExists(supabase:SupabaseClientLike,proposal:ElosI
     const query=await supabase.from("execution_contract_measurement_documents").select("id").eq("measurement_id",stringValue(result.measurement_id)).eq("file_name",fileName).eq("caption",caption).maybeSingle();
     return Boolean(query.data);
   }
+  if(proposal.action_type==="finance_manual_invoice"){
+    const query=await supabase.from("finance_manual_invoice_documents").select("id").eq("invoice_id",stringValue(result.invoice_id)).eq("file_name",fileName).eq("caption",caption).maybeSingle();
+    return Boolean(query.data);
+  }
   return true;
 }
 
@@ -53,6 +57,15 @@ async function copyOfficialDocuments(supabase:SupabaseClientLike,proposal:ElosIa
         const uploaded=await supabase.storage.from(bucket).upload(path,bytes,{contentType:file.mime_type||undefined,upsert:false});
         if(uploaded.error)throw new Error(uploaded.error.message);
         const inserted=await supabase.from("execution_contract_measurement_documents").insert({company_id:proposal.company_id,project_id:proposal.project_id,measurement_id:measurementId,document_type:"evidence",storage_path:path,file_name:file.file_name,mime_type:file.mime_type,file_size:file.file_size,caption,uploaded_by:proposal.created_by});
+        insertError=inserted.error;
+      }else if(proposal.action_type==="finance_manual_invoice"){
+        const invoiceId=stringValue(result.invoice_id);
+        if(!proposal.project_id||!invoiceId)throw new Error("destino");
+        bucket="manual-invoice-documents";
+        path=`${proposal.company_id}/${proposal.project_id}/${invoiceId}/${crypto.randomUUID()}-${safeName(file.file_name)}`;
+        const uploaded=await supabase.storage.from(bucket).upload(path,bytes,{contentType:file.mime_type||undefined,upsert:false});
+        if(uploaded.error)throw new Error(uploaded.error.message);
+        const inserted=await supabase.from("finance_manual_invoice_documents").insert({company_id:proposal.company_id,project_id:proposal.project_id,invoice_id:invoiceId,document_type:"invoice",storage_path:path,file_name:file.file_name,mime_type:file.mime_type,file_size:file.file_size,caption,uploaded_by:proposal.created_by});
         insertError=inserted.error;
       }
       if(insertError){if(bucket&&path)await supabase.storage.from(bucket).remove([path]);throw new Error(insertError.message);}
