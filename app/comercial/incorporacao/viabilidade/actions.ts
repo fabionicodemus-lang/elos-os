@@ -48,7 +48,7 @@ function studyPayload(formData: FormData) {
     other_land_amount: numberValue(formData, "other_land_amount"),
     commission_pct: numberValue(formData, "commission_pct", 6),
     tax_regime: taxRegime,
-    tax_rate_pct: numberValue(formData, "tax_rate_pct", taxRegime === "ret" ? 4 : 5.93),
+    tax_rate_pct: numberValue(formData, "tax_rate_pct", taxRegime === "ret" ? 4 : 0),
     marketing_amount: numberValue(formData, "marketing_amount"),
     central_office_amount: numberValue(formData, "central_office_amount"),
     financial_cost_amount: numberValue(formData, "financial_cost_amount"),
