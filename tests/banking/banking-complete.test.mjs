@@ -6,6 +6,7 @@ import { PGlite } from "@electric-sql/pglite";
 const core = readFileSync(new URL("../../supabase/migrations/20261014031500_banking_settlements_and_provider_core.sql", import.meta.url), "utf8");
 const summaries = readFileSync(new URL("../../supabase/migrations/20261014033000_banking_partial_summary_and_charge_state.sql", import.meta.url), "utf8");
 const cards = readFileSync(new URL("../../supabase/migrations/20261014034500_banking_card_lifecycle.sql", import.meta.url), "utf8");
+const security = readFileSync(new URL("../../supabase/migrations/20261014040000_banking_rpc_security_fix.sql", import.meta.url), "utf8");
 
 const uid = "11111111-1111-4111-8111-111111111111";
 const company = "22222222-2222-4222-8222-222222222222";
@@ -80,6 +81,7 @@ async function bootstrap(db) {
   await db.exec(core);
   await db.exec(summaries);
   await db.exec(cards);
+  await db.exec(security);
   await db.exec(`
     insert into auth.users values('${uid}');
     insert into public.companies values('${company}');
@@ -130,14 +132,14 @@ test("banking completo: baixa parcial, webhook idempotente e cartão", async (t)
       await db.query("select bank_register_provider_charge($1,$2,'pay_1','elos:draft','pix',null,null,'000201...',null,'{}')",[connection,draft]);
       await db.exec("reset role; set role service_role");
       assert.equal((await db.query("select bank_apply_provider_event($1,'evt_confirmed','PAYMENT_CONFIRMED','pay_1','confirmed',100,98,'2026-11-15','{}') r",[connection])).rows[0].r,"processed");
-      assert.equal((await db.query("select count(*)::int n from finance_receivable_settlements where receivable_id=$1",[webhookReceivable])).rows[0].n,0);
       assert.equal((await db.query("select bank_apply_provider_event($1,'evt_received','PAYMENT_RECEIVED','pay_1','received',100,98,'2026-11-15','{}') r",[connection])).rows[0].r,"processed");
       assert.equal((await db.query("select bank_apply_provider_event($1,'evt_received','PAYMENT_RECEIVED','pay_1','received',100,98,'2026-11-15','{}') r",[connection])).rows[0].r,"duplicate");
+      await db.exec("reset role; set role authenticated");
+      assert.equal((await db.query("select count(*)::int n from finance_receivable_settlements where receivable_id=$1",[webhookReceivable])).rows[0].n,1);
       const settlement=(await db.query("select gross_amount,net_amount,fee_amount from finance_receivable_settlements where receivable_id=$1",[webhookReceivable])).rows[0];
       assert.equal(Number(settlement.gross_amount),100); assert.equal(Number(settlement.net_amount),98); assert.equal(Number(settlement.fee_amount),2);
       assert.equal((await db.query("select count(*)::int n from finance_bank_transactions where receivable_id=$1",[webhookReceivable])).rows[0].n,1);
       assert.equal((await db.query("select count(*)::int n from finance_bank_transactions where transaction_type='fee'")).rows[0].n,1);
-      await db.exec("reset role; set role authenticated");
     });
 
     await t.test("cartão parcela, fecha e aceita pagamento parcial até quitar", async () => {
