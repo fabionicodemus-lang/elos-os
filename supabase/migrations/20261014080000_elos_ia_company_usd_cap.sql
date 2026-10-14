@@ -96,7 +96,8 @@ as $$
   from bounds
   left join public.ai_usage_log usage
     on usage.company_id = p_company_id
-   and usage.created_at >= bounds.month_start;
+   and usage.created_at >= bounds.month_start
+   and exists (select 1 from company_cfg);
 $$;
 
 revoke all on function public.ai_usage_totals(uuid) from public, anon;
