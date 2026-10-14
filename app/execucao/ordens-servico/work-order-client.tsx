@@ -11,6 +11,10 @@ import {
 } from "@/lib/financial-installments";
 import { acceptWorkOrder, saveWorkOrder, updateWorkOrderProgress } from "./actions";
 
+
+// Lista vazia estável: um "[]" no valor padrão das props cria uma lista nova a cada
+// render, o que re-disparava efeitos e zerava o que o usuário digitava.
+const EMPTY_LIST: never[] = [];
 export type ContractItemOption = {
   id: string; contract_id: string; service_code: string; service_name: string; location_name: string | null;
   unit_snapshot: string; unit_price: number; contracted_quantity: number; available_quantity: number;
@@ -46,7 +50,7 @@ function today() { return localTodayIso(); }
 function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0)); }
 function emptyItem(): DraftItem { return { contract_item_id: "", authorized_quantity: 0, planned_start: null, planned_finish: null, notes: null }; }
 
-export function WorkOrderDialog({ contracts, contractItems, workOrder, items = [], prerequisites = [], autoOpen = false, label }: {
+export function WorkOrderDialog({ contracts, contractItems, workOrder, items = EMPTY_LIST, prerequisites = EMPTY_LIST, autoOpen = false, label }: {
   contracts: ContractOption[]; contractItems: ContractItemOption[]; workOrder?: WorkOrderRecord | null;
   items?: WorkOrderItemRecord[]; prerequisites?: PrerequisiteRecord[]; autoOpen?: boolean; label?: string;
 }) {

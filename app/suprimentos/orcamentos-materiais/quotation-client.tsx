@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { approveMaterialQuotation, saveMaterialQuotation, saveMaterialSupplierOffer } from "./actions";
 
+
+// Lista vazia estável: um "[]" no valor padrão das props cria uma lista nova a cada
+// render, o que re-disparava efeitos e zerava o que o usuário digitava.
+const EMPTY_LIST: never[] = [];
 export type SupplierOption = { id: string; legal_name: string; trade_name: string | null; tax_id: string | null };
 export type EligibleRequestItem = {
   id: string; request_id: string; request_number: string; input_code: string; input_name: string; unit_snapshot: string;
@@ -39,7 +43,7 @@ function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "
 function quantity(value: number, digits = 4) { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(Number(value || 0)); }
 function supplierName(supplier: SupplierOption) { return supplier.trade_name || supplier.legal_name; }
 
-export function MaterialQuotationDialog({ eligibleItems, suppliers, quotation, quotationItems = [], invitedSuppliers = [], autoOpen = false, label }: {
+export function MaterialQuotationDialog({ eligibleItems, suppliers, quotation, quotationItems = EMPTY_LIST, invitedSuppliers = EMPTY_LIST, autoOpen = false, label }: {
   eligibleItems: EligibleRequestItem[]; suppliers: SupplierOption[]; quotation?: QuotationRecord | null;
   quotationItems?: QuotationItemRecord[]; invitedSuppliers?: QuotationSupplierRecord[]; autoOpen?: boolean; label?: string;
 }) {
@@ -122,7 +126,7 @@ export function MaterialQuotationDialog({ eligibleItems, suppliers, quotation, q
 
 type OfferRow = { quotation_item_id: string; quantity_offered: number; unit_price: number; discount_percent: number; tax_percent: number; freight_amount: number; other_cost_amount: number; brand: string; manufacturer: string; delivery_days: number | null; meets_specification: boolean; technical_notes: string };
 
-export function SupplierOfferForm({ quotationId, supplier, items, offer, offerItems = [] }: {
+export function SupplierOfferForm({ quotationId, supplier, items, offer, offerItems = EMPTY_LIST }: {
   quotationId: string; supplier: QuotationSupplierRecord; items: QuotationItemRecord[]; offer?: OfferRecord | null; offerItems?: OfferItemRecord[];
 }) {
   const offerMap = useMemo(() => new Map(offerItems.map((item) => [item.quotation_item_id,item])), [offerItems]);

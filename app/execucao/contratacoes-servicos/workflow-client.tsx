@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+
+// Lista vazia estável: um "[]" no valor padrão das props cria uma lista nova a cada
+// render, o que re-disparava efeitos e zerava o que o usuário digitava.
+const EMPTY_LIST: never[] = [];
 import {
   generateContractFromCompetition,
   saveContractStages,
@@ -58,7 +62,7 @@ function emptyRequestItem(): RequestItem {
   return { service_id: "", location_id: null, schedule_activity_id: null, service_code: "", service_name: "", location_name: null, unit_snapshot: "", requested_quantity: 1, estimated_unit_price: 0, estimated_total: 0, scope_notes: null, measurement_notes: null };
 }
 
-export function ServiceRequestDialog({ budgets, services, locations, activities, request, items = [], autoOpen = false, label }: {
+export function ServiceRequestDialog({ budgets, services, locations, activities, request, items = EMPTY_LIST, autoOpen = false, label }: {
   budgets: BudgetOption[]; services: ServiceOption[]; locations: LocationOption[]; activities: ActivityOption[];
   request?: RequestRecord | null; items?: RequestItem[]; autoOpen?: boolean; label?: string;
 }) {
@@ -163,7 +167,7 @@ export function CompetitionStartDialog({ request }: { request: RequestRecord }) 
   </>;
 }
 
-export function CompetitionOfferDialog({ competition, requestItems, suppliers, offer, offerItems = [], label }: {
+export function CompetitionOfferDialog({ competition, requestItems, suppliers, offer, offerItems = EMPTY_LIST, label }: {
   competition: CompetitionRecord; requestItems: RequestItem[]; suppliers: SupplierOption[]; offer?: OfferRecord | null; offerItems?: OfferItemRecord[]; label?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
