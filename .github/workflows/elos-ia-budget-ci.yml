@@ -1,0 +1,27 @@
+name: Elos IA Budget CI
+
+on:
+  pull_request:
+    paths:
+      - "lib/elos-ia/**"
+      - "app/elos-ia/**"
+      - "supabase/migrations/20261014080000_elos_ia_company_usd_cap.sql"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/elos-ia-budget-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Test cost calculation
+        run: node --test lib/elos-ia/usage-cost.test.mjs
+      - name: TypeScript
+        run: npx tsc --noEmit
