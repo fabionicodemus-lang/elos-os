@@ -18,7 +18,14 @@ export default async function ElosIaPage() {
   const config = getElosIaConfig();
   const [projects, usage] = await Promise.all([
     loadElosIaProjects(workspace),
-    loadElosIaUsage(workspace.supabase, workspace.companyId).catch(() => ({ tracking: false, userTokensToday: 0, companyTokensMonth: 0 })),
+    loadElosIaUsage(workspace.supabase, workspace.companyId).catch(() => ({
+      tracking: false,
+      costTracking: false,
+      userTokensToday: 0,
+      companyTokensMonth: 0,
+      companyUsdMonth: 0,
+      companyUsdLimit: null,
+    })),
   ]);
   const activeProject = projects.find((project) => project.id === workspace.projectId) ?? null;
   const activeProjectLabel = activeProject ? [activeProject.code, activeProject.name].filter(Boolean).join(" · ") : null;
