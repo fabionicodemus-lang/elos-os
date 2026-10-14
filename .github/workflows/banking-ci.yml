@@ -3,6 +3,7 @@ name: Banking CI
 on:
   pull_request:
     paths:
+      - ".github/workflows/banking-ci.yml"
       - "app/api/banking/**"
       - "app/financeiro/contas-bancarias/**"
       - "lib/banking/**"
