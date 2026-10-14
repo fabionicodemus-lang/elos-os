@@ -5,6 +5,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { calculateFeasibility } from "../../lib/commercial/feasibility.mjs";
 
 const migration = readFileSync(new URL("../../supabase/migrations/20261014062000_commercial_feasibility_studies.sql", import.meta.url), "utf8");
+const integrity = readFileSync(new URL("../../supabase/migrations/20261014062100_commercial_feasibility_integrity.sql", import.meta.url), "utf8");
 
 const baseStudy = {
   garage_stairs_area_m2:500, garage_stairs_cost_m2:1000,
@@ -73,6 +74,7 @@ test("migration converte estudo aprovado em empreendimento e congela baseline",a
       select set_config('test.uid','${uid}',false),set_config('test.company','${company}',false);
     `);
     await db.exec(migration);
+    await db.exec(integrity);
     await db.exec(`set role authenticated;`);
     const study=(await db.query(`insert into commercial_feasibility_studies(company_id,name,code,apartment_cost_m2,garage_stairs_area_m2,garage_stairs_cost_m2,approved_metrics,approved_cashflow,created_by) values($1,'Tom Jobim','TJ',2500,500,1000,$2::jsonb,$3::jsonb,$4) returning id`,[
       company, JSON.stringify({total_units:36,apartment_area_m2:2520,built_area_m2:3320}), JSON.stringify([{month:0,net:-1000},{month:1,net:2000}]), uid,
@@ -86,5 +88,6 @@ test("migration converte estudo aprovado em empreendimento e congela baseline",a
     const converted=(await db.query(`select status,converted_project_id from commercial_feasibility_studies where id=$1`,[study])).rows[0];
     assert.equal(converted.status,"converted"); assert.equal(converted.converted_project_id,result.project_id);
     await assert.rejects(db.query(`update commercial_feasibility_studies set name='Alterado' where id=$1`,[study]),/imutável/);
+    await assert.rejects(db.query(`delete from commercial_feasibility_unit_types where study_id=$1`,[study]),/imutáveis/);
   }finally{await db.close();}
 });
