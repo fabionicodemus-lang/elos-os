@@ -6,7 +6,7 @@ import { parseSinapiWorkbook } from "@/lib/preconstruction/sinapi-parser";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const PATH = "/engenharia/sinapi";
-function go(message: string, type: "success" | "error" = "success", catalog?: string) {
+function go(message: string, type: "success" | "error" = "success", catalog?: string): never {
   const params = new URLSearchParams({ [type]: message });
   if (catalog) params.set("catalog", catalog);
   redirect(`${PATH}?${params.toString()}`);
@@ -22,14 +22,14 @@ function mapCategory(value: string | null | undefined) {
   if (/SERVICO/.test(normalized)) return "service";
   return "material";
 }
-async function insertBatches<T extends Record<string, unknown>>(
+async function insertBatches(
   supabase: Awaited<ReturnType<typeof requireCompanyPermission>>["supabase"],
   table: string,
-  rows: T[],
+  rows: Record<string, unknown>[],
   batchSize = 500,
 ) {
   for (let index = 0; index < rows.length; index += batchSize) {
-    const { error } = await supabase.from(table).insert(rows.slice(index, index + batchSize));
+    const { error } = await supabase.from(table).insert(rows.slice(index, index + batchSize) as never);
     if (error) throw new Error(error.message);
   }
 }
@@ -208,7 +208,7 @@ export async function importSinapiWorkbook(formData: FormData) {
       .select("id, source_code").eq("company_id", companyId).eq("catalog_id", catalogId);
     if (referenceError) throw new Error(referenceError.message);
     const compositionIdByCode = new Map((referenceCompositions ?? []).map((row) => [row.source_code, row.id]));
-    const analyticRows = parsed.compositionItems.flatMap((row, index) => {
+    const analyticRows: Record<string, unknown>[] = parsed.compositionItems.flatMap((row, index) => {
       const compositionId = compositionIdByCode.get(row.compositionCode);
       if (!compositionId) return [];
       return [{
