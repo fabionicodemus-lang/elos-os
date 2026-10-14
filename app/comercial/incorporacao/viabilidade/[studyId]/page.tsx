@@ -12,6 +12,7 @@ import {
   type FeasibilitySalesVelocity,
   type FeasibilityUnitType,
 } from "./managed-assumptions";
+import { FeasibilityCubBaseline } from "./cub-baseline";
 import { TaxRegimeFields } from "./tax-regime-fields";
 import "../feasibility.css";
 
@@ -38,6 +39,8 @@ type Study = {
   central_office_amount:number|null; financial_cost_amount:number|null; construction_duration_months:number|null; sales_start_offset_months:number|null;
   sales_velocity_units_month:number|null; entry_pct:number|null; during_construction_pct:number|null; keys_pct:number|null; post_keys_pct:number|null;
   post_keys_months:number|null; discount_rate_annual_pct:number|null; notes:string|null;
+  vgv_cub_index_name:string|null; vgv_cub_reference_month:string|null; vgv_cub_base_value:number|null;
+  cost_cub_index_name:string|null; cost_cub_reference_month:string|null; cost_cub_base_value:number|null;
 };
 type Entity = { id:string; legal_name:string; trade_name:string|null; entity_type:string };
 
@@ -117,6 +120,21 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
     </section>
 
     {study.status === "converted" ? <div className="feasibility-note"><strong>Baseline aprovado e congelado.</strong> Este estudo originou o empreendimento e permanece como referência histórica para comparar a viabilidade inicial com a previsão atual e o realizado.</div> : null}
+
+    <FeasibilityCubBaseline
+      studyId={study.id}
+      editable={editable}
+      vgvIndexName={study.vgv_cub_index_name}
+      vgvReferenceMonth={study.vgv_cub_reference_month}
+      vgvBaseValue={study.vgv_cub_base_value}
+      costIndexName={study.cost_cub_index_name}
+      costReferenceMonth={study.cost_cub_reference_month}
+      costBaseValue={study.cost_cub_base_value}
+      grossVgv={Number(calculated.gross_vgv ?? 0)}
+      availableVgv={Number(calculated.available_vgv ?? 0)}
+      constructionCost={Number(calculated.construction_cost ?? 0)}
+      totalCost={Number(calculated.total_cost ?? 0)}
+    />
 
     <form action={updateFeasibilityStudy}>
       <input type="hidden" name="study_id" value={study.id} />
