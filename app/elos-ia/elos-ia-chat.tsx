@@ -14,10 +14,13 @@ export type ElosIaChatPersona = {
 
 type Quota = {
   tracking: boolean;
+  costTracking: boolean;
   userTokensToday: number;
   dailyUserTokens: number;
   companyTokensMonth: number;
   monthlyCompanyTokens: number;
+  companyUsdMonth: number;
+  monthlyCompanyUsd: number;
 };
 
 type ChatMessage = {
@@ -42,6 +45,10 @@ function tokenLabel(value: number) {
   if (value >= 1_000_000) return `${(value / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
   if (value >= 1_000) return `${(value / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
   return value.toLocaleString("pt-BR");
+}
+
+function usdLabel(value: number) {
+  return `US$ ${Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function uniqueSources(consultas: Array<{ nome: string; ok: boolean }>) {
@@ -80,7 +87,8 @@ export function ElosIaChat({
   const waiting = pendingPersona === personaKey;
   const busy = pendingPersona !== null;
   const dailyUsedUp = quota.tracking && quota.dailyUserTokens > 0 && quota.userTokensToday >= quota.dailyUserTokens;
-  const canType = configured && !dailyUsedUp;
+  const monthlyUsdUsedUp = quota.tracking && quota.monthlyCompanyUsd > 0 && quota.companyUsdMonth >= quota.monthlyCompanyUsd;
+  const canType = configured && !dailyUsedUp && !monthlyUsdUsedUp;
   const dailyPercent = quota.dailyUserTokens > 0 ? Math.min(100, quota.userTokensToday / quota.dailyUserTokens * 100) : 0;
 
   useEffect(() => {
@@ -129,6 +137,12 @@ export function ElosIaChat({
   }
 
   if (!persona) return null;
+
+  const blockedPlaceholder = monthlyUsdUsedUp
+    ? `Limite mensal da empresa atingido (${usdLabel(quota.monthlyCompanyUsd)}).`
+    : dailyUsedUp
+      ? "Cota diária atingida. Ela é renovada à meia-noite."
+      : `Pergunte como ${persona.label}…`;
 
   return (
     <div className="elos-ia">
@@ -238,7 +252,7 @@ export function ElosIaChat({
             onChange={(event) => setDraft(event.target.value.slice(0, maxQuestionChars))}
             onKeyDown={onKeyDown}
             rows={2}
-            placeholder={dailyUsedUp ? "Cota diária atingida. Ela é renovada à meia-noite." : `Pergunte como ${persona.label}…`}
+            placeholder={blockedPlaceholder}
             aria-label="Pergunta para o Elos IA"
             disabled={!canType}
           />
@@ -249,8 +263,12 @@ export function ElosIaChat({
 
         <footer className="elos-ia-card-foot">
           {quota.tracking ? (
-            <div className="elos-ia-quota" title={`Empresa no mês: ${tokenLabel(quota.companyTokensMonth)} de ${tokenLabel(quota.monthlyCompanyTokens)} tokens`}>
+            <div
+              className="elos-ia-quota"
+              title={`Empresa no mês: ${tokenLabel(quota.companyTokensMonth)} de ${tokenLabel(quota.monthlyCompanyTokens)} tokens · ${usdLabel(quota.companyUsdMonth)} de ${usdLabel(quota.monthlyCompanyUsd)}`}
+            >
               <span>Seu uso hoje: {tokenLabel(quota.userTokensToday)} de {tokenLabel(quota.dailyUserTokens)} tokens</span>
+              <span>Empresa: {usdLabel(quota.companyUsdMonth)} / {usdLabel(quota.monthlyCompanyUsd)} no mês{quota.costTracking ? "" : " (estimativa conservadora)"}</span>
               <span className="elos-ia-quota-bar" aria-hidden="true"><i style={{ width: `${dailyPercent}%` }} /></span>
             </div>
           ) : (
