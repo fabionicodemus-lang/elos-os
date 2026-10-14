@@ -89,7 +89,7 @@ async function materials(context: ElosIaToolContext, args: Args): Promise<Result
     .order("needed_date", { ascending: true }).limit(200);
   if (requests.error) throw new Error(requests.error.message);
   const rows = requests.data ?? [];
-  const active = rows.filter((row) => !["fulfilled", "cancelled"].includes(row.status));
+  const active = rows.filter((row) => !["attended", "cancelled"].includes(row.status));
   const urgent = active.filter((row) => row.needed_date && row.needed_date <= context.today);
   const ids = active.map((row) => row.id);
   const items = ids.length ? await context.supabase.from("execution_material_request_items")
