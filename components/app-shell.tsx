@@ -43,6 +43,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const assistantHref = can("ai.assistant.use") ? "/elos-ia" : undefined;
   const permissionsHref = privileged || can("admin.roles.view") || can("admin.roles.manage") ? "/configuracoes/permissoes" : undefined;
   const dataBackupHref = privileged || can("admin.data.view") || can("admin.data.export") || can("admin.data.restore") || can("admin.data.manage") ? "/configuracoes/dados-backup" : undefined;
+  const auditTrailHref = can("security.audit.view") ? "/configuracoes/auditoria" : undefined;
   const legalEntitiesHref = can("projects.view") ? "/empreendimentos/empresas" : undefined;
   const projectsHref = can("projects.view") ? "/empreendimentos" : undefined;
   const projectCharacteristicsHref = can("projects.view") ? "/empreendimentos/caracteristicas" : undefined;
@@ -99,6 +100,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "suppliers", disabled: !can("suppliers.view") },
       { label: "Clientes", href: can("clients.view") ? "/cadastros/clientes" : undefined, active: activeItem === "clients", disabled: !can("clients.view") },
       { label: "Dados & Backup", href: dataBackupHref, active: activeItem === "data-backup", disabled: !dataBackupHref },
+      { label: "Trilha de auditoria", href: auditTrailHref, active: activeItem === "audit-trail", disabled: !auditTrailHref },
     ]},
     { key: "projects", label: "Empreendimentos", icon: "▦", active: activeGroup === "projects", items: [
       { label: "Empresas / SPEs", href: legalEntitiesHref, active: activeItem === "legal-entities", disabled: !legalEntitiesHref },
