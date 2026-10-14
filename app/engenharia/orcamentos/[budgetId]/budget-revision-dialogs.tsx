@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef } from "react";
 import { CreatableCombobox } from "@/components/creatable-combobox";
 import {
@@ -54,14 +55,21 @@ export function BudgetRevisionDialogs({
   const generalRef = useRef<HTMLDialogElement>(null);
   const groupRef = useRef<HTMLDialogElement>(null);
   const serviceRef = useRef<HTMLDialogElement>(null);
+  const locked = budget.status === "approved" || budget.status === "archived";
 
   return (
     <div className="budget-header-actions">
-      <button className="elos-button" type="button" onClick={() => generalRef.current?.showModal()}>
-        Dados da revisão
-      </button>
-      {budget.status !== "archived" ? (
+      <Link prefetch={false} className="elos-button" href={`/engenharia/orcamentos/${budget.id}/comparar`}>
+        Comparar revisões
+      </Link>
+      <Link prefetch={false} className="elos-button" href={`/engenharia/orcamentos/${budget.id}/reajuste`}>
+        Reajuste e aditivos
+      </Link>
+      {!locked ? (
         <>
+          <button className="elos-button" type="button" onClick={() => generalRef.current?.showModal()}>
+            Dados da revisão
+          </button>
           <button className="elos-button" type="button" onClick={() => groupRef.current?.showModal()}>
             + Grupo
           </button>
@@ -74,7 +82,7 @@ export function BudgetRevisionDialogs({
         <form
           action={closeBudgetRevision}
           onSubmit={(event) => {
-            if (!window.confirm(`Aprovar o orçamento ${budget.code} · ${budget.version}? Depois de aprovado, ele poderá ser salvo como orçamento base da obra.`)) event.preventDefault();
+            if (!window.confirm(`Aprovar o orçamento ${budget.code} · ${budget.version}? Depois de aprovado, ele será congelado e poderá ser salvo como orçamento base da obra.`)) event.preventDefault();
           }}
         >
           <input type="hidden" name="budget_id" value={budget.id} />
@@ -112,7 +120,7 @@ export function BudgetRevisionDialogs({
         </button>
       </form>
 
-      <dialog ref={generalRef} className="budget-modal">
+      {!locked ? <dialog ref={generalRef} className="budget-modal">
         <form action={updateBudget} className="budget-modal-form">
           <input type="hidden" name="budget_id" value={budget.id} />
           <header className="budget-modal-head">
@@ -133,9 +141,9 @@ export function BudgetRevisionDialogs({
             <button type="submit" className="budget-primary-button">Salvar revisão</button>
           </footer>
         </form>
-      </dialog>
+      </dialog> : null}
 
-      <dialog ref={groupRef} className="budget-modal budget-modal-small">
+      {!locked ? <dialog ref={groupRef} className="budget-modal budget-modal-small">
         <form action={createBudgetGroup} className="budget-modal-form">
           <input type="hidden" name="budget_id" value={budget.id} />
           <header className="budget-modal-head">
@@ -153,9 +161,9 @@ export function BudgetRevisionDialogs({
             <button type="submit" className="budget-primary-button">Adicionar grupo</button>
           </footer>
         </form>
-      </dialog>
+      </dialog> : null}
 
-      <dialog ref={serviceRef} className="budget-modal budget-service-modal">
+      {!locked ? <dialog ref={serviceRef} className="budget-modal budget-service-modal">
         <form action={createBudgetItem} className="budget-modal-form">
           <input type="hidden" name="budget_id" value={budget.id} />
           <header className="budget-modal-head">
@@ -190,7 +198,7 @@ export function BudgetRevisionDialogs({
             <button type="submit" className="budget-primary-button">Incluir serviço</button>
           </footer>
         </form>
-      </dialog>
+      </dialog> : null}
     </div>
   );
 }
