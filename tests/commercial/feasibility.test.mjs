@@ -41,6 +41,36 @@ test("motor de viabilidade separa permuta do custo do terreno e calcula retorno"
   assert.ok(Math.abs(taxes-r.tax_cost)<0.01);
 });
 
+test("áreas de construção gerenciáveis substituem os campos legados no cálculo",()=>{
+  const r=calculateFeasibility(baseStudy,units,{
+    constructionAreas:[
+      {id:"a1",name:"Garagem e circulação",area_m2:1000,cost_m2:1500,sort_order:10},
+      {id:"a2",name:"Lazer",area_m2:300,cost_m2:3500,sort_order:20},
+    ],
+  });
+  assert.equal(r.apartment_area_m2,2520);
+  assert.equal(r.additional_area_m2,1300);
+  assert.equal(r.built_area_m2,3820);
+  assert.equal(r.apartment_construction_cost,6_300_000);
+  assert.equal(r.additional_construction_cost,2_550_000);
+  assert.equal(r.construction_cost,8_850_000);
+});
+
+test("fases de velocidade alteram o ritmo das vendas mantendo o VGV",()=>{
+  const legacy=calculateFeasibility(baseStudy,units);
+  const phased=calculateFeasibility(baseStudy,units,{
+    salesVelocities:[
+      {id:"v1",name:"Pré-lançamento",start_offset_months:-3,units_per_month:2,sort_order:10},
+      {id:"v2",name:"Lançamento",start_offset_months:0,units_per_month:6,sort_order:20},
+    ],
+  });
+  assert.equal(phased.available_vgv,legacy.available_vgv);
+  assert.equal(phased.sales_velocity_phases,2);
+  assert.ok(phased.sales_months < legacy.sales_months);
+  const sold=phased.cashflow.reduce((sum,row)=>sum+row.sales,0);
+  assert.ok(Math.abs(sold-phased.available_vgv)<0.01);
+});
+
 test("aumentar permuta reduz VGV disponível sem duplicar custo de terreno",()=>{
   const low=calculateFeasibility(baseStudy,[{...units[0],barter_units:2}]);
   const high=calculateFeasibility(baseStudy,[{...units[0],barter_units:10}]);
