@@ -57,7 +57,8 @@ test("resultado compara baseline com VGV atual e custo projetado", () => {
   assert.equal(result.cash.received, 500_000);
   assert.equal(result.cash.overdue, 600_000);
   assert.equal(result.cost.engineeringProjected, 8_400_000);
-  assert.equal(result.cost.unallocatedProjected, 150_000);
+  assert.equal(result.cost.unallocatedSourceProjected, 150_000);
+  assert.equal(result.cost.unallocatedProjected, 0);
   assert.equal(result.cost.projectedOtherCost, 2_832_000);
   assert.equal(result.result.projectedProfit, 9_198_000);
   assert.ok(result.result.projectedMarginPct > 40 && result.result.projectedMarginPct < 41);
