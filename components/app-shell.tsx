@@ -88,6 +88,8 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const hrPayrollHref = can("hr.payroll.view") || can("hr.payroll.manage") || can("hr.payroll.approve") ? "/rh/folha" : undefined;
   const proposalsHref = can("commercial.proposals.view") ? "/comercial/propostas" : undefined;
   const brokersHref = can("commercial.brokers.view") ? "/comercial/corretores" : undefined;
+  const incorporationHref = can("commercial.incorporation.view") ? "/comercial/incorporacao" : undefined;
+  const priceTablesHref = can("commercial.incorporation.view") ? "/comercial/incorporacao/tabelas" : undefined;
   const assistanceHref = can("postwork.assistance.view") ? "/pos-obra/assistencias" : undefined;
   const inspectionsHref = can("postwork.inspections.view") ? "/pos-obra/vistorias" : undefined;
   const warrantiesHref = can("postwork.warranties.view") ? "/pos-obra/garantias" : undefined;
@@ -168,10 +170,14 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Impostos", href: taxesHref, active: activeItem === "taxes", disabled: !taxesHref },
     ]},
     { key: "commercial", label: "Comercial", icon: "◇", active: activeGroup === "commercial", items: [
+      { label: "Pré-venda", sectionLabel: "Pré-venda" },
       { label: "Clientes", href: can("clients.view") ? "/cadastros/clientes" : undefined, active: activeItem === "commercial-clients", disabled: !can("clients.view") },
+      { label: "Tabelas de Venda", href: priceTablesHref, active: activeItem === "price-tables", disabled: !priceTablesHref },
       { label: "Propostas", href: proposalsHref, active: activeItem === "proposals", disabled: !proposalsHref },
       { label: "Corretores", href: brokersHref, active: activeItem === "brokers", disabled: !brokersHref },
+      { label: "Contratos e carteira", sectionLabel: "Contratos e carteira" },
       { label: "Vendas", href: can("sales.view") ? "/comercial/vendas" : undefined, active: activeItem === "sales", disabled: !can("sales.view") },
+      { label: "Carteira da Incorporadora", href: incorporationHref, active: activeItem === "incorporation", disabled: !incorporationHref },
       { label: "Planos de Pagamento", href: commercialReceivablesHref, active: activeItem === "payment-plans", disabled: !commercialReceivablesHref },
     ]},
     { key: "postwork", label: "Pós-Obra", icon: "⌁", active: activeGroup === "postwork", items: [
