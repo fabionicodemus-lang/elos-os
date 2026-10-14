@@ -8,6 +8,8 @@ import { elosIaToolLabel, elosIaToolSchemas, runElosIaTool, type ElosIaProject, 
 import { checkElosIaQuota, estimateElosIaUsageCost, loadElosIaUsage, quotaView, recordElosIaUsage, type ElosIaQuotaView } from "./usage";
 import { elosIaAttachmentContent, parseElosIaAttachments, registerElosIaAttachments } from "./attachments";
 import { elosIaActionToolLabel, elosIaActionToolSchemas, elosIaActionToolsForPersona, isElosIaActionTool, runElosIaActionTool, type ElosIaActionToolContext } from "./action-tools";
+import { elosIaFinanceToolLabel, elosIaFinanceToolSchemas, elosIaFinanceToolsForPersona, isElosIaFinanceTool, runElosIaFinanceTool } from "./finance-tools";
+import { elosIaFinanceActionToolLabel, elosIaFinanceActionToolSchemas, elosIaFinanceActionToolsForPersona, isElosIaFinanceActionTool, runElosIaFinanceActionTool } from "./finance-action-tools";
 
 type Workspace = Awaited<ReturnType<typeof resolveActiveWorkspace>>;
 const ANSWER_DEADLINE_MS = 55_000;
@@ -59,7 +61,12 @@ function finalText(text: string, status: "ok" | "incomplete" | "empty") {
   if (!text) return "Não consegui montar uma resposta com os dados consultados. Tente reformular a pergunta.";
   return text;
 }
-function toolLabel(name:string){return isElosIaActionTool(name)?elosIaActionToolLabel(name):elosIaToolLabel(name as never);}
+function toolLabel(name:string){
+  if(isElosIaFinanceActionTool(name))return elosIaFinanceActionToolLabel(name);
+  if(isElosIaActionTool(name))return elosIaActionToolLabel(name);
+  if(isElosIaFinanceTool(name))return elosIaFinanceToolLabel(name);
+  return elosIaToolLabel(name as never);
+}
 
 async function loadTurnActions(access:ElosIaAccess,turnId:string):Promise<ElosIaActionView[]> {
   const { workspace }=access;
@@ -109,7 +116,9 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
   const actionContext:ElosIaActionToolContext={...toolContext,userId:workspace.userId,turnId,persona:persona.key,attachmentNames:registeredAttachments.map((file)=>file.fileName)};
   const instructions=buildElosIaInstructions(persona,{today,companyName:workspace.company.name,activeProjectLabel:activeProject?[activeProject.code,activeProject.name].filter(Boolean).join(" · "):null,projectCount:projects.length,userName:profileResult.data?.full_name?.trim()||workspace.email.split("@")[0]||"Usuário",roleName:workspace.role.name??workspace.roleKey});
   const actionTools=elosIaActionToolsForPersona(persona.key);
-  const tools=[...elosIaToolSchemas(persona.tools),...elosIaActionToolSchemas(actionTools)];
+  const financeTools=elosIaFinanceToolsForPersona(persona.key);
+  const financeActionTools=elosIaFinanceActionToolsForPersona(persona.key);
+  const tools=[...elosIaToolSchemas(persona.tools),...elosIaFinanceToolSchemas(financeTools),...elosIaActionToolSchemas(actionTools),...elosIaFinanceActionToolSchemas(financeActionTools)];
   const userContent=elosIaAttachmentContent(question,registeredAttachments);
 
   const record=async(status:"ok"|"incomplete"|"empty"|"error",usage:AgentUsage,trace:AgentToolTrace[])=>{
@@ -121,7 +130,7 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
   try{
     const result=await runAgentTurn({
       callModel:({input:items,toolChoice})=>createOpenAiResponse({config,instructions,input:items,tools,toolChoice,timeoutMs:startedAt+HARD_DEADLINE_MS-Date.now()}),
-      runTool:(name,args)=>isElosIaActionTool(name)?runElosIaActionTool(actionContext,actionTools,name,args):runElosIaTool(toolContext,persona.tools,name,args),
+      runTool:(name,args)=>isElosIaFinanceActionTool(name)?runElosIaFinanceActionTool(actionContext,financeActionTools,name,args):isElosIaActionTool(name)?runElosIaActionTool(actionContext,actionTools,name,args):isElosIaFinanceTool(name)?runElosIaFinanceTool(toolContext,financeTools,name,args):runElosIaTool(toolContext,persona.tools,name,args),
       history:trimHistory(input.history),question,userContent,maxRounds:config.maxRounds,turnTokenBudget:config.turnTokenBudget,deadlineAt:startedAt+ANSWER_DEADLINE_MS,
     });
     const estimatedCostUsd=await record(result.status,result.usage,result.toolTrace);
