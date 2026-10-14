@@ -40,6 +40,7 @@ export default async function PreconstructionHubPage() {
         <section className="pre95-grid">
           <Link prefetch={false} href={baseBudget ? `/engenharia/curva-abc?budget=${baseBudget.id}` : "/engenharia/curva-abc"}><b>ABC</b><div><strong>Curva ABC</strong><span>Priorize serviços e insumos que concentram o orçamento.</span></div></Link>
           <Link prefetch={false} href={baseBudget ? `/engenharia/orcamentos/${baseBudget.id}/comparar` : "/engenharia/orcamentos"}><b>Δ</b><div><strong>Revisões e comparador</strong><span>Compare quantidade, preço e impacto financeiro entre snapshots.</span></div></Link>
+          <Link prefetch={false} href={baseBudget ? `/engenharia/orcamentos/${baseBudget.id}/reajuste` : "/engenharia/orcamentos"}><b>↗</b><div><strong>Reajuste mensal e aditivos</strong><span>Ative CUB, INCC, IPCA ou outro índice e acompanhe o saldo reajustado mês a mês.</span></div></Link>
           <Link prefetch={false} href="/engenharia/produtividade"><b>∑</b><div><strong>Produtividade</strong><span>Defina padrões por serviço e compare com o histórico real da obra.</span></div></Link>
           <Link prefetch={false} href={baseline ? `/engenharia/caminho-critico?baseline=${baseline.id}` : "/engenharia/caminho-critico"}><b>CP</b><div><strong>Caminho crítico</strong><span>CPM, folga total, folga livre e atividades críticas.</span></div></Link>
           <Link prefetch={false} href="/engenharia/calendario"><b>▣</b><div><strong>Calendário da obra</strong><span>Feriados, recessos e dias de trabalho excepcionais.</span></div></Link>
