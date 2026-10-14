@@ -15,8 +15,9 @@ function serviceClient() {
 
 function sameSecret(received: string | null, expected: string | null) {
   if (!received || !expected) return false;
-  const left = Buffer.from(received, "utf8");
-  const right = Buffer.from(expected, "utf8");
+  const encoder = new TextEncoder();
+  const left = encoder.encode(received);
+  const right = encoder.encode(expected);
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
