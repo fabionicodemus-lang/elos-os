@@ -1,0 +1,28 @@
+name: Procurement 9.5 CI
+
+on:
+  pull_request:
+    paths:
+      - "app/execucao/solicitacoes-materiais/**"
+      - "app/suprimentos/aprovacoes-compras/**"
+      - "supabase/migrations/*procurement_request_stock_intelligence*"
+      - "supabase/migrations/*procurement_purchase_approval_levels*"
+      - "tests/procurement/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  procurement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/procurement/procurement-95.test.mjs
+      - run: npx tsc --noEmit

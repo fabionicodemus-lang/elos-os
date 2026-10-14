@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { approveMaterialRequest, cancelMaterialRequest } from "./actions";
+import { fulfillMaterialRequestFromStock } from "./stock-actions";
 import {
   MaterialRequestCreateDialog,
   MaterialRequestEditDialog,
@@ -27,7 +28,11 @@ type MaterialRequest = {
 type MaterialRequestItem = {
   id: string; request_id: string; input_id: string; input_code: string; input_name: string; unit_snapshot: string;
   category_snapshot: string; cost_center_service_id: string | null; cost_center_code: string; cost_center_name: string; requested_quantity: number;
-  ordered_quantity: number; notes: string | null; sort_order: number;
+  ordered_quantity: number; stock_fulfilled_quantity: number; notes: string | null; sort_order: number;
+};
+type InventoryBalance = {
+  id: string; input_id: string; location_id: string; input_code: string; input_name: string; unit_snapshot: string;
+  batch_number: string; expiration_date: string; available_quantity: number; average_unit_cost: number;
 };
 
 const statusLabels: Record<RequestStatus, string> = {
@@ -37,17 +42,21 @@ const statusLabels: Record<RequestStatus, string> = {
   attended: "Atendida",
   cancelled: "Cancelada",
 };
+const coverageLabels: Record<string, string> = {
+  covered: "Coberto", planned: "Planejado", quote_now: "Cotar agora", order_now: "Pedir agora", critical: "Crítico", rupture: "Ruptura",
+};
 
 function quantity(value: number, digits = 3) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(Number(value || 0));
 }
-
+function money(value: number) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0));
+}
 function dateBR(value?: string | null) {
   if (!value) return "—";
   const date = new Date(`${value.slice(0, 10)}T12:00:00Z`);
   return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(date);
 }
-
 function requestSearchText(request: MaterialRequest, items: MaterialRequestItem[]) {
   return [request.request_number, request.requester_name, request.notes ?? "", ...items.flatMap((item) => [item.input_code, item.input_name, item.cost_center_code, item.cost_center_name])]
     .join(" ").toLocaleLowerCase("pt-BR");
@@ -87,7 +96,7 @@ export default async function MaterialRequestsPage({ searchParams }: {
       })
     : Promise.resolve({ data: [] as BudgetServiceReference[], error: null });
 
-  const [projectResult, budgetsResult, servicesResult, budgetServicesResult, inputsResult, requestsResult, itemsResult, supplyResult, manageResult, approveResult] = await Promise.all([
+  const [projectResult, budgetsResult, servicesResult, budgetServicesResult, inputsResult, requestsResult, itemsResult, supplyResult, balancesResult, manageResult, approveResult, stockIssueResult] = await Promise.all([
     projectPromise,
     budgetsPromise,
     servicesPromise,
@@ -107,19 +116,26 @@ export default async function MaterialRequestsPage({ searchParams }: {
     }) : Promise.resolve({ data: [] as MaterialRequest[], error: null }),
     projectId ? fetchAllRows<MaterialRequestItem>(async (from, to) => {
       const { data, error } = await supabase.from("execution_material_request_items")
-        .select("id, request_id, input_id, input_code, input_name, unit_snapshot, category_snapshot, cost_center_service_id, cost_center_code, cost_center_name, requested_quantity, ordered_quantity, notes, sort_order")
+        .select("id, request_id, input_id, input_code, input_name, unit_snapshot, category_snapshot, cost_center_service_id, cost_center_code, cost_center_name, requested_quantity, ordered_quantity, stock_fulfilled_quantity, notes, sort_order")
         .eq("company_id", companyId).eq("project_id", projectId).order("sort_order").range(from, to);
       return { data: (data ?? []) as MaterialRequestItem[], error };
     }) : Promise.resolve({ data: [] as MaterialRequestItem[], error: null }),
     projectId ? fetchAllRows<SupplyPlanReference>(async (from, to) => {
-      const { data, error } = await supabase.from("engineering_supply_plan_items")
-        .select("input_id, required_quantity, purchase_quantity, unit_snapshot, order_deadline, first_use_date")
-        .eq("company_id", companyId).eq("project_id", projectId).eq("record_status", "active")
-        .neq("status", "canceled").order("first_use_date").range(from, to);
+      const { data, error } = await supabase.from("procurement_integrated_supply_control")
+        .select("input_id,required_quantity,ordered_quantity,outstanding_order_quantity,on_hand_quantity,available_quantity,remaining_to_buy_quantity,suggested_purchase_quantity,unit_snapshot,order_deadline,first_use_date,coverage_status")
+        .eq("company_id", companyId).eq("project_id", projectId).order("first_use_date").range(from, to);
       return { data: (data ?? []) as SupplyPlanReference[], error };
     }) : Promise.resolve({ data: [] as SupplyPlanReference[], error: null }),
+    projectId ? fetchAllRows<InventoryBalance>(async (from, to) => {
+      const { data, error } = await supabase.from("procurement_inventory_balances")
+        .select("id,input_id,location_id,input_code,input_name,unit_snapshot,batch_number,expiration_date,available_quantity,average_unit_cost")
+        .eq("company_id", companyId).eq("project_id", projectId).gt("available_quantity", 0)
+        .order("input_name").range(from, to);
+      return { data: (data ?? []) as InventoryBalance[], error };
+    }) : Promise.resolve({ data: [] as InventoryBalance[], error: null }),
     roleKey === "owner" || roleKey === "admin" ? Promise.resolve({ data: true, error: null }) : supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "execution.material_requests.manage" }),
     roleKey === "owner" || roleKey === "admin" ? Promise.resolve({ data: true, error: null }) : supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "execution.material_requests.approve" }),
+    roleKey === "owner" || roleKey === "admin" ? Promise.resolve({ data: true, error: null }) : supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "procurement.inventory.issue" }),
   ]);
 
   const project = projectResult.data as Project | null;
@@ -133,59 +149,52 @@ export default async function MaterialRequestsPage({ searchParams }: {
   });
   const centers: MaterialCostCenterOption[] = budgets.flatMap((budget) => {
     const linkedServices = referenceMap.get(budget.id) ?? new Set<string>();
-    const services = linkedServices.size
-      ? servicesResult.data.filter((service) => linkedServices.has(service.id))
-      : servicesResult.data;
-    return services.map((service) => ({
-      id: service.id,
-      budget_id: budget.id,
-      code: service.code,
-      name: service.description,
-      unit: service.unit,
-      group_code: service.group_code,
-    }));
+    const services = linkedServices.size ? servicesResult.data.filter((service) => linkedServices.has(service.id)) : servicesResult.data;
+    return services.map((service) => ({ id: service.id, budget_id: budget.id, code: service.code, name: service.description, unit: service.unit, group_code: service.group_code }));
   });
   const requests = requestsResult.data;
   const items = itemsResult.data;
   const itemMap = new Map<string, MaterialRequestItem[]>();
   items.forEach((item) => itemMap.set(item.request_id, [...(itemMap.get(item.request_id) ?? []), item]));
+  const supplyMap = new Map(supplyResult.data.map((row) => [row.input_id, row]));
+  const balanceMap = new Map<string, InventoryBalance[]>();
+  balancesResult.data.forEach((row) => balanceMap.set(row.input_id, [...(balanceMap.get(row.input_id) ?? []), row]));
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const canApprove = approveResult.data === true || roleKey === "owner" || roleKey === "admin";
+  const canFulfillStock = stockIssueResult.data === true || roleKey === "owner" || roleKey === "admin";
   const view = params.view === "history" ? "history" : "pending";
   const statusFilter = Object.keys(statusLabels).includes(params.status ?? "") ? params.status as RequestStatus : "";
   const queryText = (params.q ?? "").trim().toLocaleLowerCase("pt-BR");
-  const visible = requests.filter((request) => view === "history"
-    ? ["attended", "cancelled"].includes(request.status)
-    : !["attended", "cancelled"].includes(request.status))
+  const visible = requests.filter((request) => view === "history" ? ["attended", "cancelled"].includes(request.status) : !["attended", "cancelled"].includes(request.status))
     .filter((request) => !statusFilter || request.status === statusFilter)
     .filter((request) => !queryText || requestSearchText(request, itemMap.get(request.id) ?? []).includes(queryText));
 
   const pendingRequests = requests.filter((request) => !["attended", "cancelled"].includes(request.status));
   const attended = requests.filter((request) => request.status === "attended").length;
-  const pendingItems = pendingRequests.reduce((total, request) => total + (itemMap.get(request.id) ?? []).filter((item) => Number(item.ordered_quantity) < Number(item.requested_quantity)).length, 0);
+  const pendingItems = pendingRequests.reduce((total, request) => total + (itemMap.get(request.id) ?? []).filter((item) => Number(item.ordered_quantity) + Number(item.stock_fulfilled_quantity) < Number(item.requested_quantity) - 0.000001).length, 0);
   const approved = requests.filter((request) => ["approved", "partially_ordered"].includes(request.status)).length;
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
   const dialogBase = { inputs: inputsResult.data, centers, supplyPlan: supplyResult.data, approvedBudgetId: approvedBudget?.id ?? "" };
-  const structureError = requestsResult.error || itemsResult.error;
+  const structureError = requestsResult.error || itemsResult.error || supplyResult.error;
 
   return <AppShell activeGroup="execution" activeItem="material-requests" eyebrow="Execução · Suprimentos" title="Solicitações de Materiais"
-    description={`${company.name} · ${context} · materiais apropriados diretamente aos serviços do orçamento base.`}
+    description={`${company.name} · ${context} · necessidade da obra confrontada com compras e estoque antes de gerar nova aquisição.`}
     actions={canManage && approvedBudget ? <MaterialRequestCreateDialog {...dialogBase} /> : undefined}>
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
-    {structureError ? <div className="auth-message error workspace-message">A atualização dos centros de custo ainda não está instalada. Execute a migration <strong>20260728_0035_material_request_service_centers.sql</strong>.</div> : null}
+    {structureError ? <div className="auth-message error workspace-message">A inteligência de suprimentos precisa estar instalada e atualizada para exibir previsto, comprado e saldo.</div> : null}
     {!projectId ? <div className="material-requests-empty-page">Selecione uma obra no topo.</div> : null}
     {projectId && !approvedBudget ? <div className="auth-message error workspace-message">A obra precisa ter um orçamento <strong>aprovado e salvo como orçamento base</strong> antes de solicitar materiais.</div> : null}
 
     <section className="material-request-kpis">
-      <article><span>Não atendidas</span><strong>{pendingRequests.length}</strong><small>aguardam aprovação ou pedido</small></article>
+      <article><span>Não atendidas</span><strong>{pendingRequests.length}</strong><small>aguardam aprovação, estoque ou pedido</small></article>
       <article><span>Aprovadas</span><strong>{approved}</strong><small>liberadas para Suprimentos</small></article>
-      <article><span>Itens pendentes</span><strong>{pendingItems}</strong><small>quantidades ainda não pedidas</small></article>
-      <article><span>Atendidas</span><strong>{attended}</strong><small>integralmente convertidas em compra</small></article>
+      <article><span>Itens pendentes</span><strong>{pendingItems}</strong><small>saldo ainda não coberto por compra/estoque</small></article>
+      <article><span>Atendidas</span><strong>{attended}</strong><small>100% cobertas por compra e/ou estoque</small></article>
     </section>
 
     <section className="material-request-flow">
-      {[["1","Solicitação","Obra informa a necessidade"],["2","Aprovação","Engenharia valida"],["3","Cotação","Suprimentos negocia"],["4","Pedido","Quantidade é comprometida"],["5","Atendimento","Saldo solicitado chega a zero"]].map(([number,title,caption]) => <div key={number}><i>{number}</i><strong>{title}</strong><span>{caption}</span></div>)}
+      {[["1","Solicitação","Obra informa a necessidade"],["2","Aprovação","Engenharia valida"],["3","Estoque / Cotação","Elos verifica se já há material"],["4","Pedido","Somente o saldo é comprado"],["5","Atendimento","Compra + estoque cobrem a necessidade"]].map(([number,title,caption]) => <div key={number}><i>{number}</i><strong>{title}</strong><span>{caption}</span></div>)}
     </section>
 
     <nav className="material-request-tabs">
@@ -199,23 +208,41 @@ export default async function MaterialRequestsPage({ searchParams }: {
 
     <section className="material-request-table-card">
       <div className="budget-section-head"><div><span>{view === "history" ? "Histórico da obra" : "Necessidades abertas"}</span><h2>{view === "history" ? "Solicitações concluídas" : "Materiais ainda pendentes"}</h2></div><p>{visible.length} solicitação(ões).</p></div>
-      <div className="registry-table-wrap"><table className="registry-table material-request-table"><thead><tr><th>Solicitação</th><th>Materiais</th><th>Necessidade</th><th>Solicitante automático</th><th>Serviços / centros de custo</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+      <div className="registry-table-wrap"><table className="registry-table material-request-table"><thead><tr><th>Solicitação</th><th>Materiais · previsto / comprado / saldo</th><th>Necessidade</th><th>Solicitante automático</th><th>Serviços / centros de custo</th><th>Status</th><th>Ações</th></tr></thead><tbody>
         {visible.map((request) => {
           const requestItems = itemMap.get(request.id) ?? [];
-          const remaining = requestItems.filter((item) => Number(item.ordered_quantity) < Number(item.requested_quantity));
+          const remaining = requestItems.filter((item) => Number(item.ordered_quantity) + Number(item.stock_fulfilled_quantity) < Number(item.requested_quantity) - 0.000001);
           const shownItems = view === "history" ? requestItems : remaining;
           const requestCenters = [...new Map(requestItems.map((item) => [item.cost_center_code, item.cost_center_name])).entries()];
           const dialogRequest: MaterialRequestDialogData = {
             id: request.id, request_number: request.request_number, budget_id: request.budget_id,
             needed_date: request.needed_date, notes: request.notes, status: request.status,
-            items: requestItems.map((item) => ({
-              id: item.id, input_id: item.input_id, quantity: Number(item.requested_quantity),
-              cost_center_service_id: item.cost_center_service_id, cost_center_code: item.cost_center_code, notes: item.notes,
-            })),
+            items: requestItems.map((item) => ({ id: item.id, input_id: item.input_id, quantity: Number(item.requested_quantity), cost_center_service_id: item.cost_center_service_id, cost_center_code: item.cost_center_code, notes: item.notes })),
           };
           return <tr key={request.id}>
             <td><strong>{request.request_number}</strong><span>{dateBR(request.created_at)}</span><small>{requestItems.length} item(ns)</small></td>
-            <td><div className="material-request-item-summary">{shownItems.slice(0, 4).map((item) => <div key={item.id}><code>{item.input_code}</code><span>{item.input_name}</span><b>{quantity(view === "history" ? Number(item.requested_quantity) : Number(item.requested_quantity) - Number(item.ordered_quantity))} {item.unit_snapshot}</b>{Number(item.ordered_quantity) > 0 ? <small>{quantity(Number(item.ordered_quantity))} já pedido</small> : null}</div>)}{shownItems.length > 4 ? <small>+ {shownItems.length - 4} outro(s)</small> : null}{!shownItems.length ? <span>Sem saldo pendente.</span> : null}</div></td>
+            <td><div className="material-request-item-summary">{shownItems.slice(0, 6).map((item) => {
+              const plan = supplyMap.get(item.input_id);
+              const requestBalance = Math.max(0, Number(item.requested_quantity) - Number(item.ordered_quantity) - Number(item.stock_fulfilled_quantity));
+              const stockBalances = balanceMap.get(item.input_id) ?? [];
+              const stockAvailable = stockBalances.reduce((sum, row) => sum + Number(row.available_quantity), 0);
+              return <div key={item.id}>
+                <code>{item.input_code}</code><span>{item.input_name}</span>
+                <b>Previsto {quantity(plan?.required_quantity ?? 0)} · Comprado {quantity(plan?.ordered_quantity ?? 0)} · Saldo {quantity(plan?.remaining_to_buy_quantity ?? 0)} {item.unit_snapshot}</b>
+                <small>Solicitado {quantity(item.requested_quantity)} · por compra {quantity(item.ordered_quantity)} · por estoque {quantity(item.stock_fulfilled_quantity)} · saldo desta solicitação {quantity(requestBalance)}</small>
+                {plan ? <small>{coverageLabels[plan.coverage_status] ?? plan.coverage_status} · estoque disponível {quantity(plan.available_quantity)} · a receber {quantity(plan.outstanding_order_quantity)} · pedir até {dateBR(plan.order_deadline)}</small> : <small>Material fora do planejamento de suprimentos atual.</small>}
+                {canFulfillStock && ["approved","partially_ordered"].includes(request.status) && requestBalance > 0 && stockAvailable > 0 ? <details>
+                  <summary>Atender com estoque ({quantity(stockAvailable)} disponível)</summary>
+                  <form action={fulfillMaterialRequestFromStock}>
+                    <input type="hidden" name="request_item_id" value={item.id} />
+                    <select name="balance_id" required defaultValue=""><option value="">Selecione o lote/saldo</option>{stockBalances.map((balance) => <option key={balance.id} value={balance.id}>{quantity(balance.available_quantity)} {balance.unit_snapshot}{balance.batch_number ? ` · lote ${balance.batch_number}` : ""} · {money(balance.average_unit_cost)}/un</option>)}</select>
+                    <input name="quantity" type="number" min="0.000001" max={requestBalance} step="0.000001" defaultValue={Math.min(requestBalance, stockAvailable)} required />
+                    <input name="notes" placeholder="Observação opcional" />
+                    <button className="table-action primary" type="submit">Reservar para esta solicitação</button>
+                  </form>
+                </details> : null}
+              </div>;
+            })}{shownItems.length > 6 ? <small>+ {shownItems.length - 6} outro(s)</small> : null}{!shownItems.length ? <span>Sem saldo pendente.</span> : null}</div></td>
             <td><strong>{dateBR(request.needed_date)}</strong>{request.approved_at ? <small>Aprovada em {dateBR(request.approved_at)}</small> : null}</td>
             <td><strong>{request.requester_name}</strong><small>preenchido pelo login</small></td>
             <td><div className="material-request-centers">{requestCenters.map(([code,name]) => <span key={code}>{code}<small>{name}</small></span>)}</div></td>
@@ -224,7 +251,7 @@ export default async function MaterialRequestsPage({ searchParams }: {
               {canManage && request.status === "requested" ? <MaterialRequestEditDialog {...dialogBase} request={dialogRequest} /> : null}
               {canApprove && request.status === "requested" ? <form action={approveMaterialRequest}><input type="hidden" name="request_id" value={request.id} /><button className="table-action primary" type="submit">Aprovar</button></form> : null}
               {canApprove && !["attended", "cancelled"].includes(request.status) ? <details><summary>Cancelar</summary><form action={cancelMaterialRequest}><input type="hidden" name="request_id" value={request.id} /><textarea name="reason" required placeholder="Motivo do cancelamento" rows={2} /><button className="table-action danger" type="submit">Confirmar</button></form></details> : null}
-              {!canManage && !canApprove ? "—" : null}
+              {!canManage && !canApprove && !canFulfillStock ? "—" : null}
             </div></td>
           </tr>;
         })}
