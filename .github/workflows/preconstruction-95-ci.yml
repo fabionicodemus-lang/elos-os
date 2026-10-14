@@ -1,0 +1,63 @@
+name: Preconstruction 9.5 CI
+
+on:
+  push:
+    branches:
+      - feat/preobra-95
+    paths:
+      - "app/engenharia/preobra/**"
+      - "app/engenharia/curva-abc/**"
+      - "app/engenharia/orcamentos/**"
+      - "app/engenharia/produtividade/**"
+      - "app/engenharia/caminho-critico/**"
+      - "app/engenharia/calendario/**"
+      - "app/engenharia/sinapi/**"
+      - "app/preconstruction-95.css"
+      - "components/shell-navigation.tsx"
+      - "lib/preconstruction/**"
+      - "supabase/migrations/2026101409*.sql"
+      - "tests/preconstruction/**"
+      - "package.json"
+      - ".github/workflows/preconstruction-95-ci.yml"
+  pull_request:
+    paths:
+      - "app/engenharia/preobra/**"
+      - "app/engenharia/curva-abc/**"
+      - "app/engenharia/orcamentos/**"
+      - "app/engenharia/produtividade/**"
+      - "app/engenharia/caminho-critico/**"
+      - "app/engenharia/calendario/**"
+      - "app/engenharia/sinapi/**"
+      - "app/preconstruction-95.css"
+      - "components/shell-navigation.tsx"
+      - "lib/preconstruction/**"
+      - "supabase/migrations/2026101409*.sql"
+      - "tests/preconstruction/**"
+      - "package.json"
+      - ".github/workflows/preconstruction-95-ci.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Preconstruction functional tests
+        run: npm run test:preconstruction
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: Production build
+        run: npm run build
