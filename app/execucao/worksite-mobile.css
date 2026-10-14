@@ -1,0 +1,416 @@
+.worksite-connectivity,
+.worksite-dirty-dot {
+  display: none;
+}
+
+.worksite-file-preview {
+  margin-top: 8px;
+}
+
+.worksite-file-summary {
+  margin-bottom: 8px;
+  color: #4f6865;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.worksite-file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.worksite-file-card,
+.worksite-file-more {
+  min-height: 92px;
+  overflow: hidden;
+  border: 1px solid #d8e4e2;
+  border-radius: 12px;
+  background: #f7faf9;
+}
+
+.worksite-file-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.worksite-file-card img {
+  width: 100%;
+  height: 72px;
+  object-fit: cover;
+}
+
+.worksite-file-card > span,
+.worksite-file-more {
+  display: grid;
+  place-items: center;
+  min-height: 72px;
+  color: #0f5f5b;
+  font-weight: 900;
+}
+
+.worksite-file-card small {
+  overflow: hidden;
+  padding: 5px 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .worksite-connectivity {
+    position: sticky;
+    top: 0;
+    z-index: 35;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    margin: -4px -4px 12px;
+    padding: 8px 11px;
+    border: 1px solid #d7e4e2;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 5px 18px rgba(16, 37, 34, 0.08);
+    backdrop-filter: blur(8px);
+    color: #244541;
+    font-size: 12px;
+  }
+
+  .worksite-connectivity > span {
+    color: #1d8c65;
+    font-size: 13px;
+  }
+
+  .worksite-connectivity.offline {
+    border-color: #efd1a8;
+    background: #fff8ec;
+  }
+
+  .worksite-connectivity.offline > span {
+    color: #be6b00;
+  }
+
+  .worksite-connectivity strong {
+    font-size: 12px;
+  }
+
+  .worksite-connectivity small {
+    color: #6b7977;
+    text-align: right;
+  }
+
+  .worksite-dirty-dot {
+    position: fixed;
+    right: 10px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    z-index: 70;
+    display: grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    background: #e78a16;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+    font-size: 21px;
+    line-height: 1;
+  }
+
+  .daily-log-editor,
+  .quality-inspection-editor {
+    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+  }
+
+  .daily-log-editor-head,
+  .quality-inspection-hero {
+    gap: 12px;
+    align-items: flex-start !important;
+  }
+
+  .daily-log-editor-head h2,
+  .quality-inspection-hero h2 {
+    font-size: clamp(18px, 5vw, 24px) !important;
+    line-height: 1.2;
+  }
+
+  .daily-log-editor-head p,
+  .quality-inspection-hero p {
+    line-height: 1.45;
+  }
+
+  .daily-log-section,
+  .quality-answer-card,
+  .quality-executor-card,
+  .quality-criterion-group {
+    scroll-margin-top: 62px;
+  }
+
+  .daily-log-section > summary {
+    min-height: 62px;
+    padding: 12px !important;
+    cursor: pointer;
+  }
+
+  .daily-log-section > summary > span {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .daily-log-section-body {
+    padding: 12px !important;
+  }
+
+  .daily-log-basic-grid,
+  .daily-log-weather-grid,
+  .quality-form-grid,
+  .quality-executor-card > div,
+  .quality-inspection-summary {
+    grid-template-columns: 1fr !important;
+  }
+
+  .span2 {
+    grid-column: 1 !important;
+  }
+
+  .daily-log-section input,
+  .daily-log-section select,
+  .daily-log-section textarea,
+  .quality-inspection-editor input,
+  .quality-inspection-editor select,
+  .quality-inspection-editor textarea,
+  .quality-dialog input,
+  .quality-dialog select,
+  .quality-dialog textarea {
+    width: 100%;
+    min-height: 46px;
+    font-size: 16px !important;
+  }
+
+  .daily-log-section textarea,
+  .quality-inspection-editor textarea,
+  .quality-dialog textarea {
+    min-height: 86px;
+  }
+
+  .daily-log-table-wrap {
+    overflow: visible !important;
+  }
+
+  .daily-log-edit-table,
+  .daily-log-edit-table tbody,
+  .daily-log-edit-table tr,
+  .daily-log-edit-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .daily-log-edit-table thead {
+    display: none;
+  }
+
+  .daily-log-edit-table tr {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #dce6e4;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .daily-log-edit-table td {
+    padding: 4px 0 !important;
+    border: 0 !important;
+  }
+
+  .daily-log-service-row,
+  .daily-log-occurrence {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 9px !important;
+    padding: 12px !important;
+    border-radius: 12px;
+  }
+
+  .daily-log-inline-actions,
+  .daily-log-occurrence-checks,
+  .daily-log-workflow-actions,
+  .quality-workflow-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px;
+  }
+
+  .daily-log-add,
+  .daily-log-inline-actions button,
+  .daily-log-workflow-actions button,
+  .quality-workflow-actions button,
+  .quality-response-buttons button,
+  .quality-save-bar button,
+  .daily-log-save-bar button {
+    min-height: 46px;
+    touch-action: manipulation;
+  }
+
+  .daily-log-photo-upload input[type="file"],
+  .quality-answer-card input[type="file"] {
+    min-height: 58px;
+    padding: 7px;
+    border: 1px dashed #85aaa5;
+    border-radius: 12px;
+    background: #f2f9f7;
+  }
+
+  .daily-log-photo-upload input[type="file"]::file-selector-button,
+  .quality-answer-card input[type="file"]::file-selector-button {
+    min-height: 42px;
+    margin-right: 8px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 9px;
+    background: #0f5f5b;
+    color: white;
+    font-weight: 800;
+  }
+
+  .daily-log-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .daily-log-gallery figure {
+    border-radius: 12px !important;
+  }
+
+  .daily-log-gallery img {
+    min-height: 135px;
+    object-fit: cover;
+  }
+
+  .daily-log-save-bar,
+  .quality-save-bar {
+    position: fixed !important;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 9px 10px calc(9px + env(safe-area-inset-bottom)) !important;
+    border-top: 1px solid #d3dfdd;
+    background: rgba(255, 255, 255, 0.97) !important;
+    box-shadow: 0 -8px 22px rgba(16, 37, 34, 0.12);
+    backdrop-filter: blur(8px);
+  }
+
+  .daily-log-save-bar span,
+  .quality-save-bar span {
+    max-height: 34px;
+    overflow: hidden;
+    color: #5d6f6c;
+    font-size: 10px !important;
+    line-height: 1.25;
+  }
+
+  .daily-log-save-bar button,
+  .quality-save-bar button {
+    min-width: 126px;
+    border-radius: 10px;
+    font-weight: 850;
+  }
+
+  .quality-response-buttons {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px !important;
+  }
+
+  .quality-response-buttons button {
+    width: 100%;
+    padding: 8px !important;
+    white-space: normal;
+  }
+
+  .quality-answer-card {
+    padding: 12px !important;
+  }
+
+  .quality-answer-title {
+    align-items: flex-start !important;
+  }
+
+  .quality-inspection-summary article {
+    min-height: 72px;
+  }
+
+  .quality-dialog {
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 16px) !important;
+    margin: 8px !important;
+    border-radius: 14px !important;
+  }
+
+  .quality-dialog > form {
+    max-height: calc(100dvh - 16px);
+  }
+
+  .quality-dialog header,
+  .quality-dialog footer {
+    position: sticky;
+    z-index: 3;
+    background: #fff;
+  }
+
+  .quality-dialog header {
+    top: 0;
+  }
+
+  .quality-dialog footer {
+    bottom: 0;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .quality-dialog footer button {
+    min-height: 46px;
+  }
+
+  .worksite-file-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .worksite-file-card,
+  .worksite-file-more {
+    min-height: 82px;
+  }
+
+  .worksite-file-card img,
+  .worksite-file-card > span,
+  .worksite-file-more {
+    min-height: 62px;
+    height: 62px;
+  }
+}
+
+@media (max-width: 420px) {
+  .worksite-connectivity {
+    grid-template-columns: auto 1fr;
+  }
+
+  .worksite-connectivity small {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .daily-log-gallery,
+  .worksite-file-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .daily-log-save-bar,
+  .quality-save-bar {
+    grid-template-columns: 1fr auto;
+  }
+}
