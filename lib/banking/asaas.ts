@@ -126,26 +126,21 @@ export async function ensureAsaasCustomer(connection: AsaasConnection, customer:
   return id;
 }
 
-export async function createAsaasCharge(connection: AsaasConnection, input: AsaasChargeInput): Promise<AsaasChargeResult> {
-  const customerId = await ensureAsaasCustomer(connection, input.customer);
-  const payment = await asaasRequest<Json>(connection, "/payments", {
-    method: "POST",
-    body: JSON.stringify({
-      customer: customerId,
-      billingType: input.billingType,
-      value: Number(input.amount.toFixed(2)),
-      dueDate: input.dueDate,
-      externalReference: input.externalReference,
-      fine: input.finePercent && input.finePercent > 0 ? { value: input.finePercent } : undefined,
-      interest: input.interestPercent && input.interestPercent > 0 ? { value: input.interestPercent } : undefined,
-    }),
-  });
+async function findPayment(connection: AsaasConnection, externalReference: string): Promise<Json | null> {
+  const query = new URLSearchParams({ externalReference, limit: "1" });
+  const data = await asaasRequest<Json>(connection, `/payments?${query.toString()}`, { method: "GET" });
+  const rows = Array.isArray(data.data) ? data.data : [];
+  const first = rows[0];
+  return first && typeof first === "object" ? first as Json : null;
+}
+
+async function finishCharge(connection: AsaasConnection, payment: Json, billingType: "BOLETO" | "PIX"): Promise<AsaasChargeResult> {
   const id = String(payment.id ?? "");
   if (!id) throw new Error("Asaas não retornou o identificador da cobrança.");
 
   let pixPayload: string | null = null;
   let pixExpirationAt: string | null = null;
-  if (input.billingType === "PIX") {
+  if (billingType === "PIX") {
     const qr = await asaasRequest<Json>(connection, `/payments/${encodeURIComponent(id)}/pixQrCode`, { method: "GET" });
     pixPayload = typeof qr.payload === "string" ? qr.payload : null;
     pixExpirationAt = typeof qr.expirationDate === "string" ? qr.expirationDate : null;
@@ -162,6 +157,28 @@ export async function createAsaasCharge(connection: AsaasConnection, input: Asaa
   };
 }
 
+export async function createAsaasCharge(connection: AsaasConnection, input: AsaasChargeInput): Promise<AsaasChargeResult> {
+  // Recupera antes de criar. Isso torna o comando seguro quando a chamada anterior
+  // chegou ao Asaas, mas a resposta se perdeu antes do registro local.
+  const existing = await findPayment(connection, input.externalReference);
+  if (existing) return finishCharge(connection, existing, input.billingType);
+
+  const customerId = await ensureAsaasCustomer(connection, input.customer);
+  const payment = await asaasRequest<Json>(connection, "/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: customerId,
+      billingType: input.billingType,
+      value: Number(input.amount.toFixed(2)),
+      dueDate: input.dueDate,
+      externalReference: input.externalReference,
+      fine: input.finePercent && input.finePercent > 0 ? { value: input.finePercent } : undefined,
+      interest: input.interestPercent && input.interestPercent > 0 ? { value: input.interestPercent } : undefined,
+    }),
+  });
+  return finishCharge(connection, payment, input.billingType);
+}
+
 export type NormalizedAsaasWebhook = {
   eventId: string;
   eventType: string;
@@ -173,7 +190,7 @@ export type NormalizedAsaasWebhook = {
   raw: Json;
 };
 
-function normalizedStatus(event: string) : NormalizedAsaasWebhook["status"] {
+function normalizedStatus(event: string): NormalizedAsaasWebhook["status"] {
   if (event === "PAYMENT_RECEIVED") return "received";
   if (event === "PAYMENT_CONFIRMED") return "confirmed";
   if (event === "PAYMENT_OVERDUE") return "overdue";
