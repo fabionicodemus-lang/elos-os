@@ -1,16 +1,16 @@
 "use client";
 
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { deleteManualInvoice } from "./actions";
 
 export function ManualInvoiceDeleteButton({ invoiceId, registryNumber }: { invoiceId: string; registryNumber: string }) {
-  return <form
-    action={deleteManualInvoice}
-    onSubmit={(event) => {
-      const confirmed = window.confirm(`Excluir definitivamente a nota ${registryNumber} e todos os lançamentos ainda não pagos? Esta ação não poderá ser desfeita.`);
-      if (!confirmed) event.preventDefault();
-    }}
-  >
+  return <form action={deleteManualInvoice}>
     <input type="hidden" name="invoice_id" value={invoiceId} />
-    <button className="danger" type="submit">Excluir nota</button>
+    <ConfirmSubmitButton
+      className="danger"
+      label="Excluir nota"
+      confirmLabel={`Confirmar exclusão ${registryNumber}`}
+      title="Clique uma vez para preparar a exclusão e novamente para confirmar."
+    />
   </form>;
 }

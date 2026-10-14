@@ -22,8 +22,7 @@ function target(message: string, type: "success" | "error") {
 }
 
 export async function fulfillMaterialRequestFromStock(formData: FormData) {
-  const { supabase, companyId, projectId } = await requireCompanyPermission("procurement.inventory.issue");
-  if (!projectId) redirect(target("Selecione uma obra.", "error"));
+  const { supabase, companyId } = await requireCompanyPermission("procurement.inventory.issue");
 
   const requestItemId = text(formData, "request_item_id");
   const balanceId = text(formData, "balance_id");
@@ -32,9 +31,29 @@ export async function fulfillMaterialRequestFromStock(formData: FormData) {
     redirect(target("Selecione o saldo de estoque e informe uma quantidade válida.", "error"));
   }
 
+  const [{ data: requestItem }, { data: balance }] = await Promise.all([
+    supabase
+      .from("execution_material_request_items")
+      .select("id, project_id, input_id")
+      .eq("id", requestItemId)
+      .eq("company_id", companyId)
+      .maybeSingle(),
+    supabase
+      .from("procurement_inventory_balances")
+      .select("id, project_id, input_id")
+      .eq("id", balanceId)
+      .eq("company_id", companyId)
+      .maybeSingle(),
+  ]);
+
+  if (!requestItem || !balance) redirect(target("Solicitação ou saldo de estoque não encontrado.", "error"));
+  if (requestItem.project_id !== balance.project_id || requestItem.input_id !== balance.input_id) {
+    redirect(target("O saldo selecionado não pertence à mesma obra/material da solicitação.", "error"));
+  }
+
   const { error } = await supabase.rpc("fulfill_execution_material_request_from_stock", {
     p_company_id: companyId,
-    p_project_id: projectId,
+    p_project_id: requestItem.project_id,
     p_request_item_id: requestItemId,
     p_balance_id: balanceId,
     p_quantity: quantity,
