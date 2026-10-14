@@ -1,4 +1,4 @@
--- Elos OS — Medições: aprovação técnica volta a aguardar a nota fiscal.
+-- Elos OS 0092 — Medições: aprovação técnica volta a aguardar a nota fiscal.
 --
 -- Problema (teste da obra Vinicius, out/2026): desde a 0075 a aprovação já criava
 -- a conta a pagar com o número da medição como documento e vencimento contado a
