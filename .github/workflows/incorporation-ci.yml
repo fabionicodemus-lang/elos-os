@@ -4,11 +4,12 @@ on:
   pull_request:
     paths:
       - "app/comercial/incorporacao/**"
-      - "supabase/migrations/*commercial_incorporation*"
+      - "supabase/migrations/*commercial*"
       - "tests/commercial/**"
       - "components/app-shell.tsx"
       - "package.json"
       - "package-lock.json"
+      - ".github/workflows/incorporation-ci.yml"
   workflow_dispatch:
 
 permissions:
