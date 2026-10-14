@@ -68,7 +68,7 @@ export default async function MaterialRequestsPage({ searchParams }: {
   const params = await searchParams;
   const { supabase, company, companyId, projectId, roleKey } = await requireCompanyPermission("execution.material_requests.view");
   const projectPromise = projectId
-    ? supabase.from("projects").select("id, code, name").eq("id", projectId).maybeSingle()
+    ? supabase.from("projects").select("id, code, name").eq("id", projectId).eq("company_id", companyId).maybeSingle()
     : Promise.resolve({ data: null, error: null });
   const budgetsPromise = projectId
     ? fetchAllRows<Budget>(async (from, to) => {
@@ -88,9 +88,10 @@ export default async function MaterialRequestsPage({ searchParams }: {
   });
   const budgetServicesPromise = projectId
     ? fetchAllRows<BudgetServiceReference>(async (from, to) => {
-        const { data, error } = await supabase.from("engineering_takeoffs")
+        const { data, error } = await supabase.from("engineering_budget_items")
           .select("budget_id, service_id")
-          .eq("company_id", companyId).eq("project_id", projectId).eq("record_status", "active")
+          .eq("company_id", companyId).eq("project_id", projectId).eq("status", "active")
+          .not("service_id", "is", null)
           .range(from, to);
         return { data: (data ?? []) as BudgetServiceReference[], error };
       })
@@ -149,9 +150,11 @@ export default async function MaterialRequestsPage({ searchParams }: {
   });
   const centers: MaterialCostCenterOption[] = budgets.flatMap((budget) => {
     const linkedServices = referenceMap.get(budget.id) ?? new Set<string>();
-    const services = linkedServices.size ? servicesResult.data.filter((service) => linkedServices.has(service.id)) : servicesResult.data;
-    return services.map((service) => ({ id: service.id, budget_id: budget.id, code: service.code, name: service.description, unit: service.unit, group_code: service.group_code }));
+    return servicesResult.data
+      .filter((service) => linkedServices.has(service.id))
+      .map((service) => ({ id: service.id, budget_id: budget.id, code: service.code, name: service.description, unit: service.unit, group_code: service.group_code }));
   });
+  const baseCenters = approvedBudget ? centers.filter((center) => center.budget_id === approvedBudget.id) : [];
   const requests = requestsResult.data;
   const items = itemsResult.data;
   const itemMap = new Map<string, MaterialRequestItem[]>();
@@ -174,17 +177,18 @@ export default async function MaterialRequestsPage({ searchParams }: {
   const pendingItems = pendingRequests.reduce((total, request) => total + (itemMap.get(request.id) ?? []).filter((item) => Number(item.ordered_quantity) + Number(item.stock_fulfilled_quantity) < Number(item.requested_quantity) - 0.000001).length, 0);
   const approved = requests.filter((request) => ["approved", "partially_ordered"].includes(request.status)).length;
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
-  const dialogBase = { inputs: inputsResult.data, centers, supplyPlan: supplyResult.data, approvedBudgetId: approvedBudget?.id ?? "" };
-  const structureError = requestsResult.error || itemsResult.error || supplyResult.error;
+  const dialogBase = { inputs: inputsResult.data, centers: baseCenters, supplyPlan: supplyResult.data, approvedBudgetId: approvedBudget?.id ?? "" };
+  const structureError = requestsResult.error || itemsResult.error || supplyResult.error || budgetServicesResult.error;
 
   return <AppShell activeGroup="execution" activeItem="material-requests" eyebrow="Execução · Suprimentos" title="Solicitações de Materiais"
     description={`${company.name} · ${context} · necessidade da obra confrontada com compras e estoque antes de gerar nova aquisição.`}
-    actions={canManage && approvedBudget ? <MaterialRequestCreateDialog {...dialogBase} /> : undefined}>
+    actions={canManage && approvedBudget && baseCenters.length ? <MaterialRequestCreateDialog {...dialogBase} /> : undefined}>
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
     {structureError ? <div className="auth-message error workspace-message">A inteligência de suprimentos precisa estar instalada e atualizada para exibir previsto, comprado e saldo.</div> : null}
     {!projectId ? <div className="material-requests-empty-page">Selecione uma obra no topo.</div> : null}
     {projectId && !approvedBudget ? <div className="auth-message error workspace-message">A obra precisa ter um orçamento <strong>aprovado e salvo como orçamento base</strong> antes de solicitar materiais.</div> : null}
+    {projectId && approvedBudget && !baseCenters.length ? <div className="auth-message error workspace-message">O orçamento base desta obra ainda não possui serviços vinculados aos centros de custo. Revise os serviços do orçamento; o Elos não exibirá serviços de outras obras como alternativa.</div> : null}
 
     <section className="material-request-kpis">
       <article><span>Não atendidas</span><strong>{pendingRequests.length}</strong><small>aguardam aprovação, estoque ou pedido</small></article>
