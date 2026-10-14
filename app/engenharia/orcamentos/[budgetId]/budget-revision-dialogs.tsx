@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRef } from "react";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { CreatableCombobox } from "@/components/creatable-combobox";
 import {
   closeBudgetRevision,
@@ -79,45 +80,37 @@ export function BudgetRevisionDialogs({
         </>
       ) : null}
       {!['approved', 'archived'].includes(budget.status) ? (
-        <form
-          action={closeBudgetRevision}
-          onSubmit={(event) => {
-            if (!window.confirm(`Aprovar o orçamento ${budget.code} · ${budget.version}? Depois de aprovado, ele será congelado e poderá ser salvo como orçamento base da obra.`)) event.preventDefault();
-          }}
-        >
+        <form action={closeBudgetRevision}>
           <input type="hidden" name="budget_id" value={budget.id} />
-          <button className="elos-button budget-close-revision-button" type="submit">
-            Aprovar orçamento
-          </button>
+          <ConfirmSubmitButton
+            className="elos-button budget-close-revision-button"
+            label="Aprovar orçamento"
+            confirmLabel="Confirmar aprovação"
+            title={`Aprovar ${budget.code} · ${budget.version}. No segundo clique a revisão será congelada.`}
+          />
         </form>
       ) : null}
       {budget.status === "approved" && !budget.is_base ? (
-        <form
-          action={setBudgetAsBase}
-          onSubmit={(event) => {
-            if (!window.confirm(`Salvar ${budget.code} · ${budget.version} como orçamento base da obra? Os centros de custo serão gerados a partir desta revisão.`)) event.preventDefault();
-          }}
-        >
+        <form action={setBudgetAsBase}>
           <input type="hidden" name="budget_id" value={budget.id} />
-          <button className="elos-button budget-base-button" type="submit">Salvar como orçamento base</button>
+          <ConfirmSubmitButton
+            className="elos-button budget-base-button"
+            label="Salvar como orçamento base"
+            confirmLabel="Confirmar orçamento base"
+            title={`Salvar ${budget.code} · ${budget.version} como orçamento base e gerar os centros de custo.`}
+          />
         </form>
       ) : null}
       {budget.is_base ? <span className="budget-base-badge budget-base-badge-header">Orçamento base</span> : null}
-      <form
-        action={deleteBudget}
-        onSubmit={(event) => {
-          if (!window.confirm(`Excluir definitivamente o orçamento ${budget.code} · ${budget.version}?`)) event.preventDefault();
-        }}
-      >
+      <form action={deleteBudget}>
         <input type="hidden" name="budget_id" value={budget.id} />
-        <button
+        <ConfirmSubmitButton
           className="elos-button elos-button-danger"
-          type="submit"
+          label="Excluir orçamento"
+          confirmLabel="Confirmar exclusão"
           disabled={hasCostCenterTransactions}
-          title={hasCostCenterTransactions ? "Este orçamento possui lançamentos nos centros de custo e não pode ser excluído." : "Excluir orçamento e seus dados internos."}
-        >
-          Excluir orçamento
-        </button>
+          title={hasCostCenterTransactions ? "Este orçamento possui lançamentos nos centros de custo e não pode ser excluído." : `Excluir definitivamente ${budget.code} · ${budget.version}. Clique novamente para confirmar.`}
+        />
       </form>
 
       {!locked ? <dialog ref={generalRef} className="budget-modal">
