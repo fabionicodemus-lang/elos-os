@@ -13,7 +13,7 @@ declare
   p public.ai_action_proposals%rowtype;
   offer_id uuid;
   measurement_id uuid;
-  result jsonb;
+  v_result jsonb;
 begin
   if auth.uid() is null then raise exception 'Sessão inválida.'; end if;
   select * into p from public.ai_action_proposals where id=p_proposal_id for update;
@@ -39,7 +39,7 @@ begin
       p.payload->>'paymentTerms',nullif(p.payload->>'deliveryDays','')::integer,
       p.payload->>'freightTerms',p.payload->>'warrantyTerms',p.payload->>'notes',p.payload->'items'
     );
-    result:=jsonb_build_object('kind','procurement_supplier_offer','offer_id',offer_id,'quotation_id',p.payload->>'quotationId','supplier_id',p.payload->>'supplierId');
+    v_result:=jsonb_build_object('kind','procurement_supplier_offer','offer_id',offer_id,'quotation_id',p.payload->>'quotationId','supplier_id',p.payload->>'supplierId');
   elsif p.action_type='execution_contract_measurement' then
     measurement_id := public.save_execution_contract_measurement(
       p.company_id,p.project_id,null,
@@ -47,15 +47,15 @@ begin
       coalesce((p.payload->>'taxWithholding')::numeric,0),coalesce((p.payload->>'advanceDeduction')::numeric,0),coalesce((p.payload->>'otherDiscount')::numeric,0),
       p.payload->>'notes',p.payload->>'contractorNotes',p.payload->'items',false
     );
-    result:=jsonb_build_object('kind','execution_contract_measurement','measurement_id',measurement_id,'contract_id',p.payload->>'contractId');
+    v_result:=jsonb_build_object('kind','execution_contract_measurement','measurement_id',measurement_id,'contract_id',p.payload->>'contractId');
   else
     raise exception 'Tipo de ação não suportado.';
   end if;
 
   update public.ai_action_proposals
-     set status='executed',reviewed_by=auth.uid(),reviewed_at=now(),executed_by=auth.uid(),executed_at=now(),result=result,last_error=null,updated_at=now()
+     set status='executed',reviewed_by=auth.uid(),reviewed_at=now(),executed_by=auth.uid(),executed_at=now(),result=v_result,last_error=null,updated_at=now()
    where id=p.id;
-  return result;
+  return v_result;
 exception when others then
   -- A exceção reverte também qualquer escrita do domínio. O cartão permanece
   -- pendente porque a transação inteira é atômica, permitindo corrigir a origem.
