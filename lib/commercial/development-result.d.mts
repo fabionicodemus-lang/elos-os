@@ -63,9 +63,9 @@ export type DevelopmentResult = {
   };
   cost: {
     engineeringBudget:number; engineeringActual:number; engineeringCommitted:number; engineeringToCommit:number;
-    engineeringProjected:number; unallocatedActual:number; unallocatedCommitted:number; unallocatedProjected:number;
-    unallocatedExcess:number; projectedOtherCost:number; projectedCommission:number; projectedTaxes:number;
-    projectedTotalCost:number;
+    engineeringProjected:number; unallocatedActual:number; unallocatedCommitted:number; unallocatedSourceProjected:number;
+    unallocatedProjected:number; unallocatedExcess:number; projectedOtherCost:number; projectedCommission:number;
+    projectedTaxes:number; projectedTotalCost:number;
   };
   result: {
     projectedProfit:number; projectedMarginPct:number; profitDeviation:number; marginDeviationPct:number;
