@@ -6,7 +6,7 @@ import { getElosIaConfig, type ElosIaConfig } from "./config";
 import { createOpenAiResponse, friendlyOpenAiError } from "./openai";
 import { buildElosIaInstructions, getElosIaPersona, type ElosIaPersonaKey } from "./personas";
 import { elosIaToolLabel, elosIaToolSchemas, runElosIaTool, type ElosIaProject, type ElosIaToolContext } from "./tools";
-import { checkElosIaQuota, loadElosIaUsage, quotaView, recordElosIaUsage, type ElosIaQuotaView } from "./usage";
+import { checkElosIaQuota, estimateElosIaUsageCost, loadElosIaUsage, quotaView, recordElosIaUsage, type ElosIaQuotaView } from "./usage";
 
 type Workspace = Awaited<ReturnType<typeof resolveActiveWorkspace>>;
 
@@ -66,7 +66,6 @@ export async function resolveElosIaAccess(): Promise<ElosIaAccess> {
     if (!permission.endsWith(".view")) return false;
     const base = permission.slice(0, -5);
     if (granted.has(`${base}.manage`)) return true;
-    // Nas tabelas de Execução, quem aprova também lê; nas medições, quem libera o financeiro também.
     if (base.startsWith("execution.") && granted.has(`${base}.approve`)) return true;
     return base === "execution.measurements" && granted.has(`${base}.finance`);
   };
@@ -148,8 +147,9 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
   });
   const tools = elosIaToolSchemas(persona.tools);
 
-  const record = (status: "ok" | "incomplete" | "empty" | "error", usage: AgentUsage, trace: AgentToolTrace[]) =>
-    recordElosIaUsage(workspace.supabase, {
+  const record = async (status: "ok" | "incomplete" | "empty" | "error", usage: AgentUsage, trace: AgentToolTrace[]) => {
+    const estimatedCostUsd = estimateElosIaUsageCost(config, usage);
+    await recordElosIaUsage(workspace.supabase, {
       companyId: workspace.companyId,
       projectId: activeProject?.id ?? null,
       userId: workspace.userId,
@@ -157,9 +157,12 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
       model: config.model,
       status,
       usage,
+      estimatedCostUsd,
       toolsUsed: trace.map((item) => item.name),
       durationMs: Date.now() - startedAt,
     });
+    return estimatedCostUsd;
+  };
 
   try {
     const result = await runAgentTurn({
@@ -172,20 +175,20 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
       turnTokenBudget: config.turnTokenBudget,
       deadlineAt: startedAt + ANSWER_DEADLINE_MS,
     });
-    await record(result.status, result.usage, result.toolTrace);
+    const estimatedCostUsd = await record(result.status, result.usage, result.toolTrace);
     return {
       ok: true,
       text: finalText(result.text, result.status),
       persona: persona.key,
       consultas: result.toolTrace.map((item) => ({ nome: elosIaToolLabel(item.name), ok: item.ok })),
       tokens: result.usage.totalTokens,
-      quota: quotaView(config, usageSnapshot, result.usage.totalTokens),
+      quota: quotaView(config, usageSnapshot, result.usage.totalTokens, estimatedCostUsd),
     };
   } catch (error) {
     const partial = error as { usage?: AgentUsage; toolTrace?: AgentToolTrace[] };
     const usage = partial.usage ?? emptyUsage();
     console.error("[elos-ia] Falha ao responder:", error);
-    await record("error", usage, partial.toolTrace ?? []);
-    return { ok: false, status: 502, error: friendlyOpenAiError(error), quota: quotaView(config, usageSnapshot, usage.totalTokens) };
+    const estimatedCostUsd = await record("error", usage, partial.toolTrace ?? []);
+    return { ok: false, status: 502, error: friendlyOpenAiError(error), quota: quotaView(config, usageSnapshot, usage.totalTokens, estimatedCostUsd) };
   }
 }
