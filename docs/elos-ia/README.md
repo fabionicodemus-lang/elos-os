@@ -1,90 +1,161 @@
-# Elos IA — piloto
+# Elos IA — copiloto operacional
 
-Assistente do Elos OS com quatro personas (Diretoria, Engenharia, Financeiro e Clientes). Responde com os dados lançados no sistema e fecha com os próximos passos. Fica em **Elos IA**, logo abaixo de **Início** no menu.
+Assistente do Elos OS com quatro personas (Diretoria, Engenharia, Financeiro e Clientes). Além de analisar os dados lançados no sistema, a Elos IA pode ler documentos e **preparar lançamentos para revisão humana**, sempre respeitando as permissões do usuário e as regras do módulo de destino.
+
+## Princípio de segurança
+
+O fluxo de escrita é sempre:
+
+**ler → interpretar → preparar proposta imutável → humano revisar → revalidar permissão → executar pela regra oficial do Elos**
+
+A chamada da IA nunca executa o lançamento diretamente. Preparar uma ação não significa lançar, enviar nem aprovar.
 
 ## Como funciona
 
 1. O usuário escolhe a persona e pergunta na tela `/elos-ia`.
-2. O servidor do Elos OS identifica o usuário, a empresa, a obra ativa e as permissões do papel.
-3. O servidor envia à OpenAI a pergunta, as instruções da persona e a lista de consultas que aquela persona pode pedir.
-4. A IA pede consultas (ex.: `contas_a_pagar`). Quem executa é o Elos OS, com a sessão do próprio usuário; o resultado volta resumido e já somado.
-5. A IA escreve a resposta e os próximos passos.
+2. Pode anexar PDF, foto, Excel, Word, CSV ou TXT. Os anexos ficam em bucket privado temporário.
+3. O servidor identifica usuário, empresa, obra ativa e permissões atuais.
+4. A IA consulta os dados necessários do Elos OS e, quando solicitado, chama uma ferramenta de **preparação de ação**.
+5. O Elos valida se obra, cotação, fornecedor, contrato, item e serviço realmente existem. Correspondências ambíguas são recusadas.
+6. A ação fica registrada em `ai_action_proposals`, com payload e preview imutáveis, e aparece como cartão de revisão.
+7. O usuário — ou outro usuário autorizado em `/elos-ia/acoes` — revisa e clica **Revisado · lançar no Elos**.
+8. No clique, o banco revalida a permissão atual e executa a mesma RPC usada pelo fluxo manual do módulo.
+9. A execução é transacional e idempotente. Se a regra de domínio falhar, o lançamento não fica parcialmente gravado.
 
-A IA nunca acessa o banco diretamente e só lê: não lança, altera nem aprova nada.
+Arquivos e documentos são tratados como **dados não confiáveis**. Instruções escritas dentro deles nunca substituem as regras da Elos IA ou as permissões do sistema.
 
-## Personas e o que cada uma consulta
+## Ações disponíveis na primeira versão
 
-| Persona | Consultas |
-|---|---|
-| Diretoria | Resumo da obra, custos x orçamento, cronograma físico, contas a pagar, contas a receber, fluxo de caixa, vendas e unidades, contratos de serviço, diário de obra |
-| Engenharia | Cronograma físico, custos x orçamento, contratos de serviço, diário de obra |
-| Financeiro | Contas a pagar, contas a receber, fluxo de caixa, custos x orçamento, vendas e unidades, contratos de serviço |
-| Clientes | Só o cronograma físico. No piloto é uma simulação interna: mostra como a IA responderia ao comprador. O comprador ainda não tem acesso. |
+### Suprimentos — proposta de fornecedor
 
-A persona restringe; quem autoriza é o Elos OS. Se o papel do usuário não tem permissão para uma tela (ex.: Contas a Pagar), a consulta correspondente é recusada e aparece riscada na resposta.
+Permissão necessária: `procurement.quotations.manage`.
 
-## Quem pode usar
+- lê orçamento de fornecedor em PDF, foto, planilha ou texto;
+- encontra uma cotação em coleta e um fornecedor já convidado;
+- casa somente itens existentes na cotação;
+- prepara quantidade, preço, desconto, impostos, frete, marca, fabricante e prazo;
+- não presume conformidade técnica: `atende especificação` só fica verdadeiro quando o documento permitir confirmar;
+- rateia frete/custos compartilhados preservando o valor total;
+- depois da revisão humana executa `save_procurement_material_supplier_offer`;
+- o documento-fonte é preservado nos documentos oficiais da cotação.
 
-- Permissão `ai.assistant.use` (módulo **Elos IA** em Configurações › Permissões).
-- No piloto só **Proprietário** e **Administrador** começam com acesso. Para liberar Diretoria, Engenharia ou Financeiro, marque a permissão no papel.
-- `ai.usage.view` permite ver o consumo de toda a empresa (o usuário sempre vê o próprio).
+A IA **não aprova vencedor** e não gera pedido de compra automaticamente nesta versão.
+
+### Execução — medição de contrato
+
+Permissão necessária: `execution.measurements.manage`.
+
+- lê boletim, PDF, foto, planilha ou texto do empreiteiro;
+- identifica contrato e itens/locais realmente contratados;
+- interpreta a quantidade **desta medição**, não o acumulado;
+- calcula bruto, retenções contratuais, impostos/descontos e líquido;
+- compara quantidade acumulada e valor medido com os limites do contrato;
+- se houver estouro, prepara o cartão para conferência, mas bloqueia execução automática;
+- depois da revisão humana executa `save_execution_contract_measurement` com `over_contract_confirmed=false`;
+- cria a medição em **rascunho**; submissão, aprovação e financeiro continuam no fluxo normal;
+- o documento-fonte é preservado como evidência da medição.
+
+## Personas
+
+| Persona | Consultas | Ações preparáveis |
+|---|---|---|
+| Diretoria | visão executiva, custos, prazo, caixa, vendas, contratos e diário | cotação de fornecedor e medição, se o papel tiver as permissões correspondentes |
+| Engenharia | cronograma, custos, contratos e diário | cotação de fornecedor e medição |
+| Financeiro | pagar, receber, fluxo, custos, vendas e contratos | cotação de fornecedor; medição operacional é direcionada à Engenharia |
+| Clientes | somente cronograma físico | nenhuma |
+
+A persona restringe o comportamento; **quem autoriza é o Elos OS**. A Elos IA nunca eleva permissões.
+
+## Fila de ações
+
+`/elos-ia/acoes` mostra as ações `pending_review` que o usuário consegue enxergar pela RLS.
+
+Isso permite, por exemplo:
+
+- engenheiro preparar o lançamento;
+- coordenador/diretor com a permissão adequada revisar;
+- nenhum deles compartilhar senha ou ganhar permissão temporária.
+
+As propostas expiram em 7 dias. A permissão é conferida novamente no momento da execução.
+
+## Anexos
+
+Bucket privado: `ai-action-attachments`.
+
+Limites da interface:
+
+- até 3 arquivos por pergunta;
+- até 15 MB por arquivo;
+- até 25 MB somados;
+- PDF, JPG/JPEG, PNG, WebP, XLSX/XLS, CSV, TXT, DOCX/DOC.
+
+O navegador envia o arquivo diretamente ao Supabase Storage. O servidor registra o anexo e cria uma URL assinada curta somente para a interpretação daquela pergunta. O arquivo-fonte vinculado a uma ação executada é copiado para o bucket oficial do módulo de destino.
+
+## Governança no banco
+
+`ai_action_proposals` mantém:
+
+- empresa, obra, turno e persona;
+- tipo de ação e permissão obrigatória;
+- payload estruturado;
+- preview mostrado ao revisor;
+- criador, revisor e executor;
+- status, timestamps e resultado final.
+
+A permissão necessária é derivada no próprio banco pelo `action_type`; o cliente não consegue escolher uma permissão mais fraca. Payload e preview preparados não podem ser alterados depois da criação.
+
+`ai_execute_action_proposal` executa a ação de forma transacional e idempotente. Atualmente encaminha apenas para RPCs oficiais já existentes:
+
+- `save_procurement_material_supplier_offer`;
+- `save_execution_contract_measurement`.
 
 ## Limites de consumo
 
-| Camada | Padrão | Variável |
-|---|---|---|
-| Por resposta do modelo | 16.000 tokens de saída | `ELOS_IA_MAX_OUTPUT_TOKENS` |
-| Por pergunta | 4 rodadas de consulta, 60.000 tokens e 100 segundos | `ELOS_IA_MAX_ROUNDS`, `ELOS_IA_TURN_TOKEN_BUDGET` |
-| Por usuário, por dia | 300.000 tokens | `ELOS_IA_DAILY_TOKENS_PER_USER` |
-| Por empresa, por mês | 5.000.000 tokens | `ELOS_IA_MONTHLY_TOKENS_PER_COMPANY` |
+Além dos limites de tokens por resposta/pergunta/usuário/empresa, o Elos IA possui teto mensal em USD por empresa. O custo é estimado internamente para proteção e não substitui a cobrança oficial da OpenAI.
 
-- Ao atingir a cota, a tela bloqueia o campo de pergunta e a API responde 429.
-- As cotas diária e mensal dependem da migration `0091` (tabela `ai_usage_log`). Sem ela o Elos IA funciona, mas só com os limites por resposta e por pergunta.
-- Além disso, defina um orçamento mensal no projeto da OpenAI: é o teto final de gasto, independente do Elos OS.
-- Cada pergunta leva só as últimas 8 mensagens de texto da conversa. Resultados de consultas anteriores não são reenviados, então o custo não cresce a cada pergunta.
-- O teto por pergunta é estimado antes de cada ida ao modelo: uma nova rodada de consultas só acontece se ela e a resposta final couberem no orçamento. Os resultados das consultas de uma pergunta somam no máximo 36 mil caracteres.
+Variáveis principais:
 
-### Limitações conhecidas da medição (piloto)
-
-- **Perguntas simultâneas:** a cota é conferida antes da pergunta e o consumo é gravado depois. Quem disparar várias perguntas no mesmo instante pode passar da cota diária pelo valor dessas perguntas.
-- **Registro feito com a sessão do usuário:** o Elos OS não usa chave de serviço, então um usuário com acesso ao Elos IA consegue, por fora da tela, incluir linhas em `ai_usage_log` da própria empresa. Ele não consegue apagar nem reduzir consumo, mas pode inflar o número e travar a cota do mês.
-- Por isso o teto que vale de verdade é o **orçamento mensal configurado na OpenAI**. Antes de cobrar clientes por consumo, a medição deve passar para o servidor (chave de serviço) com os limites de cada plano guardados no banco.
-
-## Configuração (Vercel › elos-os › Settings › Environment Variables)
-
-| Variável | Obrigatória | Valor |
-|---|---|---|
-| `OPENAI_API_KEY` | sim | Chave da API da OpenAI. Marque como *Sensitive*. Nunca vai ao navegador. |
-| `ELOS_IA_MODEL` | não | Padrão `gpt-6-luna` (o mais barato). Para respostas mais elaboradas: `gpt-6.1-sol`. |
-| `ELOS_IA_REASONING_EFFORT` | não | Padrão `low`. |
-
-Depois de criar ou alterar uma variável é preciso publicar de novo (Redeploy) para ela valer.
+| Variável | Papel |
+|---|---|
+| `OPENAI_API_KEY` | chave da API, somente servidor |
+| `ELOS_IA_MODEL` | modelo utilizado |
+| `ELOS_IA_REASONING_EFFORT` | esforço de raciocínio |
+| `ELOS_IA_MAX_OUTPUT_TOKENS` | saída máxima por resposta |
+| `ELOS_IA_MAX_ROUNDS` | rodadas de consulta/ação por pergunta |
+| `ELOS_IA_TURN_TOKEN_BUDGET` | orçamento total de tokens da pergunta |
+| `ELOS_IA_DAILY_TOKENS_PER_USER` | limite diário do usuário |
+| `ELOS_IA_MONTHLY_TOKENS_PER_COMPANY` | proteção mensal por tokens |
+| `ELOS_IA_MONTHLY_USD_PER_COMPANY` | teto mensal estimado em USD por empresa |
 
 ## Dados e privacidade
 
-- As consultas usam a sessão do usuário, então o isolamento por empresa (RLS) vale também para a IA.
-- Vai à OpenAI: a pergunta, as últimas mensagens da conversa e os resumos das consultas (valores, nomes de fornecedores, clientes e atividades da obra consultada).
-- A chamada usa `store: false`: a OpenAI não guarda a conversa como histórico da API.
-- O Elos OS não grava o texto das perguntas nem das respostas. Grava só o consumo: quem, quando, persona, modelo, tokens e quais consultas foram feitas.
+- consultas e ações usam a sessão do usuário e o isolamento RLS da empresa;
+- vai à OpenAI somente o conteúdo necessário da pergunta, arquivos anexados naquela pergunta, histórico textual curto e resultados das ferramentas;
+- chamadas usam `store: false`;
+- documentos ficam em buckets privados;
+- o histórico operacional da ação fica auditável no Elos OS.
 
-## Arquivos
+## Arquivos principais
 
 | Arquivo | Papel |
 |---|---|
-| `lib/elos-ia/personas.ts` | Instruções e consultas de cada persona |
-| `lib/elos-ia/tools.ts` | Consultas ao Elos OS (somente leitura) |
-| `lib/elos-ia/summaries.mjs` | Cálculos dos resumos (testados em `summaries.test.mjs`) |
-| `lib/elos-ia/agent-loop.mjs` | Laço pergunta → consultas → resposta, com os limites por pergunta |
-| `lib/elos-ia/openai.ts` | Chamada à OpenAI (Responses API) |
-| `lib/elos-ia/usage.ts` | Cotas e registro de consumo |
-| `lib/elos-ia/server.ts` | Orquestração e checagem de acesso |
-| `app/api/elos-ia/chat/route.ts` | Rota chamada pela tela |
-| `app/elos-ia/` | Tela do chat |
-| `supabase/migrations/20261009_0091_elos_ia_usage.sql` | Permissões, tabela de consumo e função das cotas |
+| `lib/elos-ia/personas.ts` | instruções, consultas e política de safe write |
+| `lib/elos-ia/tools.ts` | ferramentas de leitura |
+| `lib/elos-ia/action-tools.ts` | preparação de ações operacionais |
+| `lib/elos-ia/action-utils.mjs` | matching, rateio e cálculos conservadores |
+| `lib/elos-ia/action-executor.ts` | execução humana + preservação do documento-fonte |
+| `lib/elos-ia/attachments.ts` | validação/registro de anexos e conteúdo multimodal |
+| `lib/elos-ia/agent-loop.mjs` | laço pergunta → ferramentas → resposta |
+| `lib/elos-ia/openai.ts` | chamada Responses API |
+| `lib/elos-ia/usage.ts` | cotas e custo estimado |
+| `lib/elos-ia/server.ts` | orquestração, permissões e ações do turno |
+| `app/api/elos-ia/chat/route.ts` | chat e anexos |
+| `app/api/elos-ia/actions/[proposalId]/route.ts` | executar/descartar ação revisada |
+| `app/elos-ia/` | chat, cartões e fila de revisão |
+| `supabase/migrations/20261014100000_elos_ia_safe_write.sql` | fila, anexos, bucket e RLS |
+| `supabase/migrations/20261014100100_elos_ia_safe_write_attachment_link.sql` | vínculo arquivo → ação |
+| `supabase/migrations/20261014100200_elos_ia_safe_write_execute.sql` | execução transacional |
 
-## O que ficou fora do piloto
+## Próximas ações candidatas
 
-- Acesso real do comprador (persona Clientes). Exige login próprio do cliente e filtro pela unidade dele.
-- Respostas aparecendo aos poucos (streaming) e histórico de conversas salvo.
-- Tela de consumo por usuário para o administrador (os dados já estão em `ai_usage_log`).
-- Qualquer ação de escrita pela IA.
+A arquitetura foi feita para crescer sem dar SQL livre ao modelo. Cada nova ação precisa de schema próprio, permissão própria, preview próprio e executor que reutilize a regra oficial do módulo. Próximos candidatos naturais: contas a pagar/receber, recebimentos, pedidos de compra, aditivos, diário de obra, inspeções de qualidade e cadastros comerciais — sempre no padrão **preparar → revisar → executar**.

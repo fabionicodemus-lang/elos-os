@@ -1,19 +1,23 @@
-name: Elos IA Budget CI
+name: Elos IA CI
 
 on:
   pull_request:
     paths:
       - "lib/elos-ia/**"
       - "app/elos-ia/**"
-      - "supabase/migrations/20261014080000_elos_ia_company_usd_cap.sql"
+      - "app/api/elos-ia/**"
+      - "app/elos-ia.css"
+      - "app/elos-ia-actions.css"
+      - "supabase/migrations/*elos_ia*"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/elos-ia-budget-ci.yml"
   workflow_dispatch:
 
 jobs:
-  budget:
+  elos-ia:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,7 +25,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Test cost calculation
+      - name: Test usage budget
         run: node --test lib/elos-ia/usage-cost.test.mjs
+      - name: Test safe write utilities
+        run: node --test lib/elos-ia/action-utils.test.mjs
+      - name: Test safe write database
+        run: node --test lib/elos-ia/safe-write-db.test.mjs
       - name: TypeScript
         run: npx tsc --noEmit
+      - name: Lint Elos IA
+        run: npx eslint app/elos-ia app/api/elos-ia lib/elos-ia
+      - name: Production build
+        run: npm run build
