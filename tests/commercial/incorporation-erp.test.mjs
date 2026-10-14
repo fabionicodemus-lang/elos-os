@@ -5,6 +5,7 @@ import { PGlite } from "@electric-sql/pglite";
 
 const migration = readFileSync(new URL("../../supabase/migrations/20261014043000_commercial_incorporation_erp.sql", import.meta.url), "utf8");
 const integrity = readFileSync(new URL("../../supabase/migrations/20261014044000_commercial_incorporation_integrity.sql", import.meta.url), "utf8");
+const renegotiation = readFileSync(new URL("../../supabase/migrations/20261014045000_commercial_renegotiation_execution.sql", import.meta.url), "utf8");
 const uid="11111111-1111-4111-8111-111111111111";
 const company="22222222-2222-4222-8222-222222222222";
 const project="33333333-3333-4333-8333-333333333333";
@@ -12,6 +13,8 @@ const client="44444444-4444-4444-8444-444444444444";
 const secondClient="44444444-4444-4444-8444-555555555555";
 const unit="55555555-5555-4555-8555-555555555555";
 const sale="66666666-6666-4666-8666-666666666666";
+const unit2="55555555-5555-4555-8555-666666666666";
+const sale2="66666666-6666-4666-8666-777777777777";
 
 async function bootstrap(db){
   await db.exec(`
@@ -28,12 +31,17 @@ async function bootstrap(db){
     create table public.clients(id uuid primary key,company_id uuid not null,name text,tax_id text,status text default 'active');
     create table public.units(id uuid primary key,company_id uuid not null,project_id uuid not null,code text,list_price numeric,status text default 'available',updated_at timestamptz default now());
     create table public.sales(id uuid primary key,company_id uuid not null,project_id uuid not null,unit_id uuid not null,client_id uuid not null,number text,contract_number text,sale_date date,total_amount numeric,status text default 'active',notes text,created_by uuid,updated_at timestamptz default now());
-    create table public.receivables(id uuid primary key default gen_random_uuid(),company_id uuid not null,project_id uuid not null,sale_id uuid not null,client_id uuid,unit_id uuid,description text,due_date date,amount numeric,adjusted_amount numeric,paid_amount numeric,status text default 'open',notes text,updated_at timestamptz default now());
+    create table public.receivables(
+      id uuid primary key default gen_random_uuid(),company_id uuid not null,project_id uuid not null,sale_id uuid not null,client_id uuid,unit_id uuid,
+      category text not null default 'monthly',description text,due_date date,amount numeric,adjusted_amount numeric,paid_amount numeric,status text default 'open',notes text,
+      sequence_number integer not null default 1,sequence_total integer not null default 1,adjustment_index text,interest_rate_monthly numeric,
+      correction_index_id uuid,source_system text,source_id text,created_by uuid,updated_at timestamptz default now(),unique(company_id,source_system,source_id)
+    );
     create table public.payables(id uuid primary key default gen_random_uuid(),company_id uuid not null,project_id uuid not null,supplier_id uuid,beneficiary_name text,beneficiary_tax_id text,document text,fiscal_class text,payment_method text,due_date date not null,amount numeric,status text default 'open',installment_label text,notes text,origin text default 'manual',source_category text,source_system text,source_id text,created_by uuid,created_at timestamptz default now(),updated_at timestamptz default now(),unique(company_id,source_system,source_id));
     create table public.commercial_sale_commissions(id uuid primary key default gen_random_uuid(),company_id uuid not null,project_id uuid not null,sale_id uuid not null,status text,notes text,updated_at timestamptz default now());
     create function public.has_company_permission(target_company_id uuid,target_permission text) returns boolean language sql stable as $$select auth.uid() is not null and target_company_id=nullif(current_setting('test.company',true),'')::uuid$$;
     grant usage on schema public,auth to authenticated;
-    grant select on public.sales,public.units,public.clients,public.receivables,public.payables,public.commercial_sale_commissions,public.projects to authenticated;
+    grant select on public.sales,public.units,public.clients,public.receivables,public.payables,public.commercial_sale_commissions,public.projects,public.correction_indices to authenticated;
 
     insert into auth.users values('${uid}');
     insert into companies values('${company}');
@@ -41,21 +49,28 @@ async function bootstrap(db){
     insert into clients values
       ('${client}','${company}','Cliente Teste','12345678901','active'),
       ('${secondClient}','${company}','Segundo Cliente','98765432100','active');
-    insert into units values('${unit}','${company}','${project}','101',900000,'available',now());
-    insert into sales(id,company_id,project_id,unit_id,client_id,number,contract_number,sale_date,total_amount,status,created_by,updated_at) values('${sale}','${company}','${project}','${unit}','${client}','V-001','CT-001','2026-01-10',1000000,'active','${uid}',now());
-    insert into receivables(company_id,project_id,sale_id,client_id,unit_id,description,due_date,amount,adjusted_amount,paid_amount,status) values
-      ('${company}','${project}','${sale}','${client}','${unit}','Entrada','2026-01-15',100,100,40,'open'),
-      ('${company}','${project}','${sale}','${client}','${unit}','Mensal','2026-12-15',200,200,0,'open');
+    insert into units values
+      ('${unit}','${company}','${project}','101',900000,'available',now()),
+      ('${unit2}','${company}','${project}','102',900000,'available',now());
+    insert into sales(id,company_id,project_id,unit_id,client_id,number,contract_number,sale_date,total_amount,status,created_by,updated_at) values
+      ('${sale}','${company}','${project}','${unit}','${client}','V-001','CT-001','2026-01-10',1000000,'active','${uid}',now()),
+      ('${sale2}','${company}','${project}','${unit2}','${client}','V-002','CT-002','2026-02-10',1000,'active','${uid}',now());
+    insert into receivables(company_id,project_id,sale_id,client_id,unit_id,category,description,due_date,amount,adjusted_amount,paid_amount,status) values
+      ('${company}','${project}','${sale}','${client}','${unit}','entry','Entrada','2026-01-15',100,100,40,'open'),
+      ('${company}','${project}','${sale}','${client}','${unit}','monthly','Mensal','2026-12-15',200,200,0,'open'),
+      ('${company}','${project}','${sale2}','${client}','${unit2}','monthly','M1','2026-11-10',150,150,0,'open'),
+      ('${company}','${project}','${sale2}','${client}','${unit2}','monthly','M2','2026-12-10',150,150,0,'open');
   `);
   await db.exec(migration);
   await db.exec(integrity);
+  await db.exec(renegotiation);
   await db.exec(`
     select set_config('test.uid','${uid}',false),set_config('test.company','${company}',false);
     set role authenticated;
   `);
 }
 
-test("ERP de incorporadora: tabela, carteira e distrato preservam invariantes", async(t)=>{
+test("ERP de incorporadora: tabela, carteira, renegociação e distrato preservam invariantes", async(t)=>{
   const db=new PGlite();
   try{
     await bootstrap(db);
@@ -78,7 +93,26 @@ test("ERP de incorporadora: tabela, carteira e distrato preservam invariantes", 
     });
     await t.test("resumo separa recebido, aberto e vencido",async()=>{
       const s=(await db.query("select commercial_incorporation_summary($1,$2) s",[company,project])).rows[0].s;
-      assert.equal(Number(s.active_sales),1); assert.equal(Number(s.received_amount),40); assert.equal(Number(s.open_amount),260); assert.equal(Number(s.overdue_amount),60); assert.equal(Number(s.overdue_installments),1);
+      assert.equal(Number(s.active_sales),2); assert.equal(Number(s.received_amount),40); assert.equal(Number(s.open_amount),560); assert.equal(Number(s.overdue_amount),60); assert.equal(Number(s.overdue_installments),1);
+    });
+    await t.test("renegociação bloqueia parcela parcialmente paga",async()=>{
+      const items=JSON.stringify([{category:"monthly",description:"Nova",due_date:"2026-11-10",amount:260}]);
+      await assert.rejects(db.query("select commercial_execute_payment_plan_renegotiation($1,$2,'2026-10-14','Reprogramação de fluxo',0,$3::jsonb,$4)",[company,sale,items,uid]),/pagamento parcial/);
+    });
+    await t.test("renegociação substitui saldo aberto e registra impacto financeiro",async()=>{
+      const items=JSON.stringify([
+        {category:"monthly",description:"Reneg 1/3",due_date:"2026-11-20",amount:110},
+        {category:"monthly",description:"Reneg 2/3",due_date:"2026-12-20",amount:110},
+        {category:"reinforcement",description:"Reneg 3/3",due_date:"2027-01-20",amount:110}
+      ]);
+      const amendment=(await db.query("select commercial_execute_payment_plan_renegotiation($1,$2,'2026-10-14','Ajuste comercial aprovado',30,$3::jsonb,$4) id",[company,sale2,items,uid])).rows[0].id;
+      assert.ok(amendment);
+      assert.equal((await db.query("select count(*)::int n from receivables where sale_id=$1 and status='cancelled'",[sale2])).rows[0].n,2);
+      assert.equal((await db.query("select count(*)::int n from receivables where sale_id=$1 and status='open'",[sale2])).rows[0].n,3);
+      assert.equal(Number((await db.query("select sum(amount) n from receivables where sale_id=$1 and status='open'",[sale2])).rows[0].n),330);
+      assert.equal(Number((await db.query("select total_amount from sales where id=$1",[sale2])).rows[0].total_amount),1030);
+      assert.equal((await db.query("select status from commercial_sale_amendments where id=$1",[amendment])).rows[0].status,"executed");
+      assert.equal((await db.query("select count(*)::int n from commercial_sale_contracts where sale_id=$1 and kind='renegotiation'",[sale2])).rows[0].n,1);
     });
     await t.test("distrato calcula retenção, cancela carteira, libera unidade e gera devolução",async()=>{
       const tid=(await db.query("select commercial_prepare_termination($1,$2,10,'2026-11-10','Desistência contratual',$3) id",[company,sale,uid])).rows[0].id;
