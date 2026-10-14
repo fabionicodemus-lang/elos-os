@@ -59,9 +59,12 @@ async function quality(context: ElosIaToolContext, args: Args): Promise<Result> 
   const ncRows = nonconformities.data ?? [];
   const activeInspections = inspectionRows.filter((row) => !["closed", "cancelled"].includes(row.status));
   const openNcs = ncRows.filter((row) => !["closed", "cancelled"].includes(row.status));
-  const overdueNcs = openNcs.filter((row) => String(row.due_at ?? "").slice(0, 10) < today);
+  const overdueNcs = openNcs.filter((row) => Boolean(row.due_at) && String(row.due_at).slice(0, 10) < today);
   const blocked = activeInspections.filter((row) => row.release_status === "blocked" || row.status === "blocked");
-  const scores = inspectionRows.map((row) => Number(row.current_score)).filter((value) => Number.isFinite(value));
+  const scores = inspectionRows
+    .filter((row) => row.current_score !== null)
+    .map((row) => Number(row.current_score))
+    .filter((value) => Number.isFinite(value));
   return {
     obra: pid,
     resumo: {
