@@ -7,6 +7,19 @@ import "../../preconstruction-95.css";
 type Budget = { id: string; code: string; version: string; name: string; status: string; is_base: boolean; updated_at: string };
 type ServiceRow = { budget_item_id: string; code: string | null; description: string; unit: string; quantity: number; unit_direct_cost: number; total_direct_cost: number };
 type InputRow = { input_id: string; code: string; description: string; unit: string; category: string; planned_quantity: number; weighted_unit_price: number; total_cost: number };
+type DisplayRow = {
+  id: string;
+  label: string;
+  code: string | null;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  value: number;
+  rank: number;
+  percentage: number;
+  accumulatedPercentage: number;
+  classification: "A" | "B" | "C";
+};
 
 function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(value || 0)); }
 function decimal(value: number, digits = 1) { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(Number(value || 0)); }
@@ -30,9 +43,25 @@ export default async function AbcPage({ searchParams }: { searchParams: Promise<
     supabase.from("engineering_budget_abc_inputs").select("input_id, code, description, unit, category, planned_quantity, weighted_unit_price, total_cost").eq("company_id", companyId).eq("budget_id", budget.id),
   ]) : [{ data: [], error: null }, { data: [], error: null }];
 
-  const serviceRows = classifyAbc(((servicesResult.data ?? []) as ServiceRow[]).map((row) => ({ id: row.budget_item_id, label: row.description, value: Number(row.total_direct_cost), ...row })));
-  const inputRows = classifyAbc(((inputsResult.data ?? []) as InputRow[]).map((row) => ({ id: row.input_id, label: row.description, value: Number(row.total_cost), ...row })));
-  const currentRows = tab === "inputs" ? inputRows : serviceRows;
+  const serviceRows: DisplayRow[] = classifyAbc(((servicesResult.data ?? []) as ServiceRow[]).map((row) => ({
+    id: row.budget_item_id,
+    label: row.description,
+    code: row.code,
+    unit: row.unit,
+    quantity: Number(row.quantity),
+    unitPrice: Number(row.unit_direct_cost),
+    value: Number(row.total_direct_cost),
+  }))).map((row) => ({ ...row }));
+  const inputRows: DisplayRow[] = classifyAbc(((inputsResult.data ?? []) as InputRow[]).map((row) => ({
+    id: row.input_id,
+    label: row.description,
+    code: row.code,
+    unit: row.unit,
+    quantity: Number(row.planned_quantity),
+    unitPrice: Number(row.weighted_unit_price),
+    value: Number(row.total_cost),
+  }))).map((row) => ({ ...row }));
+  const currentRows: DisplayRow[] = tab === "inputs" ? inputRows : serviceRows;
   const summary = abcSummary(currentRows);
   const total = currentRows.reduce((sum, row) => sum + Number(row.value), 0);
   const schemaMissing = Boolean(servicesResult.error || inputsResult.error);
@@ -62,7 +91,7 @@ export default async function AbcPage({ searchParams }: { searchParams: Promise<
         <section className="pre95-card">
           <div className="pre95-heading"><div><span>Priorização 80 / 15 / 5</span><h2>{tab === "inputs" ? "Insumos que concentram o custo" : "Serviços que concentram o orçamento"}</h2></div><p>A = até ~80% acumulado · B = até ~95% · C = restante.</p></div>
           <div className="registry-table-wrap"><table className="registry-table"><thead><tr><th>#</th><th>Classe</th><th>Código</th><th>{tab === "inputs" ? "Insumo" : "Serviço"}</th><th>Qtd.</th><th>Un.</th><th>Unitário</th><th>Valor</th><th>%</th><th>% acum.</th></tr></thead><tbody>
-            {currentRows.map((row) => <tr key={row.id} className={`abc-row abc-${row.classification.toLowerCase()}`}><td>{row.rank}</td><td><strong className={`abc-badge abc-${row.classification.toLowerCase()}`}>{row.classification}</strong></td><td><strong>{String(row.code ?? "—")}</strong></td><td>{row.label}</td><td>{decimal(Number(tab === "inputs" ? row.planned_quantity : row.quantity), 3)}</td><td>{String(row.unit ?? "—")}</td><td>{money(Number(tab === "inputs" ? row.weighted_unit_price : row.unit_direct_cost))}</td><td><strong>{money(row.value)}</strong></td><td>{decimal(row.percentage, 2)}%</td><td>{decimal(row.accumulatedPercentage, 2)}%</td></tr>)}
+            {currentRows.map((row) => <tr key={row.id} className={`abc-row abc-${row.classification.toLowerCase()}`}><td>{row.rank}</td><td><strong className={`abc-badge abc-${row.classification.toLowerCase()}`}>{row.classification}</strong></td><td><strong>{String(row.code ?? "—")}</strong></td><td>{row.label}</td><td>{decimal(row.quantity, 3)}</td><td>{row.unit}</td><td>{money(row.unitPrice)}</td><td><strong>{money(row.value)}</strong></td><td>{decimal(row.percentage, 2)}%</td><td>{decimal(row.accumulatedPercentage, 2)}%</td></tr>)}
             {!currentRows.length ? <tr><td colSpan={10}>Nenhum item disponível para classificar.</td></tr> : null}
           </tbody></table></div>
         </section>
