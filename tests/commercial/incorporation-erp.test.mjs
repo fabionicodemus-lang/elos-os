@@ -4,17 +4,21 @@ import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 
 const migration = readFileSync(new URL("../../supabase/migrations/20261014043000_commercial_incorporation_erp.sql", import.meta.url), "utf8");
+const integrity = readFileSync(new URL("../../supabase/migrations/20261014044000_commercial_incorporation_integrity.sql", import.meta.url), "utf8");
 const uid="11111111-1111-4111-8111-111111111111";
 const company="22222222-2222-4222-8222-222222222222";
 const project="33333333-3333-4333-8333-333333333333";
 const client="44444444-4444-4444-8444-444444444444";
+const secondClient="44444444-4444-4444-8444-555555555555";
 const unit="55555555-5555-4555-8555-555555555555";
 const sale="66666666-6666-4666-8666-666666666666";
 
 async function bootstrap(db){
   await db.exec(`
     create role anon; create role authenticated;
-    create schema auth; create table auth.users(id uuid primary key);
+    create schema auth;
+    create table auth.users(id uuid primary key);
+    create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('test.uid',true),'')::uuid$$;
     create table public.companies(id uuid primary key);
     create table public.projects(id uuid primary key,company_id uuid not null,status text default 'active');
     create table public.permissions(key text primary key,module text,action text,description text);
@@ -29,18 +33,22 @@ async function bootstrap(db){
     create table public.commercial_sale_commissions(id uuid primary key default gen_random_uuid(),company_id uuid not null,project_id uuid not null,sale_id uuid not null,status text,notes text,updated_at timestamptz default now());
     create function public.has_company_permission(target_company_id uuid,target_permission text) returns boolean language sql stable as $$select auth.uid() is not null and target_company_id=nullif(current_setting('test.company',true),'')::uuid$$;
     grant usage on schema public,auth to authenticated;
-  `);
-  await db.exec(migration);
-  await db.exec(`
+
     insert into auth.users values('${uid}');
     insert into companies values('${company}');
     insert into projects values('${project}','${company}','active');
-    insert into clients values('${client}','${company}','Cliente Teste','12345678901','active');
+    insert into clients values
+      ('${client}','${company}','Cliente Teste','12345678901','active'),
+      ('${secondClient}','${company}','Segundo Cliente','98765432100','active');
     insert into units values('${unit}','${company}','${project}','101',900000,'available',now());
     insert into sales values('${sale}','${company}','${project}','${unit}','${client}','V-001','CT-001','2026-01-10',1000000,'active','${uid}',now());
     insert into receivables(company_id,project_id,sale_id,client_id,unit_id,description,due_date,amount,adjusted_amount,paid_amount,status) values
       ('${company}','${project}','${sale}','${client}','${unit}','Entrada','2026-01-15',100,100,40,'open'),
       ('${company}','${project}','${sale}','${client}','${unit}','Mensal','2026-12-15',200,200,0,'open');
+  `);
+  await db.exec(migration);
+  await db.exec(integrity);
+  await db.exec(`
     select set_config('test.uid','${uid}',false),set_config('test.company','${company}',false);
     set role authenticated;
   `);
@@ -53,6 +61,12 @@ test("ERP de incorporadora: tabela, carteira e distrato preservam invariantes", 
     await t.test("venda histórica recebe comprador principal",async()=>{
       const row=(await db.query("select client_id,is_primary,ownership_percent from commercial_sale_parties where sale_id=$1",[sale])).rows[0];
       assert.equal(row.client_id,client); assert.equal(row.is_primary,true); assert.equal(Number(row.ownership_percent),100);
+    });
+    await t.test("troca de comprador principal atualiza partes e venda na mesma RPC",async()=>{
+      await db.query("select commercial_save_sale_party($1,$2,$3,'buyer',100,true,'2026-10-14','Cessão aprovada',$4)",[company,sale,secondClient,uid]);
+      const primaries=(await db.query("select client_id from commercial_sale_parties where sale_id=$1 and is_primary and status='active'",[sale])).rows;
+      assert.equal(primaries.length,1); assert.equal(primaries[0].client_id,secondClient);
+      assert.equal((await db.query("select client_id from sales where id=$1",[sale])).rows[0].client_id,secondClient);
     });
     await t.test("ativar tabela atualiza preço da unidade",async()=>{
       const table=(await db.query("insert into commercial_price_tables(company_id,project_id,name,version_no,valid_from,status,created_by) values($1,$2,'Tabela 1',1,'2026-10-01','draft',$3) returning id",[company,project,uid])).rows[0].id;
@@ -75,7 +89,7 @@ test("ERP de incorporadora: tabela, carteira e distrato preservam invariantes", 
       assert.equal((await db.query("select status from units where id=$1",[unit])).rows[0].status,"available");
       assert.equal((await db.query("select count(*)::int n from receivables where sale_id=$1 and status='open'",[sale])).rows[0].n,0);
       const p=(await db.query("select amount,beneficiary_name,status from payables where id=$1",[payable])).rows[0];
-      assert.equal(Number(p.amount),36); assert.equal(p.beneficiary_name,"Cliente Teste"); assert.equal(p.status,"open");
+      assert.equal(Number(p.amount),36); assert.equal(p.beneficiary_name,"Segundo Cliente"); assert.equal(p.status,"open");
       const again=(await db.query("select commercial_execute_termination($1,$2,$3) id",[company,tid,uid])).rows[0].id;
       assert.equal(again,payable);
     });
