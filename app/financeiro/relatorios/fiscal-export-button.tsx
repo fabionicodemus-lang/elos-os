@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 export function FiscalExportButton() {
   const searchParams = useSearchParams();
   const query = searchParams.toString();
-  const href = `/api/financeiro/exportacao-fiscal${query ? `?${query}` : ""}`;
+  const href = `/api/financeiro/exportacao-fiscal-validada${query ? `?${query}` : ""}`;
 
   return (
     <div
@@ -19,7 +19,7 @@ export function FiscalExportButton() {
         gap: 8,
       }}
     >
-      <a className="elos-button" href={href} title="Exportar dados fiscais e a apropriação da obra para a contabilidade">
+      <a className="elos-button" href={href} title="Exportar pacote fiscal validado, com apropriação e pendências para a contabilidade">
         Exportar fiscal · XLSX
       </a>
     </div>
