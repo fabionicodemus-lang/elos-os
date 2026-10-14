@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveContractMeasurement } from "./actions";
 
+
+// Lista vazia estável: um "[]" no valor padrão das props cria uma lista nova a cada
+// render, o que re-disparava efeitos e zerava o que o usuário digitava.
+const EMPTY_LIST: never[] = [];
 export type MeasurementContract = {
   id: string; contract_number: string; title: string; supplier_id: string; supplier_name: string;
   start_date: string; end_date: string; status: string; current_value: number; measured_value: number;
@@ -19,7 +23,7 @@ export type MeasurementRecord = {
 };
 export type MeasurementItemRecord = { contract_item_id: string; current_quantity: number; notes: string | null };
 
-type Row = MeasurementContractItem & { current_quantity: number; notes: string };
+type Row = MeasurementContractItem & { current_quantity: number; notes: string; quantity_text?: string };
 
 function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0)); }
 function number(value: number, digits = 4) { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(Number(value || 0)); }
@@ -31,7 +35,7 @@ function monthRange() {
   return { start: format(start), end: format(end) };
 }
 
-export function ContractMeasurementDialog({ contracts, contractItems, measurement, measurementItems = [], autoOpen = false, label }: {
+export function ContractMeasurementDialog({ contracts, contractItems, measurement, measurementItems = EMPTY_LIST, autoOpen = false, label }: {
   contracts: MeasurementContract[]; contractItems: MeasurementContractItem[]; measurement?: MeasurementRecord | null;
   measurementItems?: MeasurementItemRecord[]; autoOpen?: boolean; label?: string;
 }) {
@@ -92,7 +96,7 @@ export function ContractMeasurementDialog({ contracts, contractItems, measuremen
                 <div><strong>{number(row.contracted_quantity)} {row.unit_snapshot}</strong><span>{money(row.contracted_quantity * row.unit_price)}</span></div>
                 <div><strong>{number(row.measured_quantity)} {row.unit_snapshot}</strong><span>{money(row.measured_value)}</span></div>
                 <div><strong>{number(remaining)} {row.unit_snapshot}</strong><span>{money(remaining * row.unit_price)}</span></div>
-                <div><input type="number" min="0" max={remaining} step="0.000001" value={row.current_quantity} onChange={(event) => updateRow(row.id, { current_quantity: Math.min(remaining, Math.max(0, Number(event.target.value))) })} /><span>{row.unit_snapshot}</span></div>
+                <div><input type="text" inputMode="decimal" value={row.quantity_text ?? (row.current_quantity ? String(row.current_quantity).replace(".", ",") : "")} placeholder="0" onChange={(event) => { const raw = event.target.value.replace(/[^0-9.,]/g, ""); const parsed = Number(raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw); updateRow(row.id, { quantity_text: raw, current_quantity: Number.isFinite(parsed) ? Math.min(remaining, Math.max(0, parsed)) : 0 }); }} onBlur={() => updateRow(row.id, { quantity_text: undefined })} /><span>{row.unit_snapshot}</span></div>
                 <div><strong>{money(row.current_quantity * row.unit_price)}</strong><span>{money(row.unit_price)} / {row.unit_snapshot}</span></div>
                 <div><strong>{number(accumulated)} {row.unit_snapshot}</strong><span>{number(progress, 1)}%</span></div>
               </article>;

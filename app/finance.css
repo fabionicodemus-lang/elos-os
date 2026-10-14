@@ -176,3 +176,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* O formulário de baixa abre dentro da tabela, que tem rolagem própria: sem espaço
+   extra ele ficava cortado (invisível) na última linha. */
+.registry-table-wrap:has(.payable-actions details[open]) {
+  padding-bottom: 240px;
+}

@@ -119,7 +119,11 @@ export default async function PayablesPage({
   if (supplierId) listQuery = listQuery.eq("supplier_id", supplierId);
   if (dateFrom) listQuery = listQuery.gte("due_date", dateFrom);
   if (dateTo) listQuery = listQuery.lte("due_date", dateTo);
-  if (queryText) {
+  // Atalho "Contas a Pagar da Folha" (?q=RH): o texto "RH" não fica gravado em
+  // nenhuma coluna pesquisável, então filtramos pela origem da folha.
+  if (queryText.toUpperCase() === "RH") {
+    listQuery = listQuery.eq("origin", "hr_payroll");
+  } else if (queryText) {
     const safe = queryText.replace(/[,%()]/g, " ").trim();
     listQuery = listQuery.or(`document.ilike.%${safe}%,notes.ilike.%${safe}%,installment_label.ilike.%${safe}%,beneficiary_name.ilike.%${safe}%,beneficiary_tax_id.ilike.%${safe}%`);
   }
