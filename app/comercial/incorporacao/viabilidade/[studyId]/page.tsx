@@ -10,7 +10,30 @@ import {
 import { TaxRegimeFields } from "./tax-regime-fields";
 import "../feasibility.css";
 
-type Study = Record<string, any> & { id:string; name:string; code:string|null; status:string; approved_metrics:any; approved_cashflow:any; converted_project_id:string|null };
+type CashflowRow = {
+  month:number; sales:number; receipts:number; land:number; projects:number; construction:number;
+  commission:number; taxes:number; marketing:number; centralOffice:number; financial:number;
+  contingency:number; net:number; cumulative:number;
+};
+type FeasibilityMetrics = {
+  gross_vgv:number; total_units:number; barter_vgv:number; barter_units:number; available_vgv:number; available_units:number;
+  profit:number; margin_pct:number; irr_annual_pct:number|null; irr_monthly_pct:number|null; exposure_max:number; exposure_month:number;
+  npv:number; built_area_m2:number; apartment_area_m2:number; construction_cost:number; total_cost:number; payback_month:number|null;
+  land_cost:number; design_cost:number; commission_cost:number; marketing_cost:number; tax_cost:number; central_office_cost:number;
+  financial_cost:number; contingency_cost:number;
+};
+type Study = {
+  id:string; name:string; code:string|null; status:string; converted_project_id:string|null;
+  approved_metrics:FeasibilityMetrics|null; approved_cashflow:CashflowRow[]|null;
+  construction_start_date:string|null; preconstruction_months:number|null; project_type:string|null; city:string|null; state:string|null;
+  legal_entity_id:string|null; apartment_cost_m2:number|null; garage_stairs_area_m2:number|null; garage_stairs_cost_m2:number|null;
+  lobby_area_m2:number|null; lobby_cost_m2:number|null; decorated_common_area_m2:number|null; decorated_common_cost_m2:number|null;
+  design_cost_m2:number|null; contingency_pct:number|null; land_cash_amount:number|null; iptu_amount:number|null; onerous_grant_amount:number|null;
+  other_land_amount:number|null; commission_pct:number|null; tax_regime:string|null; tax_rate_pct:number|null; marketing_amount:number|null;
+  central_office_amount:number|null; financial_cost_amount:number|null; construction_duration_months:number|null; sales_start_offset_months:number|null;
+  sales_velocity_units_month:number|null; entry_pct:number|null; during_construction_pct:number|null; keys_pct:number|null; post_keys_pct:number|null;
+  post_keys_months:number|null; discount_rate_annual_pct:number|null; notes:string|null;
+};
 type UnitType = { id:string; name:string; quantity:number; private_area_m2:number; sale_price_m2:number; barter_units:number; sort_order:number; notes:string|null };
 type Entity = { id:string; legal_name:string; trade_name:string|null; entity_type:string };
 
@@ -45,7 +68,7 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
   const calculated = study.status === "converted" && study.approved_metrics
     ? { ...study.approved_metrics, cashflow: study.approved_cashflow ?? [] }
     : calculateFeasibility(study, unitTypes);
-  const cashflow = (calculated.cashflow ?? []) as any[];
+  const cashflow = (calculated.cashflow ?? []) as CashflowRow[];
   const totalPayment = Number(study.entry_pct ?? 0) + Number(study.during_construction_pct ?? 0) + Number(study.keys_pct ?? 0) + Number(study.post_keys_pct ?? 0);
 
   const costRows = [
