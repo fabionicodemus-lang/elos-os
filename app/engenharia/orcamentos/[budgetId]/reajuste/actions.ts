@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 function path(budgetId: string) { return `/engenharia/orcamentos/${budgetId}/reajuste`; }
-function go(budgetId: string, message: string, type: "success" | "error" = "success") {
+function go(budgetId: string, message: string, type: "success" | "error" = "success"): never {
   redirect(`${path(budgetId)}?${type}=${encodeURIComponent(message)}`);
 }
 function text(formData: FormData, key: string) { return String(formData.get(key) ?? "").trim(); }
