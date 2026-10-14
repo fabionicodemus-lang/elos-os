@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { loadCostVsBudget } from "@/lib/cost-vs-budget/server";
 import { requireCompanyPermission } from "@/lib/workspace";
 import {
   addBudgetAmendmentItem,
@@ -15,7 +16,6 @@ type Budget = {
   adjustment_enabled: boolean; correction_index_id: string | null; correction_base_month: string | null; correction_base_value: number | null;
 };
 type Index = { id: string; code: string; name: string; value_type: string; unit_label: string; source_name: string | null };
-type IndexValue = { correction_index_id: string; reference_month: string; value: number };
 type BudgetItem = { id: string; service_id: string | null; code: string | null; description: string; total_direct_cost: number };
 type Amendment = {
   id: string; code: string; description: string; approval_date: string | null; status: string; adjustment_enabled: boolean;
@@ -51,6 +51,7 @@ export default async function BudgetAdjustmentPage({ params, searchParams }: {
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   if (!budget) return <AppShell activeGroup="engineering" activeItem="budgets" eyebrow="Engenharia · Orçamento" title="Reajuste do orçamento" description={company.name}><div className="pre95-empty">Orçamento não localizado.</div></AppShell>;
 
+  const costContext = await loadCostVsBudget({ supabase, companyId, projectId: budget.project_id, budgetId: budget.id });
   const nominalBudget = items.reduce((sum, item) => sum + Number(item.total_direct_cost || 0), 0);
   const currentIndex = indices.find((item) => item.id === budget.correction_index_id) ?? null;
   let factor = 1;
@@ -67,8 +68,16 @@ export default async function BudgetAdjustmentPage({ params, searchParams }: {
   const approvedAmendments = amendments.filter((item) => item.status === "approved");
   const nominalAmendments = approvedAmendments.reduce((sum, item) => sum + Number(item.nominal_amount || 0), 0);
   const currentAmendments = approvedAmendments.reduce((sum, item) => sum + Number(item.current_amount || 0), 0);
+  const nominalReference = nominalBudget + nominalAmendments;
   const currentBudgetReference = nominalBudget * factor + currentAmendments;
-  const adjustmentGain = currentBudgetReference - (nominalBudget + nominalAmendments);
+  const adjustmentGain = currentBudgetReference - nominalReference;
+  const weightedFactor = Math.abs(nominalReference) > 0.01 ? currentBudgetReference / nominalReference : 1;
+  const forecastCost = Number(costContext.totals.forecast || 0);
+  const nominalBalance = nominalReference - forecastCost;
+  // Regra conservadora: só o saldo positivo remanescente recebe atualização. Um
+  // estouro não é "curado" pelo índice e permanece negativo em valor nominal.
+  const adjustedBalance = nominalBalance > 0 ? nominalBalance * weightedFactor : nominalBalance;
+  const balanceAdjustmentGain = adjustedBalance - nominalBalance;
 
   return (
     <AppShell activeGroup="engineering" activeItem="budgets" eyebrow="Engenharia · Orçamento" title="Reajuste mensal do orçamento"
@@ -79,14 +88,20 @@ export default async function BudgetAdjustmentPage({ params, searchParams }: {
       {(budgetResult.error || amendmentsResult.error) ? <div className="auth-message error workspace-message">A tela exige as migrations do pacote Pré-Obra 9.5.</div> : null}
 
       <section className="pre95-summary">
-        <article><span>Orçamento nominal</span><strong>{money(nominalBudget)}</strong><small>snapshot da revisão</small></article>
-        <article><span>Aditivos aprovados</span><strong>{money(nominalAmendments)}</strong><small>{approvedAmendments.length} aditivo(s)</small></article>
+        <article><span>Orçamento nominal + aditivos</span><strong>{money(nominalReference)}</strong><small>{money(nominalBudget)} base · {money(nominalAmendments)} aditivos</small></article>
+        <article><span>Custo previsto / comprometido</span><strong>{money(forecastCost)}</strong><small>controle atual da obra</small></article>
+        <article><span>Saldo nominal</span><strong>{money(nominalBalance)}</strong><small>sem correção monetária</small></article>
+        <article className={adjustedBalance >= 0 ? "positive" : "negative"}><span>Saldo reajustado</span><strong>{money(adjustedBalance)}</strong><small>{balanceAdjustmentGain >= 0 ? "+" : ""}{money(balanceAdjustmentGain)} pelo índice</small></article>
         <article><span>Referência atualizada</span><strong>{money(currentBudgetReference)}</strong><small>base + aditivos no índice atual</small></article>
-        <article className={adjustmentGain > 0 ? "positive" : ""}><span>Efeito dos reajustes</span><strong>{adjustmentGain >= 0 ? "+" : ""}{money(adjustmentGain)}</strong><small>memória de referência; o controle reajusta o saldo</small></article>
+        <article className={adjustmentGain > 0 ? "positive" : ""}><span>Efeito bruto dos índices</span><strong>{adjustmentGain >= 0 ? "+" : ""}{money(adjustmentGain)}</strong><small>memória de referência</small></article>
       </section>
 
+      <div className="auth-message warning workspace-message">
+        Regra do Elos: custos já realizados ou comprometidos não são reindexados retroativamente. O índice atualiza o saldo positivo ainda disponível. Se a obra estiver estourada, o saldo negativo não é reduzido pelo reajuste.
+      </div>
+
       <section className="pre95-card">
-        <div className="pre95-heading"><div><span>Política de reajuste</span><h2>O orçamento será reajustado mensalmente?</h2></div><p>O snapshot nominal permanece intacto. Em Custos × Orçamento, o saldo disponível é exibido também em valor reajustado.</p></div>
+        <div className="pre95-heading"><div><span>Política de reajuste</span><h2>O orçamento será reajustado mensalmente?</h2></div><p>O snapshot nominal permanece intacto. O saldo positivo disponível é apresentado também em valor reajustado.</p></div>
         {canManage ? <form action={configureBudgetAdjustment} className="pre95-form-grid">
           <input type="hidden" name="budget_id" value={budget.id} />
           <label className="pre95-toggle"><input type="checkbox" name="adjustment_enabled" defaultChecked={budget.adjustment_enabled} /><span>Reajustado?</span></label>
@@ -98,7 +113,7 @@ export default async function BudgetAdjustmentPage({ params, searchParams }: {
           <div><span>Situação</span><strong>{budget.adjustment_enabled ? "Reajuste ativo" : "Sem reajuste"}</strong></div>
           <div><span>Índice</span><strong>{currentIndex?.code ?? "—"}</strong><small>{currentIndex?.source_name ?? ""}</small></div>
           <div><span>Base</span><strong>{monthBR(budget.correction_base_month)}</strong><small>{budget.correction_base_value ? decimal(budget.correction_base_value, 4) : "valor-base ainda não informado"}</small></div>
-          <div><span>Fator atual</span><strong>{decimal(factor, 6)}×</strong><small>{decimal((factor - 1) * 100, 3)}%</small></div>
+          <div><span>Fator ponderado atual</span><strong>{decimal(weightedFactor, 6)}×</strong><small>{decimal((weightedFactor - 1) * 100, 3)}%</small></div>
         </div>
       </section>
 
