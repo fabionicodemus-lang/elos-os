@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "app/comercial/incorporacao/**"
+      - "lib/commercial/**"
       - "supabase/migrations/*commercial*"
       - "tests/commercial/**"
       - "components/app-shell.tsx"
@@ -28,3 +29,4 @@ jobs:
       - run: npm ci
       - run: npm run test:incorporation
       - run: npx tsc --noEmit
+      - run: npm run build
