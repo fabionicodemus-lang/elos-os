@@ -42,6 +42,9 @@ function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string)
   const budgetAccess = engineering?.items.find(
     (item) => !item.sectionLabel && (item.href === "/engenharia/orcamentos" || item.label === "Orçamentos"),
   );
+  const servicesAccess = engineering?.items.find((item) => item.href === "/engenharia/servicos");
+  const inputsAccess = engineering?.items.find((item) => item.href === "/engenharia/insumos");
+  const scheduleAccess = engineering?.items.find((item) => item.href === "/engenharia/cronograma");
   const scheduleItem = execution?.items.find((item) => item.href === "/execucao/cronograma");
   const contractsItem = engineering?.items.find((item) => item.href === "/engenharia/contratos");
 
@@ -74,6 +77,46 @@ function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string)
         },
   ];
 
+  const preconstruction95Items: ShellNavigationItem[] = [
+    { label: "Pré-Obra 9.5", sectionLabel: "Inteligência de Pré-Obra" },
+    {
+      label: "Painel Pré-Obra",
+      href: "/engenharia/preobra",
+      disabled: budgetAccess ? Boolean(budgetAccess.disabled) : true,
+      active: pathname.startsWith("/engenharia/preobra"),
+    },
+    {
+      label: "Curva ABC",
+      href: "/engenharia/curva-abc",
+      disabled: budgetAccess ? Boolean(budgetAccess.disabled) : true,
+      active: pathname.startsWith("/engenharia/curva-abc"),
+    },
+    {
+      label: "Produtividade",
+      href: "/engenharia/produtividade",
+      disabled: servicesAccess ? Boolean(servicesAccess.disabled) : true,
+      active: pathname.startsWith("/engenharia/produtividade"),
+    },
+    {
+      label: "Caminho Crítico",
+      href: "/engenharia/caminho-critico",
+      disabled: scheduleAccess ? Boolean(scheduleAccess.disabled) : true,
+      active: pathname.startsWith("/engenharia/caminho-critico"),
+    },
+    {
+      label: "Calendário da Obra",
+      href: "/engenharia/calendario",
+      disabled: scheduleAccess ? Boolean(scheduleAccess.disabled) : true,
+      active: pathname.startsWith("/engenharia/calendario"),
+    },
+    {
+      label: "Referências SINAPI",
+      href: "/engenharia/sinapi",
+      disabled: inputsAccess ? Boolean(inputsAccess.disabled) : true,
+      active: pathname.startsWith("/engenharia/sinapi"),
+    },
+  ];
+
   const controlActive = controlItems.some((item) => item.active);
   const navigationGroups: ShellNavigationGroup[] = [];
 
@@ -83,7 +126,10 @@ function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string)
         ...group,
         label: "Pré-Obra",
         active: controlActive ? false : group.active,
-        items: group.items.filter((item) => item.href !== "/engenharia/contratos"),
+        items: [
+          ...group.items.filter((item) => item.href !== "/engenharia/contratos"),
+          ...preconstruction95Items,
+        ],
       });
       navigationGroups.push({
         key: "control",
