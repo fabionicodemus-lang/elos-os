@@ -28,11 +28,13 @@ type Row = {
 
 export default async function IncorporationPage({ searchParams }: { searchParams: Promise<{ q?:string; status?:string; error?:string; success?:string }> }) {
   const params = await searchParams;
-  const { supabase, company, companyId, projectId } = await requireCompanyPermission("commercial.incorporation.view");
-  const [summaryResult, portfolioResult] = await Promise.all([
+  const { supabase, company, companyId, projectId, roleKey } = await requireCompanyPermission("commercial.incorporation.view");
+  const [summaryResult, portfolioResult, approveResult] = await Promise.all([
     supabase.rpc("commercial_incorporation_summary", { p_company_id: companyId, p_project_id: projectId ?? null }),
     supabase.rpc("commercial_incorporation_portfolio", { p_company_id: companyId, p_project_id: projectId ?? null }),
+    supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "commercial.incorporation.approve" }),
   ]);
+  const canApprove = approveResult.data === true || roleKey === "owner" || roleKey === "admin";
   const summary = (summaryResult.data ?? { active_sales:0,cancelled_sales:0,contracted_amount:0,received_amount:0,open_amount:0,overdue_amount:0,overdue_installments:0,barter_amount:0,repasse_pending:0,collection_open:0,terminations_open:0 }) as Summary;
   let rows = (portfolioResult.data ?? []) as Row[];
   const q = (params.q ?? "").trim().toLowerCase();
@@ -96,7 +98,10 @@ export default async function IncorporationPage({ searchParams }: { searchParams
           <td>{Number(row.overdue_amount) > 0 ? <strong>{money(row.overdue_amount)}</strong> : "—"}<br/>{Number(row.overdue_count) > 0 ? <small>{row.overdue_count} parcela(s)</small> : null}</td>
           <td>{Number(row.barter_amount) > 0 ? money(row.barter_amount) : "—"}</td>
           <td>{transferLabels[row.transfer_status] ?? row.transfer_status}</td>
-          <td><Link prefetch={false} href={`/comercial/incorporacao/${row.sale_id}`}>Abrir carteira</Link></td>
+          <td>
+            <Link prefetch={false} href={`/comercial/incorporacao/${row.sale_id}`}>Abrir carteira</Link>
+            {canApprove && row.sale_status === "active" && Number(row.open_amount) > 0 ? <><br/><Link prefetch={false} href={`/comercial/incorporacao/${row.sale_id}/renegociar`}>Renegociar fluxo</Link></> : null}
+          </td>
         </tr>)}</tbody>
       </table></div>
       {!rows.length ? <p>Nenhuma venda encontrada para os filtros atuais.</p> : null}
