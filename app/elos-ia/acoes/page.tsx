@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { resolveElosIaAccess } from "@/lib/elos-ia/server";
 import { ElosIaActionCard,type ElosIaClientAction } from "../elos-ia-action-card";
 import "../../elos-ia.css";
+import "../../elos-ia-actions.css";
 
 type Row={id:string;action_type:string;title:string;summary:string|null;preview:Record<string,unknown>;status:string;required_permission:string;created_at:string;expires_at:string;created_by:string};
 
