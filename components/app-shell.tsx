@@ -8,6 +8,7 @@ import { ShellNavigation, type ShellNavigationGroup } from "@/components/shell-n
 import { resolveActiveWorkspace } from "@/lib/workspace";
 
 type Project = { id: string; name: string; code: string | null };
+type ContextLink = { label: string; href?: string };
 
 function initials(value: string) {
   const parts = value.trim().split(/\s+/).filter(Boolean);
@@ -95,6 +96,41 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const assistanceHref = can("postwork.assistance.view") ? "/pos-obra/assistencias" : undefined;
   const inspectionsHref = can("postwork.inspections.view") ? "/pos-obra/vistorias" : undefined;
   const warrantiesHref = can("postwork.warranties.view") ? "/pos-obra/garantias" : undefined;
+
+  const contextualLinks: ContextLink[] = activeItem === "budgets" ? [
+    { label: "Serviços", href: servicesHref },
+    { label: "Insumos", href: inputsHref },
+    { label: "Preços e Cotações", href: pricesHref },
+    { label: "Quantitativos", href: takeoffsHref },
+  ] : activeItem === "schedule" ? [
+    { label: "Curvas Física e Financeira", href: curvesHref },
+  ] : activeItem === "contract-plan" ? [
+    { label: "Contratos e Medições", href: engineeringContractsHref },
+  ] : activeItem === "service-contracts" ? [
+    { label: "Medições por Etapas", href: stageMeasurementsHref },
+    { label: "Aprovação e Financeiro", href: contractMeasurementsHref },
+    { label: "Ordens de Serviço", href: workOrdersHref },
+  ] : activeItem === "purchase-orders" ? [
+    { label: "Solicitações e Concorrências", href: serviceProcurementHref },
+    { label: "Orçamentos de Materiais", href: materialQuotationsHref },
+    { label: "Alçadas de Compras", href: purchaseApprovalsHref },
+    { label: "Recebimento de Materiais", href: materialReceiptsHref },
+    { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined },
+  ] : activeItem === "integrated-control" ? [
+    { label: "Oportunidades", href: procurementOpportunitiesHref },
+    { label: "Desempenho de Fornecedores", href: supplierPerformanceHref },
+    { label: "Indicadores", href: procurementIndicatorsHref },
+  ] : activeItem === "incorporation" ? [
+    { label: "Clientes", href: can("clients.view") ? "/cadastros/clientes" : undefined },
+    { label: "Tabelas de Venda", href: priceTablesHref },
+    { label: "Corretores", href: brokersHref },
+    { label: "Planos de Pagamento", href: commercialReceivablesHref },
+  ] : activeItem === "projects" ? [
+    { label: "Características", href: projectCharacteristicsHref },
+    { label: "Locais / Pavimentos", href: projectLocationsHref },
+    { label: "Unidades Privativas", href: projectUnitsHref },
+  ] : [];
+  const visibleContextualLinks = contextualLinks.filter((item): item is { label: string; href: string } => Boolean(item.href));
 
   const groups: ShellNavigationGroup[] = [
     { key: "system", label: "Sistema", icon: "⚙", active: activeGroup === "system", items: [
@@ -204,7 +240,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
         <div className="elos-user"><span className="elos-avatar">{initials(fullName)}</span><span className="elos-user-text"><strong>{fullName}</strong><span>{role.name}</span></span></div>
         <form action={logout}><button className="elos-logout-button" type="submit" title="Sair" aria-label="Sair">↪</button></form>
       </header>
-      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">{APP_VERSION_LABEL}</span></h1>{description ? <p>{description}</p> : null}</div>{actions ? <div className="elos-page-actions">{actions}</div> : null}</div>{children}</div>
+      <div className="elos-module-content"><div className="elos-page-top"><div><div className="elos-eyebrow">{eyebrow}</div><h1>{title}<span className="elos-module-version">{APP_VERSION_LABEL}</span></h1>{description ? <p>{description}</p> : null}</div>{actions || visibleContextualLinks.length ? <div className="elos-page-actions">{actions}{visibleContextualLinks.map((item) => <a className="elos-button" href={item.href} key={item.href}>{item.label}</a>)}</div> : null}</div>{children}</div>
     </main>
   </div>;
 }
