@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import {
   generateScheduleFromTakeoffs,
   moveScheduleActivity,
@@ -578,7 +579,7 @@ export function SchedulePrevisionWorkbench({
           <button type="button" onClick={exportHtml} disabled={!selectedBaseline}>Exportar HTML</button>
           {canManage && selectedBaseline ? <ScheduleImportHtmlDialog baselineId={selectedBaseline.id} /> : null}
           <button type="button" onClick={() => downloadJson(`cronograma-${selectedBaseline?.code ?? "elos"}.json`, { baseline: selectedBaseline, activities, dependencies, locations, services })}>Exportar JSON</button>
-          {canManage && selectedBaseline && selectedBaseline.status !== "approved" && activities.some((activity) => activity.record_status === "active" && activity.planning_status !== "approved") ? <form action={approveAllScheduleActivities} onSubmit={(event) => { if (!window.confirm("Aprovar todas as atividades desta linha de base?")) event.preventDefault(); }}><input type="hidden" name="baseline_id" value={selectedBaseline.id} /><button type="submit">Aprovar todas as atividades</button></form> : null}
+          {canManage && selectedBaseline && selectedBaseline.status !== "approved" && activities.some((activity) => activity.record_status === "active" && activity.planning_status !== "approved") ? <form action={approveAllScheduleActivities}><input type="hidden" name="baseline_id" value={selectedBaseline.id} /><ConfirmSubmitButton label="Aprovar todas as atividades" confirmLabel="Confirmar aprovação" title="Clique novamente para aprovar todas as atividades desta linha de base." /></form> : null}
           {canManage && selectedBaseline && selectedBaseline.status !== "approved" ? <form action={updateScheduleBaselineStatus}><input type="hidden" name="baseline_id" value={selectedBaseline.id} /><input type="hidden" name="status" value="approved" /><button type="submit">Salvar linha de base</button></form> : null}
           <Link prefetch={false} href={selectedBaseline ? `?baseline=${selectedBaseline.id}` : "/engenharia/cronograma"}>Restaurar linha de base</Link>
         </div>
