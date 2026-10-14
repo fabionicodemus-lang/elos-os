@@ -23,10 +23,16 @@ export type MaterialCostCenterOption = {
 export type SupplyPlanReference = {
   input_id: string;
   required_quantity: number;
-  purchase_quantity: number;
+  ordered_quantity: number;
+  outstanding_order_quantity: number;
+  on_hand_quantity: number;
+  available_quantity: number;
+  remaining_to_buy_quantity: number;
+  suggested_purchase_quantity: number;
   unit_snapshot: string;
   order_deadline: string;
   first_use_date: string;
+  coverage_status: string;
 };
 
 export type MaterialRequestItemData = {
@@ -63,6 +69,15 @@ const categoryLabels: Record<string, string> = {
   equipment: "Equipamento",
   freight: "Frete",
   other: "Outro custo",
+};
+
+const coverageLabels: Record<string, string> = {
+  covered: "Coberto",
+  planned: "Planejado",
+  quote_now: "Cotar agora",
+  order_now: "Pedir agora",
+  critical: "Crítico",
+  rupture: "Ruptura",
 };
 
 function quantity(value: number) {
@@ -118,10 +133,12 @@ function MaterialRequestDialog({ inputs, centers, supplyPlan, approvedBudgetId, 
   const add = (inputId: string) => {
     const repeatedCenterId = rows[0]?.cost_center_service_id ?? availableCenters[0]?.id ?? null;
     const repeatedCenter = repeatedCenterId ? centerMap.get(repeatedCenterId) : availableCenters[0];
+    const planned = supplyMap.get(inputId);
+    const suggested = Math.max(0, Number(planned?.suggested_purchase_quantity ?? planned?.remaining_to_buy_quantity ?? 0));
     setRows((current) => [...current, {
       row_id: `${inputId}-${Date.now()}`,
       input_id: inputId,
-      quantity: 1,
+      quantity: suggested > 0 ? suggested : 1,
       cost_center_service_id: repeatedCenter?.id ?? null,
       cost_center_code: repeatedCenter?.code ?? "",
       notes: "",
@@ -166,7 +183,7 @@ function MaterialRequestDialog({ inputs, centers, supplyPlan, approvedBudgetId, 
         <input type="hidden" name="budget_id" value={budgetId} />
         <input type="hidden" name="items_json" value={JSON.stringify(payload)} />
         <header>
-          <div><span>EXECUÇÃO · SUPRIMENTOS</span><h2>{request ? `Editar ${request.request_number}` : "Nova solicitação de materiais"}</h2><p>O solicitante será preenchido automaticamente pelo login. Cada item precisa de quantidade e serviço para apropriação do custo.</p></div>
+          <div><span>EXECUÇÃO · SUPRIMENTOS</span><h2>{request ? `Editar ${request.request_number}` : "Nova solicitação de materiais"}</h2><p>Antes de solicitar, o Elos mostra o previsto na obra, o que já foi comprado, o estoque disponível e o saldo real a comprar.</p></div>
           <button type="button" aria-label="Fechar" onClick={() => dialogRef.current?.close()}>×</button>
         </header>
 
@@ -188,7 +205,7 @@ function MaterialRequestDialog({ inputs, centers, supplyPlan, approvedBudgetId, 
               {filteredInputs.map((input) => {
                 const planned = supplyMap.get(input.id);
                 return <button key={input.id} type="button" onClick={() => add(input.id)} title={`${input.code} · ${input.description}`}>
-                  <code>{input.code}</code><span><strong>{input.description}</strong><small>{categoryLabels[input.category] ?? input.category} · {input.unit}{planned ? ` · plano: ${quantity(planned.purchase_quantity)} ${planned.unit_snapshot}` : ""}</small></span><b>Inserir</b>
+                  <code>{input.code}</code><span><strong>{input.description}</strong><small>{categoryLabels[input.category] ?? input.category} · {input.unit}{planned ? ` · previsto ${quantity(planned.required_quantity)} · comprado ${quantity(planned.ordered_quantity)} · saldo ${quantity(planned.remaining_to_buy_quantity)}` : " · fora do planejamento"}</small></span><b>Inserir</b>
                 </button>;
               })}
               {!filteredInputs.length ? <p>Nenhum material disponível para essa pesquisa.</p> : null}
@@ -199,17 +216,18 @@ function MaterialRequestDialog({ inputs, centers, supplyPlan, approvedBudgetId, 
 
           <div className="material-request-items-table-wrap">
             <table className="material-request-items-table">
-              <thead><tr><th>Material</th><th>Planejamento</th><th>Quantidade</th><th>Serviço / centro de custo</th><th>Observação</th><th></th></tr></thead>
+              <thead><tr><th>Material</th><th>Previsto / comprado / saldo</th><th>Quantidade</th><th>Serviço / centro de custo</th><th>Observação</th><th></th></tr></thead>
               <tbody>
                 {rows.map((row) => {
                   const input = inputMap.get(row.input_id);
                   const planned = supplyMap.get(row.input_id);
                   const selectedCenter = row.cost_center_service_id ? centerMap.get(row.cost_center_service_id) : undefined;
                   const centerCode = selectedCenter?.code ?? row.cost_center_code ?? "";
+                  const exceedsBalance = Boolean(planned && Number(row.quantity) > Number(planned.remaining_to_buy_quantity) + 0.000001);
                   return <tr key={row.row_id}>
                     <td><strong>{input?.code ?? "—"}</strong><span>{input?.description ?? "Material não encontrado"}</span><small>{input?.unit ?? "un"}</small></td>
-                    <td>{planned ? <><strong>{quantity(planned.purchase_quantity)} {planned.unit_snapshot}</strong><span>Pedido até {dateBR(planned.order_deadline)}</span><small>1º uso {dateBR(planned.first_use_date)}</small></> : <span>Fora do plano atual</span>}</td>
-                    <td><input type="number" min="0.000001" step="0.000001" value={row.quantity} onChange={(event) => update(row.row_id, { quantity: Number(event.target.value) })} /></td>
+                    <td>{planned ? <><strong>Previsto {quantity(planned.required_quantity)} {planned.unit_snapshot}</strong><span>Comprado {quantity(planned.ordered_quantity)} · a receber {quantity(planned.outstanding_order_quantity)}</span><span>Estoque {quantity(planned.available_quantity)} · saldo a comprar <b>{quantity(planned.remaining_to_buy_quantity)}</b></span><small>{coverageLabels[planned.coverage_status] ?? planned.coverage_status} · pedir até {dateBR(planned.order_deadline)} · 1º uso {dateBR(planned.first_use_date)}</small></> : <span>Fora do planejamento atual</span>}</td>
+                    <td><input type="number" min="0.000001" step="0.000001" value={row.quantity} onChange={(event) => update(row.row_id, { quantity: Number(event.target.value) })} />{exceedsBalance ? <small>⚠ Quantidade acima do saldo a comprar. O Elos permite, mas exige conferência.</small> : null}</td>
                     <td className="material-center-cell">
                       <div className="material-center-picker">
                         <button className={`material-center-trigger ${selectedCenter ? "selected" : ""}`} type="button" onClick={() => { setOpenCenterRow((current) => current === row.row_id ? null : row.row_id); setCenterSearch(""); }}>
@@ -238,7 +256,7 @@ function MaterialRequestDialog({ inputs, centers, supplyPlan, approvedBudgetId, 
           </div>
         </section>
 
-        <div className="material-request-status-note"><strong>Status automático:</strong> a solicitação nasce como <b>Solicitada</b> e somente depois da aprovação fica disponível para o fluxo de compras.</div>
+        <div className="material-request-status-note"><strong>Status automático:</strong> a solicitação nasce como <b>Solicitada</b>; depois da aprovação pode ser atendida por <b>compra ou estoque</b>.</div>
         <footer><button className="secondary" type="button" onClick={() => dialogRef.current?.close()}>Cancelar</button><button type="submit" disabled={!valid}>{request ? "Salvar alterações" : "Criar solicitação"}</button></footer>
       </form>
     </dialog>
