@@ -3,10 +3,15 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { calculateFeasibility } from "@/lib/commercial/feasibility.mjs";
 import { requireCompanyPermission } from "@/lib/workspace";
+import { approveAndConvertFeasibilityStudy, updateFeasibilityStudy } from "../actions";
 import {
-  addFeasibilityUnitType, approveAndConvertFeasibilityStudy, deleteFeasibilityUnitType,
-  updateFeasibilityStudy, updateFeasibilityUnitType,
-} from "../actions";
+  FeasibilityConstructionAreasManager,
+  FeasibilitySalesVelocitiesManager,
+  FeasibilityUnitTypesManager,
+  type FeasibilityConstructionArea,
+  type FeasibilitySalesVelocity,
+  type FeasibilityUnitType,
+} from "./managed-assumptions";
 import { TaxRegimeFields } from "./tax-regime-fields";
 import "../feasibility.css";
 
@@ -34,7 +39,6 @@ type Study = {
   sales_velocity_units_month:number|null; entry_pct:number|null; during_construction_pct:number|null; keys_pct:number|null; post_keys_pct:number|null;
   post_keys_months:number|null; discount_rate_annual_pct:number|null; notes:string|null;
 };
-type UnitType = { id:string; name:string; quantity:number; private_area_m2:number; sale_price_m2:number; barter_units:number; sort_order:number; notes:string|null };
 type Entity = { id:string; legal_name:string; trade_name:string|null; entity_type:string };
 
 function money(value: unknown) { return new Intl.NumberFormat("pt-BR", { style:"currency", currency:"BRL", maximumFractionDigits:0 }).format(Number(value ?? 0)); }
@@ -51,23 +55,27 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
   const { studyId } = await params;
   const messages = await searchParams;
   const { supabase, company, companyId, roleKey } = await requireCompanyPermission("commercial.incorporation.view");
-  const [studyResult, unitsResult, entitiesResult, manageResult, approveResult] = await Promise.all([
+  const [studyResult, unitsResult, constructionAreasResult, salesVelocitiesResult, entitiesResult, manageResult, approveResult] = await Promise.all([
     supabase.from("commercial_feasibility_studies").select("*").eq("id", studyId).eq("company_id", companyId).maybeSingle(),
     supabase.from("commercial_feasibility_unit_types").select("*").eq("study_id", studyId).eq("company_id", companyId).order("sort_order").order("name"),
+    supabase.from("commercial_feasibility_construction_areas").select("*").eq("study_id", studyId).eq("company_id", companyId).order("sort_order").order("name"),
+    supabase.from("commercial_feasibility_sales_velocities").select("*").eq("study_id", studyId).eq("company_id", companyId).order("start_offset_months").order("sort_order"),
     supabase.from("legal_entities").select("id,legal_name,trade_name,entity_type").eq("company_id", companyId).eq("status", "active").order("legal_name"),
     supabase.rpc("has_company_permission", { target_company_id:companyId, target_permission:"commercial.incorporation.manage" }),
     supabase.rpc("has_company_permission", { target_company_id:companyId, target_permission:"commercial.incorporation.approve" }),
   ]);
   if (!studyResult.data) notFound();
   const study = studyResult.data as Study;
-  const unitTypes = (unitsResult.data ?? []) as UnitType[];
+  const unitTypes = (unitsResult.data ?? []) as FeasibilityUnitType[];
+  const constructionAreas = (constructionAreasResult.data ?? []) as FeasibilityConstructionArea[];
+  const salesVelocities = (salesVelocitiesResult.data ?? []) as FeasibilitySalesVelocity[];
   const entities = (entitiesResult.data ?? []) as Entity[];
   const canManage = roleKey === "owner" || roleKey === "admin" || manageResult.data === true;
   const canApprove = roleKey === "owner" || roleKey === "admin" || approveResult.data === true;
   const editable = study.status === "draft" && canManage;
   const calculated = study.status === "converted" && study.approved_metrics
     ? { ...study.approved_metrics, cashflow: study.approved_cashflow ?? [] }
-    : calculateFeasibility(study, unitTypes);
+    : calculateFeasibility(study, unitTypes, { constructionAreas, salesVelocities });
   const cashflow = (calculated.cashflow ?? []) as CashflowRow[];
   const totalPayment = Number(study.entry_pct ?? 0) + Number(study.during_construction_pct ?? 0) + Number(study.keys_pct ?? 0) + Number(study.post_keys_pct ?? 0);
 
@@ -83,13 +91,15 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
     ["Contingência", calculated.contingency_cost],
   ];
 
+  const managedStructureError = constructionAreasResult.error || salesVelocitiesResult.error;
+
   return <AppShell activeGroup="commercial" activeItem="feasibility"
     eyebrow="Comercial · Incorporação · Viabilidade" title={study.name}
     description={`${company.name} · ${study.code ? `${study.code} · ` : ""}${study.status === "converted" ? "baseline econômico aprovado" : "estudo em elaboração"}`}
     actions={<><Link className="elos-button" prefetch={false} href="/comercial/incorporacao/viabilidade">Todos os estudos</Link>{study.converted_project_id ? <Link className="elos-button" prefetch={false} href="/empreendimentos">Abrir empreendimentos</Link> : null}</>}>
     {messages.error ? <div className="auth-message error workspace-message">{messages.error}</div> : null}
     {messages.success ? <div className="auth-message success workspace-message">{messages.success}</div> : null}
-    {studyResult.error || unitsResult.error ? <div className="auth-message error workspace-message">A migration de viabilidade precisa estar aplicada corretamente.</div> : null}
+    {studyResult.error || unitsResult.error || managedStructureError ? <div className="auth-message error workspace-message">A estrutura de viabilidade precisa estar atualizada. Aplique a migration mais recente para gerenciar áreas e velocidades de venda.</div> : null}
 
     <section className="feasibility-kpis">
       <article><span>VGV bruto</span><strong>{money(calculated.gross_vgv)}</strong><small>{calculated.total_units} unidade(s)</small></article>
@@ -123,19 +133,19 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
       </section>
 
       <section className="feasibility-card feasibility-section">
-        <div className="feasibility-section-title"><div><span>Custo da obra por área</span><h2>Construção estimada</h2></div><p>Os apartamentos vêm das tipologias abaixo; as demais áreas possuem custo/m² próprio.</p></div>
+        <div className="feasibility-section-title"><div><span>Custo da obra</span><h2>Premissas gerais da construção</h2></div><p>As áreas adicionais são cadastradas e gerenciadas logo abaixo, com custo/m² individual.</p></div>
         <div className="feasibility-form">
           <label>Área apartamentos<input value={number(calculated.apartment_area_m2, 2)} disabled /></label>
           <label>Custo apartamentos / m²<input name="apartment_cost_m2" type="number" step="0.01" min="0" defaultValue={study.apartment_cost_m2 ?? 0} disabled={!editable} /></label>
-          <label>Garagem + escadas · m²<input name="garage_stairs_area_m2" type="number" step="0.01" min="0" defaultValue={study.garage_stairs_area_m2 ?? 0} disabled={!editable} /></label>
-          <label>Custo garagem + escadas / m²<input name="garage_stairs_cost_m2" type="number" step="0.01" min="0" defaultValue={study.garage_stairs_cost_m2 ?? 0} disabled={!editable} /></label>
-          <label>Hall de entrada · m²<input name="lobby_area_m2" type="number" step="0.01" min="0" defaultValue={study.lobby_area_m2 ?? 0} disabled={!editable} /></label>
-          <label>Custo hall / m²<input name="lobby_cost_m2" type="number" step="0.01" min="0" defaultValue={study.lobby_cost_m2 ?? 0} disabled={!editable} /></label>
-          <label>Áreas comuns decoradas · m²<input name="decorated_common_area_m2" type="number" step="0.01" min="0" defaultValue={study.decorated_common_area_m2 ?? 0} disabled={!editable} /></label>
-          <label>Custo áreas decoradas / m²<input name="decorated_common_cost_m2" type="number" step="0.01" min="0" defaultValue={study.decorated_common_cost_m2 ?? 0} disabled={!editable} /></label>
           <label>Projetos / m² construído<input name="design_cost_m2" type="number" step="0.01" min="0" defaultValue={study.design_cost_m2 ?? 0} disabled={!editable} /></label>
           <label>Contingência obra (%)<input name="contingency_pct" type="number" step="0.01" min="0" max="100" defaultValue={study.contingency_pct ?? 0} disabled={!editable} /></label>
         </div>
+        <input type="hidden" name="garage_stairs_area_m2" value={study.garage_stairs_area_m2 ?? 0} />
+        <input type="hidden" name="garage_stairs_cost_m2" value={study.garage_stairs_cost_m2 ?? 0} />
+        <input type="hidden" name="lobby_area_m2" value={study.lobby_area_m2 ?? 0} />
+        <input type="hidden" name="lobby_cost_m2" value={study.lobby_cost_m2 ?? 0} />
+        <input type="hidden" name="decorated_common_area_m2" value={study.decorated_common_area_m2 ?? 0} />
+        <input type="hidden" name="decorated_common_cost_m2" value={study.decorated_common_cost_m2 ?? 0} />
       </section>
 
       <section className="feasibility-card feasibility-section">
@@ -160,13 +170,11 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
       </section>
 
       <section className="feasibility-card feasibility-section">
-        <div className="feasibility-section-title"><div><span>Prazo e velocidade de vendas</span><h2>Fluxo do empreendimento</h2></div><p>Estas premissas determinam exposição máxima, VPL e TIR.</p></div>
+        <div className="feasibility-section-title"><div><span>Prazo e recebimentos</span><h2>Fluxo do empreendimento</h2></div><p>As velocidades de venda são gerenciadas por fases logo abaixo.</p></div>
         <div className="feasibility-form">
           <label>Meses de pré-obra<input name="preconstruction_months" type="number" min="0" max="60" defaultValue={study.preconstruction_months ?? 6} disabled={!editable} /></label>
           <label>Início previsto da obra<input name="construction_start_date" type="date" defaultValue={study.construction_start_date ?? ""} disabled={!editable} /></label>
           <label>Duração da obra (meses)<input name="construction_duration_months" type="number" min="1" max="180" defaultValue={study.construction_duration_months ?? 36} disabled={!editable} /></label>
-          <label>Início das vendas vs obra (meses)<input name="sales_start_offset_months" type="number" min="-60" max="180" defaultValue={study.sales_start_offset_months ?? -3} disabled={!editable} /></label>
-          <label>Velocidade de vendas (un./mês)<input name="sales_velocity_units_month" type="number" min="0.01" step="0.01" defaultValue={study.sales_velocity_units_month ?? 2} disabled={!editable} /></label>
           <label>Entrada (%)<input name="entry_pct" type="number" min="0" max="100" step="0.01" defaultValue={study.entry_pct ?? 10} disabled={!editable} /></label>
           <label>Durante obra (%)<input name="during_construction_pct" type="number" min="0" max="100" step="0.01" defaultValue={study.during_construction_pct ?? 40} disabled={!editable} /></label>
           <label>Chaves (%)<input name="keys_pct" type="number" min="0" max="100" step="0.01" defaultValue={study.keys_pct ?? 20} disabled={!editable} /></label>
@@ -175,42 +183,22 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
           <label>Taxa de desconto VPL (% a.a.)<input name="discount_rate_annual_pct" type="number" step="0.01" defaultValue={study.discount_rate_annual_pct ?? 15} disabled={!editable} /></label>
           <label className="span-2">Notas<textarea name="notes" defaultValue={study.notes ?? ""} disabled={!editable} /></label>
         </div>
+        <input type="hidden" name="sales_start_offset_months" value={study.sales_start_offset_months ?? -3} />
+        <input type="hidden" name="sales_velocity_units_month" value={study.sales_velocity_units_month ?? 2} />
         <div className={`feasibility-note ${Math.abs(totalPayment - 100) > 0.001 ? "feasibility-warning" : ""}`} style={{marginTop:12}}>Fluxo do cliente: {number(totalPayment,2)}% distribuído entre entrada, obra, chaves e pós-chaves. A obra utiliza uma curva física estimada em S para projetar os desembolsos.</div>
         {editable ? <div className="feasibility-actions"><button className="feasibility-primary" type="submit">Salvar e recalcular</button></div> : null}
       </section>
     </form>
 
-    <section className="feasibility-card feasibility-section">
-      <div className="feasibility-section-title"><div><span>Produto e permuta física</span><h2>Tipologias dos apartamentos</h2></div><p>O VGV da permuta é retirado do VGV disponível; não volta como custo do terreno.</p></div>
-      {editable ? <form action={addFeasibilityUnitType} className="feasibility-unit-grid">
-        <input type="hidden" name="study_id" value={study.id} />
-        <label>Tipologia<input name="name" required placeholder="Tipo 01" /></label>
-        <label>Quantidade<input name="quantity" type="number" min="1" required /></label>
-        <label>Área privativa m²<input name="private_area_m2" type="number" min="0.01" step="0.01" required /></label>
-        <label>Preço venda / m²<input name="sale_price_m2" type="number" min="0.01" step="0.01" required /></label>
-        <label>Unidades permuta<input name="barter_units" type="number" min="0" defaultValue="0" required /></label>
-        <button className="feasibility-primary" type="submit">Adicionar</button>
-      </form> : null}
-      <div className="registry-table-wrap" style={{marginTop:14}}><table className="registry-table">
-        <thead><tr><th>Tipologia</th><th>Qtd.</th><th>Área/un.</th><th>Preço/m²</th><th>VGV</th><th>Permuta</th><th>VGV permuta</th>{editable ? <th></th> : null}</tr></thead>
-        <tbody>{unitTypes.map(item => <tr key={item.id}>
-          {editable ? <>
-            <td colSpan={editable ? 8 : 7} style={{padding:8}}><form action={updateFeasibilityUnitType} className="feasibility-unit-grid">
-              <input type="hidden" name="study_id" value={study.id}/><input type="hidden" name="unit_type_id" value={item.id}/>
-              <label>Tipologia<input name="name" defaultValue={item.name}/></label>
-              <label>Qtd.<input name="quantity" type="number" min="1" defaultValue={item.quantity}/></label>
-              <label>Área m²<input name="private_area_m2" type="number" min="0.01" step="0.01" defaultValue={item.private_area_m2}/></label>
-              <label>Venda/m²<input name="sale_price_m2" type="number" min="0.01" step="0.01" defaultValue={item.sale_price_m2}/></label>
-              <label>Permuta<input name="barter_units" type="number" min="0" max={item.quantity} defaultValue={item.barter_units}/></label>
-              <div className="feasibility-actions"><button className="feasibility-secondary" type="submit">Salvar</button><button className="feasibility-secondary" formAction={deleteFeasibilityUnitType} type="submit">Excluir</button></div>
-            </form></td>
-          </> : <>
-            <td><strong>{item.name}</strong></td><td>{item.quantity}</td><td>{number(item.private_area_m2,2)} m²</td><td>{money(item.sale_price_m2)}</td><td>{money(Number(item.quantity)*Number(item.private_area_m2)*Number(item.sale_price_m2))}</td><td>{item.barter_units}</td><td>{money(Number(item.barter_units)*Number(item.private_area_m2)*Number(item.sale_price_m2))}</td>
-          </>}
-        </tr>)}</tbody>
-      </table></div>
-      {!unitTypes.length ? <p>Nenhuma tipologia cadastrada.</p> : null}
-    </section>
+    <FeasibilityUnitTypesManager studyId={study.id} unitTypes={unitTypes} editable={editable} />
+    <FeasibilityConstructionAreasManager
+      studyId={study.id}
+      constructionAreas={constructionAreas}
+      apartmentAreaM2={Number(calculated.apartment_area_m2 ?? 0)}
+      apartmentCostM2={Number(study.apartment_cost_m2 ?? 0)}
+      editable={editable}
+    />
+    <FeasibilitySalesVelocitiesManager studyId={study.id} salesVelocities={salesVelocities} editable={editable} />
 
     <section className="feasibility-two feasibility-section">
       <div className="feasibility-card"><div className="feasibility-section-title"><div><span>Resultado econômico</span><h2>Composição dos custos</h2></div></div><div className="registry-table-wrap"><table className="registry-table feasibility-metric-table"><thead><tr><th>Conta</th><th>Valor</th></tr></thead><tbody>{costRows.map(([label,value]) => <tr key={String(label)}><td>{label}</td><td><strong>{money(value)}</strong></td></tr>)}<tr><td><strong>Custo total</strong></td><td><strong>{money(calculated.total_cost)}</strong></td></tr><tr><td><strong>Lucro</strong></td><td><strong>{money(calculated.profit)}</strong></td></tr></tbody></table></div></div>
