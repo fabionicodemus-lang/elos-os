@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import "../elos-ia.css";
+import "../elos-ia-actions.css";
 import { AppShell } from "@/components/app-shell";
 import { getElosIaConfig } from "@/lib/elos-ia/config";
 import { defaultPersonaForRole, ELOS_IA_PERSONAS } from "@/lib/elos-ia/personas";
