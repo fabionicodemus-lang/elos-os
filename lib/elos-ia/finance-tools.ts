@@ -18,6 +18,9 @@ type Definition = {
   run: (context: ElosIaToolContext, args: Args) => Promise<Result>;
 };
 
+type SupplierRelation = { legal_name?: string | null; trade_name?: string | null } | Array<{ legal_name?: string | null; trade_name?: string | null }> | null;
+type TaxTypeRelation = { code?: string | null; name?: string | null; category?: string | null } | Array<{ code?: string | null; name?: string | null; category?: string | null }> | null;
+
 function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
 function limit(value: unknown, fallback = 12) { const n = Number(value); return Number.isFinite(n) ? Math.min(30, Math.max(1, Math.floor(n))) : fallback; }
 function projectId(context: ElosIaToolContext, raw: unknown) {
@@ -29,6 +32,8 @@ function projectId(context: ElosIaToolContext, raw: unknown) {
   throw new Error(`Não encontrei a obra "${text(raw)}".`);
 }
 function money(value: unknown) { const n = Number(value ?? 0); return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0; }
+function supplierName(value: SupplierRelation) { const row = Array.isArray(value) ? value[0] : value; return row?.trade_name || row?.legal_name || null; }
+function taxType(value: TaxTypeRelation) { return Array.isArray(value) ? value[0] ?? null : value; }
 function ensure(context: ElosIaToolContext, permissions: string[]) {
   const missing = permissions.filter((permission) => !context.can(permission));
   if (missing.length) throw new Error(`Seu papel não possui permissão para esta consulta (${missing.join(", ")}).`);
@@ -37,16 +42,16 @@ function ensure(context: ElosIaToolContext, permissions: string[]) {
 async function invoices(context: ElosIaToolContext, args: Args): Promise<Result> {
   const pid = projectId(context, args.obra);
   const max = limit(args.limite);
-  const [electronic, manual] = await Promise.all([
-    context.supabase.from("finance_electronic_invoices").select("id,number,series,issue_date,total_invoice,status,validation_status,suppliers(legal_name,trade_name)").eq("company_id", context.companyId).eq("project_id", pid ?? "").order("issue_date", { ascending: false }).limit(max),
-    context.supabase.from("finance_manual_invoices").select("id,document_type,document_number,issue_date,gross_amount,net_amount,status,suppliers(legal_name,trade_name)").eq("company_id", context.companyId).eq("project_id", pid ?? "").order("issue_date", { ascending: false }).limit(max),
-  ]);
+  let electronicQuery = context.supabase.from("finance_electronic_invoices").select("id,number,series,issue_date,total_invoice,status,validation_status,suppliers(legal_name,trade_name)").eq("company_id", context.companyId).order("issue_date", { ascending: false }).limit(max);
+  let manualQuery = context.supabase.from("finance_manual_invoices").select("id,document_type,document_number,issue_date,gross_amount,net_amount,status,suppliers(legal_name,trade_name)").eq("company_id", context.companyId).order("issue_date", { ascending: false }).limit(max);
+  if (pid) { electronicQuery = electronicQuery.eq("project_id", pid); manualQuery = manualQuery.eq("project_id", pid); }
+  const [electronic, manual] = await Promise.all([electronicQuery, manualQuery]);
   if (electronic.error) throw new Error(electronic.error.message);
   if (manual.error) throw new Error(manual.error.message);
   return {
-    obra: pid ?? null,
-    notas_eletronicas: (electronic.data ?? []).map((row) => ({ id: row.id, numero: row.number, serie: row.series, emissao: row.issue_date, valor: money(row.total_invoice), status: row.status, validacao: row.validation_status, fornecedor: Array.isArray(row.suppliers) ? row.suppliers[0]?.trade_name || row.suppliers[0]?.legal_name : row.suppliers?.trade_name || row.suppliers?.legal_name })),
-    notas_manuais: (manual.data ?? []).map((row) => ({ id: row.id, tipo: row.document_type, numero: row.document_number, emissao: row.issue_date, bruto: money(row.gross_amount), liquido: money(row.net_amount), status: row.status, fornecedor: Array.isArray(row.suppliers) ? row.suppliers[0]?.trade_name || row.suppliers[0]?.legal_name : row.suppliers?.trade_name || row.suppliers?.legal_name })),
+    obra: pid ?? "todas",
+    notas_eletronicas: (electronic.data ?? []).map((row) => ({ id: row.id, numero: row.number, serie: row.series, emissao: row.issue_date, valor: money(row.total_invoice), status: row.status, validacao: row.validation_status, fornecedor: supplierName(row.suppliers as SupplierRelation) })),
+    notas_manuais: (manual.data ?? []).map((row) => ({ id: row.id, tipo: row.document_type, numero: row.document_number, emissao: row.issue_date, bruto: money(row.gross_amount), liquido: money(row.net_amount), status: row.status, fornecedor: supplierName(row.suppliers as SupplierRelation) })),
   };
 }
 
@@ -57,7 +62,7 @@ async function taxes(context: ElosIaToolContext, args: Args): Promise<Result> {
   if (pid) query = query.eq("project_id", pid);
   const result = await query;
   if (result.error) throw new Error(result.error.message);
-  return { obra: pid ?? "todas", obrigacoes: (result.data ?? []).map((row) => { const type = Array.isArray(row.finance_tax_types) ? row.finance_tax_types[0] : row.finance_tax_types; return { id: row.id, tributo: type ? `${type.code} · ${type.name}` : null, categoria: type?.category ?? null, competencia: row.competence_date, referencia: row.reference, vencimento: row.due_date, valor: money(Number(row.principal_amount ?? 0) + Number(row.interest_amount ?? 0) + Number(row.penalty_amount ?? 0) + Number(row.other_amount ?? 0) - Number(row.discount_amount ?? 0)), status: row.status, conta_a_pagar_gerada: Boolean(row.payable_id) }; }) };
+  return { obra: pid ?? "todas", obrigacoes: (result.data ?? []).map((row) => { const type = taxType(row.finance_tax_types as TaxTypeRelation); return { id: row.id, tributo: type ? `${type.code} · ${type.name}` : null, categoria: type?.category ?? null, competencia: row.competence_date, referencia: row.reference, vencimento: row.due_date, valor: money(Number(row.principal_amount ?? 0) + Number(row.interest_amount ?? 0) + Number(row.penalty_amount ?? 0) + Number(row.other_amount ?? 0) - Number(row.discount_amount ?? 0)), status: row.status, conta_a_pagar_gerada: Boolean(row.payable_id) }; }) };
 }
 
 async function banks(context: ElosIaToolContext, args: Args): Promise<Result> {
@@ -78,7 +83,7 @@ async function indices(context: ElosIaToolContext, args: Args): Promise<Result> 
   return { indices: (names.data ?? []).map((index) => ({ id: index.id, codigo: index.code, nome: index.name, valores: (values.data ?? []).filter((row) => row.correction_index_id === index.id).slice(0, max).map((row) => ({ mes: row.reference_month, valor: row.value, observacoes: row.notes })) })) };
 }
 
-const nullableObra = { type: ["string", "null"], description: "Nome/código da obra; null usa a obra ativa. Para impostos, sem obra ativa retorna visão geral." };
+const nullableObra = { type: ["string", "null"], description: "Nome/código da obra; null usa a obra ativa. Sem obra ativa retorna visão da empresa quando a consulta permitir." };
 const nullableLimit = { type: ["integer", "null"], description: "Máximo de registros retornados; null usa o padrão." };
 const DEFINITIONS: Definition[] = [
   { name: "financeiro_notas", label: "Notas fiscais e documentos", description: "Consulta as notas eletrônicas e manuais do Financeiro, com fornecedor, valor, status e validação.", permissions: ["finance.invoices.view", "finance.manual_invoices.view"], properties: { obra: nullableObra, limite: nullableLimit }, run: invoices },
