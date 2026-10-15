@@ -27,7 +27,7 @@ function visiblePageContext(pathname:string,activeProjectLabel:string|null):Elos
   const heading=document.querySelector(".elos-page-top h1");
   const screen=heading ? Array.from(heading.childNodes).filter((node)=>node.nodeType===Node.TEXT_NODE).map((node)=>node.textContent?.trim()??"").filter(Boolean).join(" ") : null;
   const breadcrumb=Array.from(document.querySelectorAll(".elos-breadcrumb > *")).map((node)=>node.textContent?.trim()??"").filter(Boolean);
-  const module=breadcrumb.length>=2?breadcrumb[1]:null;
+  const module=breadcrumb.length>=3?breadcrumb[2]:null;
   const eyebrow=document.querySelector(".elos-eyebrow")?.textContent?.trim()??null;
   return {pathname,module,screen:screen||eyebrow||null,eyebrow,activeProjectLabel};
 }
