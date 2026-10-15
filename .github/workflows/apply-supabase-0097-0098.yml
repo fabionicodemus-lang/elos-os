@@ -1,22 +1,35 @@
-name: Aplicar migrations Supabase 0097-0098
+name: Aplicar migrations Supabase 0096-0098
 
 on:
+  workflow_dispatch:
   issues:
     types: [opened]
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20261015111500_integration_mapping_foundation.sql"
+      - "supabase/migrations/20261015112000_integration_mapping_legacy_bridge.sql"
+      - "supabase/migrations/20261015133000_engineering_budget_import_staging.sql"
+      - "supabase/migrations/20261015143000_engineering_budget_import_promotion.sql"
+      - ".github/scripts/apply-supabase-0096.sh"
+      - ".github/scripts/apply-supabase-0097.sh"
+      - ".github/scripts/apply-supabase-0098.sh"
+      - ".github/tests/integration-mappings-0096.sql"
+      - ".github/workflows/apply-supabase-0097-0098.yml"
 
 permissions:
   contents: read
   issues: write
 
 concurrency:
-  group: apply-supabase-0097-0098
-  cancel-in-progress: true
+  group: apply-supabase-budget-import-production
+  cancel-in-progress: false
 
 jobs:
   migrate:
-    if: github.event.issue.title == '[RUN] Supabase 0097-0098'
+    if: ${{ github.event_name != 'issues' || github.event.issue.title == '[RUN] Supabase 0096-0098' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       PGSSLMODE: require
@@ -27,7 +40,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Informar início
-        run: gh issue comment "$ISSUE_NUMBER" --body "Iniciando as migrations \`0097\` e \`0098\` do importador de orçamento."
+        if: github.event_name == 'issues'
+        run: gh issue comment "$ISSUE_NUMBER" --body "Iniciando as migrations \`0096\`, \`0097\` e \`0098\` do importador de orçamento, na ordem correta."
 
       - name: Normalizar conexão
         id: connection
@@ -53,22 +67,36 @@ jobs:
       - name: Instalar PostgreSQL
         run: sudo timeout 60s apt-get update && sudo timeout 60s apt-get install -y postgresql-client
 
-      - name: Executar e validar 0097 e 0098
+      - name: Executar e validar 0096, 0097 e 0098
         id: apply
         shell: bash
         run: |
           set +e
-          if [ "${{ steps.connection.outputs.configured }}" != "true" ]; then echo "Secret não configurado." >/tmp/migration.log; status=89
-          elif [ "${{ steps.connection.outputs.placeholder }}" = "true" ]; then echo "URI contém senha-placeholder." >/tmp/migration.log; status=90
-          elif [ "${{ steps.connection.outputs.kind }}" != "pooler" ]; then echo "Use a URI Session Pooler." >/tmp/migration.log; status=91
+          if [ "${{ steps.connection.outputs.configured }}" != "true" ]; then
+            echo "Secret SUPABASE_DB_URL não configurado." >/tmp/migration.log
+            status=89
+          elif [ "${{ steps.connection.outputs.placeholder }}" = "true" ]; then
+            echo "URI contém senha-placeholder." >/tmp/migration.log
+            status=90
+          elif [ "${{ steps.connection.outputs.kind }}" != "pooler" ]; then
+            echo "Use a URI Session Pooler do Supabase." >/tmp/migration.log
+            status=91
           else
             export SUPABASE_DB_URL="$EFFECTIVE_DB_URL"
-            bash .github/scripts/apply-supabase-0097.sh >/tmp/migration.log 2>&1
-            status=$?
-            if [ "$status" -eq 0 ]; then
-              bash .github/scripts/apply-supabase-0098.sh >>/tmp/migration.log 2>&1
+            : >/tmp/migration.log
+            status=0
+            for script in \
+              .github/scripts/apply-supabase-0096.sh \
+              .github/scripts/apply-supabase-0097.sh \
+              .github/scripts/apply-supabase-0098.sh
+            do
+              echo "=== Executando $script ===" >>/tmp/migration.log
+              bash "$script" >>/tmp/migration.log 2>&1
               status=$?
-            fi
+              if [ "$status" -ne 0 ]; then
+                break
+              fi
+            done
           fi
           set -e
           cat /tmp/migration.log
@@ -83,15 +111,26 @@ jobs:
           PY
           echo "status=$status" >> "$GITHUB_OUTPUT"
 
-      - name: Confirmar sucesso
-        if: steps.apply.outputs.status == '0'
+      - name: Confirmar sucesso no issue
+        if: github.event_name == 'issues' && steps.apply.outputs.status == '0'
         run: |
-          gh issue comment "$ISSUE_NUMBER" --body "✅ Migrations 0097 e 0098 aplicadas e validadas. O staging, a revisão de pendências e a promoção controlada do importador de orçamento estão disponíveis. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh issue comment "$ISSUE_NUMBER" --body "✅ Migrations 0096-0098 aplicadas e validadas na ordem correta. Mapa de integrações, staging, revisão e promoção do importador de orçamento estão disponíveis. Execução: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           gh issue close "$ISSUE_NUMBER" --reason completed
 
-      - name: Registrar falha
-        if: steps.apply.outputs.status != '' && steps.apply.outputs.status != '0'
+      - name: Confirmar sucesso automático
+        if: github.event_name != 'issues' && steps.apply.outputs.status == '0'
+        run: echo "Migrations 0096-0098 aplicadas e validadas com sucesso."
+
+      - name: Registrar falha no issue
+        if: github.event_name == 'issues' && steps.apply.outputs.status != '' && steps.apply.outputs.status != '0'
         run: |
-          { echo '❌ As migrations 0097-0098 falharam.'; echo; echo '```text'; tail -n 120 /tmp/safe.log; echo '```'; } >/tmp/body.md
+          { echo '❌ As migrations 0096-0098 falharam.'; echo; echo '```text'; tail -n 120 /tmp/safe.log; echo '```'; } >/tmp/body.md
           gh issue comment "$ISSUE_NUMBER" --body-file /tmp/body.md
+          exit 1
+
+      - name: Falhar execução automática
+        if: github.event_name != 'issues' && steps.apply.outputs.status != '' && steps.apply.outputs.status != '0'
+        run: |
+          echo "As migrations 0096-0098 falharam."
+          tail -n 120 /tmp/safe.log
           exit 1
