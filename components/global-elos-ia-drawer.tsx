@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ElosIaChat, type ElosIaChatPersona, type ElosIaPageContext } from "@/app/elos-ia/elos-ia-chat";
 
@@ -39,6 +39,8 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
   const [bootstrap,setBootstrap]=useState<Bootstrap|null>(null);
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState<string|null>(null);
+  const [reloadKey,setReloadKey]=useState(0);
+  const [context,setContext]=useState<ElosIaPageContext>({pathname,activeProjectLabel});
 
   useEffect(()=>{
     setMounted(true);
@@ -51,9 +53,15 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
   },[mounted,open]);
 
   useEffect(()=>{
-    if(!open||bootstrap||loading)return;
+    if(!mounted)return;
+    const frame=requestAnimationFrame(()=>setContext(visiblePageContext(pathname,activeProjectLabel)));
+    return()=>cancelAnimationFrame(frame);
+  },[mounted,pathname,activeProjectLabel,open]);
+
+  useEffect(()=>{
+    if(!open||bootstrap||loading||error)return;
     let cancelled=false;
-    setLoading(true);setError(null);
+    setLoading(true);
     fetch("/api/elos-ia/bootstrap",{headers:{accept:"application/json"},cache:"no-store"})
       .then(async(response)=>{
         const payload=await response.json().catch(()=>null) as Bootstrap|null;
@@ -64,7 +72,7 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
       .catch(()=>{if(!cancelled)setError("Não foi possível conectar ao Elos IA.");})
       .finally(()=>{if(!cancelled)setLoading(false);});
     return()=>{cancelled=true;};
-  },[open,bootstrap,loading]);
+  },[open,bootstrap,loading,error,reloadKey]);
 
   useEffect(()=>{
     if(!open)return;
@@ -73,7 +81,7 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
     return()=>window.removeEventListener("keydown",onKey);
   },[open]);
 
-  const context=useMemo(()=>visiblePageContext(pathname,activeProjectLabel),[pathname,activeProjectLabel,open]);
+  const retry=()=>{setError(null);setBootstrap(null);setReloadKey((value)=>value+1);};
   const contextLabel=[activeProjectLabel,context.screen].filter(Boolean).join(" · ")||"Contexto atual";
 
   const drawer=mounted&&open?createPortal(
@@ -84,7 +92,7 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
       </header>
       <div className="elos-ai-drawer-body">
         {loading?<div className="elos-ai-drawer-state"><span className="elos-ai-drawer-spark">✦</span><strong>Preparando o contexto desta tela…</strong></div>:null}
-        {error?<div className="elos-ai-drawer-state error"><strong>{error}</strong><button type="button" className="elos-button" onClick={()=>{setError(null);setBootstrap(null);}}>Tentar novamente</button></div>:null}
+        {error?<div className="elos-ai-drawer-state error"><strong>{error}</strong><button type="button" className="elos-button" onClick={retry}>Tentar novamente</button></div>:null}
         {bootstrap?<ElosIaChat personas={bootstrap.personas} defaultPersona={bootstrap.defaultPersona} configured={bootstrap.configured} activeProjectLabel={activeProjectLabel??bootstrap.activeProjectLabel} initialQuota={bootstrap.initialQuota} maxQuestionChars={bootstrap.maxQuestionChars} companyId={bootstrap.companyId} userId={bootstrap.userId} compact pageContext={context} storageKey={`elos-ia-global:${bootstrap.companyId}:${bootstrap.userId}`}/>:null}
       </div>
     </aside>,document.body):null;
