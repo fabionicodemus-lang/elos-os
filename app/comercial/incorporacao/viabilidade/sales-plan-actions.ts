@@ -47,6 +47,32 @@ async function requireDraftStudy(
   return data;
 }
 
+async function availableUnitsForStudy(
+  supabase: Awaited<ReturnType<typeof requireCompanyPermission>>["supabase"],
+  companyId: string,
+  studyId: string,
+) {
+  const { data, error } = await supabase.from("commercial_feasibility_unit_types")
+    .select("quantity,barter_units")
+    .eq("company_id", companyId)
+    .eq("study_id", studyId);
+  if (error) go(studyId, error.message, "error");
+  return (data ?? []).reduce((sum,item) => {
+    const quantity = Math.max(0, Math.trunc(Number(item.quantity ?? 0)));
+    const barter = Math.min(quantity, Math.max(0, Math.trunc(Number(item.barter_units ?? 0))));
+    return sum + quantity - barter;
+  }, 0);
+}
+
+function neutralTargets(total: number) {
+  const safeTotal = Math.max(0, Math.trunc(total));
+  return PHASE_KEYS.map((_,index) => {
+    const current = Math.round(safeTotal * (index + 1) / PHASE_KEYS.length);
+    const previous = Math.round(safeTotal * index / PHASE_KEYS.length);
+    return current - previous;
+  });
+}
+
 export async function initializeFeasibilitySalesPlan(formData: FormData) {
   const studyId = text(formData, "study_id");
   if (!studyId) redirect(`${BASE}?error=Estudo%20inv%C3%A1lido.`);
@@ -60,6 +86,9 @@ export async function initializeFeasibilitySalesPlan(formData: FormData) {
     .not("phase_key", "is", null);
   if ((count ?? 0) > 0) go(studyId, "O plano de vendas em fases já está ativo.");
 
+  const availableUnits = await availableUnitsForStudy(supabase, companyId, studyId);
+  if (availableUnits <= 0) go(studyId, "Cadastre o estoque comercializável antes de ativar o plano em fases.", "error");
+
   const duration = Math.max(2, Number(study.construction_duration_months ?? 36));
   const baseVelocity = Math.max(0.01, Number(study.sales_velocity_units_month ?? 2));
   const entry = Math.max(0, Number(study.entry_pct ?? 10));
@@ -67,6 +96,7 @@ export async function initializeFeasibilitySalesPlan(formData: FormData) {
   const monthly = Math.max(0, 100 - entry - keys);
   const installments = Math.min(240, Math.max(1, Number(study.post_keys_months ?? 24)));
   const prelaunchOffset = Math.min(-6, Number(study.sales_start_offset_months ?? -3));
+  const targets = neutralTargets(availableUnits);
 
   const phases = [
     { phase_key:"prelaunch", name:"Pré-lançamento", start_offset_months:prelaunchOffset, sort_order:10 },
@@ -74,11 +104,12 @@ export async function initializeFeasibilitySalesPlan(formData: FormData) {
     { phase_key:"construction_start", name:"Início das obras", start_offset_months:0, sort_order:30 },
     { phase_key:"mid_construction", name:"Meio das obras", start_offset_months:Math.max(1, Math.round(duration / 2)), sort_order:40 },
     { phase_key:"ready", name:"Pronto", start_offset_months:duration, sort_order:50 },
-  ].map(item => ({
+  ].map((item,index) => ({
     ...item,
     company_id:companyId,
     study_id:studyId,
-    target_units_pct:20,
+    target_units:targets[index],
+    target_units_pct:availableUnits > 0 ? targets[index] / availableUnits * 100 : 0,
     units_per_month:baseVelocity,
     price_appreciation_pct:0,
     entry_pct:entry,
@@ -91,7 +122,7 @@ export async function initializeFeasibilitySalesPlan(formData: FormData) {
   const { error } = await supabase.from("commercial_feasibility_sales_velocities").insert(phases);
   if (error) go(studyId, error.message, "error");
   refresh(studyId);
-  go(studyId, "Plano de Vendas e Recebimentos ativado em 5 fases. Agora ajuste metas, velocidade, valorização e condições.");
+  go(studyId, "Plano de Vendas e Recebimentos ativado em 5 fases. Agora ajuste períodos, unidades, velocidade, valorização e condições.");
 }
 
 export async function updateFeasibilitySalesPhase(formData: FormData) {
@@ -99,7 +130,7 @@ export async function updateFeasibilitySalesPhase(formData: FormData) {
   const phaseId = text(formData, "sales_phase_id");
   const key = phaseKey(text(formData, "phase_key"));
   const startOffset = integerValue(formData, "start_offset_months");
-  const targetPct = numberValue(formData, "target_units_pct");
+  const targetUnits = integerValue(formData, "target_units");
   const unitsPerMonth = numberValue(formData, "units_per_month");
   const appreciationPct = numberValue(formData, "price_appreciation_pct", 0);
   const entryPct = numberValue(formData, "entry_pct");
@@ -111,7 +142,7 @@ export async function updateFeasibilitySalesPhase(formData: FormData) {
   const valid = Boolean(
     studyId && phaseId && key &&
     Number.isFinite(startOffset) && startOffset >= -60 && startOffset <= 240 &&
-    Number.isFinite(targetPct) && targetPct >= 0 && targetPct <= 100 &&
+    Number.isFinite(targetUnits) && targetUnits >= 0 &&
     Number.isFinite(unitsPerMonth) && unitsPerMonth > 0 &&
     Number.isFinite(appreciationPct) && appreciationPct >= -90 && appreciationPct <= 500 &&
     Number.isFinite(entryPct) && entryPct >= 0 && entryPct <= 100 &&
@@ -124,9 +155,31 @@ export async function updateFeasibilitySalesPhase(formData: FormData) {
 
   const { supabase, companyId } = await requireCompanyPermission("commercial.incorporation.manage");
   await requireDraftStudy(supabase, companyId, studyId);
+  const availableUnits = await availableUnitsForStudy(supabase, companyId, studyId);
+  if (targetUnits > availableUnits) go(studyId, `A meta da fase não pode superar o estoque comercializável de ${availableUnits} unidade(s).`, "error");
 
+  const { data: phases, error: phaseError } = await supabase.from("commercial_feasibility_sales_velocities")
+    .select("id,sort_order,start_offset_months")
+    .eq("company_id", companyId)
+    .eq("study_id", studyId)
+    .not("phase_key", "is", null)
+    .order("sort_order");
+  if (phaseError) go(studyId, phaseError.message, "error");
+  const currentIndex = (phases ?? []).findIndex(item => item.id === phaseId);
+  if (currentIndex < 0) go(studyId, "Fase comercial não localizada.", "error");
+  const previous = currentIndex > 0 ? phases![currentIndex - 1] : null;
+  const next = currentIndex < phases!.length - 1 ? phases![currentIndex + 1] : null;
+  if (previous && startOffset <= Number(previous.start_offset_months)) {
+    go(studyId, "O início desta fase precisa ser posterior ao início da fase anterior.", "error");
+  }
+  if (next && startOffset >= Number(next.start_offset_months)) {
+    go(studyId, "O início desta fase precisa ser anterior ao início da próxima fase.", "error");
+  }
+
+  const targetPct = availableUnits > 0 ? targetUnits / availableUnits * 100 : 0;
   const { error } = await supabase.from("commercial_feasibility_sales_velocities").update({
     start_offset_months:startOffset,
+    target_units:targetUnits,
     target_units_pct:targetPct,
     units_per_month:unitsPerMonth,
     price_appreciation_pct:appreciationPct,
@@ -139,7 +192,7 @@ export async function updateFeasibilitySalesPhase(formData: FormData) {
   }).eq("id", phaseId).eq("study_id", studyId).eq("company_id", companyId).eq("phase_key", key);
   if (error) go(studyId, error.message, "error");
   refresh(studyId);
-  go(studyId, "Fase comercial atualizada.");
+  go(studyId, `Fase atualizada: ${targetUnits} unidade(s), equivalentes a ${targetPct.toFixed(1).replace(".", ",")}% do estoque.`);
 }
 
 export async function copyPreviousFeasibilitySalesPhaseTerms(formData: FormData) {
