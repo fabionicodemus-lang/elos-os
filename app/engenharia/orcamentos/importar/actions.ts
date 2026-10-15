@@ -23,13 +23,7 @@ function nameUnit(name: unknown, unit: unknown) {
   return `${normalizeImportText(name)}|${normalizeImportText(unit)}`;
 }
 
-type CatalogEntity = {
-  id: string;
-  code: string;
-  description: string;
-  unit: string;
-};
-
+type CatalogEntity = { id: string; code: string; description: string; unit: string };
 type IntegrationMapping = {
   source_entity_type: string;
   scope: "company" | "project";
@@ -39,7 +33,6 @@ type IntegrationMapping = {
   target_entity_type: string;
   target_entity_id: string;
 };
-
 type MatchResult = {
   target_entity_type: string | null;
   target_entity_id: string | null;
@@ -61,13 +54,7 @@ function catalogIndexes(rows: CatalogEntity[]) {
   return { byCode, byNameUnit };
 }
 
-function mappedTarget(
-  mappings: IntegrationMapping[],
-  projectId: string,
-  externalCode: string | null,
-  targetType: string,
-  entityTypes: string[],
-) {
+function mappedTarget(mappings: IntegrationMapping[], projectId: string, externalCode: string | null, targetType: string, entityTypes: string[]) {
   if (!externalCode) return null;
   const externalKey = key(externalCode);
   const candidates = mappings.filter((mapping) =>
@@ -77,7 +64,7 @@ function mappedTarget(
     && entityTypes.includes(mapping.source_entity_type)
     && (mapping.scope !== "project" || mapping.scope_id === projectId)
   );
-  candidates.sort((a, b) => (a.scope === "project" ? -1 : 1) - (b.scope === "project" ? -1 : 1));
+  candidates.sort((a, b) => Number(b.scope === "project") - Number(a.scope === "project"));
   return candidates[0] ?? null;
 }
 
@@ -93,13 +80,7 @@ function matchEntity(options: {
   byCode: Map<string, CatalogEntity[]>;
   byNameUnit: Map<string, CatalogEntity[]>;
 }): MatchResult {
-  const mapped = mappedTarget(
-    options.mappings,
-    options.projectId,
-    options.externalCode,
-    options.targetType,
-    options.entityTypes,
-  );
+  const mapped = mappedTarget(options.mappings, options.projectId, options.externalCode, options.targetType, options.entityTypes);
   if (mapped) {
     const target = options.catalog.find((row) => row.id === mapped.target_entity_id) ?? null;
     return {
@@ -114,50 +95,42 @@ function matchEntity(options: {
 
   if (options.externalCode) {
     const direct = options.byCode.get(options.externalCode.toUpperCase()) ?? [];
-    if (direct.length === 1) {
-      return {
-        target_entity_type: options.targetType,
-        target_entity_id: direct[0].id,
-        target_label: `${direct[0].code} · ${direct[0].description}`,
-        match_status: "exact_code",
-        match_method: "catalog_code",
-        confidence: 100,
-      };
-    }
-    if (direct.length > 1) {
-      return {
-        target_entity_type: options.targetType,
-        target_entity_id: null,
-        target_label: `${direct.length} cadastros com o mesmo código`,
-        match_status: "ambiguous",
-        match_method: "catalog_code_collision",
-        confidence: null,
-      };
-    }
+    if (direct.length === 1) return {
+      target_entity_type: options.targetType,
+      target_entity_id: direct[0].id,
+      target_label: `${direct[0].code} · ${direct[0].description}`,
+      match_status: "exact_code",
+      match_method: "catalog_code",
+      confidence: 100,
+    };
+    if (direct.length > 1) return {
+      target_entity_type: options.targetType,
+      target_entity_id: null,
+      target_label: `${direct.length} cadastros com o mesmo código`,
+      match_status: "ambiguous",
+      match_method: "catalog_code_collision",
+      confidence: null,
+    };
   }
 
   if (options.externalName) {
     const exactName = options.byNameUnit.get(nameUnit(options.externalName, options.externalUnit)) ?? [];
-    if (exactName.length === 1) {
-      return {
-        target_entity_type: options.targetType,
-        target_entity_id: exactName[0].id,
-        target_label: `${exactName[0].code} · ${exactName[0].description}`,
-        match_status: "exact_name_unit",
-        match_method: "catalog_name_unit",
-        confidence: 98,
-      };
-    }
-    if (exactName.length > 1) {
-      return {
-        target_entity_type: options.targetType,
-        target_entity_id: null,
-        target_label: `${exactName.length} cadastros com mesmo nome e unidade`,
-        match_status: "ambiguous",
-        match_method: "catalog_name_unit_collision",
-        confidence: null,
-      };
-    }
+    if (exactName.length === 1) return {
+      target_entity_type: options.targetType,
+      target_entity_id: exactName[0].id,
+      target_label: `${exactName[0].code} · ${exactName[0].description}`,
+      match_status: "exact_name_unit",
+      match_method: "catalog_name_unit",
+      confidence: 98,
+    };
+    if (exactName.length > 1) return {
+      target_entity_type: options.targetType,
+      target_entity_id: null,
+      target_label: `${exactName.length} cadastros com mesmo nome e unidade`,
+      match_status: "ambiguous",
+      match_method: "catalog_name_unit_collision",
+      confidence: null,
+    };
   }
 
   return {
@@ -181,7 +154,6 @@ export async function stageBudgetImport(formData: FormData) {
 
   const bytes = new Uint8Array(await uploaded.arrayBuffer());
   const fileHash = createHash("sha256").update(bytes).digest("hex");
-
   let parsed;
   try {
     parsed = parseBudgetWorkbook(bytes);
@@ -191,29 +163,14 @@ export async function stageBudgetImport(formData: FormData) {
   }
 
   const [servicesResult, inputsResult, mappingsResult, duplicateResult] = await Promise.all([
-    supabase.from("engineering_services")
-      .select("id,code,description,unit")
-      .eq("company_id", companyId)
-      .eq("status", "active")
-      .limit(10000),
-    supabase.from("engineering_inputs")
-      .select("id,code,description,unit")
-      .eq("company_id", companyId)
-      .eq("status", "active")
-      .limit(20000),
+    supabase.from("engineering_services").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").limit(10000),
+    supabase.from("engineering_inputs").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").limit(20000),
     supabase.from("integration_mappings")
       .select("source_entity_type,scope,scope_id,key_kind,external_key,target_entity_type,target_entity_id")
-      .eq("company_id", companyId)
-      .eq("source_system", parsed.catalog_namespace)
-      .eq("status", "confirmed")
-      .limit(20000),
+      .eq("company_id", companyId).eq("source_system", parsed.catalog_namespace).eq("status", "confirmed").limit(20000),
     supabase.from("engineering_budget_import_batches")
-      .select("id,created_at,status")
-      .eq("company_id", companyId)
-      .eq("project_id", projectId)
-      .eq("file_hash", fileHash)
-      .order("created_at", { ascending: false })
-      .limit(1),
+      .select("id,created_at,status").eq("company_id", companyId).eq("project_id", projectId).eq("file_hash", fileHash)
+      .order("created_at", { ascending: false }).limit(1),
   ]);
 
   if (servicesResult.error) redirect(resultUrl(servicesResult.error.message));
@@ -225,123 +182,56 @@ export async function stageBudgetImport(formData: FormData) {
   const mappings = (mappingsResult.data ?? []) as IntegrationMapping[];
   const serviceIndexes = catalogIndexes(services);
   const inputIndexes = catalogIndexes(inputs);
-
   let matched = 0;
-  let suggested = 0;
   let ambiguous = 0;
   let newCount = 0;
 
-  const stagedRows = parsed.rows.map((row: Record<string, any>) => {
+  const stagedRows = parsed.rows.map((row) => {
     let match: MatchResult;
     if (row.entity_kind === "group") {
-      match = {
-        target_entity_type: null,
-        target_entity_id: null,
-        target_label: null,
-        match_status: "ignored",
-        match_method: "budget_hierarchy",
-        confidence: 100,
-      };
+      match = { target_entity_type: null, target_entity_id: null, target_label: null, match_status: "ignored", match_method: "budget_hierarchy", confidence: 100 };
     } else if (row.entity_kind === "service") {
-      match = matchEntity({
-        projectId,
-        externalCode: row.external_code,
-        externalName: row.external_name,
-        externalUnit: row.external_unit,
-        targetType: "engineering_service",
-        entityTypes: ["service", "cost_center"],
-        mappings,
-        catalog: services,
-        ...serviceIndexes,
-      });
+      match = matchEntity({ projectId, externalCode: row.external_code, externalName: row.external_name, externalUnit: row.external_unit,
+        targetType: "engineering_service", entityTypes: ["service", "cost_center"], mappings, catalog: services, ...serviceIndexes });
     } else {
-      match = matchEntity({
-        projectId,
-        externalCode: row.external_code,
-        externalName: row.external_name,
-        externalUnit: row.external_unit,
-        targetType: "engineering_input",
-        entityTypes: ["input"],
-        mappings,
-        catalog: inputs,
-        ...inputIndexes,
-      });
+      match = matchEntity({ projectId, externalCode: row.external_code, externalName: row.external_name, externalUnit: row.external_unit,
+        targetType: "engineering_input", entityTypes: ["input"], mappings, catalog: inputs, ...inputIndexes });
     }
 
     if (["mapped", "exact_code", "exact_name_unit"].includes(match.match_status)) matched += 1;
-    else if (match.match_status === "suggested") suggested += 1;
     else if (match.match_status === "ambiguous") ambiguous += 1;
     else if (match.match_status === "new") newCount += 1;
 
     return {
-      company_id: companyId,
-      project_id: projectId,
-      entity_kind: row.entity_kind,
-      source_sheet: row.source_sheet,
-      source_row: row.source_row,
-      sort_order: row.sort_order,
-      source_group_code: row.source_group_code,
-      source_group_name: row.source_group_name,
-      source_service_code: row.source_service_code,
-      source_service_name: row.source_service_name,
-      external_code: row.external_code,
-      external_name: row.external_name,
-      external_unit: row.external_unit,
-      quantity: row.quantity,
-      unit_cost: row.unit_cost,
-      total_cost: row.total_cost,
-      coefficient: row.coefficient,
-      raw_coefficient: row.raw_coefficient,
-      target_entity_type: match.target_entity_type,
-      target_entity_id: match.target_entity_id,
-      target_label: match.target_label,
-      match_status: match.match_status,
-      match_method: match.match_method,
-      confidence: match.confidence,
-      payload: row.payload ?? {},
-      created_by: userId,
+      company_id: companyId, project_id: projectId,
+      entity_kind: row.entity_kind, source_sheet: row.source_sheet, source_row: row.source_row, sort_order: row.sort_order,
+      source_group_code: row.source_group_code, source_group_name: row.source_group_name,
+      source_service_code: row.source_service_code, source_service_name: row.source_service_name,
+      external_code: row.external_code, external_name: row.external_name, external_unit: row.external_unit,
+      quantity: row.quantity, unit_cost: row.unit_cost, total_cost: row.total_cost,
+      coefficient: row.coefficient, raw_coefficient: row.raw_coefficient,
+      target_entity_type: match.target_entity_type, target_entity_id: match.target_entity_id, target_label: match.target_label,
+      match_status: match.match_status, match_method: match.match_method, confidence: match.confidence,
+      payload: row.payload ?? {}, created_by: userId,
     };
   });
 
-  const { data: batch, error: batchError } = await supabase
-    .from("engineering_budget_import_batches")
-    .insert({
-      company_id: companyId,
-      project_id: projectId,
-      source_system: "xlsx",
-      catalog_namespace: parsed.catalog_namespace,
-      parser_key: parsed.parser_key,
-      file_name: uploaded.name,
-      file_hash: fileHash,
-      source_sheet: parsed.source_sheet,
-      source_budget_code: parsed.source_budget_code,
-      source_budget_name: parsed.source_budget_name,
-      source_version: parsed.source_version,
-      source_reference_date: parsed.source_reference_date,
-      source_area_m2: parsed.source_area_m2,
-      source_total: parsed.source_total,
-      status: "review",
-      groups_total: parsed.summary.groups,
-      services_total: parsed.summary.services,
-      inputs_total: parsed.summary.inputs,
-      matched_total: matched,
-      suggested_total: suggested,
-      ambiguous_total: ambiguous,
-      new_total: newCount,
-      metadata: {
-        unique_input_codes: parsed.summary.unique_input_codes,
-        priced_inputs: parsed.summary.priced_inputs,
-        previous_batch_id: duplicateResult.data?.[0]?.id ?? null,
-      },
-      created_by: userId,
-    })
-    .select("id")
-    .single();
+  const { data: batch, error: batchError } = await supabase.from("engineering_budget_import_batches").insert({
+    company_id: companyId, project_id: projectId, source_system: "xlsx", catalog_namespace: parsed.catalog_namespace,
+    parser_key: parsed.parser_key, file_name: uploaded.name, file_hash: fileHash, source_sheet: parsed.source_sheet,
+    source_budget_code: parsed.source_budget_code, source_budget_name: parsed.source_budget_name, source_version: parsed.source_version,
+    source_reference_date: parsed.source_reference_date, source_area_m2: parsed.source_area_m2, source_total: parsed.source_total,
+    status: "review", groups_total: parsed.summary.groups, services_total: parsed.summary.services, inputs_total: parsed.summary.inputs,
+    matched_total: matched, suggested_total: 0, ambiguous_total: ambiguous, new_total: newCount,
+    metadata: { unique_input_codes: parsed.summary.unique_input_codes, priced_inputs: parsed.summary.priced_inputs,
+      previous_batch_id: duplicateResult.data?.[0]?.id ?? null },
+    created_by: userId,
+  }).select("id").single();
 
   if (batchError || !batch?.id) redirect(resultUrl(batchError?.message || "Não foi possível criar o lote de staging."));
 
   for (let index = 0; index < stagedRows.length; index += INSERT_CHUNK) {
-    const chunk = stagedRows.slice(index, index + INSERT_CHUNK).map((row: Record<string, any>) => ({ ...row, batch_id: batch.id }));
+    const chunk = stagedRows.slice(index, index + INSERT_CHUNK).map((row) => ({ ...row, batch_id: batch.id }));
     const { error } = await supabase.from("engineering_budget_import_rows").insert(chunk);
     if (error) {
       await supabase.from("engineering_budget_import_batches").delete().eq("id", batch.id).eq("company_id", companyId);
@@ -357,12 +247,9 @@ export async function cancelBudgetImport(formData: FormData) {
   const batchId = String(formData.get("batch_id") ?? "").trim();
   if (!batchId) redirect(resultUrl("Lote inválido."));
   const { supabase, companyId } = await requireCompanyPermission("budgets.manage");
-  const { error } = await supabase
-    .from("engineering_budget_import_batches")
+  const { error } = await supabase.from("engineering_budget_import_batches")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", batchId)
-    .eq("company_id", companyId)
-    .neq("status", "promoted");
+    .eq("id", batchId).eq("company_id", companyId).neq("status", "promoted");
   if (error) redirect(resultUrl(error.message));
   revalidatePath(IMPORT_PATH);
   redirect(resultUrl("Lote cancelado. Nenhum dado canônico foi alterado.", "success"));
