@@ -97,7 +97,7 @@ export function FeasibilitySalesPlanManager({
 
   if (!phases.length) {
     const legacy = salesVelocities[0];
-    return <section className="feasibility-card feasibility-section">
+    return <section className="feasibility-card feasibility-section" id="vendas">
       <div className="feasibility-section-title">
         <div><span>Plano de Vendas e Recebimentos</span><h2>5 fases comerciais</h2></div>
         <p>Pré-lançamento → lançamento → início das obras → meio das obras → pronto.</p>
@@ -118,7 +118,7 @@ export function FeasibilitySalesPlanManager({
   const targetTotalPct = availableUnits > 0 ? targetUnitsTotal / availableUnits * 100 : 0;
   let cumulativeFactor = 1;
 
-  return <section className="feasibility-card feasibility-section">
+  return <section className="feasibility-card feasibility-section" id="vendas">
     <div className="feasibility-section-title">
       <div><span>Plano de Vendas e Recebimentos</span><h2>Estratégia comercial por fase</h2></div>
       <p>O início de cada fase também encerra a fase anterior. A última permanece ativa até zerar o estoque.</p>

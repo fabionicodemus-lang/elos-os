@@ -103,20 +103,33 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
     {messages.success ? <div className="auth-message success workspace-message">{messages.success}</div> : null}
     {studyResult.error || unitsResult.error || managedStructureError ? <div className="auth-message error workspace-message">A estrutura de viabilidade precisa estar atualizada. Aplique a migration mais recente para gerenciar áreas e plano de vendas.</div> : null}
 
-    <section className="feasibility-kpis">
-      <article><span>VGV bruto</span><strong>{money(calculated.gross_vgv)}</strong><small>{calculated.total_units} unidade(s)</small></article>
-      <article><span>Permuta física</span><strong>{money(calculated.barter_vgv)}</strong><small>{calculated.barter_units} unidade(s) fora do VGV disponível</small></article>
-      <article><span>VGV disponível</span><strong>{money(calculated.available_vgv)}</strong><small>{calculated.available_units} unidade(s) comercializável(is)</small></article>
-      <article className={Number(calculated.profit) >= 0 ? "positive" : "danger"}><span>Lucro projetado</span><strong>{money(calculated.profit)}</strong><small>após todos os custos estimados</small></article>
-      <article className={Number(calculated.margin_pct) >= 20 ? "positive" : ""}><span>Margem</span><strong>{pct(calculated.margin_pct)}</strong><small>sobre VGV disponível</small></article>
-      <article><span>TIR do projeto</span><strong>{pct(calculated.irr_annual_pct)}</strong><small>{calculated.irr_monthly_pct == null ? "fluxo ainda insuficiente" : `${pct(calculated.irr_monthly_pct)} a.m.`}</small></article>
-      <article className="danger"><span>Exposição máxima</span><strong>{money(calculated.exposure_max)}</strong><small>{monthLabel(study, Number(calculated.exposure_month ?? 0))}</small></article>
-      <article><span>VPL</span><strong>{money(calculated.npv)}</strong><small>taxa de desconto {pct(study.discount_rate_annual_pct)} a.a.</small></article>
-      <article><span>Área construída</span><strong>{number(calculated.built_area_m2, 0)} m²</strong><small>{number(calculated.apartment_area_m2, 0)} m² em apartamentos</small></article>
-      <article><span>Custo da obra</span><strong>{money(calculated.construction_cost)}</strong><small>{calculated.built_area_m2 > 0 ? money(Number(calculated.construction_cost) / Number(calculated.built_area_m2)) : "—"} / m² médio</small></article>
-      <article><span>Custo total</span><strong>{money(calculated.total_cost)}</strong><small>{calculated.available_vgv > 0 ? pct(Number(calculated.total_cost) / Number(calculated.available_vgv) * 100) : "—"} do VGV disponível</small></article>
-      <article><span>Payback</span><strong>{calculated.payback_month == null ? "—" : monthLabel(study, Number(calculated.payback_month))}</strong><small>retorno acumulado ao caixa positivo</small></article>
-    </section>
+    <div className="feasibility-page">
+      <nav className="feasibility-jump-nav" aria-label="Seções do estudo">
+        <span>Ir para</span>
+        <a href="#resumo">Resumo</a>
+        <a href="#cub">CUB-base</a>
+        <a href="#premissas">Premissas</a>
+        <a href="#produto">Produto</a>
+        <a href="#vendas">Vendas</a>
+        <a href="#areas">Áreas</a>
+        <a href="#resultado">Resultado</a>
+        <a href="#fluxo">Fluxo</a>
+      </nav>
+
+      <section className="feasibility-kpis" id="resumo" aria-label="Resumo executivo da viabilidade">
+        <article className="feasibility-kpi-primary"><span>VGV disponível</span><strong>{money(calculated.available_vgv)}</strong><small>{calculated.available_units} unidade(s) comercializável(is)</small></article>
+        <article className={`feasibility-kpi-primary ${Number(calculated.profit) >= 0 ? "positive" : "danger"}`}><span>Lucro projetado</span><strong>{money(calculated.profit)}</strong><small>após todos os custos estimados</small></article>
+        <article className={`feasibility-kpi-primary ${Number(calculated.margin_pct) >= 20 ? "positive" : ""}`}><span>Margem</span><strong>{pct(calculated.margin_pct)}</strong><small>sobre VGV disponível</small></article>
+        <article className="feasibility-kpi-primary danger"><span>Exposição máxima</span><strong>{money(calculated.exposure_max)}</strong><small>{monthLabel(study, Number(calculated.exposure_month ?? 0))}</small></article>
+        <article><span>VGV bruto</span><strong>{money(calculated.gross_vgv)}</strong><small>{calculated.total_units} unidade(s)</small></article>
+        <article><span>Permuta física</span><strong>{money(calculated.barter_vgv)}</strong><small>{calculated.barter_units} unidade(s) fora do VGV disponível</small></article>
+        <article><span>TIR do projeto</span><strong>{pct(calculated.irr_annual_pct)}</strong><small>{calculated.irr_monthly_pct == null ? "fluxo ainda insuficiente" : `${pct(calculated.irr_monthly_pct)} a.m.`}</small></article>
+        <article><span>VPL</span><strong>{money(calculated.npv)}</strong><small>taxa de desconto {pct(study.discount_rate_annual_pct)} a.a.</small></article>
+        <article><span>Área construída</span><strong>{number(calculated.built_area_m2, 0)} m²</strong><small>{number(calculated.apartment_area_m2, 0)} m² em apartamentos</small></article>
+        <article><span>Custo da obra</span><strong>{money(calculated.construction_cost)}</strong><small>{calculated.built_area_m2 > 0 ? money(Number(calculated.construction_cost) / Number(calculated.built_area_m2)) : "—"} / m² médio</small></article>
+        <article><span>Custo total</span><strong>{money(calculated.total_cost)}</strong><small>{calculated.available_vgv > 0 ? pct(Number(calculated.total_cost) / Number(calculated.available_vgv) * 100) : "—"} do VGV disponível</small></article>
+        <article><span>Payback</span><strong>{calculated.payback_month == null ? "—" : monthLabel(study, Number(calculated.payback_month))}</strong><small>retorno acumulado ao caixa positivo</small></article>
+      </section>
 
     {study.status === "converted" ? <div className="feasibility-note"><strong>Baseline aprovado e congelado.</strong> Este estudo originou o empreendimento e permanece como referência histórica para comparar a viabilidade inicial com a previsão atual e o realizado.</div> : null}
 
@@ -135,7 +148,7 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
       totalCost={Number(calculated.total_cost ?? 0)}
     />
 
-    <form action={updateFeasibilityStudy}>
+    <form action={updateFeasibilityStudy} id="premissas">
       <input type="hidden" name="study_id" value={study.id} />
       <section className="feasibility-card feasibility-section">
         <div className="feasibility-section-title"><div><span>Identificação</span><h2>Oportunidade e premissas gerais</h2></div><p>O estudo pode existir antes da SPE; a empresa fiscal pode ser vinculada antes da aprovação.</p></div>
@@ -203,7 +216,7 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
         <input type="hidden" name="post_keys_pct" value={study.post_keys_pct ?? 30} />
         <input type="hidden" name="post_keys_months" value={study.post_keys_months ?? 24} />
         <div className="feasibility-note" style={{marginTop:12}}>A obra utiliza uma curva física estimada em S para projetar desembolsos. O caixa de vendas passa a seguir as condições de cada fase comercial.</div>
-        {editable ? <div className="feasibility-actions"><button className="feasibility-primary" type="submit">Salvar e recalcular</button></div> : null}
+        {editable ? <div className="feasibility-actions feasibility-save-bar"><span>As alterações atualizam automaticamente indicadores, custos e fluxo.</span><button className="feasibility-primary" type="submit">Salvar e recalcular</button></div> : null}
       </section>
     </form>
 
@@ -217,20 +230,21 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
       editable={editable}
     />
 
-    <section className="feasibility-two feasibility-section">
+    <section className="feasibility-two feasibility-section" id="resultado">
       <div className="feasibility-card"><div className="feasibility-section-title"><div><span>Resultado econômico</span><h2>Composição dos custos</h2></div></div><div className="registry-table-wrap"><table className="registry-table feasibility-metric-table"><thead><tr><th>Conta</th><th>Valor</th></tr></thead><tbody>{costRows.map(([label,value]) => <tr key={String(label)}><td>{label}</td><td><strong>{money(value)}</strong></td></tr>)}<tr><td><strong>Custo total</strong></td><td><strong>{money(calculated.total_cost)}</strong></td></tr><tr><td><strong>Lucro</strong></td><td><strong>{money(calculated.profit)}</strong></td></tr></tbody></table></div></div>
       <div className="feasibility-card"><div className="feasibility-section-title"><div><span>Terreno</span><h2>Carga econômica</h2></div></div><p className="feasibility-note">A permuta é apresentada como carga econômica do terreno para comparação entre oportunidades, mas não é somada novamente ao custo da DRE.</p><div className="registry-table-wrap"><table className="registry-table feasibility-metric-table"><tbody><tr><td>Permuta física pelo VGV</td><td><strong>{money(calculated.barter_vgv)}</strong></td></tr><tr><td>Terreno e Viabilização em caixa</td><td><strong>{money(calculated.land_cost)}</strong></td></tr><tr><td><strong>Carga econômica do terreno</strong></td><td><strong>{money(Number(calculated.barter_vgv)+Number(calculated.land_cost))}</strong></td></tr><tr><td>Carga / VGV bruto</td><td><strong>{calculated.gross_vgv > 0 ? pct((Number(calculated.barter_vgv)+Number(calculated.land_cost))/Number(calculated.gross_vgv)*100) : "—"}</strong></td></tr></tbody></table></div></div>
     </section>
 
-    <section className="feasibility-card feasibility-section">
+    <section className="feasibility-card feasibility-section" id="fluxo">
       <div className="feasibility-section-title"><div><span>Fluxo projetado</span><h2>Entradas, saídas e exposição de caixa</h2></div><p>{cashflow.length} mês(es) simulados</p></div>
       <div className="registry-table-wrap feasibility-flow"><table className="registry-table"><thead><tr><th>Mês</th><th>Vendas</th><th>Recebimentos</th><th>Terreno</th><th>Projetos</th><th>Obra</th><th>Comissão</th><th>Impostos</th><th>Marketing</th><th>Central</th><th>Financeiro</th><th>Contingência</th><th>Caixa mês</th><th>Acumulado</th></tr></thead><tbody>{cashflow.map(row => <tr key={row.month}><td><strong>{monthLabel(study,row.month)}</strong></td><td>{money(row.sales)}</td><td>{money(row.receipts)}</td><td>{money(row.land)}</td><td>{money(row.projects)}</td><td>{money(row.construction)}</td><td>{money(row.commission)}</td><td>{money(row.taxes)}</td><td>{money(row.marketing)}</td><td>{money(row.centralOffice)}</td><td>{money(row.financial)}</td><td>{money(row.contingency)}</td><td><strong>{money(row.net)}</strong></td><td><strong>{money(row.cumulative)}</strong></td></tr>)}</tbody></table></div>
     </section>
 
-    {study.status === "draft" && canApprove ? <section className="feasibility-card feasibility-section">
+    {study.status === "draft" && canApprove ? <section className="feasibility-card feasibility-section" id="decisao">
       <div className="feasibility-section-title"><div><span>Decisão de investimento</span><h2>Aprovar permuta e criar empreendimento</h2></div><p>Esta ação congela o estudo e cria a obra em Planejamento.</p></div>
       <div className="feasibility-note feasibility-warning">Depois da aprovação, as premissas deste estudo não poderão ser alteradas. O snapshot passa a ser o baseline econômico original do empreendimento.</div>
       <form action={approveAndConvertFeasibilityStudy} className="feasibility-actions"><input type="hidden" name="study_id" value={study.id}/><button className="feasibility-primary" type="submit">Aprovar permuta e criar empreendimento</button></form>
     </section> : null}
+    </div>
   </AppShell>;
 }

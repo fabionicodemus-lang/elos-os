@@ -62,7 +62,7 @@ export function FeasibilityUnitTypesManager({
   unitTypes:FeasibilityUnitType[];
   editable:boolean;
 }) {
-  return <section className="feasibility-card feasibility-section">
+  return <section className="feasibility-card feasibility-section" id="produto">
     <div className="feasibility-section-title">
       <div><span>Produto e permuta física</span><h2>Tipologias dos apartamentos</h2></div>
       <p>Veja todas as tipologias cadastradas; edite ou exclua sem perder o contexto do estudo.</p>
@@ -126,7 +126,7 @@ export function FeasibilityConstructionAreasManager({
   apartmentCostM2:number;
   editable:boolean;
 }) {
-  return <section className="feasibility-card feasibility-section">
+  return <section className="feasibility-card feasibility-section" id="areas">
     <div className="feasibility-section-title">
       <div><span>Áreas de construção</span><h2>Áreas e custos por m²</h2></div>
       <p>A área dos apartamentos vem das tipologias. As demais áreas podem ser criadas, editadas e excluídas livremente.</p>

@@ -30,7 +30,7 @@ export function FeasibilityCubBaseline(props: Props) {
   const ready = Boolean(indexName && referenceMonth && baseValue > 0);
 
   return (
-    <section className="feasibility-card feasibility-section">
+    <section className="feasibility-card feasibility-section" id="cub">
       <div className="feasibility-section-title">
         <div><span>Referência de reajuste</span><h2>CUB-base do estudo</h2></div>
         <p>Uma única referência monetária para VGV e custos. O CUB-base fica congelado quando o estudo é aprovado.</p>
