@@ -32,19 +32,13 @@ function go(studyId: string, message: string, type: "success" | "error" = "succe
 
 export async function updateFeasibilityCubBaseline(formData: FormData) {
   const studyId = text(formData, "study_id");
-  const vgvIndexName = text(formData, "vgv_cub_index_name");
-  const vgvReferenceMonth = monthValue(formData, "vgv_cub_reference_month");
-  const vgvBaseValue = numberValue(formData, "vgv_cub_base_value");
-  const costIndexName = text(formData, "cost_cub_index_name");
-  const costReferenceMonth = monthValue(formData, "cost_cub_reference_month");
-  const costBaseValue = numberValue(formData, "cost_cub_base_value");
+  const indexName = text(formData, "cub_index_name");
+  const referenceMonth = monthValue(formData, "cub_reference_month");
+  const baseValue = numberValue(formData, "cub_base_value");
 
   if (!studyId) redirect(`${BASE}?error=Estudo%20inv%C3%A1lido.`);
-  if (
-    !vgvIndexName || !vgvReferenceMonth || !Number.isFinite(vgvBaseValue) || vgvBaseValue <= 0 ||
-    !costIndexName || !costReferenceMonth || !Number.isFinite(costBaseValue) || costBaseValue <= 0
-  ) {
-    go(studyId, "Informe índice, mês-base e valor do CUB tanto para o VGV quanto para os custos.", "error");
+  if (!indexName || !referenceMonth || !Number.isFinite(baseValue) || baseValue <= 0) {
+    go(studyId, "Informe índice, mês-base e valor do CUB-base.", "error");
   }
 
   const { supabase, companyId } = await requireCompanyPermission("commercial.incorporation.manage");
@@ -58,16 +52,18 @@ export async function updateFeasibilityCubBaseline(formData: FormData) {
   if (!study) go(studyId, "Estudo não localizado.", "error");
   if (study.status !== "draft") go(studyId, "O CUB-base faz parte do baseline aprovado e não pode ser alterado depois da conversão.", "error");
 
+  // Mantemos os campos VGV/custo por compatibilidade com baselines antigos,
+  // mas a interface e a regra de negócio usam uma única referência.
   const { error } = await supabase
     .from("commercial_feasibility_studies")
     .update({
-      vgv_cub_index_name: vgvIndexName,
-      vgv_cub_reference_month: vgvReferenceMonth,
-      vgv_cub_base_value: vgvBaseValue,
-      cost_cub_index_name: costIndexName,
-      cost_cub_reference_month: costReferenceMonth,
-      cost_cub_base_value: costBaseValue,
-      updated_at: new Date().toISOString(),
+      vgv_cub_index_name:indexName,
+      vgv_cub_reference_month:referenceMonth,
+      vgv_cub_base_value:baseValue,
+      cost_cub_index_name:indexName,
+      cost_cub_reference_month:referenceMonth,
+      cost_cub_base_value:baseValue,
+      updated_at:new Date().toISOString(),
     })
     .eq("id", studyId)
     .eq("company_id", companyId)
@@ -77,5 +73,5 @@ export async function updateFeasibilityCubBaseline(formData: FormData) {
 
   revalidatePath(detail(studyId));
   revalidatePath(BASE);
-  go(studyId, "Referências CUB do VGV e dos custos salvas no baseline.");
+  go(studyId, "CUB-base único salvo para VGV e custos.");
 }

@@ -6,13 +6,13 @@ import { requireCompanyPermission } from "@/lib/workspace";
 import { approveAndConvertFeasibilityStudy, updateFeasibilityStudy } from "../actions";
 import {
   FeasibilityConstructionAreasManager,
-  FeasibilitySalesVelocitiesManager,
   FeasibilityUnitTypesManager,
   type FeasibilityConstructionArea,
   type FeasibilitySalesVelocity,
   type FeasibilityUnitType,
 } from "./managed-assumptions";
 import { FeasibilityCubBaseline } from "./cub-baseline";
+import { FeasibilitySalesPlanManager } from "./sales-plan";
 import { TaxRegimeFields } from "./tax-regime-fields";
 import "../feasibility.css";
 
@@ -80,7 +80,6 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
     ? { ...study.approved_metrics, cashflow: study.approved_cashflow ?? [] }
     : calculateFeasibility(study, unitTypes, { constructionAreas, salesVelocities });
   const cashflow = (calculated.cashflow ?? []) as CashflowRow[];
-  const totalPayment = Number(study.entry_pct ?? 0) + Number(study.during_construction_pct ?? 0) + Number(study.keys_pct ?? 0) + Number(study.post_keys_pct ?? 0);
 
   const costRows = [
     ["Terreno e Viabilização", calculated.land_cost],
@@ -102,7 +101,7 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
     actions={<><Link className="elos-button" prefetch={false} href="/comercial/incorporacao/viabilidade">Todos os estudos</Link>{study.converted_project_id ? <Link className="elos-button" prefetch={false} href="/empreendimentos">Abrir empreendimentos</Link> : null}</>}>
     {messages.error ? <div className="auth-message error workspace-message">{messages.error}</div> : null}
     {messages.success ? <div className="auth-message success workspace-message">{messages.success}</div> : null}
-    {studyResult.error || unitsResult.error || managedStructureError ? <div className="auth-message error workspace-message">A estrutura de viabilidade precisa estar atualizada. Aplique a migration mais recente para gerenciar áreas e velocidades de venda.</div> : null}
+    {studyResult.error || unitsResult.error || managedStructureError ? <div className="auth-message error workspace-message">A estrutura de viabilidade precisa estar atualizada. Aplique a migration mais recente para gerenciar áreas e plano de vendas.</div> : null}
 
     <section className="feasibility-kpis">
       <article><span>VGV bruto</span><strong>{money(calculated.gross_vgv)}</strong><small>{calculated.total_units} unidade(s)</small></article>
@@ -188,27 +187,28 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
       </section>
 
       <section className="feasibility-card feasibility-section">
-        <div className="feasibility-section-title"><div><span>Prazo e recebimentos</span><h2>Fluxo do empreendimento</h2></div><p>As velocidades de venda são gerenciadas por fases logo abaixo.</p></div>
+        <div className="feasibility-section-title"><div><span>Cronograma e retorno</span><h2>Prazo do empreendimento</h2></div><p>Velocidade, valorização e recebimentos são configurados no Plano de Vendas e Recebimentos.</p></div>
         <div className="feasibility-form">
           <label>Meses de pré-obra<input name="preconstruction_months" type="number" min="0" max="60" defaultValue={study.preconstruction_months ?? 6} disabled={!editable} /></label>
           <label>Início previsto da obra<input name="construction_start_date" type="date" defaultValue={study.construction_start_date ?? ""} disabled={!editable} /></label>
           <label>Duração da obra (meses)<input name="construction_duration_months" type="number" min="1" max="180" defaultValue={study.construction_duration_months ?? 36} disabled={!editable} /></label>
-          <label>Entrada (%)<input name="entry_pct" type="number" min="0" max="100" step="0.01" defaultValue={study.entry_pct ?? 10} disabled={!editable} /></label>
-          <label>Durante obra (%)<input name="during_construction_pct" type="number" min="0" max="100" step="0.01" defaultValue={study.during_construction_pct ?? 40} disabled={!editable} /></label>
-          <label>Chaves (%)<input name="keys_pct" type="number" min="0" max="100" step="0.01" defaultValue={study.keys_pct ?? 20} disabled={!editable} /></label>
-          <label>Pós-chaves (%)<input name="post_keys_pct" type="number" min="0" max="100" step="0.01" defaultValue={study.post_keys_pct ?? 30} disabled={!editable} /></label>
-          <label>Pós-chaves (meses)<input name="post_keys_months" type="number" min="1" max="240" defaultValue={study.post_keys_months ?? 24} disabled={!editable} /></label>
           <label>Taxa de desconto VPL (% a.a.)<input name="discount_rate_annual_pct" type="number" step="0.01" defaultValue={study.discount_rate_annual_pct ?? 15} disabled={!editable} /></label>
-          <label className="span-2">Notas<textarea name="notes" defaultValue={study.notes ?? ""} disabled={!editable} /></label>
+          <label className="span-4">Notas<textarea name="notes" defaultValue={study.notes ?? ""} disabled={!editable} /></label>
         </div>
         <input type="hidden" name="sales_start_offset_months" value={study.sales_start_offset_months ?? -3} />
         <input type="hidden" name="sales_velocity_units_month" value={study.sales_velocity_units_month ?? 2} />
-        <div className={`feasibility-note ${Math.abs(totalPayment - 100) > 0.001 ? "feasibility-warning" : ""}`} style={{marginTop:12}}>Fluxo do cliente: {number(totalPayment,2)}% distribuído entre entrada, obra, chaves e pós-chaves. A obra utiliza uma curva física estimada em S para projetar os desembolsos.</div>
+        <input type="hidden" name="entry_pct" value={study.entry_pct ?? 10} />
+        <input type="hidden" name="during_construction_pct" value={study.during_construction_pct ?? 40} />
+        <input type="hidden" name="keys_pct" value={study.keys_pct ?? 20} />
+        <input type="hidden" name="post_keys_pct" value={study.post_keys_pct ?? 30} />
+        <input type="hidden" name="post_keys_months" value={study.post_keys_months ?? 24} />
+        <div className="feasibility-note" style={{marginTop:12}}>A obra utiliza uma curva física estimada em S para projetar desembolsos. O caixa de vendas passa a seguir as condições de cada fase comercial.</div>
         {editable ? <div className="feasibility-actions"><button className="feasibility-primary" type="submit">Salvar e recalcular</button></div> : null}
       </section>
     </form>
 
     <FeasibilityUnitTypesManager studyId={study.id} unitTypes={unitTypes} editable={editable} />
+    <FeasibilitySalesPlanManager studyId={study.id} salesVelocities={salesVelocities} availableUnits={Number(calculated.available_units ?? 0)} editable={editable} />
     <FeasibilityConstructionAreasManager
       studyId={study.id}
       constructionAreas={constructionAreas}
@@ -216,7 +216,6 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
       apartmentCostM2={Number(study.apartment_cost_m2 ?? 0)}
       editable={editable}
     />
-    <FeasibilitySalesVelocitiesManager studyId={study.id} salesVelocities={salesVelocities} editable={editable} />
 
     <section className="feasibility-two feasibility-section">
       <div className="feasibility-card"><div className="feasibility-section-title"><div><span>Resultado econômico</span><h2>Composição dos custos</h2></div></div><div className="registry-table-wrap"><table className="registry-table feasibility-metric-table"><thead><tr><th>Conta</th><th>Valor</th></tr></thead><tbody>{costRows.map(([label,value]) => <tr key={String(label)}><td>{label}</td><td><strong>{money(value)}</strong></td></tr>)}<tr><td><strong>Custo total</strong></td><td><strong>{money(calculated.total_cost)}</strong></td></tr><tr><td><strong>Lucro</strong></td><td><strong>{money(calculated.profit)}</strong></td></tr></tbody></table></div></div>
