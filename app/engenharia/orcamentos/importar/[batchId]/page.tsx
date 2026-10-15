@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { cancelBudgetImport } from "../actions";
+import { promoteBudgetImport, resolveBudgetImportEntity } from "../review-actions";
 
 function money(value: number | null | undefined) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value ?? 0));
@@ -12,8 +13,42 @@ function decimal(value: number | null | undefined, digits = 4) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(Number(value ?? 0));
 }
 
+function normalized(value: unknown) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function entityKey(row: { entity_kind: string; external_code: string | null; external_name: string | null; external_unit: string | null }) {
+  return [row.entity_kind, normalized(row.external_code), normalized(row.external_name), normalized(row.external_unit)].join("|");
+}
+
+function candidateScore(
+  pending: { external_code: string | null; external_name: string | null; external_unit: string | null },
+  target: { code: string; description: string; unit: string },
+) {
+  const pCode = normalized(pending.external_code);
+  const pName = normalized(pending.external_name);
+  const pUnit = normalized(pending.external_unit);
+  const tCode = normalized(target.code);
+  const tName = normalized(target.description);
+  const tUnit = normalized(target.unit);
+  let score = 0;
+  if (pUnit && pUnit === tUnit) score += 25;
+  if (pCode && pCode === tCode) score += 100;
+  if (pName && pName === tName) score += 90;
+  if (pName && (tName.includes(pName) || pName.includes(tName))) score += 45;
+  const tokens = new Set(pName.split(" ").filter((token) => token.length > 2));
+  const targetTokens = new Set(tName.split(" ").filter((token) => token.length > 2));
+  tokens.forEach((token) => { if (targetTokens.has(token)) score += 8; });
+  return score;
+}
+
 const matchLabel: Record<string, string> = {
-  mapped: "Mapa de Integrações",
+  mapped: "Mapa / confirmado",
   exact_code: "Código exato",
   exact_name_unit: "Nome + unidade",
   suggested: "Sugestão",
@@ -22,16 +57,42 @@ const matchLabel: Record<string, string> = {
   ignored: "Hierarquia",
 };
 
+const resolutionLabel: Record<string, string> = {
+  unresolved: "Pendente",
+  auto: "Aceito automaticamente",
+  reuse: "Reutilizar cadastro",
+  create: "Criar na promoção",
+  created: "Criado na promoção",
+  ignored: "Hierarquia",
+};
+
+type CatalogEntity = { id: string; code: string; description: string; unit: string };
+type PendingRow = {
+  id: string;
+  entity_kind: "service" | "input";
+  external_code: string | null;
+  external_name: string | null;
+  external_unit: string | null;
+  source_row: number;
+  match_status: string;
+};
+
 export default async function BudgetImportReviewPage({
   params,
   searchParams,
 }: {
   params: Promise<{ batchId: string }>;
-  searchParams: Promise<{ kind?: string; match?: string }>;
+  searchParams: Promise<{ kind?: string; match?: string; success?: string; error?: string }>;
 }) {
   const { batchId } = await params;
   const filters = await searchParams;
-  const { supabase, company, companyId } = await requireCompanyPermission("budgets.view");
+  const workspace = await requireCompanyPermission("budgets.view");
+  const { supabase, company, companyId, roleKey } = workspace;
+
+  const manageResult = roleKey === "owner" || roleKey === "admin"
+    ? { data: true, error: null }
+    : await supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "budgets.manage" });
+  const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
 
   const { data: batch, error: batchError } = await supabase
     .from("engineering_budget_import_batches")
@@ -43,7 +104,7 @@ export default async function BudgetImportReviewPage({
 
   let rowsQuery = supabase
     .from("engineering_budget_import_rows")
-    .select("id,entity_kind,source_row,source_group_code,source_group_name,source_service_code,source_service_name,external_code,external_name,external_unit,quantity,unit_cost,total_cost,coefficient,target_label,match_status,match_method,confidence")
+    .select("id,entity_kind,source_row,source_group_code,source_group_name,source_service_code,source_service_name,external_code,external_name,external_unit,quantity,unit_cost,total_cost,coefficient,target_label,match_status,match_method,confidence,resolution_action,canonical_category")
     .eq("batch_id", batchId)
     .eq("company_id", companyId)
     .order("source_row", { ascending: true })
@@ -52,19 +113,40 @@ export default async function BudgetImportReviewPage({
   if (["group", "service", "input"].includes(filters.kind ?? "")) rowsQuery = rowsQuery.eq("entity_kind", filters.kind!);
   if (["mapped", "exact_code", "exact_name_unit", "suggested", "ambiguous", "new", "ignored"].includes(filters.match ?? "")) rowsQuery = rowsQuery.eq("match_status", filters.match!);
 
-  const { data: rows, error: rowsError } = await rowsQuery;
-  const unresolved = Number(batch.new_total ?? 0) + Number(batch.ambiguous_total ?? 0) + Number(batch.suggested_total ?? 0);
+  const [rowsResult, pendingResult, servicesResult, inputsResult] = await Promise.all([
+    rowsQuery,
+    supabase.from("engineering_budget_import_rows")
+      .select("id,entity_kind,external_code,external_name,external_unit,source_row,match_status")
+      .eq("batch_id", batchId).eq("company_id", companyId).eq("resolution_action", "unresolved")
+      .in("entity_kind", ["service", "input"]).order("source_row").limit(10000),
+    supabase.from("engineering_services").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").limit(10000),
+    supabase.from("engineering_inputs").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").limit(20000),
+  ]);
+
+  const pendingMap = new Map<string, PendingRow>();
+  ((pendingResult.data ?? []) as PendingRow[]).forEach((row) => {
+    const key = entityKey(row);
+    if (!pendingMap.has(key)) pendingMap.set(key, row);
+  });
+  const uniquePending = [...pendingMap.values()];
+  const visiblePending = uniquePending.slice(0, 100);
+  const services = (servicesResult.data ?? []) as CatalogEntity[];
+  const inputs = (inputsResult.data ?? []) as CatalogEntity[];
+  const promotion = (batch.metadata as { promotion?: { canonical_total?: number; source_total?: number; difference?: number } } | null)?.promotion;
 
   return (
     <AppShell
       activeGroup="engineering"
       activeItem="budgets"
       eyebrow="Engenharia · Importação de orçamento"
-      title="Revisar staging"
-      description={`${company.name} · ${batch.file_name} · nenhum dado canônico foi alterado.`}
+      title="Revisar e promover"
+      description={`${company.name} · ${batch.file_name} · origem preservada até a promoção.`}
       actions={<Link prefetch={false} className="elos-button" href="/engenharia/orcamentos/importar">← Importações</Link>}
     >
-      {rowsError ? <div className="auth-message error workspace-message">{rowsError.message}</div> : null}
+      {filters.success ? <div className="auth-message success workspace-message">{filters.success}</div> : null}
+      {filters.error ? <div className="auth-message error workspace-message">{filters.error}</div> : null}
+      {rowsResult.error ? <div className="auth-message error workspace-message">{rowsResult.error.message}</div> : null}
+      {pendingResult.error ? <div className="auth-message error workspace-message">{pendingResult.error.message}</div> : null}
 
       <section className="budget-kpi-grid">
         <article><span>Grupos</span><strong>{batch.groups_total}</strong><small>hierarquia detectada</small></article>
@@ -75,80 +157,155 @@ export default async function BudgetImportReviewPage({
 
       <section className="budget-flow-card">
         <div className="budget-flow-head">
-          <div><span>Matching</span><h2>{batch.matched_total} encontrados · {unresolved} pendentes</h2></div>
-          <p>O arquivo usa namespace <strong>{batch.catalog_namespace}</strong>; códigos externos permanecem apenas como referência.</p>
+          <div><span>Revisão</span><h2>{uniquePending.length} entidade(s) única(s) ainda pendente(s)</h2></div>
+          <p>Status do lote: <strong>{batch.status}</strong>. O namespace externo é <strong>{batch.catalog_namespace}</strong>; o código externo não vira identidade do Elos.</p>
         </div>
         <div className="budget-flow-grid">
           <article><b>{batch.matched_total} encontrados</b><span>Mapa, código exato ou nome + unidade.</span></article>
-          <article><b>{batch.suggested_total} sugestões</b><span>Precisam de confirmação antes da promoção.</span></article>
-          <article><b>{batch.ambiguous_total} ambíguos</b><span>Mais de um destino possível.</span></article>
-          <article><b>{batch.new_total} novos</b><span>Sem equivalente localizado na base atual.</span></article>
+          <article><b>{batch.ambiguous_total} ambíguos na origem</b><span>Podem ser vinculados manualmente abaixo.</span></article>
+          <article><b>{batch.new_total} sem equivalente inicial</b><span>Podem reutilizar um cadastro ou criar um novo na promoção.</span></article>
+          <article><b>{batch.status === "ready" ? "Pronto" : "Em revisão"}</b><span>A promoção só libera com zero pendências.</span></article>
         </div>
       </section>
+
+      {canManage && uniquePending.length > 0 ? (
+        <section className="budget-table-card">
+          <div className="budget-section-head">
+            <div><span>Pendências únicas</span><h2>Resolver antes de promover</h2></div>
+            <p>{visiblePending.length} de {uniquePending.length} entidade(s) exibida(s). Resolver uma entidade atualiza todas as ocorrências iguais no lote.</p>
+          </div>
+          <div className="registry-table-wrap">
+            <table className="registry-table budgets-table">
+              <thead><tr><th>Tipo</th><th>Origem</th><th>Un.</th><th>Reutilizar cadastro Elos</th><th>Ou criar novo</th></tr></thead>
+              <tbody>
+                {visiblePending.map((pending) => {
+                  const catalog = pending.entity_kind === "service" ? services : inputs;
+                  const candidates = catalog
+                    .map((target) => ({ target, score: candidateScore(pending, target) }))
+                    .filter(({ score, target }) => score > 0 || normalized(target.unit) === normalized(pending.external_unit))
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 8);
+                  return (
+                    <tr key={entityKey(pending)}>
+                      <td><strong>{pending.entity_kind === "service" ? "Serviço" : "Insumo"}</strong><span>linha {pending.source_row}</span></td>
+                      <td><strong>{pending.external_code || "sem código"}</strong><span>{pending.external_name || "—"}</span></td>
+                      <td>{pending.external_unit || "—"}</td>
+                      <td>
+                        <form action={resolveBudgetImportEntity}>
+                          <input type="hidden" name="batch_id" value={batchId} />
+                          <input type="hidden" name="row_id" value={pending.id} />
+                          <input type="hidden" name="resolution_action" value="reuse" />
+                          <select name="target_id" required defaultValue="">
+                            <option value="" disabled>Selecionar equivalente</option>
+                            {candidates.map(({ target, score }) => (
+                              <option key={target.id} value={target.id}>{target.code} · {target.description} · {target.unit} ({score})</option>
+                            ))}
+                          </select>
+                          <button type="submit">Vincular</button>
+                        </form>
+                      </td>
+                      <td>
+                        <form action={resolveBudgetImportEntity}>
+                          <input type="hidden" name="batch_id" value={batchId} />
+                          <input type="hidden" name="row_id" value={pending.id} />
+                          <input type="hidden" name="resolution_action" value="create" />
+                          {pending.entity_kind === "input" ? (
+                            <select name="category" required defaultValue="">
+                              <option value="" disabled>Categoria</option>
+                              <option value="material">Material</option>
+                              <option value="labor">Mão de obra</option>
+                              <option value="equipment">Equipamento</option>
+                              <option value="service">Serviço terceirizado</option>
+                              <option value="freight">Frete</option>
+                              <option value="other">Outro</option>
+                            </select>
+                          ) : null}
+                          <button type="submit">Criar novo na promoção</button>
+                        </form>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      {canManage && batch.status === "ready" && !batch.promoted_budget_id ? (
+        <section className="budget-toolbar-card">
+          <div className="budget-section-head">
+            <div><span>Promoção controlada</span><h2>Criar a revisão canônica no Elos</h2></div>
+            <p>Novos cadastros, mapa, orçamento e composições são criados juntos. O orçamento nasce em revisão e não vira base automaticamente.</p>
+          </div>
+          <form action={promoteBudgetImport} className="budget-modal-form">
+            <input type="hidden" name="batch_id" value={batchId} />
+            <label><span>Código da revisão</span><input name="budget_code" defaultValue={batch.source_budget_code || "FLOW-IMP"} required /></label>
+            <label><span>Nome</span><input name="budget_name" defaultValue={batch.source_budget_name || "Orçamento Flow importado"} required /></label>
+            <label><span>Versão</span><input name="budget_version" defaultValue={batch.source_version || "R01"} required /></label>
+            <button type="submit">Promover orçamento</button>
+          </form>
+        </section>
+      ) : null}
+
+      {batch.promoted_budget_id ? (
+        <section className="budget-flow-card">
+          <div className="budget-flow-head">
+            <div><span>Promovido</span><h2>Orçamento canônico criado</h2></div>
+            <Link className="elos-button" href={`/engenharia/orcamentos/${batch.promoted_budget_id}`}>Abrir orçamento</Link>
+          </div>
+          {promotion ? (
+            <div className="budget-flow-grid">
+              <article><b>{money(promotion.source_total)}</b><span>Total da origem</span></article>
+              <article><b>{money(promotion.canonical_total)}</b><span>Total promovido</span></article>
+              <article><b>{money(promotion.difference)}</b><span>Diferença de conciliação</span></article>
+              <article><b>Em revisão</b><span>Só depois da conferência deve virar orçamento base.</span></article>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="budget-toolbar-card">
         <form method="get" className="budgets-filter">
           <select name="kind" defaultValue={filters.kind ?? ""}>
-            <option value="">Todos os tipos</option>
-            <option value="group">Grupos</option>
-            <option value="service">Serviços</option>
-            <option value="input">Insumos</option>
+            <option value="">Todos os tipos</option><option value="group">Grupos</option><option value="service">Serviços</option><option value="input">Insumos</option>
           </select>
           <select name="match" defaultValue={filters.match ?? ""}>
-            <option value="">Todos os vínculos</option>
-            <option value="mapped">Mapa de Integrações</option>
-            <option value="exact_code">Código exato</option>
-            <option value="exact_name_unit">Nome + unidade</option>
-            <option value="suggested">Sugestão</option>
-            <option value="ambiguous">Ambíguos</option>
-            <option value="new">Novos</option>
+            <option value="">Todos os vínculos</option><option value="mapped">Mapa / confirmado</option><option value="exact_code">Código exato</option>
+            <option value="exact_name_unit">Nome + unidade</option><option value="ambiguous">Ambíguos</option><option value="new">Novos</option>
           </select>
-          <button type="submit">Filtrar</button>
+          <button type="submit">Filtrar staging</button>
           <Link prefetch={false} href={`/engenharia/orcamentos/importar/${batchId}`}>Limpar</Link>
         </form>
       </section>
 
       <section className="budget-table-card">
-        <div className="budget-section-head">
-          <div><span>Amostra do staging</span><h2>Linhas interpretadas</h2></div>
-          <p>Até 500 linhas por filtro.</p>
-        </div>
+        <div className="budget-section-head"><div><span>Staging auditável</span><h2>Linhas interpretadas</h2></div><p>Até 500 linhas por filtro.</p></div>
         <div className="registry-table-wrap">
           <table className="registry-table budgets-table">
-            <thead><tr><th>Linha</th><th>Tipo</th><th>Código</th><th>Descrição</th><th>Un.</th><th>Qtd.</th><th>Unitário</th><th>Total</th><th>Vínculo</th><th>Destino Elos</th></tr></thead>
+            <thead><tr><th>Linha</th><th>Tipo</th><th>Código</th><th>Descrição</th><th>Un.</th><th>Qtd.</th><th>Unitário</th><th>Total</th><th>Matching</th><th>Decisão</th><th>Destino Elos</th></tr></thead>
             <tbody>
-              {(rows ?? []).map((row) => (
+              {(rowsResult.data ?? []).map((row) => (
                 <tr key={row.id}>
-                  <td>{row.source_row}</td>
-                  <td>{row.entity_kind}</td>
-                  <td><strong>{row.external_code || row.source_group_code || "—"}</strong></td>
+                  <td>{row.source_row}</td><td>{row.entity_kind}</td><td><strong>{row.external_code || row.source_group_code || "—"}</strong></td>
                   <td>{row.external_name || row.source_group_name || "—"}{row.entity_kind === "input" && row.source_service_code ? <span>em {row.source_service_code} · {row.source_service_name}</span> : null}</td>
-                  <td>{row.external_unit || "—"}</td>
-                  <td>{row.quantity == null ? "—" : decimal(row.quantity)}</td>
-                  <td>{row.unit_cost == null ? "—" : money(row.unit_cost)}</td>
-                  <td>{row.total_cost == null ? "—" : money(row.total_cost)}</td>
+                  <td>{row.external_unit || "—"}</td><td>{row.quantity == null ? "—" : decimal(row.quantity)}</td>
+                  <td>{row.unit_cost == null ? "—" : money(row.unit_cost)}</td><td>{row.total_cost == null ? "—" : money(row.total_cost)}</td>
                   <td>{matchLabel[row.match_status] ?? row.match_status}{row.confidence != null ? <span>{decimal(row.confidence, 0)}%</span> : null}</td>
-                  <td>{row.target_label || "—"}</td>
+                  <td>{resolutionLabel[row.resolution_action] ?? row.resolution_action}</td><td>{row.target_label || "—"}</td>
                 </tr>
               ))}
-              {(rows ?? []).length === 0 ? <tr><td colSpan={10}>Nenhuma linha neste filtro.</td></tr> : null}
+              {(rowsResult.data ?? []).length === 0 ? <tr><td colSpan={11}>Nenhuma linha neste filtro.</td></tr> : null}
             </tbody>
           </table>
         </div>
       </section>
 
-      <section className="budget-toolbar-card">
-        <div className="budget-section-head">
-          <div><span>Segurança</span><h2>Promoção ainda bloqueada</h2></div>
-          <p>Este primeiro passo só prepara e audita o staging. A promoção será liberada depois de resolver novos/ambíguos e validar os totais.</p>
-        </div>
-        {batch.status !== "promoted" && batch.status !== "cancelled" ? (
-          <form action={cancelBudgetImport}>
-            <input type="hidden" name="batch_id" value={batchId} />
-            <button type="submit">Cancelar lote</button>
-          </form>
-        ) : null}
-      </section>
+      {canManage && batch.status !== "promoted" && batch.status !== "cancelled" ? (
+        <section className="budget-toolbar-card">
+          <form action={cancelBudgetImport}><input type="hidden" name="batch_id" value={batchId} /><button type="submit">Cancelar lote</button></form>
+        </section>
+      ) : null}
     </AppShell>
   );
 }
