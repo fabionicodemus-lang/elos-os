@@ -21,6 +21,7 @@ type Bootstrap={
 };
 
 const OPEN_KEY="elos-ia-global-drawer-open";
+const SPLIT_CLASS="elos-ai-split-open";
 
 function visiblePageContext(pathname:string,activeProjectLabel:string|null):ElosIaPageContext {
   if(typeof document==="undefined") return {pathname,activeProjectLabel};
@@ -50,6 +51,8 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
   useEffect(()=>{
     if(!mounted)return;
     try{sessionStorage.setItem(OPEN_KEY,open?"1":"0");}catch{}
+    document.body.classList.toggle(SPLIT_CLASS,open);
+    return()=>document.body.classList.remove(SPLIT_CLASS);
   },[mounted,open]);
 
   useEffect(()=>{
@@ -59,20 +62,24 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
   },[mounted,pathname,activeProjectLabel,open]);
 
   useEffect(()=>{
-    if(!open||bootstrap||loading||error)return;
-    let cancelled=false;
+    if(!open||bootstrap||error)return;
+    const controller=new AbortController();
     setLoading(true);
-    fetch("/api/elos-ia/bootstrap",{headers:{accept:"application/json"},cache:"no-store"})
+    fetch("/api/elos-ia/bootstrap",{headers:{accept:"application/json"},cache:"no-store",signal:controller.signal})
       .then(async(response)=>{
         const payload=await response.json().catch(()=>null) as Bootstrap|null;
-        if(cancelled)return;
+        if(controller.signal.aborted)return;
         if(!response.ok||!payload?.ok){setError(payload?.error??"Não foi possível abrir o Elos IA.");return;}
         setBootstrap(payload);
       })
-      .catch(()=>{if(!cancelled)setError("Não foi possível conectar ao Elos IA.");})
-      .finally(()=>{if(!cancelled)setLoading(false);});
-    return()=>{cancelled=true;};
-  },[open,bootstrap,loading,error,reloadKey]);
+      .catch((reason:unknown)=>{
+        if(controller.signal.aborted)return;
+        if(reason instanceof DOMException&&reason.name==="AbortError")return;
+        setError("Não foi possível conectar ao Elos IA.");
+      })
+      .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+    return()=>controller.abort();
+  },[open,bootstrap,error,reloadKey]);
 
   useEffect(()=>{
     if(!open)return;
@@ -81,7 +88,7 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
     return()=>window.removeEventListener("keydown",onKey);
   },[open]);
 
-  const retry=()=>{setError(null);setBootstrap(null);setReloadKey((value)=>value+1);};
+  const retry=()=>{setError(null);setBootstrap(null);setLoading(false);setReloadKey((value)=>value+1);};
   const contextLabel=[activeProjectLabel,context.screen].filter(Boolean).join(" · ")||"Contexto atual";
 
   const drawer=mounted&&open?createPortal(
@@ -91,7 +98,7 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
         <div className="elos-ai-drawer-actions"><Link href="/elos-ia" title="Abrir Elos IA em tela completa" aria-label="Abrir Elos IA em tela completa">↗</Link><button type="button" onClick={()=>setOpen(false)} title="Fechar Elos IA" aria-label="Fechar Elos IA">×</button></div>
       </header>
       <div className="elos-ai-drawer-body">
-        {loading?<div className="elos-ai-drawer-state"><span className="elos-ai-drawer-spark">✦</span><strong>Preparando o contexto desta tela…</strong></div>:null}
+        {loading&&!bootstrap?<div className="elos-ai-drawer-state"><span className="elos-ai-drawer-spark">✦</span><strong>Preparando o contexto desta tela…</strong></div>:null}
         {error?<div className="elos-ai-drawer-state error"><strong>{error}</strong><button type="button" className="elos-button" onClick={retry}>Tentar novamente</button></div>:null}
         {bootstrap?<ElosIaChat personas={bootstrap.personas} defaultPersona={bootstrap.defaultPersona} configured={bootstrap.configured} activeProjectLabel={activeProjectLabel??bootstrap.activeProjectLabel} initialQuota={bootstrap.initialQuota} maxQuestionChars={bootstrap.maxQuestionChars} companyId={bootstrap.companyId} userId={bootstrap.userId} compact pageContext={context} storageKey={`elos-ia-global:${bootstrap.companyId}:${bootstrap.userId}`}/>:null}
       </div>
