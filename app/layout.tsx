@@ -48,6 +48,9 @@ import "./brokers.css";
 import "./sefaz-nfe.css";
 import "./financial-installments.css";
 import "./elos-theme.css";
+import "./elos-ia.css";
+import "./elos-ia-actions.css";
+import "./elos-ia-drawer.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
   variable: "--font-ibm-plex",
