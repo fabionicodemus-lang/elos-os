@@ -3,6 +3,7 @@
 import { APP_VERSION } from "@/lib/version";
 import { useMemo, type FormEvent } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { GlobalElosIaDrawer } from "@/components/global-elos-ia-drawer";
 
 export type ProjectSwitcherOption = {
   id: string;
@@ -34,6 +35,8 @@ export function ProjectSwitcher({
   }
 
   const selectedValue = companyOverview ? "" : activeProjectId ?? "";
+  const activeProject = companyOverview ? null : projects.find((project) => project.id === activeProjectId) ?? null;
+  const activeProjectLabel = activeProject ? [activeProject.code, activeProject.name].filter(Boolean).join(" · ") : null;
 
   return (
     <form
@@ -60,6 +63,7 @@ export function ProjectSwitcher({
           </option>
         ))}
       </select>
+      <GlobalElosIaDrawer activeProjectLabel={activeProjectLabel} />
       <button className="elos-visually-hidden" type="submit">Aplicar</button>
     </form>
   );
