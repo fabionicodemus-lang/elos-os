@@ -1,0 +1,150 @@
+/* Elos OS — Pré-Obra faithful handoff layer
+ * Source of truth: Elos OS · Pre-Obra.dc.html
+ * Visual only: business rules, queries, permissions and server actions stay intact.
+ */
+
+/* Shell */
+.elos-round2-engineering #elos-round2-tabs-host{display:none!important}
+.elos-round2-engineering .elos-main{background:#eef1f0}
+.elos-round2-engineering .elos-header{position:sticky;top:0;z-index:30;min-height:60px;height:60px;padding:10px 24px;border-bottom:1px solid #e2e8e8;background:rgba(255,255,255,.94);backdrop-filter:blur(10px)}
+.elos-round2-engineering .elos-breadcrumb{flex:1;gap:6px;color:#8b989a;font-size:12px;font-weight:600}
+.elos-round2-engineering .elos-breadcrumb>span:first-child{display:none}
+.elos-round2-engineering .elos-breadcrumb>span:nth-child(2){display:none}
+.elos-round2-engineering .elos-breadcrumb b{color:#8b989a;font-weight:600}
+.elos-round2-engineering .elos-breadcrumb>span:last-child{color:#16211f;font-weight:700}
+.elos-round2-engineering .elos-user,.elos-round2-engineering .elos-logout-button{display:none!important}
+.elos-round2-engineering .elos-project-switcher{margin-left:auto}
+.elos-round2-engineering .elos-project-switcher select{height:38px;min-width:220px;border:1px solid #e0e6e6!important;border-radius:10px!important;background:#f7f9f9!important;color:#334143;font-size:12px;font-weight:600}
+.elos-round2-engineering .elos-module-content{display:flex;flex-direction:column;gap:14px;width:100%;max-width:1480px;margin:0 auto;padding:24px 28px 60px}
+.elos-round2-engineering:has(.prevision-workbench) .elos-module-content{max-width:none}
+
+/* Header */
+.elos-round2-engineering .elos-page-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0}
+.elos-round2-engineering .elos-page-top>div:first-child{display:flex;flex-direction:column;gap:4px;min-width:0}
+.elos-round2-engineering .elos-eyebrow{color:#008780;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.elos-round2-engineering .elos-page-top h1{margin:0;color:#16211f;font-family:var(--font-space-grotesk),sans-serif;font-size:28px;font-weight:600;letter-spacing:-.035em;line-height:1.1}
+.elos-round2-engineering .elos-module-version{display:none}
+.elos-round2-engineering .elos-page-top p{margin:0;color:#5f7d79;font-size:13px;line-height:1.45}
+.elos-round2-engineering .elos-page-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.elos-round2-engineering .elos-button,.elos-round2-engineering .elos-page-actions button{height:38px;min-height:38px;padding:0 14px;border:1px solid #dce3e3;border-radius:10px;background:#fff;color:#334143;font-size:12px;font-weight:600;box-shadow:none}
+.elos-round2-engineering .elos-button.primary,.elos-round2-engineering .elos-page-actions .primary,.elos-round2-engineering .auth-primary{border-color:#008780;background:#008780;color:#fff}
+
+/* Handoff has no secondary module nav inside the content. Sidebar is the module nav. */
+.elos-round2-engineering .budget-module-nav{display:none!important}
+
+/* KPI strip — exact handoff proportions */
+.elos-round2-engineering .budget-kpi-grid,
+.elos-round2-engineering .contract-plan-kpis,
+.elos-round2-engineering .supply-plan-kpis,
+.elos-round2-engineering .preobra-schedule-kpis,
+.elos-round2-engineering .prevision-big-kpis{
+  display:flex!important;flex-wrap:wrap!important;gap:0!important;overflow:hidden!important;
+  margin:0!important;padding:0!important;border:1px solid #e5eae8!important;border-radius:14px!important;background:#fff!important;box-shadow:none!important
+}
+.elos-round2-engineering .budget-kpi-grid>article,
+.elos-round2-engineering .contract-plan-kpis>article,
+.elos-round2-engineering .supply-plan-kpis>article,
+.elos-round2-engineering .preobra-schedule-kpis>article,
+.elos-round2-engineering .prevision-big-kpis>div{
+  flex:1 1 160px!important;min-width:150px!important;display:flex!important;flex-direction:column!important;gap:4px!important;
+  margin:0!important;padding:13px 16px!important;border:0!important;border-radius:0!important;background:#fff!important;box-shadow:0 0 0 .5px #e5eae8!important
+}
+.elos-round2-engineering .budget-kpi-grid span,.elos-round2-engineering .contract-plan-kpis span,.elos-round2-engineering .supply-plan-kpis span,.elos-round2-engineering .preobra-schedule-kpis span,.elos-round2-engineering .prevision-big-kpis span{color:#5f7d79;font-size:11px;font-weight:600}
+.elos-round2-engineering .budget-kpi-grid strong,.elos-round2-engineering .contract-plan-kpis strong,.elos-round2-engineering .supply-plan-kpis strong,.elos-round2-engineering .preobra-schedule-kpis strong,.elos-round2-engineering .prevision-big-kpis strong{margin:0;color:#16211f;font-family:var(--font-space-grotesk),sans-serif;font-size:21px;font-weight:600;letter-spacing:-.025em;line-height:1.15}
+.elos-round2-engineering .budget-kpi-grid small,.elos-round2-engineering .contract-plan-kpis small,.elos-round2-engineering .supply-plan-kpis small,.elos-round2-engineering .preobra-schedule-kpis small{color:#5f7d79;font-size:11px}
+.elos-round2-engineering .contract-plan-kpis article.critical strong,.elos-round2-engineering .supply-plan-kpis article.critical strong,.elos-round2-engineering .preobra-kpi-bad strong{color:#b8453f!important}
+.elos-round2-engineering .preobra-kpi-warn strong{color:#946414!important}
+.elos-round2-engineering .preobra-kpi-ok strong{color:#217a50!important}
+
+/* Orçamentos — formation banner */
+.elos-round2-engineering .budget-flow-card{display:flex!important;align-items:center!important;gap:14px 24px!important;flex-wrap:wrap!important;margin:0!important;padding:14px 18px!important;border:1px solid #e5eae8!important;border-radius:14px!important;background:#fff!important;box-shadow:none!important}
+.elos-round2-engineering .budget-flow-head{flex:1 1 300px;display:flex;flex-direction:column;gap:3px;min-width:0;margin:0!important;padding:0!important;border:0!important}
+.elos-round2-engineering .budget-flow-head>div{display:flex;flex-direction:column;gap:3px}
+.elos-round2-engineering .budget-flow-head span{color:#008780;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.elos-round2-engineering .budget-flow-head h2{margin:0;color:#16211f;font-family:var(--font-ibm-plex),sans-serif;font-size:14px;font-weight:600;letter-spacing:0}
+.elos-round2-engineering .budget-flow-head p{margin:0;color:#5f7d79;font-size:12px;line-height:1.5}
+.elos-round2-engineering .budget-flow-grid{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important;margin:0!important}
+.elos-round2-engineering .budget-flow-grid article{display:flex;flex-direction:column;gap:2px;min-width:auto!important;padding:8px 12px!important;border:1px solid #dce6e3!important;border-radius:10px!important;background:#f8fbfa!important;box-shadow:none!important}
+.elos-round2-engineering .budget-flow-grid article b{color:#5f7d79;font-size:10px;font-weight:500}
+.elos-round2-engineering .budget-flow-grid article span{color:#16211f;font-size:12px;font-weight:600}
+/* Main handoff intentionally has no filter bar on history screen. */
+.elos-round2-engineering .budget-toolbar-card{display:none!important}
+
+/* Tables */
+.elos-round2-engineering .budget-table-card,.elos-round2-engineering .contract-plan-table-card,.elos-round2-engineering .supply-plan-table-card,
+.elos-round2-engineering .budgets-detail-card,.elos-round2-engineering .registry-table-panel{
+  overflow:hidden;margin:0!important;padding:14px 16px!important;border:1px solid #e5eae8!important;border-radius:14px!important;background:#fff!important;box-shadow:none!important
+}
+.elos-round2-engineering .budget-section-head,.elos-round2-engineering .section-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin:0 0 10px!important;padding:0!important;border:0!important}
+.elos-round2-engineering .budget-section-head span,.elos-round2-engineering .section-heading span{color:#008780;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.elos-round2-engineering .budget-section-head h2,.elos-round2-engineering .section-heading h2{margin:2px 0 0;color:#16211f;font-family:var(--font-space-grotesk),sans-serif;font-size:15px;font-weight:600;letter-spacing:-.015em}
+.elos-round2-engineering .budget-section-head p,.elos-round2-engineering .section-heading p{margin:0;color:#5f7d79;font-size:11px}
+.elos-round2-engineering .registry-table-wrap{margin:0 -16px -14px;overflow-x:auto}
+.elos-round2-engineering .registry-table{width:100%;border-collapse:collapse;background:#fff}
+.elos-round2-engineering .registry-table th{padding:9px 12px;border-bottom:1px solid #e5eae8;background:#f7f9f9;color:#58706d;font-size:10px;font-weight:700;letter-spacing:.055em;text-transform:uppercase;white-space:nowrap}
+.elos-round2-engineering .registry-table td{padding:10px 12px;border-bottom:1px solid #edf1f1;color:#334143;font-size:12px;vertical-align:middle}
+.elos-round2-engineering .registry-table tbody tr:hover{background:#f8fbfa}
+.elos-round2-engineering .registry-table td strong{color:#16211f;font-weight:600}
+.elos-round2-engineering .registry-table td span,.elos-round2-engineering .registry-table td small{display:block;color:#5f7d79;font-size:10px;line-height:1.35}
+.elos-round2-engineering .table-action{height:30px;min-height:30px;border:1px solid #dce3e3;border-radius:8px;padding:0 10px;color:#008780;background:#fff;font-size:11px;font-weight:700}
+.elos-round2-engineering [class*="status"],.elos-round2-engineering [class*="risk"]{font-size:10px}
+
+/* Budget detail: handoff has header -> KPI -> composition -> filters -> table. */
+.elos-round2-engineering .budget-reference-bar{display:none!important}
+.elos-round2-engineering .budget-detail-kpis{margin:0!important}
+.elos-round2-engineering .budgets-cost-composition{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0}
+.elos-round2-engineering .budgets-cost-composition article{position:relative;overflow:hidden;padding:12px 14px;border:1px solid #e5eae8;border-radius:12px;background:#fff;box-shadow:none}
+.elos-round2-engineering .budgets-cost-composition article span{display:block;color:#5f7d79;font-size:11px;font-weight:600}.elos-round2-engineering .budgets-cost-composition article strong{display:block;margin:4px 0 2px;font-family:var(--font-space-grotesk),sans-serif;font-size:16px}.elos-round2-engineering .budgets-cost-composition article small{color:#5f7d79;font-size:10px}.elos-round2-engineering .budgets-cost-composition article i{position:absolute;left:0;bottom:0;height:3px;background:#008780}
+.elos-round2-engineering .budgets-filter,.elos-round2-engineering .contract-plan-toolbar,.elos-round2-engineering .supply-plan-toolbar{margin:0!important;padding:10px!important;border:1px solid #e5eae8!important;border-radius:14px!important;background:#fff!important;box-shadow:none!important}
+.elos-round2-engineering .budgets-filter,.elos-round2-engineering .contract-plan-toolbar form,.elos-round2-engineering .supply-plan-toolbar form{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.elos-round2-engineering .budgets-filter input,.elos-round2-engineering .contract-plan-toolbar input,.elos-round2-engineering .supply-plan-toolbar input{flex:1 1 220px;height:36px;min-height:36px;border:1px solid #dce3e3;border-radius:9px;padding:0 10px;background:#fff;font-size:12px}
+.elos-round2-engineering .budgets-filter select,.elos-round2-engineering .contract-plan-toolbar select,.elos-round2-engineering .supply-plan-toolbar select{height:36px;min-height:36px;border:1px solid #dce3e3;border-radius:9px;padding:0 30px 0 10px;background:#fff;font-size:12px}
+.elos-round2-engineering .budgets-filter button,.elos-round2-engineering .contract-plan-toolbar button,.elos-round2-engineering .supply-plan-toolbar button{height:36px;min-height:36px;border:1px solid #008780;border-radius:9px;padding:0 12px;background:#008780;color:#fff;font-size:12px;font-weight:600}
+
+/* Contract/supply prototype does not show these legacy helper cards. */
+.elos-round2-engineering .contract-baseline-card,.elos-round2-engineering .contract-plan-flow,.elos-round2-engineering .supply-baseline-card,.elos-round2-engineering .supply-plan-flow{display:none!important}
+.elos-round2-engineering .contract-plan-kpis,.elos-round2-engineering .supply-plan-kpis{margin:0!important}
+
+/* Segmented chips inserted by the faithful pages */
+.elos-round2-engineering .preobra-filter-shell{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid #e5eae8;border-radius:14px;background:#fff}
+.elos-round2-engineering .preobra-chips{display:flex;gap:2px;padding:3px;border-radius:9px;background:#f2f5f4}
+.elos-round2-engineering .preobra-chips a{height:30px;display:inline-flex;align-items:center;gap:6px;padding:0 10px;border-radius:7px;color:#5f7d79;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap}
+.elos-round2-engineering .preobra-chips a.active{color:#16211f;background:#fff;box-shadow:0 1px 2px rgba(15,28,27,.12)}
+.elos-round2-engineering .preobra-chips small{color:#8b989a;font-family:var(--font-ibm-plex-mono),monospace;font-size:10px}
+.elos-round2-engineering .preobra-filter-shell form{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}
+.elos-round2-engineering .preobra-filter-shell input{flex:1 1 220px;height:34px;border:1px solid #dce3e3;border-radius:9px;padding:0 10px;font-size:12px}.elos-round2-engineering .preobra-filter-shell select{height:34px;border:1px solid #dce3e3;border-radius:9px;padding:0 30px 0 10px;font-size:12px}
+
+/* Cronograma: strip the old nested app shell and turn workbench into the handoff card. */
+.elos-round2-engineering .prevision-workbench{display:flex;flex-direction:column;gap:14px;margin:0;border:0;background:transparent;box-shadow:none}
+.elos-round2-engineering .prevision-appbar{display:flex;align-items:center;gap:12px;min-height:auto;padding:0;border:0;border-bottom:1px solid #dfe6e5;background:transparent;box-shadow:none}
+.elos-round2-engineering .prevision-brand{display:none!important}
+.elos-round2-engineering .prevision-appbar nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1}
+.elos-round2-engineering .prevision-appbar nav button{height:38px;min-height:38px;padding:0 14px;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;background:transparent!important;color:#5f7d79!important;font-size:13px;font-weight:600;white-space:nowrap}
+.elos-round2-engineering .prevision-appbar nav button.active{border-bottom-color:#008780!important;color:#16211f!important}
+.elos-round2-engineering .prevision-top-actions{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:4px}
+.elos-round2-engineering .prevision-top-actions>*{margin:0}.elos-round2-engineering .prevision-top-actions button,.elos-round2-engineering .prevision-top-actions a{height:34px;min-height:34px;border:1px solid #dce3e3!important;border-radius:9px!important;background:#fff!important;color:#334143!important;font-size:11px!important;font-weight:600!important;text-decoration:none}
+.elos-round2-engineering .prevision-modebar{order:3;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0;padding:12px 16px;border:1px solid #dce6e3;border-radius:14px 14px 0 0;background:linear-gradient(90deg,#eef8f5,#f8fbfa);box-shadow:none}
+.elos-round2-engineering .prevision-modebar>div:first-child>span{display:none}.elos-round2-engineering .prevision-modebar strong{font-size:13px;font-weight:600}.elos-round2-engineering .prevision-modebar small{display:block;margin-top:2px;color:#5f7d79;font-size:11px}
+.elos-round2-engineering .prevision-baseline-state{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;background:#fff3d7;color:#946414;font-size:11px;font-weight:700}.elos-round2-engineering .prevision-baseline-state i{width:7px;height:7px;border-radius:50%;background:#946414}
+.elos-round2-engineering .prevision-gantt-view{order:4;margin-top:-14px;border:1px solid #e5eae8;border-top:0;border-radius:0 0 14px 14px;overflow:hidden;background:#fff}
+.elos-round2-engineering .prevision-toolbar{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid #e5eae8;background:#fff}
+.elos-round2-engineering .prevision-toolbar label{display:flex;flex-direction:column;gap:4px;color:#58706d;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}.elos-round2-engineering .prevision-toolbar input:not([type=range]),.elos-round2-engineering .prevision-toolbar select{height:34px;min-height:34px;border:1px solid #dce3e3;border-radius:9px;padding:0 10px;color:#16211f;background:#fff;font-size:12px;font-weight:400;text-transform:none;letter-spacing:0}.elos-round2-engineering .prevision-toolbar label:first-child{flex:1 1 180px}.elos-round2-engineering .prevision-toolbar label:first-child input{width:100%}
+.elos-round2-engineering .prevision-kpi-mini{display:flex;flex-direction:column;gap:2px;padding:6px 12px;border:1px solid #e5eae8;border-radius:9px;background:#fff}.elos-round2-engineering .prevision-kpi-mini span{color:#58706d;font-size:9px;font-weight:700;text-transform:uppercase}.elos-round2-engineering .prevision-kpi-mini strong{font-family:var(--font-ibm-plex-mono),monospace;font-size:14px}
+.elos-round2-engineering .prevision-service-legend{display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid #e5eae8;background:#fff}.elos-round2-engineering .prevision-service-legend>strong{display:none}.elos-round2-engineering .prevision-service-legend-list{display:flex;flex-wrap:wrap;gap:6px 12px}.elos-round2-engineering .prevision-service-legend-item{display:flex;align-items:center;gap:5px;color:#5f7d79;font-size:10px}.elos-round2-engineering .prevision-service-legend-item i{width:18px;height:10px;border-radius:3px}.elos-round2-engineering .prevision-service-legend-item b{color:#16211f}.elos-round2-engineering .prevision-service-legend-item em{font-style:normal}
+.elos-round2-engineering .prevision-gantt-shell{height:min(64vh,650px);min-height:380px;overflow:scroll!important;scrollbar-width:auto;scrollbar-color:#9fb2af #edf2f1;background:#fff}.elos-round2-engineering .prevision-gantt-shell::-webkit-scrollbar{width:13px;height:13px}.elos-round2-engineering .prevision-gantt-shell::-webkit-scrollbar-track{background:#edf2f1}.elos-round2-engineering .prevision-gantt-shell::-webkit-scrollbar-thumb{border:3px solid #edf2f1;border-radius:999px;background:#9fb2af}
+.elos-round2-engineering .prevision-print-title{display:none}
+.elos-round2-engineering .prevision-gantt-head{background:#edf2f1!important}.elos-round2-engineering .prevision-meta-head{background:#edf2f1!important}.elos-round2-engineering .prevision-meta-head>div,.elos-round2-engineering .prevision-week-cell{color:#58706d;font-size:10px;font-weight:700;text-transform:uppercase}
+.elos-round2-engineering .prevision-panel-page{order:4;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}.elos-round2-engineering .prevision-card{border:1px solid #e5eae8!important;border-radius:14px!important;background:#fff!important;box-shadow:none!important}
+
+/* Compact navigation sidebar already contains exactly the four handoff items. */
+.elos-round2-engineering .elos-module-group.open .elos-subnav{margin:2px 0 6px 19px;padding-left:10px;border-left:1px solid rgba(255,255,255,.1)}
+.elos-round2-engineering .elos-subnav a{min-height:32px;border-radius:7px;padding:0 10px}.elos-round2-engineering .elos-subnav a.active{color:#7fd8d1;background:rgba(0,135,128,.22)}
+
+@media(max-width:980px){
+  .elos-round2-engineering .budgets-cost-composition{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .elos-round2-engineering .prevision-appbar{align-items:flex-start;flex-direction:column}.elos-round2-engineering .prevision-top-actions{width:100%}
+}
+@media(max-width:640px){
+  .elos-round2-engineering .elos-module-content{padding:18px 14px 48px}.elos-round2-engineering .elos-page-top h1{font-size:24px}
+  .elos-round2-engineering .budgets-cost-composition{grid-template-columns:1fr}.elos-round2-engineering .preobra-filter-shell{align-items:stretch}.elos-round2-engineering .preobra-chips{overflow-x:auto}.elos-round2-engineering .prevision-gantt-shell{height:58vh}
+}
