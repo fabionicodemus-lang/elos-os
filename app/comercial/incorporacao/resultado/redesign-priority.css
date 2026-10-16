@@ -1,0 +1,255 @@
+/* Specificity guard for the approved Result screen redesign.
+   The route already imports result.css inside page.tsx; prefixing with body:has()
+   guarantees this visual layer wins regardless of Next.js CSS chunk ordering. */
+
+body:has(.result-hero) .result-empty,
+body:has(.result-hero) .result-warning,
+body:has(.result-hero) .result-panel,
+body:has(.result-hero) .result-hero {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: none;
+}
+
+body:has(.result-hero) .result-warning {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-color: #ead3a1;
+  color: #6d4c10;
+  background: #fff8e8;
+}
+
+body:has(.result-hero) .result-warning span { color: #806633; }
+
+body:has(.result-hero) .result-hero {
+  display: grid;
+  grid-template-columns: minmax(280px,1.5fr) minmax(190px,1fr) minmax(190px,1fr) minmax(150px,.75fr);
+  gap: 18px;
+  margin-bottom: 14px;
+  border: 0;
+  border-radius: 16px;
+  padding: 20px 22px;
+  color: #fff;
+  background: var(--sidebar);
+}
+
+body:has(.result-hero) .result-hero::before { display: none; }
+body:has(.result-hero) .result-hero span {
+  color: var(--sidebar-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+body:has(.result-hero) .result-hero > div:first-child > span { color: var(--teal-light); }
+body:has(.result-hero) .result-hero > div > strong {
+  margin-top: 6px;
+  color: #fff;
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -.035em;
+}
+body:has(.result-hero) .result-hero > div > small {
+  color: var(--sidebar-muted);
+  font-size: 11px;
+}
+body:has(.result-hero) .result-hero .result-hero-metric > strong,
+body:has(.result-hero) .result-hero .result-health > strong { font-size: 22px; }
+body:has(.result-hero) .result-hero .positive { color: var(--teal-light) !important; }
+body:has(.result-hero) .result-hero .negative { color: #f09a92 !important; }
+body:has(.result-hero) .result-hero .neutral { color: #fff !important; }
+body:has(.result-hero) .result-health {
+  border-left: 1px solid rgba(255,255,255,.1);
+  padding-left: 16px;
+}
+
+body:has(.result-hero) .result-kpi-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+body:has(.result-hero) .result-kpi-grid article {
+  flex: 1 1 170px;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 16px;
+  background: #fff;
+  box-shadow: 0 0 0 .5px var(--line);
+}
+body:has(.result-hero) .result-kpi-grid article:hover { background: var(--surface-3); }
+body:has(.result-hero) .result-kpi-grid article.danger { border: 0; background: #fff; }
+body:has(.result-hero) .result-kpi-grid article.danger strong { color: var(--danger); }
+body:has(.result-hero) .result-kpi-grid span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+body:has(.result-hero) .result-kpi-grid strong {
+  margin: 5px 0 3px;
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -.03em;
+}
+body:has(.result-hero) .result-kpi-grid small { color: var(--muted); font-size: 10px; }
+
+body:has(.result-hero) .result-layout {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+body:has(.result-hero) .result-panel {
+  flex: 1 1 300px;
+  min-width: 0;
+  padding: 16px 18px;
+}
+body:has(.result-hero) .result-panel-large { flex: 2 1 560px; }
+
+body:has(.result-hero) .result-heading {
+  align-items: center;
+  margin-bottom: 12px;
+}
+body:has(.result-hero) .result-heading span {
+  color: var(--brand);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+body:has(.result-hero) .result-heading h2 {
+  margin-top: 3px;
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+body:has(.result-hero) .result-heading small { color: var(--muted); font-size: 10px; }
+
+body:has(.result-hero) .result-table { min-width: 700px; }
+body:has(.result-hero) .result-table th,
+body:has(.result-hero) .result-table td {
+  padding: 10px 11px;
+  border-color: var(--line-soft);
+  color: var(--foreground);
+  font-family: var(--font-ibm-plex-mono, monospace), monospace;
+  font-size: 11px;
+}
+body:has(.result-hero) .result-table th:first-child,
+body:has(.result-hero) .result-table td:first-child { font-family: var(--font-ibm-plex), sans-serif; }
+body:has(.result-hero) .result-table th {
+  color: #58706d;
+  background: var(--surface-2);
+  font-family: var(--font-ibm-plex), sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+body:has(.result-hero) .result-table tr.strong td {
+  font-weight: 700;
+  background: var(--surface-3);
+}
+body:has(.result-hero) .result-table .positive { color: var(--success) !important; }
+body:has(.result-hero) .result-table .negative { color: var(--danger) !important; }
+body:has(.result-hero) .result-table .neutral { color: var(--muted) !important; }
+
+body:has(.result-hero) .result-stat-list > div {
+  padding: 9px 0;
+  border-color: var(--line-soft);
+}
+body:has(.result-hero) .result-stat-list span {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+body:has(.result-hero) .result-stat-list strong {
+  color: var(--foreground);
+  font-family: var(--font-ibm-plex-mono, monospace), monospace;
+  font-size: 12px;
+}
+body:has(.result-hero) .result-stat-list .total {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: var(--surface-3);
+}
+body:has(.result-hero) .result-stat-list .total:has(.negative) { background: var(--danger-soft); }
+body:has(.result-hero) .result-stat-list .total:has(.positive) { background: #e7f3ec; }
+body:has(.result-hero) .positive { color: var(--success) !important; }
+body:has(.result-hero) .negative { color: var(--danger) !important; }
+body:has(.result-hero) .neutral { color: var(--muted) !important; }
+
+body:has(.result-hero) .result-cycle {
+  grid-template-columns: repeat(auto-fit,minmax(110px,1fr));
+  gap: 8px;
+}
+body:has(.result-hero) .result-cycle > i { display: none; }
+body:has(.result-hero) .result-cycle > div {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px;
+  color: var(--foreground);
+  background: #fff;
+}
+body:has(.result-hero) .result-cycle > div.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+body:has(.result-hero) .result-cycle b {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+body:has(.result-hero) .result-cycle span { color: var(--muted); font-size: 10px; }
+body:has(.result-hero) .result-cycle strong { color: var(--foreground); font-size: 11px; }
+
+body:has(.result-hero) .result-project-meta {
+  grid-template-columns: repeat(auto-fit,minmax(130px,1fr));
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-color: var(--line-soft);
+}
+body:has(.result-hero) .result-project-meta > span { color: var(--muted); font-size: 9px; }
+body:has(.result-hero) .result-project-meta strong { color: var(--foreground); font-size: 11px; }
+
+body:has(.result-hero) .result-warnings {
+  color: #6d4c10;
+  border-color: #edd8a6;
+  background: #fff8e8;
+}
+body:has(.result-hero) .result-warnings .result-heading span,
+body:has(.result-hero) .result-warnings .result-heading h2,
+body:has(.result-hero) .result-warnings ul { color: #6d4c10; }
+body:has(.result-hero) .result-footnote { color: var(--muted); font-size: 10px; }
+
+@media (max-width: 1180px) {
+  body:has(.result-hero) .result-hero { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body:has(.result-hero) .result-health { border-left: 0; padding-left: 0; }
+}
+
+@media (max-width: 900px) {
+  body:has(.result-hero) .result-layout { display: block; }
+  body:has(.result-hero) .result-layout > * + * { margin-top: 14px; }
+}
+
+@media (max-width: 640px) {
+  body:has(.result-hero) .result-hero { grid-template-columns: 1fr; }
+  body:has(.result-hero) .result-hero > div > strong { font-size: 32px; }
+  body:has(.result-hero) .result-kpi-grid article { flex-basis: 50%; }
+  body:has(.result-hero) .result-project-meta { grid-template-columns: 1fr 1fr; }
+}
