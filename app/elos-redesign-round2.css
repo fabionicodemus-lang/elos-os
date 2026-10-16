@@ -1,0 +1,1055 @@
+/*
+ * Elos OS — redesign rodada 2
+ * Financeiro · Suprimentos · Obra · Pré-Obra · Comercial
+ *
+ * Este arquivo é intencionalmente visual. Não altera regras, queries,
+ * permissões, cálculos ou o GlobalElosIaDrawer.
+ */
+
+:root {
+  --line-soft: #edf1f1;
+  --surface-2: #f7f9f9;
+  --surface-3: #f8fbfa;
+  --sidebar-cell: #13241f;
+  --warning-soft: #fff3d7;
+  --danger-soft: #f7e5e3;
+  --committed: #d9a23b;
+  --track: #dfe6e5;
+  --outflow: #d98b84;
+  --outflow-proj: #ecc3bf;
+  --inflow-proj: #9fcfca;
+  --teal-light: #7fd8d1;
+}
+
+.elos-round2-module {
+  display: contents;
+}
+
+/* --------------------------------------------------------------------------
+   Shell — aplicado apenas aos módulos desta rodada por meio dos layouts locais
+   -------------------------------------------------------------------------- */
+.elos-round2-module .elos-app-shell {
+  --elos-sidebar-width: 248px;
+}
+
+.elos-round2-module .elos-sidebar {
+  padding: 18px 12px 14px;
+  background: var(--sidebar);
+  border-right-color: rgba(255,255,255,.06);
+}
+
+.elos-round2-module .elos-logo {
+  gap: 10px;
+  padding: 0 7px 15px;
+}
+
+.elos-round2-module .elos-logo-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--brand);
+  box-shadow: none;
+}
+
+.elos-round2-module .elos-logo-mark svg {
+  width: 20px;
+  height: 20px;
+}
+
+.elos-round2-module .elos-logo-text strong {
+  font-size: 16px;
+  letter-spacing: -.02em;
+}
+
+.elos-round2-module .elos-logo-text span {
+  margin-top: 1px;
+  color: #5f7d79;
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+
+.elos-round2-module .elos-module-menu {
+  gap: 2px;
+}
+
+.elos-round2-module .elos-main-item {
+  min-height: 36px;
+  border-radius: 9px;
+  gap: 10px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.elos-round2-module .elos-main-item.active {
+  font-weight: 700;
+  background: var(--brand);
+}
+
+.elos-round2-module .elos-icon {
+  width: 18px;
+  flex-basis: 18px;
+  font-size: 15px;
+}
+
+.elos-round2-module .elos-subnav {
+  margin: 2px 0 6px 28px;
+  padding: 2px 0 2px 8px;
+}
+
+.elos-round2-module .elos-subnav a,
+.elos-round2-module .elos-subnav-disabled {
+  min-height: 32px;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.elos-round2-module .elos-subnav a.active {
+  color: var(--teal-light);
+  background: rgba(0,135,128,.22);
+}
+
+.elos-round2-module .elos-subtitle {
+  padding: 8px 8px 4px;
+  color: #4d6360;
+  font-size: 9px;
+  letter-spacing: .09em;
+}
+
+.elos-round2-module .elos-sidebar-foot {
+  margin: 14px 8px 0;
+  padding-top: 12px;
+}
+
+.elos-round2-module .elos-header {
+  min-height: 60px;
+  height: 60px;
+  gap: 10px;
+  padding: 10px 24px;
+  background: rgba(255,255,255,.94);
+  border-bottom-color: var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.elos-round2-module .elos-org {
+  min-width: 0;
+}
+
+.elos-round2-module .elos-org-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.elos-round2-module .elos-org-text strong {
+  max-width: 150px;
+  font-size: 12px;
+}
+
+.elos-round2-module .elos-breadcrumb {
+  gap: 6px;
+  font-size: 12px;
+}
+
+.elos-round2-module .elos-project-switcher select {
+  min-width: 220px;
+  height: 38px;
+  border-radius: 10px !important;
+  background: var(--surface-2);
+}
+
+.elos-round2-module .elos-search-button,
+.elos-round2-module .elos-logout-button {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.elos-round2-module .elos-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.elos-round2-module .elos-module-content {
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 24px 28px 60px;
+}
+
+.elos-round2-module .elos-page-top {
+  margin-bottom: 18px;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.elos-round2-module .elos-eyebrow,
+.elos-round2-module [class*="-kicker"] {
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.elos-round2-module .elos-page-top h1,
+.elos-round2-module .proposal-header-block h1,
+.elos-round2-module .schedule-header-block h1 {
+  margin-top: 4px;
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -.035em;
+  line-height: 1.08;
+}
+
+.elos-round2-module .elos-page-top p,
+.elos-round2-module .proposal-header-block p,
+.elos-round2-module .schedule-header-block p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.elos-round2-module .elos-module-version {
+  padding: 4px 8px;
+  border-color: #d8e7e5;
+  background: #f3f9f8;
+}
+
+/* --------------------------------------------------------------------------
+   Botões, campos e superfícies compartilhadas
+   -------------------------------------------------------------------------- */
+.elos-round2-module .elos-button,
+.elos-round2-module .back-link,
+.elos-round2-module .module-link,
+.elos-round2-module .table-action,
+.elos-round2-module .registry-pagination a,
+.elos-round2-module button:not(.elos-main-item):not(.elos-mobile-menu-button):not(.elos-mobile-close):not(.elos-sidebar-backdrop):not(.elos-ai-launcher):not(.elos-ai-close),
+.elos-round2-module a[class*="button"] {
+  min-height: 36px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.elos-round2-module .elos-button.primary,
+.elos-round2-module .registry-filter button,
+.elos-round2-module .finance-filter button,
+.elos-round2-module button.primary,
+.elos-round2-module [class*="primary-action"] {
+  color: #fff;
+  border-color: var(--brand);
+  background: var(--brand);
+  box-shadow: none;
+}
+
+.elos-round2-module .elos-button.primary:hover,
+.elos-round2-module button.primary:hover,
+.elos-round2-module [class*="primary-action"]:hover {
+  background: var(--brand-strong);
+}
+
+.elos-round2-module input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.elos-round2-module select,
+.elos-round2-module textarea {
+  min-height: 36px;
+  border-color: #d7e1df;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.elos-round2-module input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+.elos-round2-module select:focus,
+.elos-round2-module textarea:focus {
+  outline: none;
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(0,135,128,.12) !important;
+}
+
+.elos-round2-module .registry-section,
+.elos-round2-module .registry-card,
+.elos-round2-module .proposal-list-card,
+.elos-round2-module .proposal-filter-panel,
+.elos-round2-module .schedule-block,
+.elos-round2-module .execution-history-card,
+.elos-round2-module [class$="-panel"],
+.elos-round2-module [class$="-card"] {
+  border-color: var(--line);
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.elos-round2-module .registry-section,
+.elos-round2-module .proposal-list-card,
+.elos-round2-module .schedule-block,
+.elos-round2-module .execution-history-card {
+  background: #fff;
+}
+
+/* --------------------------------------------------------------------------
+   KPI Strip — visual único e denso
+   -------------------------------------------------------------------------- */
+.elos-round2-module .finance-summary-grid,
+.elos-round2-module .proposal-summary-grid,
+.elos-round2-module .purchase-order-kpis,
+.elos-round2-module .purchase-order-kpis-v2,
+.elos-round2-module .execution-schedule-kpis,
+.elos-round2-module .schedule-kpi-grid,
+.elos-round2-module .broker-kpis,
+.elos-round2-module .sales-kpis,
+.elos-round2-module .cashflow-kpis,
+.elos-round2-module .registry-summary-grid {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.elos-round2-module .finance-summary-grid > *,
+.elos-round2-module .proposal-summary-grid > *,
+.elos-round2-module .purchase-order-kpis > *,
+.elos-round2-module .purchase-order-kpis-v2 > *,
+.elos-round2-module .execution-schedule-kpis > *,
+.elos-round2-module .schedule-kpi-grid > *,
+.elos-round2-module .broker-kpis > *,
+.elos-round2-module .sales-kpis > *,
+.elos-round2-module .cashflow-kpis > *,
+.elos-round2-module .registry-summary-grid > * {
+  flex: 1 1 160px;
+  min-width: 0;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 13px 16px !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 .5px var(--line) !important;
+}
+
+.elos-round2-module .finance-summary-grid span,
+.elos-round2-module .proposal-summary-grid span,
+.elos-round2-module .purchase-order-kpis span,
+.elos-round2-module .purchase-order-kpis-v2 span,
+.elos-round2-module .execution-schedule-kpis span,
+.elos-round2-module .schedule-kpi-grid span,
+.elos-round2-module .broker-kpis span,
+.elos-round2-module .sales-kpis span,
+.elos-round2-module .cashflow-kpis span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.elos-round2-module .finance-summary-grid strong,
+.elos-round2-module .proposal-summary-grid strong,
+.elos-round2-module .purchase-order-kpis strong,
+.elos-round2-module .purchase-order-kpis-v2 strong,
+.elos-round2-module .execution-schedule-kpis strong,
+.elos-round2-module .schedule-kpi-grid strong,
+.elos-round2-module .broker-kpis strong,
+.elos-round2-module .sales-kpis strong,
+.elos-round2-module .cashflow-kpis strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -.03em;
+}
+
+/* --------------------------------------------------------------------------
+   Filtros, tabs e toolbars
+   -------------------------------------------------------------------------- */
+.elos-round2-module .registry-toolbar,
+.elos-round2-module .proposal-filter-panel,
+.elos-round2-module .proposal-filter-wrap,
+.elos-round2-module .finance-filter,
+.elos-round2-module .planning-filter,
+.elos-round2-module [class*="filter-bar"],
+.elos-round2-module [class*="-toolbar"] {
+  gap: 8px;
+}
+
+.elos-round2-module .registry-toolbar,
+.elos-round2-module .proposal-filter-panel,
+.elos-round2-module .finance-filter {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.elos-round2-module .planning-filter--tabs,
+.elos-round2-module .schedule-tabs,
+.elos-round2-module .module-tabs,
+.elos-round2-module [class*="-tabs"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.elos-round2-module .planning-filter--tabs a,
+.elos-round2-module .planning-filter--tabs button,
+.elos-round2-module .schedule-tab,
+.elos-round2-module [class*="-tab"] {
+  min-height: 38px;
+  border-radius: 0;
+  border-width: 0 0 2px;
+  border-bottom-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.elos-round2-module .planning-filter--tabs .active,
+.elos-round2-module .schedule-tab.active,
+.elos-round2-module [class*="-tab"].active,
+.elos-round2-module [class*="-tab"][aria-selected="true"] {
+  color: var(--foreground);
+  border-bottom-color: var(--brand);
+  background: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   Data tables
+   -------------------------------------------------------------------------- */
+.elos-round2-module .registry-table-wrap,
+.elos-round2-module .proposal-table-wrap,
+.elos-round2-module .execution-history-wrap,
+.elos-round2-module [class*="table-wrap"] {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.elos-round2-module .registry-table,
+.elos-round2-module .proposal-table,
+.elos-round2-module .finance-table,
+.elos-round2-module .execution-history-wrap table,
+.elos-round2-module table[class] {
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.elos-round2-module .registry-table th,
+.elos-round2-module .proposal-table th,
+.elos-round2-module .finance-table th,
+.elos-round2-module .execution-history-wrap th,
+.elos-round2-module table[class] th {
+  padding: 9px 12px;
+  color: #58706d;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.elos-round2-module .registry-table td,
+.elos-round2-module .proposal-table td,
+.elos-round2-module .finance-table td,
+.elos-round2-module .execution-history-wrap td,
+.elos-round2-module table[class] td {
+  padding: 9px 12px;
+  border-top: 1px solid var(--line-soft);
+  color: #334542;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.elos-round2-module .registry-table tbody tr:hover td,
+.elos-round2-module .proposal-table tbody tr:hover td,
+.elos-round2-module .finance-table tbody tr:hover td,
+.elos-round2-module table[class] tbody tr:hover td {
+  background: var(--surface-3);
+}
+
+.elos-round2-module .registry-table td.numeric,
+.elos-round2-module .proposal-table td.numeric,
+.elos-round2-module .finance-table td.numeric,
+.elos-round2-module td[class*="amount"],
+.elos-round2-module td[class*="value"],
+.elos-round2-module td[class*="number"] {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   Status pills
+   -------------------------------------------------------------------------- */
+.elos-round2-module .registry-status-pill,
+.elos-round2-module .proposal-status,
+.elos-round2-module .status-pill,
+.elos-round2-module [class*="status-pill"],
+.elos-round2-module [class*="-badge"] {
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.elos-round2-module .registry-status-paid,
+.elos-round2-module .registry-status-approved,
+.elos-round2-module .status-ok,
+.elos-round2-module .status-success,
+.elos-round2-module [class*="status-complete"],
+.elos-round2-module [class*="status-approved"] {
+  color: var(--success) !important;
+  background: #e7f3ec !important;
+}
+
+.elos-round2-module .registry-status-open,
+.elos-round2-module .registry-status-pending,
+.elos-round2-module .status-warn,
+.elos-round2-module .status-warning,
+.elos-round2-module [class*="status-pending"] {
+  color: var(--warning) !important;
+  background: var(--warning-soft) !important;
+}
+
+.elos-round2-module .registry-status-overdue,
+.elos-round2-module .status-bad,
+.elos-round2-module .status-danger,
+.elos-round2-module [class*="status-overdue"],
+.elos-round2-module [class*="status-blocked"] {
+  color: var(--danger) !important;
+  background: var(--danger-soft) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Financeiro
+   -------------------------------------------------------------------------- */
+.elos-round2-finance .finance-summary-grid {
+  margin-bottom: 14px;
+}
+
+.elos-round2-finance .finance-summary-grid > *:hover {
+  background: var(--surface-3) !important;
+}
+
+.elos-round2-finance .finance-filter {
+  margin-bottom: 12px;
+}
+
+.elos-round2-finance .registry-section > header,
+.elos-round2-finance [class*="finance-"][class$="-card"] > header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.elos-round2-finance .registry-row-actions,
+.elos-round2-finance [class*="row-actions"] {
+  gap: 5px;
+}
+
+.elos-round2-finance .registry-row-actions a,
+.elos-round2-finance .registry-row-actions button,
+.elos-round2-finance [class*="row-actions"] a,
+.elos-round2-finance [class*="row-actions"] button {
+  min-height: 28px;
+  border-color: #cfe0de;
+  border-radius: 7px;
+  padding: 0 8px;
+  color: #315e59;
+  background: #fff;
+  font-size: 10px;
+}
+
+.elos-round2-finance .cashflow-chart,
+.elos-round2-finance [class*="cashflow"][class$="-chart"] {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.elos-round2-finance .registry-mobile-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   Suprimentos
+   -------------------------------------------------------------------------- */
+.elos-round2-procurement .purchase-order-kpis,
+.elos-round2-procurement .purchase-order-kpis-v2 {
+  margin-bottom: 14px;
+}
+
+.elos-round2-procurement .purchase-order-table {
+  min-width: 980px;
+}
+
+.elos-round2-procurement .registry-row-actions {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.elos-round2-procurement .registry-row-actions a,
+.elos-round2-procurement .registry-row-actions button {
+  min-height: 28px;
+  border: 1px solid #cfe0de;
+  border-radius: 7px;
+  padding: 0 8px;
+  color: #315e59;
+  background: #fff;
+  font-size: 10px;
+}
+
+.elos-round2-procurement .registry-mobile-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.elos-round2-procurement [class*="progress-track"],
+.elos-round2-procurement [class*="stock-bar"],
+.elos-round2-procurement [class*="supplier-bar"] {
+  height: 7px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.elos-round2-procurement [class*="progress-fill"],
+.elos-round2-procurement [class*="stock-bar"] > *,
+.elos-round2-procurement [class*="supplier-bar"] > * {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+}
+
+/* --------------------------------------------------------------------------
+   Obra / Execução
+   -------------------------------------------------------------------------- */
+.elos-round2-execution .elos-module-content {
+  max-width: 1480px;
+}
+
+.elos-round2-execution .execution-schedule-workbench {
+  min-height: 0;
+  border-color: var(--line);
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.elos-round2-execution .execution-schedule-kpis {
+  padding: 0;
+  border-bottom: 0;
+  background: #fff;
+}
+
+.elos-round2-execution .execution-schedule-kpis article {
+  padding: 13px 16px !important;
+}
+
+.elos-round2-execution .execution-schedule-kpis span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.elos-round2-execution .execution-schedule-kpis strong {
+  font-size: 21px;
+}
+
+.elos-round2-execution .execution-modebar {
+  border-color: var(--line);
+  background: #fff;
+}
+
+/* Mantém o Gantt / linha de balanço atual; apenas melhora a área útil e scroll. */
+.elos-round2-execution .execution-schedule-page,
+.elos-round2-execution .execution-schedule-workbench {
+  width: 100%;
+  max-width: none;
+}
+
+.elos-round2-execution .execution-gantt-content {
+  min-height: 380px;
+  max-height: calc(100vh - 230px);
+  overflow: scroll !important;
+  scrollbar-gutter: stable both-edges;
+}
+
+.elos-round2-execution .execution-gantt-content::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.elos-round2-execution .execution-gantt-content::-webkit-scrollbar-track {
+  background: #eef2f1;
+}
+
+.elos-round2-execution .execution-gantt-content::-webkit-scrollbar-thumb {
+  border: 3px solid #eef2f1;
+  border-radius: 999px;
+  background: #a8b7b4;
+}
+
+.elos-round2-execution .execution-history-card {
+  margin: 14px 0;
+}
+
+.elos-round2-execution .execution-measure-button {
+  min-height: 28px !important;
+  border-color: #cfe0de;
+  border-radius: 7px;
+  color: var(--brand-strong);
+  background: #edf7f5;
+  font-size: 10px;
+}
+
+.elos-round2-execution [class*="quality"],
+.elos-round2-execution [class*="daily-log"],
+.elos-round2-execution [class*="material-request"],
+.elos-round2-execution [class*="contract"] {
+  --local-card-border: var(--line);
+}
+
+.elos-round2-execution [class*="quality-"][class$="-card"],
+.elos-round2-execution [class*="daily-log-"][class$="-card"],
+.elos-round2-execution [class*="material-request-"][class$="-card"],
+.elos-round2-execution [class*="contract-"][class$="-card"] {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   Pré-Obra / Engenharia
+   -------------------------------------------------------------------------- */
+.elos-round2-engineering [class*="budget-"][class$="-card"],
+.elos-round2-engineering [class*="schedule-"][class$="-card"],
+.elos-round2-engineering [class*="planning-"][class$="-card"],
+.elos-round2-engineering [class*="supply-"][class$="-card"] {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.elos-round2-engineering .budget-summary-grid,
+.elos-round2-engineering .schedule-summary-grid,
+.elos-round2-engineering .planning-summary-grid {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.elos-round2-engineering .budget-summary-grid > *,
+.elos-round2-engineering .schedule-summary-grid > *,
+.elos-round2-engineering .planning-summary-grid > * {
+  flex: 1 1 160px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 13px 16px !important;
+  box-shadow: 0 0 0 .5px var(--line) !important;
+}
+
+.elos-round2-engineering [class*="budget-table"],
+.elos-round2-engineering [class*="planning-table"],
+.elos-round2-engineering [class*="schedule-table"] {
+  background: #fff;
+}
+
+.elos-round2-engineering [class*="progress-track"],
+.elos-round2-engineering [class*="consumption-track"] {
+  height: 7px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.elos-round2-engineering [class*="progress-fill"],
+.elos-round2-engineering [class*="consumption-fill"] {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+}
+
+/* --------------------------------------------------------------------------
+   Comercial
+   -------------------------------------------------------------------------- */
+.elos-round2-commercial .proposal-header-block {
+  margin-bottom: 16px;
+}
+
+.elos-round2-commercial .proposal-header-actions {
+  gap: 8px;
+}
+
+.elos-round2-commercial .proposal-summary-grid {
+  margin-bottom: 14px;
+}
+
+.elos-round2-commercial .proposal-filter-panel {
+  margin-bottom: 12px;
+}
+
+.elos-round2-commercial .proposal-list-card {
+  overflow: hidden;
+}
+
+.elos-round2-commercial .proposal-table {
+  min-width: 1040px;
+}
+
+.elos-round2-commercial .proposal-table th {
+  background: var(--surface-2);
+}
+
+.elos-round2-commercial .proposal-mobile-card,
+.elos-round2-commercial [class*="sales-"][class$="-card"],
+.elos-round2-commercial [class*="broker-"][class$="-card"],
+.elos-round2-commercial [class*="incorporation-"][class$="-card"] {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.elos-round2-commercial [class*="sales-"][class$="-grid"],
+.elos-round2-commercial [class*="broker-"][class$="-grid"] {
+  gap: 12px;
+}
+
+/* Não sobrescrever a composição visual específica já aplicada na rodada 1. */
+.elos-round2-commercial .feasibility-page,
+.elos-round2-commercial .result-hero,
+.elos-round2-commercial .v20-dashboard {
+  --round2-preserve-specialized-redesign: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Padrões auxiliares do handoff (quando classes já existirem / forem reutilizadas)
+   -------------------------------------------------------------------------- */
+.elos-round2-module .info-banner,
+.elos-round2-module [class*="info-banner"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.elos-round2-module .info-banner h3,
+.elos-round2-module [class*="info-banner"] h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.elos-round2-module .info-banner p,
+.elos-round2-module [class*="info-banner"] p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.elos-round2-module .bar-list,
+.elos-round2-module [class*="bar-list"] {
+  display: grid;
+  gap: 10px;
+}
+
+.elos-round2-module .bar-list [class*="track"],
+.elos-round2-module [class*="bar-list"] [class*="track"] {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.elos-round2-module .bar-list [class*="fill"],
+.elos-round2-module [class*="bar-list"] [class*="fill"] {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+}
+
+/* --------------------------------------------------------------------------
+   Responsivo
+   -------------------------------------------------------------------------- */
+@media (max-width: 1300px) {
+  .elos-round2-module .elos-header {
+    padding-inline: 18px;
+  }
+
+  .elos-round2-module .elos-org-text,
+  .elos-round2-module .elos-user-text,
+  .elos-round2-module .elos-project-switcher label {
+    display: none;
+  }
+
+  .elos-round2-module .elos-project-switcher select {
+    min-width: 190px;
+  }
+
+  .elos-round2-execution .execution-gantt-content {
+    --meta: 300px;
+  }
+
+  .elos-round2-execution .execution-meta-head,
+  .elos-round2-execution .execution-task-meta {
+    width: 300px;
+    grid-template-columns: 54px minmax(140px,1fr) 58px 48px;
+  }
+
+  .elos-round2-execution .execution-meta-head > :nth-child(4),
+  .elos-round2-execution .execution-meta-head > :nth-child(5),
+  .elos-round2-execution .execution-meta-head > :nth-child(6),
+  .elos-round2-execution .execution-task-meta > :nth-child(4),
+  .elos-round2-execution .execution-task-meta > :nth-child(5),
+  .elos-round2-execution .execution-task-meta > :nth-child(6) {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .elos-round2-module .elos-app-shell {
+    --elos-sidebar-width: 0px;
+    display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .elos-round2-module .elos-main {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .elos-round2-module .elos-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(300px, 88vw);
+    transform: translateX(-104%);
+    transition: transform .2s ease;
+  }
+
+  .elos-round2-module .elos-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .elos-round2-module .elos-header {
+    min-height: 58px;
+    height: auto;
+    padding: 9px 14px 9px 58px;
+    flex-wrap: wrap;
+  }
+
+  .elos-round2-module .elos-breadcrumb,
+  .elos-round2-module .elos-org,
+  .elos-round2-module .elos-user {
+    display: none;
+  }
+
+  .elos-round2-module .elos-project-switcher {
+    margin-left: 0;
+    flex: 1 1 auto;
+  }
+
+  .elos-round2-module .elos-project-switcher select {
+    min-width: 0;
+    width: min(100%, 260px);
+  }
+
+  .elos-round2-module .elos-module-content {
+    padding: 18px 14px 48px;
+  }
+
+  .elos-round2-module .elos-page-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .elos-round2-module .elos-page-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .elos-round2-module .elos-page-top h1,
+  .elos-round2-module .proposal-header-block h1,
+  .elos-round2-module .schedule-header-block h1 {
+    font-size: 25px;
+  }
+
+  .elos-round2-module .registry-table,
+  .elos-round2-module .proposal-table,
+  .elos-round2-module .finance-table {
+    min-width: 780px;
+  }
+
+  .elos-round2-module .finance-summary-grid > *,
+  .elos-round2-module .proposal-summary-grid > *,
+  .elos-round2-module .purchase-order-kpis > *,
+  .elos-round2-module .purchase-order-kpis-v2 > *,
+  .elos-round2-module .execution-schedule-kpis > *,
+  .elos-round2-module .schedule-kpi-grid > * {
+    flex-basis: 145px;
+  }
+}
+
+@media (max-width: 600px) {
+  .elos-round2-module .elos-page-top h1,
+  .elos-round2-module .proposal-header-block h1,
+  .elos-round2-module .schedule-header-block h1 {
+    font-size: 23px;
+  }
+
+  .elos-round2-module .elos-button,
+  .elos-round2-module .elos-page-actions > * {
+    max-width: 100%;
+  }
+
+  .elos-round2-module .finance-summary-grid > *,
+  .elos-round2-module .proposal-summary-grid > *,
+  .elos-round2-module .purchase-order-kpis > *,
+  .elos-round2-module .purchase-order-kpis-v2 > *,
+  .elos-round2-module .execution-schedule-kpis > *,
+  .elos-round2-module .schedule-kpi-grid > * {
+    flex: 1 1 50%;
+  }
+
+  .elos-round2-execution .execution-meta-head,
+  .elos-round2-execution .execution-task-meta {
+    position: relative;
+    left: auto;
+  }
+
+  .elos-round2-module .info-banner,
+  .elos-round2-module [class*="info-banner"] {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
