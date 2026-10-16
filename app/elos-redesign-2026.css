@@ -1,0 +1,1201 @@
+/* Redesign aprovado em 16/10/2026 — Dashboard, Viabilidade e Resultado.
+   Escopo deliberadamente visual: preserva queries, cálculos, permissões e o GlobalElosIaDrawer. */
+
+:root {
+  --line-soft: #edf1f1;
+  --surface-2: #f7f9f9;
+  --surface-3: #f8fbfa;
+  --sidebar-cell: #13241f;
+  --warning-soft: #fff3d7;
+  --danger-soft: #f7e5e3;
+  --committed: #d9a23b;
+  --track: #dfe6e5;
+  --outflow: #d98b84;
+  --outflow-proj: #ecc3bf;
+  --inflow-proj: #9fcfca;
+  --teal-light: #7fd8d1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Shell — somente nas três telas redesenhadas                                 */
+/* -------------------------------------------------------------------------- */
+
+body:has(.v20-dashboard),
+body:has(.feasibility-page),
+body:has(.result-hero) {
+  --elos-sidebar-width: 248px;
+}
+
+body:has(.v20-dashboard) .elos-sidebar,
+body:has(.feasibility-page) .elos-sidebar,
+body:has(.result-hero) .elos-sidebar {
+  padding: 18px 12px 14px;
+}
+
+body:has(.v20-dashboard) .elos-logo,
+body:has(.feasibility-page) .elos-logo,
+body:has(.result-hero) .elos-logo {
+  gap: 10px;
+  padding: 0 6px 16px;
+}
+
+body:has(.v20-dashboard) .elos-logo-mark,
+body:has(.feasibility-page) .elos-logo-mark,
+body:has(.result-hero) .elos-logo-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--brand);
+  box-shadow: none;
+}
+
+body:has(.v20-dashboard) .elos-logo-mark svg,
+body:has(.feasibility-page) .elos-logo-mark svg,
+body:has(.result-hero) .elos-logo-mark svg {
+  width: 20px;
+  height: 20px;
+}
+
+body:has(.v20-dashboard) .elos-logo-text strong,
+body:has(.feasibility-page) .elos-logo-text strong,
+body:has(.result-hero) .elos-logo-text strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+body:has(.v20-dashboard) .elos-logo-text span,
+body:has(.feasibility-page) .elos-logo-text span,
+body:has(.result-hero) .elos-logo-text span {
+  font-size: 9px;
+  letter-spacing: .1em;
+}
+
+body:has(.v20-dashboard) .elos-module-menu,
+body:has(.feasibility-page) .elos-module-menu,
+body:has(.result-hero) .elos-module-menu {
+  gap: 2px;
+}
+
+body:has(.v20-dashboard) .elos-main-item,
+body:has(.feasibility-page) .elos-main-item,
+body:has(.result-hero) .elos-main-item {
+  min-height: 36px;
+  border-radius: 9px;
+  padding-inline: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body:has(.v20-dashboard) .elos-subnav,
+body:has(.feasibility-page) .elos-subnav,
+body:has(.result-hero) .elos-subnav {
+  margin: 2px 0 6px 29px;
+  padding-left: 9px;
+}
+
+body:has(.v20-dashboard) .elos-subnav a,
+body:has(.v20-dashboard) .elos-subnav-disabled,
+body:has(.feasibility-page) .elos-subnav a,
+body:has(.feasibility-page) .elos-subnav-disabled,
+body:has(.result-hero) .elos-subnav a,
+body:has(.result-hero) .elos-subnav-disabled {
+  min-height: 32px;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+body:has(.v20-dashboard) .elos-header,
+body:has(.feasibility-page) .elos-header,
+body:has(.result-hero) .elos-header {
+  min-height: 60px;
+  height: 60px;
+  gap: 10px;
+  padding: 10px 24px;
+  background: rgba(255,255,255,.94);
+  backdrop-filter: blur(10px);
+}
+
+body:has(.v20-dashboard) .elos-org,
+body:has(.feasibility-page) .elos-org,
+body:has(.result-hero) .elos-org {
+  min-width: 170px;
+}
+
+body:has(.v20-dashboard) .elos-org-icon,
+body:has(.feasibility-page) .elos-org-icon,
+body:has(.result-hero) .elos-org-icon,
+body:has(.v20-dashboard) .elos-avatar,
+body:has(.feasibility-page) .elos-avatar,
+body:has(.result-hero) .elos-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+body:has(.v20-dashboard) .elos-project-switcher select,
+body:has(.feasibility-page) .elos-project-switcher select,
+body:has(.result-hero) .elos-project-switcher select {
+  height: 38px;
+  min-width: 220px;
+  border-radius: 10px !important;
+  background: var(--surface-2);
+}
+
+body:has(.v20-dashboard) .elos-search-button,
+body:has(.v20-dashboard) .elos-logout-button,
+body:has(.feasibility-page) .elos-search-button,
+body:has(.feasibility-page) .elos-logout-button,
+body:has(.result-hero) .elos-search-button,
+body:has(.result-hero) .elos-logout-button {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+body:has(.v20-dashboard) .elos-module-content,
+body:has(.feasibility-page) .elos-module-content,
+body:has(.result-hero) .elos-module-content {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 24px 28px 60px;
+}
+
+body:has(.v20-dashboard) .elos-page-top,
+body:has(.feasibility-page) .elos-page-top,
+body:has(.result-hero) .elos-page-top {
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+body:has(.v20-dashboard) .elos-eyebrow,
+body:has(.feasibility-page) .elos-eyebrow,
+body:has(.result-hero) .elos-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+body:has(.v20-dashboard) .elos-page-top h1,
+body:has(.feasibility-page) .elos-page-top h1,
+body:has(.result-hero) .elos-page-top h1 {
+  margin-top: 4px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -.035em;
+}
+
+body:has(.v20-dashboard) .elos-page-top p,
+body:has(.feasibility-page) .elos-page-top p,
+body:has(.result-hero) .elos-page-top p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+body:has(.v20-dashboard) .elos-button,
+body:has(.feasibility-page) .elos-button,
+body:has(.result-hero) .elos-button {
+  min-height: 38px;
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+/* O launcher e o drawer da IA não são sobrescritos de propósito. */
+
+/* -------------------------------------------------------------------------- */
+/* Dashboard                                                                   */
+/* -------------------------------------------------------------------------- */
+
+.v20-dashboard {
+  --v20-green: var(--brand);
+  --v20-green-soft: var(--brand-soft);
+  --v20-blue: #4c8f89;
+  --v20-amber: var(--warning);
+  --v20-red: var(--danger);
+  --v20-purple: #657b78;
+  --v20-ink: var(--foreground);
+  --v20-muted: var(--muted);
+  --v20-grid: var(--line-soft);
+  width: 100%;
+  color: var(--foreground);
+}
+
+body:has(.v20-dashboard) .elos-module-content {
+  background: transparent;
+}
+
+.v20-dashboard .v20-head {
+  align-items: center;
+  margin: 0 0 14px;
+  padding-bottom: 2px;
+}
+
+.v20-dashboard .v20-head h2 {
+  margin: 0;
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -.035em;
+}
+
+.v20-dashboard .v20-head p {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.v20-dashboard .v20-status {
+  min-height: 28px;
+  padding: 5px 10px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.v20-dashboard .v20-status.ok { color: var(--success); background: #e7f3ec; }
+.v20-dashboard .v20-status.attention { color: var(--warning); background: var(--warning-soft); }
+.v20-dashboard .v20-status.critical { color: var(--danger); background: var(--danger-soft); }
+
+.v20-dashboard .v20-grid {
+  grid-template-columns: repeat(12,minmax(0,1fr));
+  gap: 14px;
+}
+
+.v20-dashboard .v20-kpi,
+.v20-dashboard .v20-card {
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: none;
+}
+
+.v20-dashboard .v20-kpi {
+  min-height: 118px;
+  border-radius: 14px;
+  padding: 14px 16px;
+  transform: none !important;
+}
+
+.v20-dashboard .v20-kpi:hover {
+  border-color: var(--line);
+  background: var(--surface-3);
+  box-shadow: none;
+}
+
+.v20-dashboard .v20-kpi-top {
+  gap: 6px;
+}
+
+.v20-dashboard .v20-kpi-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.v20-dashboard .v20-kpi-icon.green,
+.v20-dashboard .v20-kpi-icon.blue,
+.v20-dashboard .v20-kpi-icon.purple { color: var(--brand-strong); background: var(--brand-soft); }
+.v20-dashboard .v20-kpi-icon.amber { color: var(--warning); background: var(--warning-soft); }
+.v20-dashboard .v20-kpi-icon.red { color: var(--danger); background: var(--danger-soft); }
+
+.v20-dashboard .v20-kpi-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.v20-dashboard .v20-kpi-value {
+  margin: 8px 0 3px;
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -.03em;
+}
+
+.v20-dashboard .v20-kpi-foot {
+  min-height: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.v20-dashboard .v20-up { color: var(--success); }
+.v20-dashboard .v20-down { color: var(--danger); }
+.v20-dashboard .v20-flat { color: var(--muted); }
+
+/* Os quatro indicadores de qualidade passam a ter densidade de uma faixa. */
+.v20-dashboard .v20-kpi.v20-span3 {
+  min-height: 88px;
+  padding: 10px 16px;
+  border-radius: 12px;
+}
+
+.v20-dashboard .v20-kpi.v20-span3 .v20-kpi-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+}
+
+.v20-dashboard .v20-kpi.v20-span3 .v20-kpi-value {
+  margin: 5px 0 1px;
+  font-size: 20px;
+}
+
+.v20-dashboard .v20-kpi.v20-span3 .v20-kpi-foot {
+  font-size: 10px;
+}
+
+.v20-dashboard .v20-card {
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.v20-dashboard .v20-card-head {
+  margin-bottom: 12px;
+}
+
+.v20-dashboard .v20-card-head h3 {
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+
+.v20-dashboard .v20-card-head small,
+.v20-dashboard .v20-link {
+  font-size: 11px;
+}
+
+/* Ordem visual do protótipo: curva+riscos / caixa+comercial / etapas+orçamento. */
+.v20-dashboard .v20-grid > section.v20-card:nth-of-type(1) { grid-column: span 8 !important; order: 10; }
+.v20-dashboard .v20-grid > section.v20-card:nth-of-type(6) { grid-column: span 4 !important; order: 11; }
+.v20-dashboard .v20-grid > section.v20-card:nth-of-type(2) { grid-column: span 8 !important; order: 12; }
+.v20-dashboard .v20-grid > section.v20-card:nth-of-type(3) { grid-column: span 4 !important; order: 13; }
+.v20-dashboard .v20-grid > section.v20-card:nth-of-type(4) { grid-column: span 7 !important; order: 14; }
+.v20-dashboard .v20-grid > section.v20-card:nth-of-type(5) { grid-column: span 5 !important; order: 15; }
+
+.v20-dashboard .v20-legend {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.v20-dashboard .v20-legend i { border-color: var(--brand); border-width: 3px; }
+.v20-dashboard .v20-legend i.planned { border-color: #9fb2af; border-width: 2px; }
+.v20-dashboard .v20-legend i.today { background: var(--warning); }
+
+.v20-dashboard .v20-curve-scroll,
+.v20-dashboard .v20-cash-scroll {
+  border: 0;
+  border-radius: 0;
+}
+
+.v20-dashboard .v20-chart-grid-line { stroke: var(--line-soft); }
+.v20-dashboard .v20-chart-axis-label,
+.v20-dashboard .v20-chart-month-label,
+.v20-dashboard .v20-curve-table th,
+.v20-dashboard .v20-curve-table td {
+  font-family: var(--font-ibm-plex-mono, monospace), monospace;
+}
+.v20-dashboard .v20-chart-today-line { stroke: var(--warning); }
+.v20-dashboard .v20-curve-planned { stroke: #9fb2af; stroke-dasharray: 5 5; }
+.v20-dashboard .v20-curve-actual { stroke: var(--brand); stroke-width: 2.5; }
+.v20-dashboard .v20-curve-point { stroke: var(--brand); }
+.v20-dashboard .v20-curve-table .today { background: var(--warning-soft); }
+
+.v20-dashboard .v20-bar-received { fill: var(--brand); }
+.v20-dashboard .v20-bar-receivable { fill: var(--inflow-proj); }
+.v20-dashboard .v20-bar-paid { fill: var(--outflow); }
+.v20-dashboard .v20-bar-payable { fill: var(--outflow-proj); }
+
+.v20-dashboard .v20-stage-top {
+  display: grid;
+  grid-template-columns: minmax(120px,140px) 1fr 92px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 3px;
+  font-size: 11px;
+}
+
+.v20-dashboard .v20-stage-top b {
+  grid-column: 3;
+  text-align: right;
+  font-family: var(--font-ibm-plex-mono, monospace), monospace;
+}
+
+.v20-dashboard .v20-rail {
+  height: 8px;
+  background: var(--track);
+}
+.v20-dashboard .v20-fill { background: var(--brand); }
+.v20-dashboard .v20-marker { width: 2px; background: #17211f; }
+
+.v20-dashboard .v20-budget-stack {
+  height: 28px;
+  border-radius: 7px;
+  background: var(--track);
+}
+.v20-dashboard .v20-budget-stack .paid { background: var(--brand); }
+.v20-dashboard .v20-budget-stack .committed { background: var(--committed); }
+.v20-dashboard .v20-budget-stack .remaining { background: var(--track); color: #526662; }
+
+.v20-dashboard .v20-risk {
+  position: relative;
+  margin-bottom: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  padding: 11px 0 11px 17px;
+}
+.v20-dashboard .v20-risk::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+}
+.v20-dashboard .v20-risk.high::before { background: var(--danger); }
+.v20-dashboard .v20-risk.medium::before { background: var(--warning); }
+.v20-dashboard .v20-risk.high,
+.v20-dashboard .v20-risk.medium,
+.v20-dashboard .v20-risk.low { border-left: 0; }
+.v20-dashboard .v20-risk-tag {
+  padding: 3px 7px;
+  font-size: 8px;
+  border-radius: 99px;
+}
+.v20-dashboard .v20-risk.high .v20-risk-tag { color: var(--danger); background: var(--danger-soft); }
+.v20-dashboard .v20-risk.medium .v20-risk-tag { color: var(--warning); background: var(--warning-soft); }
+.v20-dashboard .v20-risk.low .v20-risk-tag { color: var(--success); background: #e7f3ec; }
+.v20-dashboard .v20-risk p { font-size: 11px; }
+
+/* -------------------------------------------------------------------------- */
+/* Estudo de Viabilidade                                                       */
+/* -------------------------------------------------------------------------- */
+
+.feasibility-page {
+  --feasibility-border: var(--line);
+  --feasibility-border-strong: #d7dfdd;
+  --feasibility-soft: var(--surface-2);
+  --feasibility-ink: var(--foreground);
+  display: grid;
+  grid-template-columns: minmax(0,1.7fr) minmax(310px,1fr);
+  align-items: start;
+  gap: 14px;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.feasibility-page > .feasibility-jump-nav {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.feasibility-page .feasibility-jump-nav {
+  position: relative;
+  top: auto;
+  z-index: 2;
+  min-height: 42px;
+  gap: 2px;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.feasibility-page .feasibility-jump-nav > span {
+  display: none;
+}
+
+.feasibility-page .feasibility-jump-nav a {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.feasibility-page .feasibility-jump-nav a:hover,
+.feasibility-page .feasibility-jump-nav a:focus-visible {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+
+/* O resumo existente vira o painel lateral de resultado ao vivo. */
+.feasibility-page > .feasibility-kpis {
+  grid-column: 2;
+  grid-row: 2 / span 7;
+  position: sticky;
+  top: 76px;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 18px;
+  color: #fff;
+  background: var(--sidebar);
+}
+
+.feasibility-page > .feasibility-kpis::before {
+  content: "RESULTADO AO VIVO";
+  grid-column: 1 / -1;
+  color: var(--teal-light);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.feasibility-page > .feasibility-kpis::after {
+  content: "Valores atualizados com as premissas salvas · salve para recalcular.";
+  grid-column: 1 / -1;
+  color: var(--sidebar-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.feasibility-page .feasibility-kpis article {
+  min-height: 78px;
+  display: block;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px;
+  color: #fff;
+  background: var(--sidebar-cell);
+  box-shadow: none;
+}
+
+.feasibility-page .feasibility-kpis article:nth-child(2) {
+  grid-column: 1 / -1;
+  min-height: auto;
+  padding: 5px 0 2px;
+  background: transparent;
+}
+
+.feasibility-page .feasibility-kpis article:nth-child(2) span {
+  color: var(--sidebar-muted);
+}
+
+.feasibility-page .feasibility-kpis article:nth-child(2) strong {
+  margin: 4px 0 3px;
+  color: #fff;
+  font-size: 32px;
+}
+
+.feasibility-page .feasibility-kpis article:nth-child(3) {
+  grid-column: 1 / -1;
+  min-height: auto;
+  padding: 0 0 8px;
+  background: transparent;
+}
+
+.feasibility-page .feasibility-kpis article:nth-child(3) strong {
+  display: inline;
+  margin: 0;
+  color: var(--teal-light);
+  font-size: 14px;
+}
+
+/* Esconde métricas secundárias que pertencem às seções detalhadas. */
+.feasibility-page .feasibility-kpis article:nth-child(6),
+.feasibility-page .feasibility-kpis article:nth-child(9),
+.feasibility-page .feasibility-kpis article:nth-child(10),
+.feasibility-page .feasibility-kpis article:nth-child(11) {
+  display: none;
+}
+
+.feasibility-page .feasibility-kpis article:nth-child(1) { order: 3; }
+.feasibility-page .feasibility-kpis article:nth-child(2) { order: 1; }
+.feasibility-page .feasibility-kpis article:nth-child(3) { order: 2; }
+.feasibility-page .feasibility-kpis article:nth-child(4) { order: 8; }
+.feasibility-page .feasibility-kpis article:nth-child(5) { order: 4; }
+.feasibility-page .feasibility-kpis article:nth-child(7) { order: 5; }
+.feasibility-page .feasibility-kpis article:nth-child(8) { order: 6; }
+.feasibility-page .feasibility-kpis article:nth-child(12) { order: 9; }
+.feasibility-page > .feasibility-kpis::before { order: 0; }
+.feasibility-page > .feasibility-kpis::after { order: 10; }
+
+.feasibility-page .feasibility-kpis span {
+  color: var(--sidebar-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.feasibility-page .feasibility-kpis strong,
+.feasibility-page .feasibility-kpis .feasibility-kpi-primary strong {
+  margin: 5px 0 3px;
+  color: #fff;
+  font-family: var(--font-ibm-plex-mono, monospace), monospace;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -.02em;
+}
+
+.feasibility-page .feasibility-kpis article:nth-child(4) strong { color: #f09a92; }
+.feasibility-page .feasibility-kpis small {
+  color: var(--sidebar-muted);
+  font-size: 9px;
+}
+
+.feasibility-page > form,
+.feasibility-page > .feasibility-note,
+.feasibility-page > section:not(.feasibility-kpis):not(.feasibility-two):not(#fluxo):not(#decisao) {
+  grid-column: 1;
+}
+
+.feasibility-page > .feasibility-two,
+.feasibility-page > #fluxo,
+.feasibility-page > #decisao {
+  grid-column: 1 / -1;
+}
+
+.feasibility-page .feasibility-section {
+  margin-top: 0;
+}
+
+.feasibility-page .feasibility-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.feasibility-page form > .feasibility-card + .feasibility-card {
+  margin-top: 14px;
+}
+
+.feasibility-page .feasibility-section-title {
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 13px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.feasibility-page .feasibility-section-title span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
+.feasibility-page .feasibility-section-title h2 {
+  margin-top: 3px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+
+.feasibility-page .feasibility-section-title p {
+  max-width: 430px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.feasibility-page .feasibility-form {
+  grid-template-columns: repeat(auto-fill,minmax(170px,1fr));
+  gap: 10px;
+}
+
+.feasibility-page .feasibility-form .span-2 { grid-column: span 2; }
+.feasibility-page .feasibility-form .span-4 { grid-column: 1 / -1; }
+
+.feasibility-page .feasibility-form label,
+.feasibility-page .feasibility-unit-grid label,
+.feasibility-page .feasibility-phase-form label {
+  gap: 5px;
+  color: #455d59;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.feasibility-page .feasibility-form input,
+.feasibility-page .feasibility-form select,
+.feasibility-page .feasibility-unit-grid input,
+.feasibility-page .feasibility-unit-grid select,
+.feasibility-page .feasibility-phase-form input,
+.feasibility-page .feasibility-phase-form select {
+  min-height: 38px;
+  height: 38px;
+  border-color: #d7dfdd;
+  border-radius: 9px;
+  padding-inline: 10px;
+  font-size: 12px;
+}
+
+.feasibility-page .feasibility-form textarea,
+.feasibility-page .feasibility-unit-grid textarea,
+.feasibility-page .feasibility-phase-form textarea {
+  min-height: 76px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.feasibility-page .feasibility-form input[type="number"],
+.feasibility-page .feasibility-unit-grid input[type="number"],
+.feasibility-page .feasibility-phase-form input[type="number"],
+.feasibility-page .registry-table td:not(:first-child),
+.feasibility-page .registry-table th:not(:first-child) {
+  font-family: var(--font-ibm-plex-mono, monospace), monospace;
+  font-weight: 500;
+}
+
+.feasibility-page input:disabled,
+.feasibility-page select:disabled,
+.feasibility-page textarea:disabled {
+  border-color: var(--line-soft) !important;
+  background: var(--surface-2) !important;
+}
+
+.feasibility-page input:focus,
+.feasibility-page select:focus,
+.feasibility-page textarea:focus {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(0,135,128,.12) !important;
+}
+
+.feasibility-page .feasibility-primary,
+.feasibility-page .feasibility-secondary,
+.feasibility-page .feasibility-danger,
+.feasibility-page .feasibility-row-editor > summary,
+.feasibility-page .feasibility-phase-editor > summary {
+  min-height: 38px;
+  border-radius: 9px !important;
+  box-shadow: none;
+}
+
+.feasibility-page .feasibility-save-bar {
+  position: static;
+  margin: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  border-radius: 0;
+  padding: 12px 0 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.feasibility-page .feasibility-note {
+  border: 1px solid #cde4e0;
+  border-left: 3px solid var(--brand);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 11px;
+}
+
+.feasibility-page .feasibility-unit-grid {
+  grid-template-columns: repeat(auto-fit,minmax(145px,1fr));
+  gap: 10px;
+  border-color: var(--line-soft);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--surface-2);
+}
+
+.feasibility-page .registry-table-wrap {
+  border-color: var(--line) !important;
+  border-radius: 10px !important;
+}
+
+.feasibility-page .registry-table th {
+  padding: 10px 11px !important;
+  color: #58706d !important;
+  background: var(--surface-2) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: .06em !important;
+}
+
+.feasibility-page .registry-table td {
+  padding: 10px 11px !important;
+  border-color: var(--line-soft) !important;
+  font-size: 11px !important;
+}
+
+.feasibility-page .registry-table tbody tr:nth-child(even) { background: #fff !important; }
+.feasibility-page .registry-table tbody tr:hover { background: var(--surface-3) !important; }
+
+.feasibility-page .feasibility-two {
+  gap: 14px;
+}
+
+.feasibility-page .feasibility-warning {
+  color: #6d4c10;
+  border-color: #edd8a6;
+  border-left-color: var(--warning);
+  background: #fff8e8;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Resultado do Empreendimento                                                 */
+/* -------------------------------------------------------------------------- */
+
+.result-empty,
+.result-warning,
+.result-panel,
+.result-hero {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.result-empty { padding: 24px; }
+.result-empty p { color: var(--muted); }
+
+.result-warning {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-color: #ead3a1;
+  color: #6d4c10;
+  background: #fff8e8;
+}
+.result-warning span { color: #806633; }
+
+.result-hero {
+  display: grid;
+  grid-template-columns: minmax(280px,1.5fr) minmax(190px,1fr) minmax(190px,1fr) minmax(150px,.75fr);
+  gap: 18px;
+  margin-bottom: 14px;
+  border: 0;
+  border-radius: 16px;
+  padding: 20px 22px;
+  color: #fff;
+  background: var(--sidebar);
+}
+
+.result-hero::before { display: none; }
+.result-hero span {
+  color: var(--sidebar-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+.result-hero > div:first-child > span { color: var(--teal-light); }
+.result-hero > div > strong {
+  margin-top: 6px;
+  color: #fff;
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -.035em;
+}
+.result-hero > div > small {
+  color: var(--sidebar-muted);
+  font-size: 11px;
+}
+.result-hero .result-hero-metric > strong,
+.result-hero .result-health > strong {
+  font-size: 22px;
+}
+.result-hero .positive { color: var(--teal-light) !important; }
+.result-hero .negative { color: #f09a92 !important; }
+.result-hero .neutral { color: #fff !important; }
+.result-health {
+  border-left: 1px solid rgba(255,255,255,.1);
+  padding-left: 16px;
+}
+
+.result-kpi-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.result-kpi-grid article {
+  flex: 1 1 170px;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 16px;
+  background: #fff;
+  box-shadow: 0 0 0 .5px var(--line);
+}
+
+.result-kpi-grid article:hover { background: var(--surface-3); }
+.result-kpi-grid article.danger { border: 0; background: #fff; }
+.result-kpi-grid article.danger strong { color: var(--danger); }
+
+.result-kpi-grid span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.result-kpi-grid strong {
+  margin: 5px 0 3px;
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -.03em;
+}
+.result-kpi-grid small { color: var(--muted); font-size: 10px; }
+
+.result-layout {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.result-panel {
+  flex: 1 1 300px;
+  min-width: 0;
+  padding: 16px 18px;
+}
+.result-panel-large { flex: 2 1 560px; }
+
+.result-heading {
+  align-items: center;
+  margin-bottom: 12px;
+}
+.result-heading span {
+  color: var(--brand);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+.result-heading h2 {
+  margin-top: 3px;
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), var(--font-ibm-plex), sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+.result-heading small { color: var(--muted); font-size: 10px; }
+
+.result-table {
+  min-width: 700px;
+}
+.result-table th,
+.result-table td {
+  padding: 10px 11px;
+  border-color: var(--line-soft);
+  color: var(--foreground);
+  font-family: var(--font-ibm-plex-mono, monospace), monospace;
+  font-size: 11px;
+}
+.result-table th:first-child,
+.result-table td:first-child {
+  font-family: var(--font-ibm-plex), sans-serif;
+}
+.result-table th {
+  color: #58706d;
+  background: var(--surface-2);
+  font-family: var(--font-ibm-plex), sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+.result-table tr.strong td {
+  font-weight: 700;
+  background: var(--surface-3);
+}
+.result-table .positive { color: var(--success) !important; }
+.result-table .negative { color: var(--danger) !important; }
+.result-table .neutral { color: var(--muted) !important; }
+
+.result-stat-list > div {
+  padding: 9px 0;
+  border-color: var(--line-soft);
+}
+.result-stat-list span {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.result-stat-list strong {
+  color: var(--foreground);
+  font-family: var(--font-ibm-plex-mono, monospace), monospace;
+  font-size: 12px;
+}
+.result-stat-list .total {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: var(--surface-3);
+}
+.result-stat-list .total:has(.negative) { background: var(--danger-soft); }
+.result-stat-list .total:has(.positive) { background: #e7f3ec; }
+.positive { color: var(--success) !important; }
+.negative { color: var(--danger) !important; }
+.neutral { color: var(--muted) !important; }
+
+.result-cycle {
+  grid-template-columns: repeat(auto-fit,minmax(110px,1fr));
+  gap: 8px;
+}
+.result-cycle > i { display: none; }
+.result-cycle > div {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px;
+  color: var(--foreground);
+  background: #fff;
+}
+.result-cycle > div.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.result-cycle b {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+.result-cycle span { color: var(--muted); font-size: 10px; }
+.result-cycle strong { color: var(--foreground); font-size: 11px; }
+
+.result-project-meta {
+  grid-template-columns: repeat(auto-fit,minmax(130px,1fr));
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-color: var(--line-soft);
+}
+.result-project-meta > span {
+  color: var(--muted);
+  font-size: 9px;
+}
+.result-project-meta strong {
+  color: var(--foreground);
+  font-size: 11px;
+}
+
+.result-warnings {
+  color: #6d4c10;
+  border-color: #edd8a6;
+  background: #fff8e8;
+}
+.result-warnings .result-heading span,
+.result-warnings .result-heading h2,
+.result-warnings ul { color: #6d4c10; }
+
+.result-footnote {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Responsivo                                                                  */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 1180px) {
+  .feasibility-page {
+    grid-template-columns: minmax(0,1.5fr) minmax(285px,.9fr);
+  }
+  .result-hero {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .result-health { border-left: 0; padding-left: 0; }
+}
+
+@media (max-width: 900px) {
+  body:has(.v20-dashboard),
+  body:has(.feasibility-page),
+  body:has(.result-hero) {
+    --elos-sidebar-width: 272px;
+  }
+
+  body:has(.v20-dashboard) .elos-header,
+  body:has(.feasibility-page) .elos-header,
+  body:has(.result-hero) .elos-header {
+    min-height: 62px;
+    height: auto;
+    padding: 10px 14px 10px 56px;
+  }
+
+  body:has(.v20-dashboard) .elos-module-content,
+  body:has(.feasibility-page) .elos-module-content,
+  body:has(.result-hero) .elos-module-content {
+    padding: 18px 14px 48px;
+  }
+
+  .feasibility-page {
+    display: block;
+  }
+
+  .feasibility-page > * + * { margin-top: 14px; }
+
+  .feasibility-page > .feasibility-kpis {
+    position: static;
+    display: grid;
+    margin-top: 14px;
+  }
+
+  .feasibility-page .feasibility-form .span-2 { grid-column: auto; }
+
+  .v20-dashboard .v20-grid > section.v20-card:nth-of-type(n) {
+    grid-column: span 12 !important;
+  }
+
+  .v20-dashboard .v20-span2,
+  .v20-dashboard .v20-span3 {
+    grid-column: span 6;
+  }
+
+  .result-layout { display: block; }
+  .result-layout > * + * { margin-top: 14px; }
+}
+
+@media (max-width: 640px) {
+  body:has(.v20-dashboard) .elos-page-top h1,
+  body:has(.feasibility-page) .elos-page-top h1,
+  body:has(.result-hero) .elos-page-top h1 {
+    font-size: 24px;
+  }
+
+  .v20-dashboard .v20-span2,
+  .v20-dashboard .v20-span3 {
+    grid-column: span 12;
+  }
+
+  .feasibility-page .feasibility-kpis {
+    grid-template-columns: 1fr;
+  }
+  .feasibility-page .feasibility-kpis article:nth-child(2),
+  .feasibility-page .feasibility-kpis article:nth-child(3) {
+    grid-column: 1;
+  }
+
+  .feasibility-page .feasibility-form {
+    grid-template-columns: 1fr;
+  }
+  .feasibility-page .feasibility-form .span-4 { grid-column: 1; }
+
+  .result-hero {
+    grid-template-columns: 1fr;
+  }
+  .result-hero > div > strong { font-size: 32px; }
+  .result-kpi-grid article { flex-basis: 50%; }
+  .result-project-meta { grid-template-columns: 1fr 1fr; }
+}
+
+@media print {
+  body:has(.v20-dashboard) .elos-module-content { max-width: none; }
+}
