@@ -1,0 +1,586 @@
+/* Elos OS — round 2 structural redesign. Scoped to modules enhanced by Round2Structure. */
+
+body.elos-round2-active {
+  --elos-sidebar-width: 248px;
+  --line-soft: #edf1f1;
+  --surface-2: #f7f9f9;
+  --surface-3: #f8fbfa;
+  --warning-soft: #fff3d7;
+  --danger-soft: #f7e5e3;
+  --committed: #d9a23b;
+  --track: #dfe6e5;
+  --sidebar-cell: #13241f;
+}
+
+body.elos-round2-active .elos-app-shell {
+  grid-template-columns: 248px minmax(0, 1fr);
+}
+
+body.elos-round2-active .elos-sidebar {
+  width: 248px;
+  padding: 18px 12px 14px;
+}
+
+body.elos-round2-active .elos-logo {
+  gap: 10px;
+  padding: 0 6px 12px;
+}
+
+body.elos-round2-active .elos-logo-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--brand);
+  box-shadow: none;
+}
+
+body.elos-round2-active .elos-logo-mark svg {
+  width: 20px;
+  height: 20px;
+}
+
+body.elos-round2-active .elos-logo-text strong {
+  font-size: 16px;
+}
+
+body.elos-round2-active .elos-logo-text span {
+  margin-top: 1px;
+  color: #5f7d79;
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+
+#elos-round2-search-host {
+  padding: 0 3px 12px;
+}
+
+.elos-sidebar-search-v2 {
+  width: 100%;
+  height: 36px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  color: #a8bbb7;
+  background: rgba(255,255,255,.04);
+  font: inherit;
+  cursor: pointer;
+}
+
+.elos-sidebar-search-v2:hover {
+  color: #fff;
+  background: rgba(255,255,255,.07);
+}
+
+.elos-sidebar-search-v2 span {
+  font-size: 15px;
+}
+
+.elos-sidebar-search-v2 strong {
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.elos-sidebar-search-v2 kbd {
+  margin-left: auto;
+  border: 0;
+  color: #657975;
+  background: transparent;
+  font: 600 9px var(--font-ibm-plex), sans-serif;
+}
+
+body.elos-round2-active .elos-main-item {
+  min-height: 36px;
+  border-radius: 9px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body.elos-round2-active .elos-subnav {
+  margin-left: 29px;
+}
+
+body.elos-round2-active .elos-subnav a,
+body.elos-round2-active .elos-subnav-disabled {
+  min-height: 32px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+body.elos-round2-active .elos-sidebar-foot {
+  margin-top: 14px;
+}
+
+body.elos-round2-active .elos-header {
+  min-height: 60px;
+  height: 60px;
+  gap: 10px;
+  padding: 0 24px;
+  background: rgba(255,255,255,.94);
+  backdrop-filter: blur(10px);
+}
+
+body.elos-round2-active .elos-org {
+  display: none;
+}
+
+body.elos-round2-active .elos-breadcrumb {
+  font-size: 12px;
+}
+
+body.elos-round2-active .elos-project-switcher {
+  margin-left: auto;
+}
+
+body.elos-round2-active .elos-project-switcher label {
+  display: none;
+}
+
+body.elos-round2-active .elos-project-switcher select {
+  min-width: 220px;
+  height: 38px;
+  border-radius: 10px !important;
+  background: var(--surface-2);
+}
+
+body.elos-round2-active .elos-search-button,
+body.elos-round2-active .elos-logout-button {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+body.elos-round2-active .elos-search-button {
+  display: none;
+}
+
+body.elos-round2-active .elos-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+body.elos-round2-active .elos-user-text {
+  display: none;
+}
+
+body.elos-round2-active .elos-module-content {
+  width: min(100%, 1480px);
+  margin: 0 auto;
+  padding: 24px 28px 60px;
+}
+
+body.elos-round2-active .elos-page-top {
+  margin-bottom: 0;
+  align-items: flex-end;
+}
+
+body.elos-round2-active .elos-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+body.elos-round2-active .elos-page-top h1 {
+  margin-top: 4px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -.035em;
+}
+
+body.elos-round2-active .elos-page-top p {
+  max-width: 900px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+body.elos-round2-active .elos-page-actions {
+  gap: 8px;
+}
+
+body.elos-round2-active .elos-button {
+  min-height: 38px;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#elos-round2-tabs-host {
+  margin: 14px 0;
+}
+
+.elos-module-tabs-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.elos-module-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+
+.elos-module-tabs a {
+  flex: 0 0 auto;
+  min-height: 38px;
+  border-bottom: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  color: #6a7a77;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.elos-module-tabs a:hover {
+  color: var(--foreground);
+  background: rgba(255,255,255,.5);
+}
+
+.elos-module-tabs a.active {
+  color: var(--foreground);
+  border-bottom-color: var(--brand);
+  font-weight: 700;
+}
+
+.elos-module-tabs.secondary {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  align-items: center;
+  padding: 4px;
+  background: #fff;
+}
+
+.elos-module-tabs.secondary a {
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 11px;
+  font-size: 12px;
+}
+
+.elos-module-tabs.secondary a.active {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+
+/* Shared round-2 visual language mapped onto existing production structures. */
+body.elos-round2-active .finance-summary-grid,
+body.elos-round2-active .registry-summary-grid,
+body.elos-round2-active .access-summary,
+body.elos-round2-active .dashboard-kpi-grid {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--line) !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+body.elos-round2-active .finance-summary-grid > article,
+body.elos-round2-active .registry-summary-grid > article,
+body.elos-round2-active .access-summary > article,
+body.elos-round2-active .dashboard-kpi-grid > article {
+  flex: 1 1 160px;
+  min-width: 150px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 13px 16px !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 .5px var(--line) !important;
+}
+
+body.elos-round2-active .finance-summary-grid span,
+body.elos-round2-active .registry-summary-grid span,
+body.elos-round2-active .access-summary span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+body.elos-round2-active .finance-summary-grid strong,
+body.elos-round2-active .registry-summary-grid strong,
+body.elos-round2-active .access-summary strong {
+  margin-top: 4px;
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+
+body.elos-round2-active .finance-summary-grid small,
+body.elos-round2-active .registry-summary-grid small,
+body.elos-round2-active .access-summary small {
+  margin-top: 3px;
+  color: #7d8f8c;
+  font-size: 11px;
+}
+
+body.elos-round2-active .registry-toolbar,
+body.elos-round2-active .finance-filter,
+body.elos-round2-active .registry-filter {
+  gap: 8px;
+}
+
+body.elos-round2-active .registry-toolbar {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px;
+  background: #fff;
+}
+
+body.elos-round2-active .finance-filter input,
+body.elos-round2-active .finance-filter select,
+body.elos-round2-active .registry-filter input,
+body.elos-round2-active .registry-filter select,
+body.elos-round2-active .registry-toolbar input,
+body.elos-round2-active .registry-toolbar select {
+  min-height: 36px;
+  border-color: #dfe7e5;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 12px;
+}
+
+body.elos-round2-active .registry-table-panel,
+body.elos-round2-active .registry-card,
+body.elos-round2-active .finance-panel,
+body.elos-round2-active .schedule-card,
+body.elos-round2-active .setup-panel {
+  margin-top: 14px;
+  border-color: var(--line) !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+body.elos-round2-active .section-heading {
+  padding: 15px 18px;
+}
+
+body.elos-round2-active .section-heading h2 {
+  margin-top: 3px;
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+
+body.elos-round2-active .registry-table-wrap,
+body.elos-round2-active .finance-table-wrap {
+  overflow-x: auto;
+}
+
+body.elos-round2-active .registry-table th,
+body.elos-round2-active .finance-table th {
+  padding: 9px 12px;
+  color: #58706d;
+  background: var(--surface-2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+body.elos-round2-active .registry-table td,
+body.elos-round2-active .finance-table td {
+  padding: 9px 12px;
+  border-top-color: var(--line-soft);
+  font-size: 12px;
+}
+
+body.elos-round2-active .registry-table tbody tr:hover,
+body.elos-round2-active .finance-table tbody tr:hover {
+  background: var(--surface-3);
+}
+
+body.elos-round2-active .registry-table td:nth-child(n+3),
+body.elos-round2-active .finance-table td:nth-child(n+3) {
+  font-variant-numeric: tabular-nums;
+}
+
+body.elos-round2-active .status-badge {
+  border: 0;
+  border-radius: 99px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+body.elos-round2-active .status-badge.paid,
+body.elos-round2-active .status-badge.approved,
+body.elos-round2-active .status-badge.completed,
+body.elos-round2-active .status-badge.active {
+  color: var(--success);
+  background: #e7f3ec;
+}
+
+body.elos-round2-active .status-badge.open,
+body.elos-round2-active .status-badge.pending,
+body.elos-round2-active .status-badge.waiting {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+body.elos-round2-active .status-badge.cancelled,
+body.elos-round2-active .status-badge.draft {
+  color: var(--muted);
+  background: #eef1f0;
+}
+
+body.elos-round2-active .table-action,
+body.elos-round2-active .payable-actions summary {
+  min-height: 28px;
+  border: 1px solid #cfe0de;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  color: var(--brand-strong);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Existing payable <details> becomes the requested right-side action drawer without changing business logic. */
+body.elos-round2-active .payable-actions > details[open] {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 100;
+  width: min(420px, 100vw);
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+  background: #fff;
+  box-shadow: -24px 0 70px rgba(5,24,22,.24);
+}
+
+body.elos-round2-active .payable-actions > details[open] > summary {
+  min-height: auto;
+  border: 0;
+  display: block;
+  padding: 0 0 18px;
+  color: var(--brand);
+  background: transparent;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+body.elos-round2-active .payable-actions > details[open] > form {
+  display: grid;
+  gap: 12px;
+}
+
+body.elos-round2-active .payable-actions > details[open] label {
+  display: grid;
+  gap: 6px;
+  color: #455955;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+body.elos-round2-active .payable-actions > details[open] input,
+body.elos-round2-active .payable-actions > details[open] select {
+  width: 100%;
+  height: 38px;
+  border: 1px solid #dfe7e5;
+  border-radius: 9px;
+  padding: 0 10px;
+  font: inherit;
+}
+
+/* Full-width execution schedule as required by the handoff. */
+body.elos-round2-active:has(.execution-schedule-workbench) .elos-module-content {
+  width: 100%;
+  max-width: none;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+body.elos-round2-active .execution-schedule-workbench {
+  min-height: 0;
+}
+
+body.elos-round2-active .execution-schedule-workbench .schedule-scroll,
+body.elos-round2-active .execution-schedule-workbench .gantt-scroll,
+body.elos-round2-active .execution-schedule-workbench [class*="scroll"] {
+  scrollbar-gutter: stable both-edges;
+}
+
+@media (max-width: 1180px) {
+  body.elos-round2-active .elos-breadcrumb span:first-child,
+  body.elos-round2-active .elos-breadcrumb span:nth-child(2) {
+    display: none;
+  }
+
+  body.elos-round2-active .elos-project-switcher select {
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 900px) {
+  body.elos-round2-active .elos-app-shell {
+    display: block;
+  }
+
+  body.elos-round2-active .elos-sidebar {
+    width: min(290px, 88vw);
+  }
+
+  body.elos-round2-active .elos-header {
+    height: 60px;
+    padding: 0 14px 0 58px;
+  }
+
+  body.elos-round2-active .elos-module-content {
+    width: 100%;
+    padding: 18px 14px 48px;
+  }
+
+  body.elos-round2-active .elos-page-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body.elos-round2-active .elos-page-actions {
+    justify-content: flex-start;
+  }
+
+  .elos-module-tabs a {
+    min-height: 36px;
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  body.elos-round2-active .elos-project-switcher select {
+    max-width: 150px;
+    min-width: 0;
+  }
+
+  body.elos-round2-active .elos-page-top h1 {
+    font-size: 24px;
+  }
+
+  body.elos-round2-active .elos-page-top p {
+    font-size: 12px;
+  }
+}
