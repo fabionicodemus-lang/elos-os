@@ -1,0 +1,34 @@
+/* Final ordering/details for the Pre-Obra handoff. */
+.elos-round2-engineering .elos-breadcrumb b{font-size:0}
+.elos-round2-engineering .elos-breadcrumb b::after{content:"Pré-Obra";font-size:12px}
+
+/* Schedule handoff order: header -> tabs -> KPI strip -> baseline banner -> work area. */
+.elos-round2-engineering:has(.prevision-workbench) .elos-module-content{display:flex;flex-direction:column;gap:14px}
+.elos-round2-engineering:has(.prevision-workbench) .prevision-workbench{display:contents!important}
+.elos-round2-engineering:has(.prevision-workbench) .elos-page-top{order:0}
+.elos-round2-engineering:has(.prevision-workbench) .auth-message,
+.elos-round2-engineering:has(.prevision-workbench) .schedule-empty{order:1}
+.elos-round2-engineering:has(.prevision-workbench) .prevision-appbar{order:2}
+.elos-round2-engineering:has(.prevision-workbench) .preobra-schedule-kpis{order:3}
+.elos-round2-engineering:has(.prevision-workbench) .prevision-modebar{order:4}
+.elos-round2-engineering:has(.prevision-workbench) .prevision-gantt-view,
+.elos-round2-engineering:has(.prevision-workbench) .prevision-panel-page{order:5}
+
+/* The handoff banner and Gantt are one visual card. */
+.elos-round2-engineering:has(.prevision-workbench) .prevision-modebar{border-radius:14px 14px 0 0!important;margin-bottom:-14px!important}
+.elos-round2-engineering:has(.prevision-workbench) .prevision-gantt-view{border-radius:0 0 14px 14px!important}
+
+/* Keep the prototype's compact action treatment. */
+.elos-round2-engineering:has(.prevision-workbench) .prevision-top-actions{margin-left:auto}
+.elos-round2-engineering:has(.prevision-workbench) .prevision-top-actions form:nth-of-type(n+3),
+.elos-round2-engineering:has(.prevision-workbench) .prevision-top-actions>a:last-child{display:none}
+
+/* Tables in Pre-Obra are intentionally wide and horizontally scrollable. */
+.elos-round2-engineering .budgets-table{min-width:980px}
+.elos-round2-engineering .contract-plan-table{min-width:1160px}
+.elos-round2-engineering .supply-plan-table{min-width:1140px}
+
+/* Exact prototype page spacing. */
+.elos-round2-engineering .budget-kpi-grid+.budget-flow-card,
+.elos-round2-engineering .contract-plan-kpis+.preobra-filter-shell,
+.elos-round2-engineering .supply-plan-kpis+.preobra-filter-shell{margin-top:0!important}
