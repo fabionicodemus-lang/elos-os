@@ -1,0 +1,732 @@
+/*
+ * Elos OS — final redesign pass
+ * Cadastros · Pós-Obra · RH
+ *
+ * High-fidelity visual layer based on the 2026-10-17 design handoff.
+ * No business rules, queries, permissions or server actions are changed here.
+ */
+
+.elos-final-module{
+  --final-line:#e5eae8;
+  --final-line-soft:#edf1f1;
+  --final-surface:#ffffff;
+  --final-surface-2:#f7f9f9;
+  --final-surface-3:#f8fbfa;
+  --final-muted:#5f7d79;
+  --final-ink:#16211f;
+  --final-brand:#008780;
+  --final-brand-strong:#00615c;
+  --final-brand-soft:#e2f1ef;
+  --final-warning:#946414;
+  --final-warning-soft:#fff3d7;
+  --final-danger:#b8453f;
+  --final-danger-soft:#f7e5e3;
+  --final-success:#217a50;
+  --final-success-soft:#e7f3ec;
+}
+
+/* --------------------------------------------------------------------------
+   Shell and page rhythm
+   -------------------------------------------------------------------------- */
+.elos-final-module .elos-main{background:#eef1f0}
+.elos-final-module .elos-module-content{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  width:100%;
+  max-width:1480px;
+  margin:0 auto;
+  padding:24px 28px 60px;
+}
+.elos-final-module #elos-round2-tabs-host{margin:0}
+.elos-final-module .elos-module-version{display:none}
+.elos-final-module .elos-page-top{margin:0;align-items:flex-end;gap:16px}
+.elos-final-module .elos-page-top>div:first-child{display:flex;flex-direction:column;gap:4px;min-width:0}
+.elos-final-module .elos-eyebrow{color:var(--final-brand);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.elos-final-module .elos-page-top h1{margin:0;color:var(--final-ink);font-family:var(--font-space-grotesk),sans-serif;font-size:28px;font-weight:600;letter-spacing:-.035em;line-height:1.08}
+.elos-final-module .elos-page-top p{margin:0;color:var(--final-muted);font-size:13px;line-height:1.45}
+.elos-final-module .elos-page-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.elos-final-module .elos-button,
+.elos-final-module .elos-page-actions button,
+.elos-final-module a[class*="action"],
+.elos-final-module button[class*="action"]{
+  min-height:38px;
+  border-radius:10px;
+  box-shadow:none;
+  font-size:12px;
+  font-weight:600;
+}
+.elos-final-module .elos-button.primary,
+.elos-final-module .auth-primary{
+  color:#fff;
+  border-color:var(--final-brand)!important;
+  background:var(--final-brand)!important;
+}
+.elos-final-module .elos-button.primary:hover,
+.elos-final-module .auth-primary:hover{background:var(--final-brand-strong)!important}
+
+/* Tabs from the handoff */
+.elos-final-module .elos-module-tabs-stack{gap:6px}
+.elos-final-module .elos-module-tabs{
+  gap:2px;
+  border-bottom:1px solid #dfe6e5;
+  padding-bottom:1px;
+  background:transparent;
+}
+.elos-final-module .elos-module-tabs a{
+  min-height:38px;
+  padding:0 14px;
+  border-bottom:2px solid transparent;
+  color:var(--final-muted);
+  font-size:13px;
+  font-weight:600;
+}
+.elos-final-module .elos-module-tabs a.active{color:var(--final-ink);border-bottom-color:var(--final-brand);background:transparent}
+.elos-final-module .elos-module-tabs.secondary{border:1px solid var(--final-line);border-radius:11px;padding:4px;background:#fff}
+
+/* --------------------------------------------------------------------------
+   Shared surfaces, fields and forms
+   -------------------------------------------------------------------------- */
+.elos-final-module input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.elos-final-module select,
+.elos-final-module textarea{
+  border-color:#dce3e3!important;
+  border-radius:10px!important;
+  background:#fff;
+  box-shadow:none!important;
+  font-family:var(--font-ibm-plex),sans-serif;
+  font-size:12px;
+}
+.elos-final-module input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.elos-final-module select{min-height:36px}
+.elos-final-module textarea{padding:9px 10px;line-height:1.45}
+.elos-final-module input:focus,
+.elos-final-module select:focus,
+.elos-final-module textarea:focus{
+  outline:none!important;
+  border-color:var(--final-brand)!important;
+  box-shadow:0 0 0 3px rgba(0,135,128,.11)!important;
+}
+.elos-final-module label>span,
+.elos-final-module .registry-form-grid>label,
+.elos-final-module .hr-form-grid>label{color:#455955;font-size:11px;font-weight:600}
+
+.elos-final-module .setup-panel,
+.elos-final-module .registry-create,
+.elos-final-module .inspection-form-card,
+.elos-final-module .warranty-card,
+.elos-final-module .assistance-card,
+.elos-final-module .hr-table-panel,
+.elos-final-module .hr-guidance,
+.elos-final-module .hr-runs-panel,
+.elos-final-module .hr-payroll-content,
+.elos-final-module .project-details-card,
+.elos-final-module .project-prototype-card,
+.elos-final-module .legal-entity-table-card,
+.elos-final-module .location-table-card,
+.elos-final-module .unit-table-card{
+  border:1px solid var(--final-line)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+
+/* --------------------------------------------------------------------------
+   KPI strips — one connected surface, matching handoff
+   -------------------------------------------------------------------------- */
+.elos-final-module .registry-summary,
+.elos-final-module .access-summary,
+.elos-final-module .legal-entity-kpis,
+.elos-final-module .unit-kpis,
+.elos-final-module .project-details-kpis,
+.elos-final-module .assistance-summary-grid,
+.elos-final-module .warranty-kpis,
+.elos-final-module .inspection-summary-grid,
+.elos-final-module .inspection-detail-kpis,
+.elos-final-module .hr-kpis,
+.elos-final-module .final-project-kpis{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:0!important;
+  overflow:hidden!important;
+  margin:0!important;
+  padding:0!important;
+  border:1px solid var(--final-line)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.elos-final-module .registry-summary>article,
+.elos-final-module .access-summary>article,
+.elos-final-module .legal-entity-kpis>article,
+.elos-final-module .unit-kpis>article,
+.elos-final-module .project-details-kpis>article,
+.elos-final-module .assistance-summary-grid>article,
+.elos-final-module .warranty-kpis>article,
+.elos-final-module .inspection-summary-grid>article,
+.elos-final-module .inspection-detail-kpis>article,
+.elos-final-module .hr-kpis>article,
+.elos-final-module .final-project-kpis>article{
+  flex:1 1 160px!important;
+  min-width:150px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:4px!important;
+  margin:0!important;
+  padding:13px 16px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:#fff!important;
+  box-shadow:0 0 0 .5px var(--final-line)!important;
+}
+.elos-final-module .registry-summary span,
+.elos-final-module .legal-entity-kpis span,
+.elos-final-module .unit-kpis span,
+.elos-final-module .project-details-kpis span,
+.elos-final-module .assistance-summary-grid span,
+.elos-final-module .warranty-kpis span,
+.elos-final-module .inspection-summary-grid span,
+.elos-final-module .inspection-detail-kpis span,
+.elos-final-module .hr-kpis span,
+.elos-final-module .final-project-kpis span{color:var(--final-muted);font-size:11px;font-weight:600}
+.elos-final-module .registry-summary strong,
+.elos-final-module .legal-entity-kpis strong,
+.elos-final-module .unit-kpis strong,
+.elos-final-module .project-details-kpis strong,
+.elos-final-module .assistance-summary-grid strong,
+.elos-final-module .warranty-kpis strong,
+.elos-final-module .inspection-summary-grid strong,
+.elos-final-module .inspection-detail-kpis strong,
+.elos-final-module .hr-kpis strong,
+.elos-final-module .final-project-kpis strong{
+  margin:0;
+  color:var(--final-ink);
+  font-family:var(--font-space-grotesk),sans-serif;
+  font-size:21px;
+  font-weight:600;
+  letter-spacing:-.025em;
+  line-height:1.15;
+}
+.elos-final-module .registry-summary small,
+.elos-final-module .legal-entity-kpis small,
+.elos-final-module .unit-kpis small,
+.elos-final-module .project-details-kpis small,
+.elos-final-module .assistance-summary-grid small,
+.elos-final-module .warranty-kpis small,
+.elos-final-module .inspection-summary-grid small,
+.elos-final-module .inspection-detail-kpis small,
+.elos-final-module .hr-kpis small,
+.elos-final-module .final-project-kpis small{color:var(--final-muted);font-size:11px}
+.elos-final-module .attention strong,
+.elos-final-module .critical strong,
+.elos-final-module .inspection-issue-count{color:var(--final-danger)!important}
+.elos-final-module .hr-kpis>article.total{background:var(--final-surface-3)!important}
+
+/* --------------------------------------------------------------------------
+   Filters / segmented controls / toolbars
+   -------------------------------------------------------------------------- */
+.elos-final-module .registry-toolbar,
+.elos-final-module .project-prototype-toolbar,
+.elos-final-module .legal-entity-toolbar,
+.elos-final-module .unit-filter-card,
+.elos-final-module .assistance-toolbar,
+.elos-final-module .warranty-toolbar,
+.elos-final-module .inspection-toolbar,
+.elos-final-module .hr-toolbar{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+  margin:0!important;
+  padding:10px!important;
+  border:1px solid var(--final-line)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.elos-final-module .registry-filter,
+.elos-final-module .project-prototype-search-form,
+.elos-final-module .legal-entity-toolbar,
+.elos-final-module .unit-filter-card form,
+.elos-final-module .assistance-toolbar form,
+.elos-final-module .warranty-toolbar form,
+.elos-final-module .inspection-toolbar form,
+.elos-final-module .hr-filter{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  flex:1 1 540px!important;
+  flex-wrap:wrap!important;
+}
+.elos-final-module .registry-filter input,
+.elos-final-module .project-prototype-search,
+.elos-final-module .legal-entity-toolbar input,
+.elos-final-module .unit-filter-card input,
+.elos-final-module .assistance-toolbar input,
+.elos-final-module .warranty-toolbar input,
+.elos-final-module .inspection-toolbar input,
+.elos-final-module .hr-filter input{flex:1 1 220px;min-width:160px}
+.elos-final-module .registry-filter button,
+.elos-final-module .project-search-submit,
+.elos-final-module .legal-entity-toolbar button,
+.elos-final-module .unit-filter-card button,
+.elos-final-module .assistance-toolbar button,
+.elos-final-module .warranty-toolbar button,
+.elos-final-module .inspection-toolbar button,
+.elos-final-module .hr-filter button{
+  min-height:36px;
+  border:1px solid var(--final-brand)!important;
+  border-radius:9px!important;
+  padding:0 12px;
+  color:#fff!important;
+  background:var(--final-brand)!important;
+  font-size:12px;
+  font-weight:600;
+}
+.elos-final-module .registry-filter a,
+.elos-final-module .project-search-clear,
+.elos-final-module .legal-entity-toolbar>a,
+.elos-final-module .unit-filter-card a,
+.elos-final-module .assistance-toolbar a,
+.elos-final-module .warranty-toolbar a,
+.elos-final-module .inspection-toolbar a,
+.elos-final-module .hr-filter a{color:var(--final-brand);font-size:12px;font-weight:600;text-decoration:none}
+
+.elos-final-module .final-chips{
+  display:flex;
+  gap:2px;
+  max-width:100%;
+  overflow-x:auto;
+  padding:3px;
+  border-radius:10px;
+  background:#f2f5f4;
+  scrollbar-width:none;
+}
+.elos-final-module .final-chips a,
+.elos-final-module .final-chips button{
+  flex:0 0 auto;
+  min-height:30px;
+  border:0;
+  border-radius:8px;
+  padding:0 12px;
+  color:var(--final-muted);
+  background:transparent;
+  font-size:12px;
+  font-weight:600;
+  text-decoration:none;
+  white-space:nowrap;
+}
+.elos-final-module .final-chips .active{color:var(--final-ink);background:#fff;box-shadow:0 1px 2px rgba(15,28,27,.12)}
+
+/* --------------------------------------------------------------------------
+   Tables
+   -------------------------------------------------------------------------- */
+.elos-final-module .registry-table-panel,
+.elos-final-module .project-prototype-card,
+.elos-final-module .legal-entity-table-card,
+.elos-final-module .location-table-card,
+.elos-final-module .unit-table-card,
+.elos-final-module .inspection-table-card,
+.elos-final-module .hr-table-panel{
+  overflow:hidden;
+  margin:0!important;
+  padding:14px 16px!important;
+  border:1px solid var(--final-line)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.elos-final-module .section-heading,
+.elos-final-module .legal-entity-table-card>header,
+.elos-final-module .inspection-section-title,
+.elos-final-module .warranty-card-header,
+.elos-final-module .hr-panel-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 10px!important;
+  padding:0!important;
+  border:0!important;
+}
+.elos-final-module .section-heading span,
+.elos-final-module .inspection-section-title span,
+.elos-final-module .hr-panel-head span{color:var(--final-brand);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.elos-final-module .section-heading h2,
+.elos-final-module .inspection-section-title h2,
+.elos-final-module .warranty-card-header h2,
+.elos-final-module .hr-panel-head h2{
+  margin:2px 0 0;
+  color:var(--final-ink);
+  font-family:var(--font-space-grotesk),sans-serif;
+  font-size:15px;
+  font-weight:600;
+  letter-spacing:-.02em;
+}
+.elos-final-module .section-heading p,
+.elos-final-module .inspection-section-title p,
+.elos-final-module .warranty-card-header p{margin:0;color:var(--final-muted);font-size:11px}
+
+.elos-final-module .registry-table-wrap,
+.elos-final-module .project-prototype-table-wrap,
+.elos-final-module .legal-entity-table-wrap,
+.elos-final-module .location-table-wrap,
+.elos-final-module .unit-table-wrap,
+.elos-final-module .inspection-table-wrap,
+.elos-final-module .warranty-table-wrap{overflow-x:auto;max-width:100%}
+.elos-final-module .registry-table,
+.elos-final-module .project-prototype-table,
+.elos-final-module .legal-entity-table,
+.elos-final-module .location-table,
+.elos-final-module .unit-table,
+.elos-final-module .inspection-table,
+.elos-final-module .warranty-table,
+.elos-final-module .hr-employees-table,
+.elos-final-module .hr-payroll-table,
+.elos-final-module .hr-obligations-table{
+  width:100%;
+  border-collapse:collapse;
+  background:#fff;
+}
+.elos-final-module .registry-table th,
+.elos-final-module .project-prototype-table th,
+.elos-final-module .legal-entity-table th,
+.elos-final-module .location-table th,
+.elos-final-module .unit-table th,
+.elos-final-module .inspection-table th,
+.elos-final-module .warranty-table th,
+.elos-final-module .hr-employees-table th,
+.elos-final-module .hr-payroll-table th,
+.elos-final-module .hr-obligations-table th{
+  padding:8px 12px!important;
+  border-bottom:1px solid var(--final-line)!important;
+  color:#58706d!important;
+  background:var(--final-surface-2)!important;
+  font-size:10px!important;
+  font-weight:700!important;
+  letter-spacing:.06em!important;
+  text-transform:uppercase!important;
+  white-space:nowrap;
+}
+.elos-final-module .registry-table td,
+.elos-final-module .project-prototype-table td,
+.elos-final-module .legal-entity-table td,
+.elos-final-module .location-table td,
+.elos-final-module .unit-table td,
+.elos-final-module .inspection-table td,
+.elos-final-module .warranty-table td,
+.elos-final-module .hr-employees-table td,
+.elos-final-module .hr-payroll-table td,
+.elos-final-module .hr-obligations-table td{
+  padding:9px 12px!important;
+  border-bottom:1px solid var(--final-line-soft)!important;
+  color:#334143;
+  background:#fff;
+  font-size:12px!important;
+  vertical-align:middle;
+}
+.elos-final-module .registry-table tbody tr:hover td,
+.elos-final-module .project-prototype-table tbody tr:hover td,
+.elos-final-module .legal-entity-table tbody tr:hover td,
+.elos-final-module .location-table tbody tr:hover td,
+.elos-final-module .unit-table tbody tr:hover td,
+.elos-final-module .inspection-table tbody tr:hover td,
+.elos-final-module .warranty-table tbody tr:hover td,
+.elos-final-module .hr-employees-table tbody tr:hover td{background:var(--final-surface-3)}
+.elos-final-module table td>strong{color:var(--final-ink);font-weight:600}
+.elos-final-module table td>small,
+.elos-final-module table td>span:not([class]){color:#7d8f8c;font-size:11px}
+.elos-final-module .table-action,
+.elos-final-module .project-table-action,
+.elos-final-module .unit-status-button,
+.elos-final-module .location-actions button,
+.elos-final-module .legal-entity-actions button{
+  min-height:28px!important;
+  border:1px solid #cfe0de!important;
+  border-radius:8px!important;
+  padding:0 10px!important;
+  color:var(--final-brand)!important;
+  background:#fff!important;
+  font-size:11px!important;
+  font-weight:600!important;
+  box-shadow:none!important;
+}
+.elos-final-module .table-action.danger,
+.elos-final-module button.danger,
+.elos-final-module [class*="delete-button"]{color:var(--final-danger)!important;border-color:#e6c8c4!important;background:#fff!important}
+.elos-final-module .registry-pagination{padding:10px 0 0;border-top:0;color:var(--final-muted);font-size:11px}
+
+/* Pills / statuses */
+.elos-final-module .status-badge,
+.elos-final-module [class*="-status"],
+.elos-final-module [class*="-priority"],
+.elos-final-module [class*="-warranty"]{
+  width:fit-content;
+  border:0!important;
+  border-radius:99px!important;
+  padding:3px 8px!important;
+  font-size:10px!important;
+  font-weight:700!important;
+  line-height:1.25;
+}
+.elos-final-module .status-badge.active,
+.elos-final-module [class*="-status"].active,
+.elos-final-module [class*="-status"].approved,
+.elos-final-module [class*="-status"].resolved,
+.elos-final-module [class*="-status"].completed,
+.elos-final-module [class*="-status"].delivered,
+.elos-final-module [class*="-status"].posted{color:var(--final-success)!important;background:var(--final-success-soft)!important}
+.elos-final-module .status-badge.inactive,
+.elos-final-module [class*="-status"].inactive,
+.elos-final-module [class*="-status"].cancelled{color:var(--final-muted)!important;background:#eef1f0!important}
+.elos-final-module [class*="-status"].draft,
+.elos-final-module [class*="-status"].open,
+.elos-final-module [class*="-status"].scheduled,
+.elos-final-module [class*="-status"].pending,
+.elos-final-module [class*="-status"].in_progress,
+.elos-final-module [class*="-status"].ready_for_reinspection{color:var(--final-warning)!important;background:var(--final-warning-soft)!important}
+.elos-final-module [class*="-priority"].urgent,
+.elos-final-module [class*="-priority"].high,
+.elos-final-module [class*="-status"].overdue,
+.elos-final-module [class*="-status"].rejected{color:var(--final-danger)!important;background:var(--final-danger-soft)!important}
+
+/* --------------------------------------------------------------------------
+   Cadastros
+   -------------------------------------------------------------------------- */
+.elos-final-registry .project-prototype-toolbar{justify-content:space-between}
+.elos-final-registry .project-prototype-search-form{max-width:760px}
+.elos-final-registry .project-prototype-card{padding:14px 16px!important}
+.elos-final-registry .project-table-cover{width:54px;height:38px;border-radius:8px;overflow:hidden;background:#edf3f2}
+.elos-final-registry .project-table-cover img{width:100%;height:100%;object-fit:cover}
+.elos-final-registry .project-table-cover span{height:100%;display:grid;place-items:center;color:var(--final-brand-strong);font-size:10px;font-weight:700}
+.elos-final-registry .project-table-code,
+.elos-final-registry .location-code,
+.elos-final-registry .unit-code-cell>span{font-family:var(--font-ibm-plex-mono),monospace;font-size:11px;font-weight:600}
+
+.elos-final-registry .legal-entity-hero,
+.elos-final-registry .location-toolbar,
+.elos-final-registry .unit-toolbar,
+.elos-final-registry .project-details-section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+  margin:0!important;
+  padding:14px 18px!important;
+  border:1px solid var(--final-line)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.elos-final-registry .legal-entity-hero>div,
+.elos-final-registry .location-toolbar>div:first-child,
+.elos-final-registry .unit-toolbar>div:first-child{display:flex;flex-direction:column;gap:3px}
+.elos-final-registry .legal-entity-hero>div>span,
+.elos-final-registry .location-toolbar>div:first-child>span,
+.elos-final-registry .unit-toolbar>div:first-child>span{color:var(--final-brand);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.elos-final-registry .legal-entity-hero h2{margin:0;font-size:15px;font-weight:600;font-family:var(--font-space-grotesk),sans-serif}
+.elos-final-registry .legal-entity-hero p{max-width:800px;margin:0;color:var(--final-muted);font-size:12px}
+.elos-final-registry .location-toolbar strong,
+.elos-final-registry .unit-toolbar strong{color:var(--final-ink);font-size:14px;font-weight:600}
+.elos-final-registry .location-toolbar small,
+.elos-final-registry .unit-toolbar small{color:var(--final-muted);font-size:11px}
+
+.elos-final-registry .location-source-section,
+.elos-final-registry .location-callout,
+.elos-final-registry .unit-callout,
+.elos-final-registry .legal-entity-rule,
+.elos-final-registry .legal-entity-warning{
+  margin:0!important;
+  padding:12px 16px!important;
+  border:1px solid var(--final-line)!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  color:var(--final-muted);
+  font-size:12px;
+  box-shadow:none!important;
+}
+.elos-final-registry .legal-entity-warning{border-color:#eddcae!important;background:#fff8e8!important;color:#6d4c10!important}
+.elos-final-registry .project-details-view{display:flex;flex-direction:column;gap:14px}
+.elos-final-registry .project-details-title-group{display:flex;align-items:center;gap:12px}
+.elos-final-registry .project-details-cover{width:72px;height:52px;border-radius:10px;overflow:hidden;background:#edf3f2}
+.elos-final-registry .project-details-cover img{width:100%;height:100%;object-fit:cover}
+.elos-final-registry .project-details-title-group h2{margin:0;font-family:var(--font-space-grotesk),sans-serif;font-size:18px;font-weight:600;letter-spacing:-.02em}
+.elos-final-registry .project-details-title-group p{margin:3px 0 0;color:var(--final-muted);font-size:12px}
+.elos-final-registry .project-details-grid{display:flex;gap:14px;flex-wrap:wrap}
+.elos-final-registry .project-details-grid>.project-details-card{flex:1 1 420px}
+.elos-final-registry .project-details-card{padding:14px 16px!important}
+.elos-final-registry .project-details-card h3{margin:0 0 10px;font-family:var(--font-space-grotesk),sans-serif;font-size:15px;font-weight:600}
+.elos-final-registry .project-details-card dl{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(180px,1.4fr);gap:8px 14px;margin:0}
+.elos-final-registry .project-details-card dt{color:var(--final-muted);font-size:11px}.elos-final-registry .project-details-card dd{margin:0;color:var(--final-ink);font-size:12px;font-weight:600}
+
+/* --------------------------------------------------------------------------
+   Pós-Obra
+   -------------------------------------------------------------------------- */
+.elos-final-postwork .assistance-empty,
+.elos-final-postwork .inspection-empty,
+.elos-final-postwork .warranty-empty{border:1px solid var(--final-line);border-radius:14px;padding:24px;background:#fff;color:var(--final-muted)}
+
+/* Detail mode should read as a dedicated screen, not as an appendage after the list. */
+.elos-final-postwork .elos-module-content:has(.assistance-detail) .assistance-summary-grid,
+.elos-final-postwork .elos-module-content:has(.assistance-detail) .assistance-toolbar,
+.elos-final-postwork .elos-module-content:has(.assistance-detail) .assistance-list-panel{display:none!important}
+.elos-final-postwork .assistance-detail{display:flex;flex-direction:column;gap:14px;margin:0!important}
+.elos-final-postwork .assistance-detail-hero,
+.elos-final-postwork .inspection-detail-header{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  flex-wrap:wrap!important;
+  margin:0!important;
+  padding:14px 18px!important;
+  border:1px solid var(--final-line)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.elos-final-postwork .assistance-detail-hero h2,
+.elos-final-postwork .inspection-detail-header h2{margin:2px 0 0;color:var(--final-ink);font-family:var(--font-space-grotesk),sans-serif;font-size:20px;font-weight:600;letter-spacing:-.025em}
+.elos-final-postwork .assistance-detail-hero p,
+.elos-final-postwork .inspection-detail-header p{margin:4px 0 0;color:var(--final-muted);font-size:12px}
+.elos-final-postwork .assistance-detail-hero>div:first-child>span,
+.elos-final-postwork .inspection-detail-header>div>span{color:var(--final-brand);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.elos-final-postwork .assistance-detail-grid{display:flex!important;align-items:flex-start;gap:14px!important;flex-wrap:wrap}
+.elos-final-postwork .assistance-main-column{flex:2 1 680px;display:flex;flex-direction:column;gap:14px}
+.elos-final-postwork .assistance-side-column{flex:1 1 310px;display:flex;flex-direction:column;gap:14px;position:sticky;top:74px}
+.elos-final-postwork .assistance-card{margin:0!important;padding:14px 16px!important}
+.elos-final-postwork .assistance-facts{display:flex;flex-wrap:wrap;gap:0;margin-top:12px;overflow:hidden;border:1px solid var(--final-line);border-radius:12px}
+.elos-final-postwork .assistance-facts>div{flex:1 1 140px;padding:10px 12px;box-shadow:0 0 0 .5px var(--final-line);background:#fff}
+.elos-final-postwork .assistance-facts span{display:block;color:var(--final-muted);font-size:10px;font-weight:600}.elos-final-postwork .assistance-facts strong{display:block;margin-top:3px;color:var(--final-ink);font-size:12px}
+.elos-final-postwork .assistance-visit-list{display:grid;gap:8px}.elos-final-postwork .assistance-visit-list>article{padding:12px;border:1px solid var(--final-line-soft);border-radius:10px;background:var(--final-surface-3)}
+.elos-final-postwork .assistance-document-list{display:grid;gap:7px}.elos-final-postwork .assistance-document-list>article{padding:10px 12px;border-bottom:1px solid var(--final-line-soft)}
+.elos-final-postwork .assistance-timeline{display:grid;gap:0}.elos-final-postwork .assistance-timeline article{position:relative;display:grid;grid-template-columns:12px 1fr;gap:8px;padding:0 0 14px}.elos-final-postwork .assistance-timeline i{width:8px;height:8px;margin-top:4px;border-radius:99px;background:var(--final-brand)}
+
+.elos-final-postwork .warranty-page{display:flex;flex-direction:column;gap:14px}
+.elos-final-postwork .warranty-toolbar{padding:10px!important}
+.elos-final-postwork .warranty-tabs{display:flex;gap:2px;padding:3px;border-radius:10px;background:#f2f5f4;overflow-x:auto}
+.elos-final-postwork .warranty-tabs a{height:30px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;color:var(--final-muted);font-size:12px;font-weight:600;white-space:nowrap}
+.elos-final-postwork .warranty-tabs a.active{color:var(--final-ink);background:#fff;box-shadow:0 1px 2px rgba(15,28,27,.12)}
+.elos-final-postwork .warranty-card{margin:0!important;padding:14px 16px!important}
+.elos-final-postwork .warranty-layout{display:flex!important;gap:14px!important;align-items:flex-start!important;flex-wrap:wrap!important}
+.elos-final-postwork .warranty-layout>.warranty-card{flex:1 1 420px}
+.elos-final-postwork .warranty-list{display:grid;gap:4px}
+.elos-final-postwork .warranty-list-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid transparent;border-radius:9px;color:inherit;text-decoration:none}
+.elos-final-postwork .warranty-list-item:hover{background:var(--final-surface-3)}
+.elos-final-postwork .warranty-list-item.active{border-color:#b8dad6;background:var(--final-brand-soft)}
+.elos-final-postwork .warranty-list-main,.elos-final-postwork .warranty-list-side{display:flex;flex-direction:column;gap:2px}.elos-final-postwork .warranty-list-main small,.elos-final-postwork .warranty-list-side small{color:var(--final-muted);font-size:10px}
+
+.elos-final-postwork .inspection-detail{display:flex;flex-direction:column;gap:14px}
+.elos-final-postwork .inspection-info-grid{display:flex!important;gap:14px!important;flex-wrap:wrap!important}
+.elos-final-postwork .inspection-info-grid>article{flex:1 1 260px;padding:14px 16px;border:1px solid var(--final-line);border-radius:14px;background:#fff}
+.elos-final-postwork .inspection-info-grid h3{margin:0 0 8px;font-size:13px;font-weight:600}.elos-final-postwork .inspection-info-grid p{margin:5px 0;color:var(--final-muted);font-size:11px}
+.elos-final-postwork .inspection-action-card,
+.elos-final-postwork .inspection-template-list,
+.elos-final-postwork .inspection-checklist-form{
+  margin:0!important;
+  padding:14px 16px!important;
+  border:1px solid var(--final-line)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.elos-final-postwork .inspection-template-grid{display:flex!important;gap:10px!important;flex-wrap:wrap!important}.elos-final-postwork .inspection-template-grid>article{flex:1 1 240px;padding:12px;border:1px solid var(--final-line-soft);border-radius:10px;background:var(--final-surface-3)}
+.elos-final-postwork .inspection-environment{margin:12px 0 0;padding:0;border:0}.elos-final-postwork .inspection-environment>h3{margin:0;padding:8px 10px;border-radius:8px;background:var(--final-surface-2);font-size:12px}
+.elos-final-postwork .inspection-check-item{padding:10px 0!important;border-bottom:1px solid var(--final-line-soft)!important;background:#fff!important}
+
+/* --------------------------------------------------------------------------
+   RH
+   -------------------------------------------------------------------------- */
+.elos-final-hr .hr-toolbar{justify-content:space-between}
+.elos-final-hr .hr-create-panel>summary,
+.elos-final-hr .hr-create-run>summary,
+.elos-final-hr .hr-inline-edit>summary{
+  min-height:34px;
+  display:inline-flex;
+  align-items:center;
+  border:1px solid #cfe0de;
+  border-radius:9px;
+  padding:0 11px;
+  color:var(--final-brand);
+  background:#fff;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+}
+.elos-final-hr .hr-create-panel[open],
+.elos-final-hr .hr-inline-edit[open]{position:relative}
+.elos-final-hr .hr-create-panel>form,
+.elos-final-hr .hr-inline-popover{
+  margin-top:10px;
+  padding:14px;
+  border:1px solid var(--final-line);
+  border-radius:12px;
+  background:#fff;
+}
+.elos-final-hr .hr-form-grid{gap:10px}
+.elos-final-hr .hr-row-actions{gap:5px}
+.elos-final-hr .hr-guidance{display:flex!important;align-items:center!important;gap:20px!important;flex-wrap:wrap!important;margin:0!important;padding:14px 18px!important}
+.elos-final-hr .hr-guidance>div:first-child{flex:1 1 300px}.elos-final-hr .hr-guidance>div:first-child>span{color:var(--final-brand);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.elos-final-hr .hr-guidance h2{margin:3px 0 0;font-size:14px;font-weight:600}.elos-final-hr .hr-guidance p{margin:3px 0 0;color:var(--final-muted);font-size:12px}
+.elos-final-hr .hr-guidance-steps{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important}.elos-final-hr .hr-guidance-steps article{display:flex!important;align-items:center!important;gap:8px!important;padding:8px 12px!important;border:1px solid var(--final-line)!important;border-radius:10px!important;background:var(--final-surface-2)!important}.elos-final-hr .hr-guidance-steps article b{width:auto!important;height:auto!important;color:var(--final-muted)!important;background:transparent!important;font-size:10px!important}.elos-final-hr .hr-guidance-steps article span{display:flex;flex-direction:column}.elos-final-hr .hr-guidance-steps article strong{font-size:12px}.elos-final-hr .hr-guidance-steps article small{color:var(--final-muted);font-size:10px}
+.elos-final-hr .hr-payroll-layout{display:flex!important;align-items:flex-start!important;gap:14px!important;flex-wrap:wrap!important}
+.elos-final-hr .hr-runs-panel{flex:0 1 300px;min-width:260px;padding:14px!important;position:sticky;top:74px}
+.elos-final-hr .hr-payroll-content{flex:1 1 720px;min-width:0;display:flex;flex-direction:column;gap:14px;padding:0!important;border:0!important;background:transparent!important}
+.elos-final-hr .hr-run-list{display:grid;gap:4px}.elos-final-hr .hr-run-list a{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:10px;border-radius:9px;color:inherit}.elos-final-hr .hr-run-list a:hover{background:var(--final-surface-3)}.elos-final-hr .hr-run-list a.active{background:var(--final-brand-soft)}.elos-final-hr .hr-run-list em{grid-column:1 / -1;color:var(--final-muted);font-family:var(--font-ibm-plex-mono),monospace;font-size:10px;font-style:normal}
+.elos-final-hr .hr-run-header,
+.elos-final-hr .hr-finance-result{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+  flex-wrap:wrap!important;
+  margin:0!important;
+  padding:14px 16px!important;
+  border:1px solid var(--final-line)!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.elos-final-hr .hr-run-header>div:first-child>span{color:var(--final-brand);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.elos-final-hr .hr-run-header h2{margin:2px 0 0;font-family:var(--font-space-grotesk),sans-serif;font-size:16px;font-weight:600}.elos-final-hr .hr-run-header p{margin:3px 0 0;color:var(--final-muted);font-size:11px}
+.elos-final-hr .hr-run-header-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.elos-final-hr .hr-finance-result{border-color:#cce6df!important;background:#f5fbf9!important}.elos-final-hr .hr-finance-result>div{display:flex;flex-direction:column;gap:2px}.elos-final-hr .hr-finance-result span{color:var(--final-success);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}.elos-final-hr .hr-finance-result strong{font-size:13px}.elos-final-hr .hr-finance-result small{color:var(--final-muted);font-size:11px}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media(max-width:900px){
+  .elos-final-module .elos-module-content{padding:18px 14px 48px}
+  .elos-final-module .elos-page-top{align-items:flex-start;flex-direction:column}
+  .elos-final-module .elos-page-actions{justify-content:flex-start}
+  .elos-final-module .elos-module-tabs a{min-height:36px;padding:0 10px;font-size:12px}
+  .elos-final-postwork .assistance-side-column,.elos-final-hr .hr-runs-panel{position:static;flex:1 1 100%}
+  .elos-final-postwork .assistance-main-column,.elos-final-postwork .assistance-side-column,.elos-final-hr .hr-payroll-content{flex-basis:100%}
+  .elos-final-registry .project-details-card dl{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .elos-final-module .elos-page-top h1{font-size:24px}
+  .elos-final-module .registry-summary>article,
+  .elos-final-module .legal-entity-kpis>article,
+  .elos-final-module .unit-kpis>article,
+  .elos-final-module .assistance-summary-grid>article,
+  .elos-final-module .warranty-kpis>article,
+  .elos-final-module .inspection-summary-grid>article,
+  .elos-final-module .inspection-detail-kpis>article,
+  .elos-final-module .hr-kpis>article{flex-basis:50%!important;min-width:50%!important}
+  .elos-final-module .registry-filter,
+  .elos-final-module .project-prototype-search-form,
+  .elos-final-module .legal-entity-toolbar,
+  .elos-final-module .unit-filter-card form,
+  .elos-final-module .assistance-toolbar form,
+  .elos-final-module .warranty-toolbar form,
+  .elos-final-module .inspection-toolbar form,
+  .elos-final-module .hr-filter{align-items:stretch!important}
+  .elos-final-module .registry-filter input,
+  .elos-final-module .project-prototype-search,
+  .elos-final-module .legal-entity-toolbar input,
+  .elos-final-module .unit-filter-card input,
+  .elos-final-module .assistance-toolbar input,
+  .elos-final-module .warranty-toolbar input,
+  .elos-final-module .inspection-toolbar input,
+  .elos-final-module .hr-filter input{flex-basis:100%}
+}

@@ -50,6 +50,29 @@ function resolveTabs(pathname: string): TabSet[] {
   if (pathname.startsWith("/comercial/") && !pathname.startsWith("/comercial/incorporacao/viabilidade") && !pathname.startsWith("/comercial/incorporacao/resultado")) return [{ aria: "Navegação Comercial", tabs: [
     { label: "Propostas", href: "/comercial/propostas" }, { label: "Vendas", href: "/comercial/vendas" }, { label: "Planos", href: "/comercial/planos-de-pagamento" }, { label: "Tabelas", href: "/comercial/incorporacao/tabelas" }, { label: "Corretores", href: "/comercial/corretores" }, { label: "Carteira", href: "/comercial/incorporacao", match: ["/comercial/incorporacao"] },
   ] }];
+
+  if (pathname.startsWith("/pos-obra/")) return [{ aria: "Navegação de Pós-Obra", tabs: [
+    { label: "Assistência Técnica", href: "/pos-obra/assistencias" },
+    { label: "Garantias", href: "/pos-obra/garantias" },
+    { label: "Vistorias de Entrega", href: "/pos-obra/vistorias" },
+  ] }];
+
+  if (pathname.startsWith("/rh/")) return [{ aria: "Navegação de Recursos Humanos", tabs: [
+    { label: "Colaboradores", href: "/rh/colaboradores" },
+    { label: "Folha de Pagamento", href: "/rh/folha" },
+  ] }];
+
+  const projectRegistryTabs = pathname === "/empreendimentos"
+    || pathname.startsWith("/empreendimentos/empresas")
+    || pathname.startsWith("/empreendimentos/locais")
+    || pathname.startsWith("/empreendimentos/caracteristicas");
+  if (projectRegistryTabs) return [{ aria: "Cadastros do empreendimento", tabs: [
+    { label: "Empreendimentos", href: "/empreendimentos" },
+    { label: "Empresas", href: "/empreendimentos/empresas" },
+    { label: "Locais", href: "/empreendimentos/locais" },
+    { label: "Características", href: "/empreendimentos/caracteristicas" },
+  ] }];
+
   return [];
 }
 

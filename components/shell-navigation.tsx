@@ -144,7 +144,7 @@ function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string)
     ],
   };
 
-  const commercialActive = Boolean(commercial?.active) && !viabilityActive;
+  const commercialActive = Boolean(commercial?.active) && !viabilityActive && !pathname.startsWith("/cadastros/");
   const commercialCompact: ShellNavigationGroup = {
     key: "commercial-compact",
     label: "Comercial",
@@ -174,20 +174,22 @@ function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string)
     icon: "⌁",
     active: Boolean(postwork?.active),
     items: [
-      compactItem("Assistências Técnicas", "/pos-obra/assistencias", findItem(postwork, "/pos-obra/assistencias"), pathname),
-      compactItem("Vistorias e Chamados", "/pos-obra/vistorias", findItem(postwork, "/pos-obra/vistorias"), pathname),
+      compactItem("Assistência Técnica", "/pos-obra/assistencias", findItem(postwork, "/pos-obra/assistencias"), pathname),
       compactItem("Garantias", "/pos-obra/garantias", findItem(postwork, "/pos-obra/garantias"), pathname),
+      compactItem("Vistorias de Entrega", "/pos-obra/vistorias", findItem(postwork, "/pos-obra/vistorias"), pathname),
     ],
   };
 
-  const projectsCompact: ShellNavigationGroup = {
-    key: "projects-compact",
-    label: "Empreendimentos",
+  const registryCompact: ShellNavigationGroup = {
+    key: "registry-compact",
+    label: "Cadastros",
     icon: "▦",
-    active: Boolean(projects?.active),
+    active: Boolean(projects?.active) || pathname.startsWith("/cadastros/"),
     items: [
       compactItem("Empreendimentos", "/empreendimentos", findItem(projects, "/empreendimentos"), pathname),
-      compactItem("Empresas / SPEs", "/empreendimentos/empresas", findItem(projects, "/empreendimentos/empresas"), pathname),
+      compactItem("Unidades", "/empreendimentos/unidades", findItem(projects, "/empreendimentos/unidades"), pathname),
+      compactItem("Clientes", "/cadastros/clientes", findItem(system, "/cadastros/clientes"), pathname),
+      compactItem("Fornecedores", "/cadastros/fornecedores", findItem(system, "/cadastros/fornecedores"), pathname),
     ],
   };
 
@@ -195,7 +197,7 @@ function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string)
     key: "system-compact",
     label: "Sistema",
     icon: "⚙",
-    active: Boolean(system?.active),
+    active: Boolean(system?.active) && !pathname.startsWith("/cadastros/"),
     items: [
       compactItem("Usuários", "/configuracoes/acessos", findItem(system, "/configuracoes/acessos"), pathname),
       compactItem("Permissões", "/configuracoes/permissoes", findItem(system, "/configuracoes/permissoes"), pathname),
@@ -212,7 +214,7 @@ function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string)
     commercialCompact,
     hrCompact,
     postworkCompact,
-    projectsCompact,
+    registryCompact,
     systemCompact,
   ];
 }
