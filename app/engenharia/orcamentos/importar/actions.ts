@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { normalizeImportText, parseBudgetWorkbook } from "@/lib/budget-import/parser.mjs";
+import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
 
 const IMPORT_PATH = "/engenharia/orcamentos/importar";
@@ -83,6 +84,11 @@ function matchEntity(options: {
   const mapped = mappedTarget(options.mappings, options.projectId, options.externalCode, options.targetType, options.entityTypes);
   if (mapped) {
     const target = options.catalog.find((row) => row.id === mapped.target_entity_id) ?? null;
+    if (!target || nameUnit("", target.unit) !== nameUnit("", options.externalUnit)) return {
+      target_entity_type: options.targetType, target_entity_id: null,
+      target_label: "Vínculo antigo sem cadastro ativo ou com unidade diferente. Revise o equivalente.",
+      match_status: "ambiguous", match_method: "stale_mapping", confidence: null,
+    };
     return {
       target_entity_type: options.targetType,
       target_entity_id: mapped.target_entity_id,
@@ -95,7 +101,7 @@ function matchEntity(options: {
 
   if (options.externalCode) {
     const direct = options.byCode.get(options.externalCode.toUpperCase()) ?? [];
-    if (direct.length === 1) return {
+    if (direct.length === 1 && normalizeImportText(direct[0].unit) === normalizeImportText(options.externalUnit)) return {
       target_entity_type: options.targetType,
       target_entity_id: direct[0].id,
       target_label: `${direct[0].code} · ${direct[0].description}`,
@@ -103,10 +109,10 @@ function matchEntity(options: {
       match_method: "catalog_code",
       confidence: 100,
     };
-    if (direct.length > 1) return {
+    if (direct.length > 0) return {
       target_entity_type: options.targetType,
       target_entity_id: null,
-      target_label: `${direct.length} cadastros com o mesmo código`,
+      target_label: direct.length > 1 ? `${direct.length} cadastros com o mesmo código` : "Código encontrado com unidade diferente",
       match_status: "ambiguous",
       match_method: "catalog_code_collision",
       confidence: null,
@@ -163,15 +169,21 @@ export async function stageBudgetImport(formData: FormData) {
   }
 
   const [servicesResult, inputsResult, mappingsResult, duplicateResult] = await Promise.all([
-    supabase.from("engineering_services").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").limit(10000),
-    supabase.from("engineering_inputs").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").limit(20000),
-    supabase.from("integration_mappings")
+    fetchAllRows<CatalogEntity>(async (from, to) => await supabase.from("engineering_services").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").order("id").range(from, to)),
+    fetchAllRows<CatalogEntity>(async (from, to) => await supabase.from("engineering_inputs").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").order("id").range(from, to)),
+    fetchAllRows<IntegrationMapping>(async (from, to) => await supabase.from("integration_mappings")
       .select("source_entity_type,scope,scope_id,key_kind,external_key,target_entity_type,target_entity_id")
-      .eq("company_id", companyId).eq("source_system", parsed.catalog_namespace).eq("status", "confirmed").limit(20000),
+      .eq("company_id", companyId).eq("source_system", parsed.catalog_namespace).eq("status", "confirmed").order("id").range(from, to)),
     supabase.from("engineering_budget_import_batches")
       .select("id,created_at,status").eq("company_id", companyId).eq("project_id", projectId).eq("file_hash", fileHash)
       .order("created_at", { ascending: false }).limit(1),
   ]);
+
+  if (duplicateResult.error) redirect(resultUrl(duplicateResult.error.message));
+  const previous = duplicateResult.data?.[0];
+  if (previous && !["cancelled", "failed"].includes(previous.status)) {
+    redirect(`${IMPORT_PATH}/${previous.id}?${new URLSearchParams({ success: "Este arquivo já foi enviado para esta obra. Continue a revisão do lote existente." })}`);
+  }
 
   if (servicesResult.error) redirect(resultUrl(servicesResult.error.message));
   if (inputsResult.error) redirect(resultUrl(inputsResult.error.message));
@@ -223,7 +235,7 @@ export async function stageBudgetImport(formData: FormData) {
     source_reference_date: parsed.source_reference_date, source_area_m2: parsed.source_area_m2, source_total: parsed.source_total,
     status: "review", groups_total: parsed.summary.groups, services_total: parsed.summary.services, inputs_total: parsed.summary.inputs,
     matched_total: matched, suggested_total: 0, ambiguous_total: ambiguous, new_total: newCount,
-    metadata: { unique_input_codes: parsed.summary.unique_input_codes, priced_inputs: parsed.summary.priced_inputs,
+    metadata: { skipped_zero_services: parsed.summary.skipped_zero_services, skipped_zero_inputs: parsed.summary.skipped_zero_inputs, unique_input_codes: parsed.summary.unique_input_codes, priced_inputs: parsed.summary.priced_inputs,
       previous_batch_id: duplicateResult.data?.[0]?.id ?? null },
     created_by: userId,
   }).select("id").single();
@@ -239,6 +251,10 @@ export async function stageBudgetImport(formData: FormData) {
     }
   }
 
+  const { error: statusError } = await supabase.from("engineering_budget_import_batches")
+    .update({ status: ambiguous + newCount === 0 ? "ready" : "review", updated_at: new Date().toISOString() })
+    .eq("id", batch.id).eq("company_id", companyId);
+  if (statusError) redirect(`${IMPORT_PATH}/${batch.id}?${new URLSearchParams({ error: statusError.message })}`);
   revalidatePath(IMPORT_PATH);
   redirect(`${IMPORT_PATH}/${batch.id}`);
 }
