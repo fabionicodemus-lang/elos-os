@@ -82,13 +82,19 @@ export default async function ProjectsRegistryPage({
       .includes(queryText);
   });
 
+  const activeProjects = projects.filter((project) => project.status !== "archived");
+  const totalUnits = activeProjects.reduce((sum, project) => sum + Number(project.total_units ?? 0), 0);
+  const totalBuiltArea = activeProjects.reduce((sum, project) => sum + Number(project.built_area_m2 ?? 0), 0);
+  const inConstruction = activeProjects.filter((project) => project.status === "active").length;
+
   return (
     <AppShell
       activeGroup="projects"
       activeItem="projects"
-      eyebrow="Empreendimentos"
-      title="Cadastro de Empreendimentos"
-      description="Cadastre cada empreendimento e mantenha seus dados principais."
+      eyebrow="Cadastros · Base do sistema"
+      title="Empreendimentos"
+      description="Obras e incorporações · cada uma com empresa, locais e unidades."
+      actions={canManage ? <ProjectCreateDialog legalEntities={legalEntities} /> : undefined}
     >
       {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
       {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
@@ -97,6 +103,13 @@ export default async function ProjectsRegistryPage({
           Execute no Supabase as migrations <strong>20260727_0027_project_cover_images.sql</strong> e <strong>20260727_0030_legal_entities.sql</strong> para liberar a tela completa.
         </div>
       ) : null}
+
+      <section className="final-project-kpis">
+        <article><span>Empreendimentos</span><strong>{activeProjects.length}</strong><small>{inConstruction} em construção</small></article>
+        <article><span>Unidades</span><strong>{totalUnits}</strong><small>soma dos cadastros ativos</small></article>
+        <article><span>Área construída</span><strong>{decimal(totalBuiltArea)} m²</strong><small>somada entre os empreendimentos</small></article>
+        <article><span>Em construção</span><strong>{inConstruction}</strong><small>{activeProjects.length - inConstruction} em outras fases</small></article>
+      </section>
 
       <section className="project-prototype-toolbar">
         <form method="get" className="project-prototype-search-form">
@@ -110,7 +123,6 @@ export default async function ProjectsRegistryPage({
           <button type="submit" className="project-search-submit">Buscar</button>
           {params.q ? <a href="/empreendimentos" className="project-search-clear">Limpar</a> : null}
         </form>
-        {canManage ? <ProjectCreateDialog legalEntities={legalEntities} /> : null}
       </section>
 
       {!structureMissing && legalEntities.filter((entity) => entity.status === "active" && hasValidCnpj(entity.cnpj)).length === 0 ? (
