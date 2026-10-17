@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
+import { ImportSubmitButton } from "./submit-button";
 import { stageBudgetImport } from "./actions";
 
 function dateBR(value: string | null | undefined) {
@@ -73,13 +74,13 @@ export default async function BudgetImportPage({ searchParams }: {
         <form action={stageBudgetImport} className="budget-modal-form">
           <div className="budget-section-head">
             <div><span>Novo lote</span><h2>Enviar planilha XLSX</h2></div>
-            <p>O primeiro adaptador reconhece o formato legado usado no orçamento do Flow.</p>
+            <p>Formato legado do Flow · XLSX de até 10 MB. Serviços com quantidade zero e seus insumos serão desconsiderados.</p>
           </div>
           <label>
             <span>Arquivo do orçamento</span>
             <input name="file" type="file" accept=".xlsx" required disabled={!projectId} />
           </label>
-          <button type="submit" className="elos-button" disabled={!projectId}>Ler e preparar staging</button>
+          <ImportSubmitButton pendingLabel="Lendo planilha…" disabled={!projectId}>Ler e revisar orçamento</ImportSubmitButton>
         </form>
       </section>
 

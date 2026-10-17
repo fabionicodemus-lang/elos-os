@@ -58,6 +58,13 @@ export async function promoteBudgetImport(formData: FormData) {
   }
 
   const { supabase, companyId } = await requireCompanyPermission("budgets.manage");
+  // Older staging batches may contain zero-quantity services. Re-reading applies the
+  // current parser to the whole composition without silently changing the audit trail.
+  const invalidServices = await supabase.from("engineering_budget_import_rows")
+    .select("id", { count: "exact", head: true }).eq("company_id", companyId)
+    .eq("batch_id", batchId).eq("entity_kind", "service").or("quantity.lte.0,quantity.is.null");
+  if (invalidServices.error) redirect(messageUrl(batchId, invalidServices.error.message));
+  if ((invalidServices.count ?? 0) > 0) redirect(messageUrl(batchId, "Este lote antigo contém serviços zerados ou sem quantidade válida. Cancele o lote e envie o XLSX novamente para desconsiderar esses serviços e suas composições."));
   const { data, error } = await supabase.rpc("promote_engineering_budget_import", {
     p_company_id: companyId,
     p_batch_id: batchId,

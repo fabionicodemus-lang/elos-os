@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["exceljs"],
   experimental: {
     serverActions: {
-      bodySizeLimit: "6mb",
+      bodySizeLimit: "11mb",
     },
   },
   async headers() {
