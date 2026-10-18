@@ -28,24 +28,28 @@ function entityKey(row: { entity_kind: string; external_code: string | null; ext
   return [row.entity_kind, normalized(row.external_code), normalized(row.external_name), normalized(row.external_unit)].join("|");
 }
 
+type NormalizedTarget = { target: CatalogEntity; code: string; name: string; unit: string; tokens: Set<string> };
+
+function normalizeCatalog(catalog: CatalogEntity[]): NormalizedTarget[] {
+  return catalog.map((target) => {
+    const name = normalized(target.description);
+    return { target, code: normalized(target.code), name, unit: normalized(target.unit), tokens: new Set(name.split(" ").filter((token) => token.length > 2)) };
+  });
+}
+
 function candidateScore(
   pending: { external_code: string | null; external_name: string | null; external_unit: string | null },
-  target: { code: string; description: string; unit: string },
+  target: NormalizedTarget,
 ) {
   const pCode = normalized(pending.external_code);
   const pName = normalized(pending.external_name);
   const pUnit = normalized(pending.external_unit);
-  const tCode = normalized(target.code);
-  const tName = normalized(target.description);
-  const tUnit = normalized(target.unit);
   let score = 0;
-  if (pUnit && pUnit === tUnit) score += 25;
-  if (pCode && pCode === tCode) score += 100;
-  if (pName && pName === tName) score += 90;
-  if (pName && (tName.includes(pName) || pName.includes(tName))) score += 45;
-  const tokens = new Set(pName.split(" ").filter((token) => token.length > 2));
-  const targetTokens = new Set(tName.split(" ").filter((token) => token.length > 2));
-  tokens.forEach((token) => { if (targetTokens.has(token)) score += 8; });
+  if (pUnit && pUnit === target.unit) score += 25;
+  if (pCode && pCode === target.code) score += 100;
+  if (pName && pName === target.name) score += 90;
+  if (pName && (target.name.includes(pName) || pName.includes(target.name))) score += 45;
+  pName.split(" ").filter((token) => token.length > 2).forEach((token) => { if (target.tokens.has(token)) score += 8; });
   return score;
 }
 
@@ -118,17 +122,28 @@ export default async function BudgetImportReviewPage({
   if (["group", "service", "input"].includes(filters.kind ?? "")) rowsQuery = rowsQuery.eq("entity_kind", filters.kind!);
   if (["mapped", "exact_code", "exact_name_unit", "suggested", "ambiguous", "new", "ignored"].includes(filters.match ?? "")) rowsQuery = rowsQuery.eq("match_status", filters.match!);
 
-  const [rowsResult, pendingResult, servicesResult, inputsResult, invalidServicesResult] = await Promise.all([
+  const [rowsResult, pendingResult, invalidServicesResult] = await Promise.all([
     rowsQuery,
     fetchAllRows<PendingRow>(async (from, to) => await supabase.from("engineering_budget_import_rows")
       .select("id,entity_kind,external_code,external_name,external_unit,source_row,match_status")
       .eq("batch_id", batchId).eq("company_id", companyId).eq("resolution_action", "unresolved")
       .in("entity_kind", ["service", "input"]).order("source_row").order("id").range(from, to)),
-    fetchAllRows<CatalogEntity>(async (from, to) => await supabase.from("engineering_services").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").order("id").range(from, to)),
-    fetchAllRows<CatalogEntity>(async (from, to) => await supabase.from("engineering_inputs").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").order("id").range(from, to)),
     supabase.from("engineering_budget_import_rows").select("id", { count: "exact", head: true })
       .eq("company_id", companyId).eq("batch_id", batchId).eq("entity_kind", "service")
       .or("quantity.lte.0,quantity.is.null"),
+  ]);
+
+  // Os catálogos (milhares de insumos) só são carregados quando há pendência a resolver,
+  // e apenas do tipo que aparece nas pendências — senão a página estoura o tempo do servidor.
+  const pendingKinds = new Set(((pendingResult.data ?? []) as PendingRow[]).map((row) => row.entity_kind));
+  const emptyCatalog = { data: [] as CatalogEntity[], error: null };
+  const [servicesResult, inputsResult] = await Promise.all([
+    pendingKinds.has("service")
+      ? fetchAllRows<CatalogEntity>(async (from, to) => await supabase.from("engineering_services").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").order("id").range(from, to))
+      : Promise.resolve(emptyCatalog),
+    pendingKinds.has("input")
+      ? fetchAllRows<CatalogEntity>(async (from, to) => await supabase.from("engineering_inputs").select("id,code,description,unit").eq("company_id", companyId).eq("status", "active").order("id").range(from, to))
+      : Promise.resolve(emptyCatalog),
   ]);
 
   const pendingMap = new Map<string, PendingRow>();
@@ -137,9 +152,9 @@ export default async function BudgetImportReviewPage({
     if (!pendingMap.has(key)) pendingMap.set(key, row);
   });
   const uniquePending = [...pendingMap.values()];
-  const visiblePending = uniquePending.slice(0, 100);
-  const services = (servicesResult.data ?? []) as CatalogEntity[];
-  const inputs = (inputsResult.data ?? []) as CatalogEntity[];
+  const visiblePending = uniquePending.slice(0, 25);
+  const services = normalizeCatalog((servicesResult.data ?? []) as CatalogEntity[]);
+  const inputs = normalizeCatalog((inputsResult.data ?? []) as CatalogEntity[]);
   const loadError = rowsResult.error || pendingResult.error || servicesResult.error || inputsResult.error || invalidServicesResult.error;
   const metadata = batch.metadata as { skipped_zero_services?: number; skipped_zero_inputs?: number } | null;
   const pageHref = (nextPage: number) => `${"/engenharia/orcamentos/importar"}/${batchId}?${new URLSearchParams({ ...(filters.kind ? { kind: filters.kind } : {}), ...(filters.match ? { match: filters.match } : {}), page: String(nextPage) })}`;
@@ -196,8 +211,8 @@ export default async function BudgetImportReviewPage({
                 {visiblePending.map((pending) => {
                   const catalog = pending.entity_kind === "service" ? services : inputs;
                   const candidates = catalog
-                    .map((target) => ({ target, score: candidateScore(pending, target) }))
-                    .filter(({ score, target }) => score > 0 || normalized(target.unit) === normalized(pending.external_unit))
+                    .map((entry) => ({ target: entry.target, unit: entry.unit, score: candidateScore(pending, entry) }))
+                    .filter(({ score, unit }) => score > 0 || unit === normalized(pending.external_unit))
                     .sort((a, b) => b.score - a.score)
                     .slice(0, 8);
                   return (
