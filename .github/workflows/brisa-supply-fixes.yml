@@ -1,0 +1,46 @@
+name: Brisa supply integration
+on:
+  pull_request:
+    paths:
+      - app/engenharia/planejamento-suprimentos/actions.ts
+      - lib/preconstruction/supply-needs.mjs
+      - tests/preconstruction/supply-needs.test.mjs
+      - .github/workflows/brisa-supply-fixes.yml
+      - .github/scripts/apply-brisa-supply-fixes.sh
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/brisa-supply-fixes.yml
+      - .github/scripts/apply-brisa-supply-fixes.sh
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:preconstruction
+      - run: node --test tests/procurement/*.test.mjs
+      - run: npx tsc --noEmit
+      - run: npm run build
+  migrate:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency: brisa-supply-database-migration
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply existing stock fulfillment migration
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: '10'
+        run: bash .github/scripts/apply-brisa-supply-fixes.sh

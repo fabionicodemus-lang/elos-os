@@ -71,3 +71,9 @@ test("valor unitário ausente usa preço da lista sem transformar vazio em zero"
   const result = parseBudgetWorkbook(XLSX.write(book, { type: "buffer", bookType: "xlsx" }));
   assert.equal(result.rows.find(r => r.entity_kind === "input").unit_cost, 7);
 });
+
+test("zero explícito não vira verba mesmo com total preenchido", () => {
+  const zero = service("01.01", 0); zero[10] = 500;
+  const result = parseBudgetWorkbook(workbook([zero, input(), service("01.02", 2)]));
+  assert.deepEqual(result.rows.filter(r => r.entity_kind === "service").map(r => r.external_code), ["01.02"]);
+});
