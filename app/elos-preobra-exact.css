@@ -68,7 +68,7 @@
 .elos-round2-engineering .budget-flow-grid article b{color:#5f7d79;font-size:10px;font-weight:500}
 .elos-round2-engineering .budget-flow-grid article span{color:#16211f;font-size:12px;font-weight:600}
 /* Main handoff intentionally has no filter bar on history screen. */
-.elos-round2-engineering .budget-toolbar-card{display:none!important}
+.elos-round2-engineering .budget-toolbar-card:not(.budget-import-card){display:none!important}
 
 /* Tables */
 .elos-round2-engineering .budget-table-card,.elos-round2-engineering .contract-plan-table-card,.elos-round2-engineering .supply-plan-table-card,

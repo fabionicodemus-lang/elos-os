@@ -268,7 +268,7 @@ export default async function BudgetImportReviewPage({
       ) : null}
 
       {canManage && editable && !batch.promoted_budget_id ? (
-        <section className="budget-toolbar-card">
+        <section className="budget-toolbar-card budget-import-card">
           <div className="budget-section-head">
             <div><span>Confirmação da importação</span><h2>Aceitar e importar orçamento</h2></div>
             <p>Novos cadastros, mapa, orçamento e composições são criados juntos. O orçamento nasce em revisão e não vira base automaticamente.</p>
@@ -301,7 +301,7 @@ export default async function BudgetImportReviewPage({
         </section>
       ) : null}
 
-      <section className="budget-toolbar-card">
+      <section className="budget-toolbar-card budget-import-card">
         <form method="get" className="budgets-filter">
           <select name="kind" aria-label="Tipo de linha" defaultValue={filters.kind ?? ""}>
             <option value="">Todos os tipos</option><option value="group">Grupos</option><option value="service">Serviços</option><option value="input">Insumos</option>

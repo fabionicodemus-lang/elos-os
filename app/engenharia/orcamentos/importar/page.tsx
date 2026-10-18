@@ -71,7 +71,7 @@ export default async function BudgetImportPage({ searchParams }: {
         </div>
       </section>
 
-      <section className="budget-toolbar-card">
+      <section className="budget-toolbar-card budget-import-card">
         <form action={stageBudgetImport} className="budget-modal-form">
           <div className="budget-section-head">
             <div><span>Novo lote</span><h2>Enviar planilha XLSX</h2></div>
