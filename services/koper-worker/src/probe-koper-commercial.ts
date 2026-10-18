@@ -208,7 +208,11 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
           return chain;
         }, label).catch(() => []);
         console.log("KOPER_PROBE_CLICK_TARGET", JSON.stringify({ label, structure }));
-        await page.getByText(label, { exact: false }).first().click({ timeout: 8_000 }).catch(() => undefined);
+        // Painel retrátil: abre pelo botão do cabeçalho (p-panel-toggler); se não houver, clica no cabeçalho.
+        const panel = page.locator(".p-panel", { hasText: label }).first();
+        const opened = await panel.locator(".p-panel-header button, .p-panel-toggler").first().click({ timeout: 8_000 }).then(() => true).catch(() => false);
+        if (!opened) await panel.locator(".p-panel-header").first().click({ timeout: 8_000 }).catch(() => undefined);
+        console.log("KOPER_PROBE_CLICK_RESULT", JSON.stringify({ label, opened }));
         await page.waitForTimeout(9_000);
         await page.mouse.wheel(0, 4000).catch(() => undefined);
         await page.waitForTimeout(3_000);
