@@ -11,6 +11,36 @@
 -- * Cada parte ligada a uma solicitação gera o vínculo pedido → solicitação (allocations), e a
 --   quantidade pedida da solicitação é atualizada.
 
+-- Fornecedor que só aparece no pedido (fora do cadastro da origem): vincula por CPF/CNPJ ou cria.
+create or replace function elos_import.ensure_supplier(p_company_id uuid, p_source_id text, p_name text, p_doc text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, elos_import
+as $$
+declare v_id uuid; v_doc text := nullif(regexp_replace(coalesce(p_doc, ''), '\D', '', 'g'), '');
+begin
+  v_id := elos_import.map_get(p_company_id, null, 'supplier', p_source_id);
+  if v_id is not null then return v_id; end if;
+  if nullif(btrim(p_name), '') is null or p_name ilike '%koper%' or p_name ilike '%não identificado%' then return null; end if;
+  if v_doc is not null then
+    select id into v_id from suppliers where company_id = p_company_id and regexp_replace(coalesce(tax_id, ''), '\D', '', 'g') = v_doc
+    order by (coalesce(source_system, '') ilike 'koper%'), (status <> 'active'), created_at limit 1;
+  end if;
+  if v_id is null then
+    insert into suppliers(company_id, person_type, legal_name, tax_id, category, status, source_system, source_id)
+    values (p_company_id, case when length(v_doc) = 14 then 'company' when length(v_doc) = 11 then 'individual' else 'other' end,
+            btrim(p_name), v_doc, 'Serviços / materiais', 'active', 'elos_import', 'supplier:' || p_source_id)
+    on conflict (company_id, source_system, source_id) do update set updated_at = now() returning id into v_id;
+  end if;
+  perform elos_import.map_put(p_company_id, null, 'supplier', p_source_id, 'supplier', v_id,
+    case when v_doc is not null then 'tax_id_or_created' else 'created' end, p_name, v_doc);
+  return v_id;
+end;
+$$;
+
+revoke all on function elos_import.ensure_supplier(uuid, text, text, text) from public, anon, authenticated;
+
 create or replace function elos_import.wave2b_purchase_orders(p_company_id uuid, p_project_id uuid, p_user_id uuid)
 returns jsonb
 language plpgsql
@@ -33,7 +63,8 @@ begin
   loop
     if elos_import.map_get(p_company_id, p_project_id, 'purchase_order', r.p->>'orderId') is not null then continue; end if;
 
-    v_supplier := elos_import.map_get(p_company_id, null, 'supplier', r.p->>'supplierId');
+    v_supplier := elos_import.ensure_supplier(p_company_id, r.p->>'supplierId',
+      coalesce(nullif(r.p->>'companyName', ''), r.p->>'supplierName'), coalesce(r.p->>'supplierCnpj', r.p->>'supplierCpf'));
     if v_supplier is null then
       perform elos_import.issue(v_run, p_company_id, p_project_id, 'purchase_order', r.p->>'orderId', 'fornecedor_sem_vinculo',
         jsonb_build_object('fornecedor', r.p->>'supplierName'));
