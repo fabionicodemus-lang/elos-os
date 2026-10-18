@@ -6,6 +6,9 @@ import { PGlite } from "@electric-sql/pglite";
 const stockMigration = readFileSync(new URL("../../supabase/migrations/20261014070000_procurement_request_stock_intelligence.sql", import.meta.url), "utf8");
 const approvalMigration = readFileSync(new URL("../../supabase/migrations/20261014071000_procurement_purchase_approval_levels.sql", import.meta.url), "utf8");
 
+const orderFix = readFileSync(new URL("../../supabase/migrations/20261018220251_brisa_order_refresh_totals.sql", import.meta.url), "utf8");
+const currentIssueFunction = orderFix.slice(orderFix.indexOf("create or replace function public.issue_procurement_purchase_order("), orderFix.lastIndexOf("commit;"));
+
 const u1 = "11111111-1111-4111-8111-111111111111";
 const u2 = "11111111-1111-4111-8111-222222222222";
 const u3 = "11111111-1111-4111-8111-333333333333";
@@ -151,6 +154,10 @@ async function bootstrap(db) {
 
   await db.exec(stockMigration);
   await db.exec(approvalMigration);
+  // Totals are tested against the real refresh in order-refresh.test.mjs.
+  // Here isolate the current emission function to exercise its access/alçada guards.
+  await db.exec(`create function public.refresh_procurement_purchase_order(uuid) returns text language sql as $$ select 'draft'::text $$;`);
+  await db.exec(currentIssueFunction);
   await db.exec(`
     grant usage on schema public, auth to authenticated;
     grant select, insert, update, delete on all tables in schema public to authenticated;

@@ -11,8 +11,10 @@ do $$ begin
 end $$;
 SQL
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261014070000_procurement_request_stock_intelligence.sql
+psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261014071000_procurement_purchase_approval_levels.sql
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261018164938_brisa_quotation_refresh_aliases.sql
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261018165125_brisa_contract_stage_uniqueness.sql
+psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261018220251_brisa_order_refresh_totals.sql
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
 do $$ begin
   if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='execution_material_request_items' and column_name='stock_fulfilled_quantity') then
