@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { ImportSubmitButton } from "./submit-button";
+import { CancelBudgetImportButton } from "./cancel-import-button";
 import { stageBudgetImport } from "./actions";
 
 function dateBR(value: string | null | undefined) {
@@ -104,7 +105,14 @@ export default async function BudgetImportPage({ searchParams }: {
                   <td>{batch.new_total} / {batch.ambiguous_total}</td>
                   <td>{money(batch.source_total)}</td>
                   <td>{dateBR(batch.created_at)}</td>
-                  <td><Link prefetch={false} className="table-action" href={`/engenharia/orcamentos/importar/${batch.id}`}>Revisar</Link></td>
+                  <td>
+                    <div className="budget-header-actions">
+                      <Link prefetch={false} className="table-action" href={`/engenharia/orcamentos/importar/${batch.id}`}>Ver lote</Link>
+                      {!["promoted", "cancelled", "failed"].includes(batch.status)
+                        ? <CancelBudgetImportButton batchId={batch.id} fileName={batch.file_name} />
+                        : null}
+                    </div>
+                  </td>
                 </tr>
               ))}
               {(batchesResult.data ?? []).length === 0 ? <tr><td colSpan={9}>Nenhum lote importado ainda.</td></tr> : null}
