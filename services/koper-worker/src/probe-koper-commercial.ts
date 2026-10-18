@@ -23,12 +23,41 @@ import {
 } from "./mirror-koper.js";
 import { createKoperStagingRecord } from "./sync/staging-record.js";
 
-const DEFAULT_ROUTES = [
+const DEFAULT_ROUTES_V1 = [
   "/comercial", "/comercial/vendas", "/comercial/contratos", "/comercial/clientes", "/comercial/unidades", "/comercial/distratos",
   "/vendas", "/crm", "/incorporacao", "/incorporacao/vendas", "/imoveis",
   "/engenharia/diario_obra", "/engenharia/diario-obra", "/engenharia/diario", "/obras/diario", "/diario_obra",
   "/financeiro/transferencias", "/financeiro/movimentacao", "/financeiro/extrato", "/financeiro/contas", "/financeiro/fluxo_caixa",
   "/financeiro/contas_receber",
+];
+// Segunda rodada: telas do app novo (web.koper.com.br) e créditos/débitos.
+const DEFAULT_ROUTES = [
+  "https://web.koper.com.br/engenharia/diario-de-obras",
+  "https://web.koper.com.br/financeiro/contas-bancarias",
+  "/financeiro/creditos",
+  "/vendas/vendas_realizadas",
+  "/vendas/empreendimentos",
+];
+void DEFAULT_ROUTES_V1;
+// GETs diretos (somente leitura). {SALE} é trocado pelos ids de venda lidos da listagem.
+const DIRECT_GETS = [
+  "/sales/v1/building?buildingId=133",
+  "/sales/v1/building_unit?buildingId=133",
+  "/sales/v1/unit?buildingId=133",
+  "/sales/v1/units?buildingId=133",
+  "/sales/v1/building/133",
+  "/sales/v1/mirror?buildingId=133",
+  "/sales/v1/sales?salesId={SALE}",
+  "/sales/v1/sales/{SALE}",
+  "/sales/v1/sales_detail?salesId={SALE}",
+  "/sales/v1/sales_installments?salesId={SALE}",
+  "/sales/v1/sales_cancel?salesId={SALE}",
+  "/sales/v1/cancellation?salesId={SALE}",
+  "/financial/v1/credit_debit?limit=200&offset=0",
+  "/financial/v1/credits?limit=200&offset=0",
+  "/financial/v1/transfer?limit=200&offset=0",
+  "/financial/v1/account_transfer?limit=200&offset=0",
+  "/financial/v1/bank_statement?limit=200&offset=0",
 ];
 const KEYWORDS = /(vend|comerc|contrat|client|unidad|imov|distrat|diar|transfer|movim|extrato|conta)/i;
 const MAX_BODY_CHARS = 1_500_000;
@@ -91,12 +120,13 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
       void (async () => {
         try {
           const url = new URL(response.url());
-          if (url.hostname !== "api.koper.com.br" || response.request().method() !== "GET") return;
+          if (!url.hostname.endsWith("koper.com.br") || url.hostname.startsWith("files") || response.request().method() !== "GET") return;
+          if (!(response.headers()["content-type"] ?? "").includes("json")) return;
           const text = await response.text().catch(() => "");
           if (!text || text.length > MAX_BODY_CHARS) return;
           let body: unknown = null;
           try { body = JSON.parse(text); } catch { return; }
-          captured.push({ method: "GET", path: url.pathname, query: stripSecrets(url), status: response.status(), route: currentRoute, body });
+          captured.push({ method: "GET", path: url.hostname === "api.koper.com.br" ? url.pathname : `${url.hostname}${url.pathname}`, query: stripSecrets(url), status: response.status(), route: currentRoute, body });
         } catch { /* ignora */ }
       })();
     });
@@ -104,8 +134,8 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
     for (const link of await collectLinks(page).catch(() => [])) links.add(link);
     for (const route of targets) {
       currentRoute = route;
-      await page.goto(`https://app.koper.com.br${route}`, { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => undefined);
-      await page.waitForTimeout(6_000);
+      await page.goto(route.startsWith("http") ? route : `https://app.koper.com.br${route}`, { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => undefined);
+      await page.waitForTimeout(9_000);
       await page.mouse.wheel(0, 4000).catch(() => undefined);
       await page.waitForTimeout(2_000);
       for (const link of await collectLinks(page).catch(() => [])) links.add(link);
@@ -114,13 +144,39 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
     }
     // Segunda passada: links do menu com cara de vendas/diário/transferência que não estavam na lista.
     const extra = [...links].map((href) => { try { return new URL(href).pathname; } catch { return ""; } })
-      .filter((path) => path && KEYWORDS.test(path) && !targets.includes(path)).slice(0, 25);
+      .filter((path) => path && KEYWORDS.test(path) && !targets.includes(path) && process.env.KOPER_PROBE_EXTRA === "1").slice(0, 25);
     for (const route of extra) {
       currentRoute = route;
       await page.goto(`https://app.koper.com.br${route}`, { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => undefined);
       await page.waitForTimeout(6_000);
       const text = (await page.evaluate(() => document.body?.innerText ?? "").catch(() => "")).replace(/\s+/g, " ").slice(0, 600);
       visits.push({ route, finalUrl: page.url(), title: await page.title().catch(() => ""), text });
+    }
+    // Leitura direta da API, sempre GET.
+    const direct = async (pathWithQuery: string): Promise<void> => {
+      const url = new URL(`https://api.koper.com.br${pathWithQuery}`);
+      url.searchParams.set("accessToken", session.token);
+      try {
+        const response = await fetch(url, { method: "GET", headers: session.headers, signal: AbortSignal.timeout(60_000) });
+        let body: unknown = null;
+        const text = await response.text();
+        try { body = JSON.parse(text); } catch { body = null; }
+        captured.push({ method: "GET", path: url.pathname, query: stripSecrets(url), status: response.status, route: "direct", body: text.length > MAX_BODY_CHARS ? null : body });
+      } catch { /* ignora */ }
+    };
+    const saleIds = new Set<string>();
+    const cancelled: string[] = [];
+    for (let offset = 0; offset < 400; offset += 100) {
+      await direct(`/sales/v1/sales?limit=100&offset=${offset}&orderby=salesDate&orderFlag=desc`);
+      const last = captured[captured.length - 1]?.body as { sales?: Array<{ salesId: number; salesCanceled?: boolean }> } | null;
+      for (const sale of last?.sales ?? []) { saleIds.add(String(sale.salesId)); if (sale.salesCanceled) cancelled.push(String(sale.salesId)); }
+      if (!last?.sales || last.sales.length < 100) break;
+    }
+    const sample = [...[...saleIds].slice(0, 2), ...cancelled.slice(0, 1)];
+    for (const template of DIRECT_GETS) {
+      if (template.includes("{SALE}")) {
+        for (const id of sample) await direct(template.replace("{SALE}", id));
+      } else await direct(template);
     }
     console.log("KOPER_PROBE_VISITS", JSON.stringify({ blocked, visits: visits.map((v) => ({ route: v.route, finalUrl: v.finalUrl, title: v.title, text: v.text.slice(0, 200) })) }));
   }, { sessionTimeoutMs: 600_000 });
