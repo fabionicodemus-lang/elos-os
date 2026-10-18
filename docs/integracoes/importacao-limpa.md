@@ -33,7 +33,10 @@ Plano completo: documento "Importação limpa Koper → Elos OS" (Claude Docs). 
 ## Pendências abertas
 - R$ 4,86 mi sem centro de custo na origem (SEM-CC): sugestão por regras em `elos_import.sem_cc_groups` (291 grupos), planilha enviada ao Fábio para decisão.
 - 4 títulos duplicados que o atualizador antigo gravou na Flow Aptos foram cancelados; a rotina antiga (koper-audit-runner) foi desligada em 18/10 (comando trocado por um aviso). Não aceitar a mudança antiga que está pendente nesse serviço.
-- Vendas da Beatriz Cristina Marques Almeida e da Marcela Gomes Lourenço: parcelas existem na origem, mas a venda (unidade) não; 99 parcelas aguardando.
+- Vendas da Beatriz Cristina Marques Almeida (2302, VD-0041) e da Marcela Gomes Lourenço (1901, VD-0042) lidas da tela de Vendas da origem e criadas em 18/10; as 99 parcelas (R$ 1.811.510,19) foram ligadas. Clientes criados sem CPF (o CPF não é copiado da origem; preencher no cadastro).
+- Tela de Vendas da origem (18/10): 51 unidades (37 vendidas R$ 26.177.197,59 + 14 disponíveis R$ 14.455.127,30) = Elos; 12 unidades disponíveis criadas. 37 vendas ativas = origem. Distratos: 7 no Elos (VD-0036…0040 com valor e data corrigidos pela origem; VD-0043 Joaquim/503 e VD-0044 Marilei/803 criados, sem parcelas). A venda cancelada da Atmosfera (901) foi refeita no mesmo dia para o mesmo cliente e não entrou como distrato — confirmar com o Fábio.
+- Contas a receber: 3.797 parcelas, R$ 14.233.282,83 recebidos = origem.
+- A rotina antiga do Flow também está travada no banco (`elos_import.block_old_flow_sync`): títulos `koper_flow` e fornecedores automáticos na Flow Aptos são recusados.
 - Transferências entre contas e diários de obra: não estão no espelho da origem; precisam ser lidos do sistema de origem.
 - Exclusão do Flow2 após a conciliação final.
 
