@@ -6,13 +6,23 @@ import { logout } from "./actions";
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; success?: string }>;
+  searchParams: Promise<{ error?: string; success?: string; scope?: string }>;
 }) {
   const supabase = await createClient();
   const { data: authData, error: authError } = await supabase.auth.getClaims();
 
   if (authError || !authData?.claims) {
     redirect("/login");
+  }
+
+  // Administradores globais chegam primeiro ao painel da plataforma. O acesso
+  // ao próprio ambiente operacional continua disponível por opção explícita.
+  const params = await searchParams;
+  if (params.scope !== "empresa") {
+    const { data: isPlatformAdmin, error: platformError } = await supabase.rpc("is_platform_admin");
+    if (!platformError && isPlatformAdmin === true) {
+      redirect("/plataforma");
+    }
   }
 
   const userId = typeof authData.claims.sub === "string" ? authData.claims.sub : "";
