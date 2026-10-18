@@ -34,10 +34,12 @@ const DEFAULT_ROUTES_V1 = [
 const DEFAULT_ROUTES = [
   "https://web.koper.com.br/engenharia/diario-de-obras",
   "https://web.koper.com.br/financeiro/contas-bancarias",
-  "/financeiro/creditos",
-  "/vendas/vendas_realizadas",
-  "/vendas/empreendimentos",
 ];
+// Depois de abrir a tela, clica num texto visível (navegação somente leitura; escrita bloqueada pelo interceptor).
+const CLICK_AFTER: Record<string, string[]> = {
+  "https://web.koper.com.br/engenharia/diario-de-obras": ["Flow Aptos"],
+  "https://web.koper.com.br/financeiro/contas-bancarias": ["DIVERSOS AJUSTES"],
+};
 void DEFAULT_ROUTES_V1;
 // GETs diretos (somente leitura). {SALE} é trocado pelos ids de venda lidos da listagem.
 const DIRECT_GETS = [
@@ -138,6 +140,12 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
       await page.waitForTimeout(9_000);
       await page.mouse.wheel(0, 4000).catch(() => undefined);
       await page.waitForTimeout(2_000);
+      for (const label of CLICK_AFTER[route] ?? []) {
+        await page.getByText(label, { exact: false }).first().click({ timeout: 8_000 }).catch(() => undefined);
+        await page.waitForTimeout(9_000);
+        await page.mouse.wheel(0, 4000).catch(() => undefined);
+        await page.waitForTimeout(3_000);
+      }
       for (const link of await collectLinks(page).catch(() => [])) links.add(link);
       const text = (await page.evaluate(() => document.body?.innerText ?? "").catch(() => "")).replace(/\s+/g, " ").slice(0, 600);
       visits.push({ route, finalUrl: page.url(), title: await page.title().catch(() => ""), text });
@@ -172,12 +180,10 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
       for (const sale of last?.sales ?? []) { saleIds.add(String(sale.salesId)); if (sale.salesCanceled) cancelled.push(String(sale.salesId)); }
       if (!last?.sales || last.sales.length < 100) break;
     }
-    const sample = [...[...saleIds].slice(0, 2), ...cancelled.slice(0, 1)];
-    for (const template of DIRECT_GETS) {
-      if (template.includes("{SALE}")) {
-        for (const id of sample) await direct(template.replace("{SALE}", id));
-      } else await direct(template);
-    }
+    void DIRECT_GETS;
+    for (const id of saleIds) await direct(`/sales/v1/sales?salesId=${id}`);
+    await direct("/financial/v3/bank_account?page=1&size=100&active=true");
+    await direct("/financial/v3/bank_account?page=1&size=100&active=false");
     console.log("KOPER_PROBE_VISITS", JSON.stringify({ blocked, visits: visits.map((v) => ({ route: v.route, finalUrl: v.finalUrl, title: v.title, text: v.text.slice(0, 200) })) }));
   }, { sessionTimeoutMs: 600_000 });
 
