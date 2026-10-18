@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { voidScheduleProgress } from "./actions";
 import { useMemo, useState, type CSSProperties } from "react";
 import {
   ScheduleProgressDialog,
@@ -70,7 +71,7 @@ function serviceVisual(service: ExecutionScheduleService | null | undefined, fal
   const code = normalize(service?.code ?? "").replace(/\s/g, "").toUpperCase();
   const description = normalize(`${service?.description ?? ""} ${fallbackValue}`);
   const reference = serviceVisualReferences.find((item) => item.codes.includes(code) || item.terms.some((term) => description.includes(term)));
-  const fallbackLabel = normalize(service?.code || service?.description || fallbackValue).replace(/[^a-z0-9]/g, "").slice(0, 3).toUpperCase() || "SRV";
+  const fallbackLabel = service?.code || normalize(service?.description || fallbackValue).replace(/[^a-z0-9]/g, "").slice(0, 3).toUpperCase() || "SRV";
   return {
     abbreviation: reference?.abbreviation ?? fallbackLabel,
     color: reference?.color ?? fallbackColor(service?.id || fallbackValue || fallbackLabel),
@@ -198,7 +199,7 @@ export function ExecutionScheduleWorkbench({
   const selectedMeasurements = useMemo(() => {
     const map = new Map<string, ExecutionScheduleMeasurement>();
     measurements
-      .filter((measurement) => measurement.measurement_date <= selectedDate)
+      .filter((measurement) => !measurement.voided_at && measurement.measurement_date <= selectedDate)
       .sort((a, b) => a.measurement_date.localeCompare(b.measurement_date) || a.created_at.localeCompare(b.created_at))
       .forEach((measurement) => map.set(measurement.activity_id, measurement));
     return map;
@@ -381,9 +382,9 @@ export function ExecutionScheduleWorkbench({
       {tab === "history" ? (
         <div className="execution-history-card">
           <header><div><h2>Histórico de medições</h2><p>Registro cronológico e auditável de todas as atualizações do avanço.</p></div><strong>{measurements.length} registro(s)</strong></header>
-          <div className="execution-history-wrap"><table><thead><tr><th>Data</th><th>Atividade</th><th>Local</th><th>Avanço</th><th>Quantidade</th><th>Período atual</th><th>Equipes</th><th>Custo realizado</th><th>Observações</th></tr></thead><tbody>{[...measurements].sort((a, b) => b.measurement_date.localeCompare(a.measurement_date) || b.created_at.localeCompare(a.created_at)).map((measurement) => {
+          <div className="execution-history-wrap"><table><thead><tr><th>Data</th><th>Atividade</th><th>Local</th><th>Avanço</th><th>Quantidade</th><th>Período atual</th><th>Equipes</th><th>Custo realizado</th><th>Observações / retificação</th></tr></thead><tbody>{[...measurements].sort((a, b) => b.measurement_date.localeCompare(a.measurement_date) || b.created_at.localeCompare(a.created_at)).map((measurement) => {
             const activity = activeActivities.find((item) => item.id === measurement.activity_id);
-            return <tr key={measurement.id}><td>{dateBR(measurement.measurement_date)}</td><td><strong>{activity?.code ?? "—"}</strong><span>{activity?.name ?? "Atividade removida"}</span></td><td>{locationMap.get(activity?.location_id ?? "")?.name ?? "Geral da obra"}</td><td><b>{numberBR(measurement.progress_percent, 1)}%</b></td><td>{numberBR(measurement.actual_quantity, 4)} {activity?.unit_snapshot ?? ""}</td><td>{dateBR(measurement.current_start)} a {dateBR(measurement.current_finish)}</td><td>{numberBR(measurement.team_count, 2)}</td><td>{money(measurement.actual_cost)}</td><td>{measurement.notes || "—"}</td></tr>;
+            return <tr key={measurement.id}><td>{dateBR(measurement.measurement_date)}</td><td><strong>{activity?.code ?? "—"}</strong><span>{activity?.name ?? "Atividade removida"}</span></td><td>{locationMap.get(activity?.location_id ?? "")?.name ?? "Geral da obra"}</td><td><b>{numberBR(measurement.progress_percent, 1)}%</b></td><td>{numberBR(measurement.actual_quantity, 4)} {activity?.unit_snapshot ?? ""}</td><td>{dateBR(measurement.current_start)} a {dateBR(measurement.current_finish)}</td><td>{numberBR(measurement.team_count, 2)}</td><td>{money(measurement.actual_cost)}</td><td>{measurement.notes || "—"}{measurement.voided_at ? <p>Anulada: {measurement.void_reason}</p> : canManage ? <details><summary>Anular lançamento</summary><form action={voidScheduleProgress}><input type="hidden" name="measurement_id" value={measurement.id}/><input type="hidden" name="baseline_id" value={selectedBaseline?.id ?? ""}/><input type="hidden" name="date" value={selectedDate}/><input name="reason" required placeholder="Motivo da anulação"/><button type="submit">Anular e recalcular</button></form></details> : null}</td></tr>;
           })}{measurements.length === 0 ? <tr><td colSpan={9} className="execution-history-empty">Nenhuma medição registrada.</td></tr> : null}</tbody></table></div>
         </div>
       ) : null}

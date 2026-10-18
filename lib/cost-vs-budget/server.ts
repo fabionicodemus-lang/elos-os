@@ -1,3 +1,4 @@
+import { loadNativeMeasurementTitles } from "./native-measurement-titles";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 
 const UNALLOCATED_COST_ID = "__unallocated_cost__";
@@ -135,6 +136,8 @@ type WorkingRow = {
   purchaseOrderCost: number;
   coveredPurchaseOrderCost: number;
   payablePaidCost: number;
+  /** Paid amount already recognized by measurement items, never added twice. */
+  nativeMeasurementPaidCost: number;
   payableOpenCost: number;
   /** Material que entrou no estoque da obra para este serviço e ainda não foi aplicado. */
   stockValue: number;
@@ -504,6 +507,7 @@ export async function loadCostVsBudget({
       purchaseOrderCost: 0,
       coveredPurchaseOrderCost: 0,
       payablePaidCost: 0,
+      nativeMeasurementPaidCost: 0,
       payableOpenCost: 0,
       stockValue: 0,
     };
@@ -639,6 +643,14 @@ export async function loadCostVsBudget({
     row.directCost += number(item.total_amount);
   }
 
+  const native = await loadNativeMeasurementTitles(supabase, companyId, projectId);
+  errors.push(...native.errors);
+  for (const allocation of native.allocations) {
+    const row = ensureRow(allocation.serviceId, allocation.serviceId, allocation.code, allocation.name);
+    row.payablePaidCost += allocation.title.paidAllocatedAmount;
+    row.nativeMeasurementPaidCost += allocation.title.paidAllocatedAmount;
+  }
+
   const statusOrder: Record<CostVsBudgetStatus, number> = {
     over: 0,
     no_budget: 1,
@@ -649,7 +661,7 @@ export async function loadCostVsBudget({
 
   const resultRows = [...rows.values()]
     .map<CostVsBudgetRow>((row) => {
-      const allocatedCost = row.materialCost + row.serviceCost + row.directCost + row.payablePaidCost;
+      const allocatedCost = row.materialCost + row.serviceCost + row.directCost + row.payablePaidCost - row.nativeMeasurementPaidCost;
       const residualPurchaseOrder = Math.max(
         0,
         row.purchaseOrderCost - row.coveredPurchaseOrderCost - Math.max(0, row.materialCost),
@@ -694,7 +706,7 @@ export async function loadCostVsBudget({
   }, emptyTotals());
 
   totals.payablePaid = resultRows.reduce((sum, row) => sum + row.payablePaidCost, 0);
-  totals.payableOpen = resultRows.reduce((sum, row) => sum + row.payableOpenCost, 0);
+  totals.payableOpen = resultRows.reduce((sum, row) => sum + row.payableOpenCost, 0) + native.allocations.reduce((sum, a) => sum + a.title.openAllocatedAmount, 0);
   totals.payableAllocated = totals.payablePaid + totals.payableOpen;
   totals.payableUnallocated = [...payableById.values()]
     .filter((payable) => !allocatedPayableIds.has(payable.id))

@@ -488,7 +488,8 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
       fetchAllRows<ScheduleMeasurement>(async (from, to) => {
         const { data, error } = await supabase.from("engineering_schedule_progress_measurements")
           .select("id,activity_id,measurement_date,progress_percent,current_finish,created_at")
-          .eq("company_id", activeCompany.id).eq("project_id", projectId).order("measurement_date").order("created_at").range(from, to);
+          .is("voided_at", null)
+        .eq("company_id", activeCompany.id).eq("project_id", projectId).order("measurement_date").order("created_at").range(from, to);
         return { data: (data ?? []) as ScheduleMeasurement[], error };
       }),
       fetchAllRows<ScheduleWeight>(async (from, to) => {

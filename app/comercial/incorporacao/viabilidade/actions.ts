@@ -117,18 +117,6 @@ export async function createFeasibilityStudy(formData: FormData) {
   }).select("id").single();
   if (error || !data?.id) go(BASE, error?.message ?? "Não foi possível criar o estudo.", "error");
 
-  // A migration nova também cria a fase padrão por trigger. Este insert cobre ambientes
-  // em que o trigger ainda não esteja ativo e é ignorado se a linha já existir.
-  await supabase.from("commercial_feasibility_sales_velocities").upsert({
-    company_id: companyId,
-    study_id: data.id,
-    name: "Velocidade padrão",
-    start_offset_months: -3,
-    units_per_month: 2,
-    sort_order: 10,
-    created_by: userId,
-  }, { onConflict: "study_id,start_offset_months", ignoreDuplicates: true });
-
   go(detail(data.id), "Estudo criado. Preencha as premissas da permuta.");
 }
 

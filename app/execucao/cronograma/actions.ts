@@ -106,3 +106,11 @@ export async function recordScheduleProgress(formData: FormData) {
   revalidatePath("/dashboard");
   redirect(resultUrl("Medição registrada e cronograma atual atualizado.", "success", baselineId, measurementDate));
 }
+
+export async function voidScheduleProgress(formData: FormData) {
+  const { supabase, companyId, projectId } = await requireCompanyPermission("execution.schedule.manage");
+  if (!projectId) redirect(resultUrl("Selecione uma obra.", "error"));
+  const { error } = await supabase.rpc("void_execution_schedule_progress", { p_company_id: companyId, p_project_id: projectId, p_measurement_id: text(formData, "measurement_id"), p_reason: text(formData, "reason") });
+  for (const path of [LIST_PATH, "/dashboard", "/engenharia/curvas", "/engenharia/previsao-financeira"]) revalidatePath(path);
+  redirect(resultUrl(error ? error.message : "Lançamento anulado. Histórico preservado e avanço recalculado.", error ? "error" : "success", text(formData, "baseline_id"), text(formData, "date")));
+}

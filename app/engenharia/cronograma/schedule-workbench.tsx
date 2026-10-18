@@ -92,7 +92,7 @@ function serviceVisual(service: ScheduleServiceOption | null | undefined, fallba
   const code = normalizeServiceText(service?.code ?? "").replace(/\s/g, "").toUpperCase();
   const description = normalizeServiceText(`${service?.description ?? ""} ${fallbackValue}`);
   const reference = serviceVisualReferences.find((item) => item.codes.includes(code) || item.terms.some((term) => description.includes(term)));
-  const fallbackLabel = normalizeServiceText(service?.code || service?.description || fallbackValue)
+  const fallbackLabel = service?.code || normalizeServiceText(service?.description || fallbackValue)
     .replace(/[^a-z0-9]/g, "")
     .slice(0, 3)
     .toUpperCase() || "SRV";

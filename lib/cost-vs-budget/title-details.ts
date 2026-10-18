@@ -1,3 +1,4 @@
+import { loadNativeMeasurementTitles } from "./native-measurement-titles";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 
 const UNALLOCATED_COST_ID = "__unallocated_cost__";
@@ -193,6 +194,19 @@ export async function loadCostVsBudgetTitles({
     grouped.set(rowId, rowTitles);
   }
 
+  const native = await loadNativeMeasurementTitles(supabase, companyId, projectId);
+  errors.push(...native.errors);
+  for (const allocation of native.allocations) {
+    const rowId = allocation.serviceId ?? UNALLOCATED_COST_ID;
+    const row = grouped.get(rowId) ?? new Map<string, CostVsBudgetTitle>();
+    const current = row.get(allocation.title.id);
+    row.set(allocation.title.id, current ? { ...current,
+      allocatedAmount: current.allocatedAmount + allocation.title.allocatedAmount,
+      paidAllocatedAmount: current.paidAllocatedAmount + allocation.title.paidAllocatedAmount,
+      openAllocatedAmount: current.openAllocatedAmount + allocation.title.openAllocatedAmount,
+    } : allocation.title);
+    grouped.set(rowId, row);
+  }
   const titlesByRow = Object.fromEntries(
     [...grouped.entries()].map(([rowId, titles]) => [
       rowId,
