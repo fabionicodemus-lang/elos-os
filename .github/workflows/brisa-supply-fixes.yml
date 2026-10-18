@@ -11,6 +11,7 @@ on:
       - tests/procurement/*.test.mjs
       - supabase/migrations/*brisa_contract*
       - supabase/migrations/*brisa_order*
+      - supabase/migrations/*brisa_receipt*
   push:
     branches: [main]
     paths:
@@ -20,6 +21,7 @@ on:
       - tests/procurement/*.test.mjs
       - supabase/migrations/*brisa_contract*
       - supabase/migrations/*brisa_order*
+      - supabase/migrations/*brisa_receipt*
 permissions:
   contents: read
 jobs:

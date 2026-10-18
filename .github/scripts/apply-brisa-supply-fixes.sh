@@ -15,6 +15,7 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261014071
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261018164938_brisa_quotation_refresh_aliases.sql
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261018165125_brisa_contract_stage_uniqueness.sql
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261018220251_brisa_order_refresh_totals.sql
+psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261018233354_brisa_receipt_replacement_quantities.sql
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
 do $$ begin
   if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='execution_material_request_items' and column_name='stock_fulfilled_quantity') then
