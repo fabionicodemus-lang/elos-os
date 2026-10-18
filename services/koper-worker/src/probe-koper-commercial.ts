@@ -33,6 +33,7 @@ const DEFAULT_ROUTES_V1 = [
 // Segunda rodada: telas do app novo (web.koper.com.br) e créditos/débitos.
 const DEFAULT_ROUTES = [
   "https://web.koper.com.br/engenharia/diario-de-obras",
+  "https://web.koper.com.br/engenharia/diario-de-obras/133",
   "https://web.koper.com.br/financeiro/contas-bancarias",
 ];
 // Depois de abrir a tela, clica num texto visível (navegação somente leitura; escrita bloqueada pelo interceptor).
@@ -118,6 +119,15 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
     if (active !== target) throw new Error("KOPER_PROBE_FLOW_NOT_SELECTED");
 
     let currentRoute = "";
+    // O app novo (web.koper.com.br) autentica a API v3 por cabeçalho. Guardado só em memória; nunca é logado.
+    let authHeader: string | null = null;
+    page.on("request", (request) => {
+      try {
+        const url = new URL(request.url());
+        const value = request.headers()["authorization"];
+        if (url.hostname === "api.koper.com.br" && value) authHeader = value;
+      } catch { /* ignora */ }
+    });
     page.on("response", (response: Response) => {
       void (async () => {
         try {
@@ -165,7 +175,9 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
       const url = new URL(`https://api.koper.com.br${pathWithQuery}`);
       url.searchParams.set("accessToken", session.token);
       try {
-        const response = await fetch(url, { method: "GET", headers: session.headers, signal: AbortSignal.timeout(60_000) });
+        const headers: Record<string, string> = { ...session.headers };
+        if (authHeader && url.pathname.includes("/v3/")) headers.authorization = authHeader;
+        const response = await fetch(url, { method: "GET", headers, signal: AbortSignal.timeout(60_000) });
         let body: unknown = null;
         const text = await response.text();
         try { body = JSON.parse(text); } catch { body = null; }
@@ -174,7 +186,7 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
     };
     const saleIds = new Set<string>();
     const cancelled: string[] = [];
-    for (let offset = 0; offset < 400; offset += 100) {
+    for (let offset = 0; offset < 400 && process.env.KOPER_PROBE_SALES === "1"; offset += 100) {
       await direct(`/sales/v1/sales?limit=100&offset=${offset}&orderby=salesDate&orderFlag=desc`);
       const last = captured[captured.length - 1]?.body as { sales?: Array<{ salesId: number; salesCanceled?: boolean }> } | null;
       for (const sale of last?.sales ?? []) { saleIds.add(String(sale.salesId)); if (sale.salesCanceled) cancelled.push(String(sale.salesId)); }
@@ -182,8 +194,24 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
     }
     void DIRECT_GETS;
     for (const id of saleIds) await direct(`/sales/v1/sales?salesId=${id}`);
-    await direct("/financial/v3/bank_account?page=1&size=100&active=true");
-    await direct("/financial/v3/bank_account?page=1&size=100&active=false");
+    // Extrato completo de cada conta do Flow (somente leitura, páginas de 100).
+    const accountIds = new Set<string>();
+    for (const c of captured) {
+      if (c.path !== "/financial/v3/bank_account") continue;
+      const items = (c.body as { items?: Array<{ accounts?: Array<{ fncAccountId: number }> }> } | null)?.items ?? [];
+      for (const group of items) for (const account of group.accounts ?? []) accountIds.add(String(account.fncAccountId));
+    }
+    let movementPages = 0;
+    for (const id of accountIds) {
+      await direct(`/financial/v3/bank_account_details/${id}`);
+      for (let pageNo = 1; pageNo <= 200; pageNo += 1) {
+        await direct(`/financial/v3/bank-account-details/${id}/movements?page=${pageNo}&size=100&orderBy=move_date&orderFlag=asc`);
+        movementPages += 1;
+        const last = captured[captured.length - 1]?.body as { pages?: number } | null;
+        if (!last || typeof last.pages !== "number" || pageNo >= last.pages) break;
+      }
+    }
+    console.log("KOPER_PROBE_MOVEMENTS", JSON.stringify({ accounts: accountIds.size, pages: movementPages, auth: Boolean(authHeader) }));
     console.log("KOPER_PROBE_VISITS", JSON.stringify({ blocked, visits: visits.map((v) => ({ route: v.route, finalUrl: v.finalUrl, title: v.title, text: v.text.slice(0, 200) })) }));
   }, { sessionTimeoutMs: 600_000 });
 
