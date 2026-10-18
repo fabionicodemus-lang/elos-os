@@ -59,9 +59,9 @@ const API = "https://api.koper.com.br";
 // Empresas autorizadas (CLAUDE.md, Seção 18)
 // ---------------------------------------------------------------------------
 
-type CompanyKey = "bossa" | "flow" | "alma";
+export type CompanyKey = "bossa" | "flow" | "alma";
 
-const COMPANIES: Record<CompanyKey, { enterpriseId: string; label: string }> = {
+export const COMPANIES: Record<CompanyKey, { enterpriseId: string; label: string }> = {
   bossa: { enterpriseId: "1645acb2-de18-11ed-bf03-8af8dfac4eab", label: "Bossa Empreendimentos" },
   flow: { enterpriseId: "6d3b4724-5880-11ee-827d-1219c832db49", label: "Flow Aptos - Bossa" },
   alma: { enterpriseId: "ec9ed276-742a-11ef-8533-1219c832db49", label: "Alma Seahouses - Bossa" },
@@ -545,7 +545,7 @@ export function isAllowedCompanySwitch(url: URL, method: string, postData: strin
   }
 }
 
-async function readActiveEnterpriseId(page: Page, session: { token: string; headers: Record<string, string> }): Promise<string | null> {
+export async function readActiveEnterpriseId(page: Page, session: { token: string; headers: Record<string, string> }): Promise<string | null> {
   const url = new URL(`${API}/administrative/v1/enterprise`);
   url.searchParams.set("accessToken", session.token);
   url.searchParams.set("page", "mirror");
@@ -556,7 +556,7 @@ async function readActiveEnterpriseId(page: Page, session: { token: string; head
 }
 
 /** Abre a tela de contas a pagar e copia token e cabeçalhos da primeira leitura da API. */
-async function captureApiSession(page: Page): Promise<{ token: string; headers: Record<string, string> }> {
+export async function captureApiSession(page: Page): Promise<{ token: string; headers: Record<string, string> }> {
   const seedPromise = page.waitForResponse((response: Response) => {
     try {
       const url = new URL(response.url());
@@ -582,7 +582,7 @@ async function captureApiSession(page: Page): Promise<{ token: string; headers: 
   return { token, headers };
 }
 
-async function switchCompanyByInterface(page: Page, target: CompanyKey, activeLabel: string | null): Promise<void> {
+export async function switchCompanyByInterface(page: Page, target: CompanyKey, activeLabel: string | null): Promise<void> {
   await page.goto("https://web.koper.com.br/", { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => undefined);
   await page.waitForTimeout(2_500);
   const labels = activeLabel ? [activeLabel] : Object.values(COMPANIES).map((company) => company.label);
