@@ -18,6 +18,20 @@ Plano completo: documento "Importação limpa Koper → Elos OS" (Claude Docs). 
 | Contas | 31 contas da origem → 15 no Elos (as "provisórias" de Flow/Alma são a mesma conta física) |
 | Orçamento | Rev03 promovido no Flow Aptos (código O1, versão R03), 157 itens, R$ 20.031.838,33 |
 | De-para | 158 centros de custo do acompanhamento do Flow → serviços do orçamento (`flow-depara-centros-de-custo.json`); grupo 29 vai para viabilidade |
+| Solicitações (2a) | 839 SM, 3.464 itens; 237 itens sem centro de custo (SEM-CC), 5 de viabilidade |
+| Pedidos (2b) | 1.346 PC, 3.723 itens, 3.365 vínculos com solicitação |
+| Recebimentos (2c) | 1.066 REC, 3.129 itens (custo do item do pedido) |
+| NF-e (2d) | 1.069 NFE, R$ 4.663.850,01 = origem; 4 canceladas fora; XML original não acompanha (caminho neutro pela chave) |
+| Títulos de NF-e (2e) | 1.523 títulos, R$ 4.583.072,41 = origem; 1.468 pagos com data, valor e conta |
+| Contratos e medições (3a) | 22 CT (cadeia SS → MC → CT), R$ 5,16 mi contratados; 138 MED aprovadas, R$ 2.325.837,44 |
+| Notas manuais (3b) | 1.864 NM, R$ 12.425.297,19 líquido = títulos; 262 ligadas a contrato, 47 a medição |
+| Demais títulos (4) | 2.560 títulos, R$ 14.850.110,42 = origem (tributos, contas avulsas, créditos, vendas, comissões, medições) |
+| Total a pagar | 4.083 títulos, R$ 19.433.182,83 = origem (títulos agrupadores ficam de fora para não duplicar) |
+
+## Pendências abertas
+- R$ 4,86 mi sem centro de custo na origem (SEM-CC): sugestão por regras em `elos_import.sem_cc_groups` (291 grupos), planilha enviada ao Fábio para decisão.
+- 4 títulos duplicados que o atualizador antigo gravou na Flow Aptos foram cancelados; o atualizador antigo precisa ser desligado para o Flow.
+- Contas a receber / comercial (onda 5), saldos bancários e exclusão do Flow2 após a conciliação final.
 
 ## Conciliação do orçamento (analítico × RESUMO GRUPOS)
 O RESUMO soma R$ 19.959.432,07. O orçamento no Elos fecha em R$ 20.031.838,33 (+R$ 72.406,26), diferença que vem do próprio analítico:
