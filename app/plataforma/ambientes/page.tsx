@@ -57,8 +57,11 @@ export default async function PlatformEnvironmentsPage({
           <div className={`${styles.message} ${styles.error}`}>{params.error}</div>
         ) : null}
         {error ? (
-          <div className={`${styles.message} ${styles.error}`}>
-            Não foi possível consultar os ambientes. Confirme se a migration 0061 foi aplicada.
+          <div className={`${styles.message} ${styles.error}`} role="alert">
+            <strong>Não foi possível consultar os ambientes.</strong>{" "}
+            A criação de empresas pode continuar funcionando, mesmo com a listagem indisponível.
+            {error.code ? <span> Código: {error.code}.</span> : null}
+            {error.message ? <div>{error.message}</div> : null}
           </div>
         ) : null}
 
@@ -114,7 +117,7 @@ export default async function PlatformEnvironmentsPage({
             <div className={styles.cardHeader}>
               <span>Controle global</span>
               <h2>Ambientes cadastrados</h2>
-              <p>{environments.length} ambiente(s) visível(is) para {email}.</p>
+              <p>{error ? "Contagem indisponível" : `${environments.length} ambiente(s) visível(is)`} para {email}.</p>
             </div>
 
             <div className={styles.tableWrap}>
@@ -149,7 +152,14 @@ export default async function PlatformEnvironmentsPage({
                       </td>
                     </tr>
                   ))}
-                  {!environments.length ? (
+                  {error ? (
+                    <tr>
+                      <td colSpan={6} className={styles.empty}>
+                        Listagem indisponível. Não significa que as empresas foram excluídas.
+                      </td>
+                    </tr>
+                  ) : null}
+                  {!error && !environments.length ? (
                     <tr>
                       <td colSpan={6} className={styles.empty}>
                         Nenhum ambiente encontrado.
