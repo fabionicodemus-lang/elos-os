@@ -16,6 +16,7 @@ jobs:
           PGCONNECT_TIMEOUT: '10'
         run: |
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+          select proname, pg_get_function_arguments(oid) as arguments from pg_proc where pronamespace='public'::regnamespace and proname in ('ensure_engineering_budget_item_composition','create_engineering_budget_item_composition_snapshot');
           begin;
           select set_config('request.jwt.claim.sub', (select id::text from auth.users where email='fabio.nicodemus+elos.teste@gmail.com'), true) is not null as test_user_found;
           set local role authenticated;
