@@ -77,7 +77,7 @@ export default async function ExecutionSchedulePage({
     projectId ? fetchAllRows<ExecutionScheduleMeasurement>(async (from, to) => {
       const { data, error } = await supabase
         .from("engineering_schedule_progress_measurements")
-        .select("id, activity_id, measurement_date, progress_percent, actual_quantity, actual_cost, team_count, current_start, current_finish, actual_start, actual_finish, notes, created_at")
+        .select("id, activity_id, measurement_date, progress_percent, actual_quantity, actual_cost, team_count, current_start, current_finish, actual_start, actual_finish, notes, created_at, voided_at, void_reason")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .order("measurement_date")
@@ -167,7 +167,7 @@ export default async function ExecutionSchedulePage({
             baselineId={selectedBaseline.id}
             selectedDate={selectedDate}
             activities={activities}
-            measurements={measurements}
+            measurements={measurements.filter((measurement) => !measurement.voided_at)}
             services={servicesResult.data}
             weights={weightsResult.data}
             canManage={canManage && !weightsResult.error}

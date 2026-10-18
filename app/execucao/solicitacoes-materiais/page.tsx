@@ -177,15 +177,22 @@ export default async function MaterialRequestsPage({ searchParams }: {
   const pendingItems = pendingRequests.reduce((total, request) => total + (itemMap.get(request.id) ?? []).filter((item) => Number(item.ordered_quantity) + Number(item.stock_fulfilled_quantity) < Number(item.requested_quantity) - 0.000001).length, 0);
   const approved = requests.filter((request) => ["approved", "partially_ordered"].includes(request.status)).length;
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
-  const dialogBase = { inputs: inputsResult.data, centers: baseCenters, supplyPlan: supplyResult.data, approvedBudgetId: approvedBudget?.id ?? "" };
-  const structureError = requestsResult.error || itemsResult.error || supplyResult.error || budgetServicesResult.error;
+  const dialogBase = { inputs: inputsResult.data, centers: baseCenters, supplyPlan: supplyResult.data, supplyUnavailable: Boolean(supplyResult.error || balancesResult.error), approvedBudgetId: approvedBudget?.id ?? "" };
+  const requestError = requestsResult.error || itemsResult.error || budgetServicesResult.error;
+  const inputError = inputsResult.error;
+  const supplyError = supplyResult.error || balancesResult.error;
+  for (const [area, error] of Object.entries({ requests: requestError, inputs: inputError, supply: supplyError })) {
+    if (error) console.error("[material-requests]", area, error.code);
+  }
 
   return <AppShell activeGroup="execution" activeItem="material-requests" eyebrow="Execução · Suprimentos" title="Solicitações de Materiais"
     description={`${company.name} · ${context} · necessidade da obra confrontada com compras e estoque antes de gerar nova aquisição.`}
     actions={canManage && approvedBudget && baseCenters.length ? <MaterialRequestCreateDialog {...dialogBase} /> : undefined}>
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
-    {structureError ? <div className="auth-message error workspace-message">A inteligência de suprimentos precisa estar instalada e atualizada para exibir previsto, comprado e saldo.</div> : null}
+    {requestError ? <div className="auth-message error workspace-message">Não foi possível carregar as solicitações ou seus centros de custo. Tente novamente.</div> : null}
+    {inputError ? <div className="auth-message error workspace-message">Não foi possível carregar o catálogo de insumos. Verifique seu acesso ou tente novamente.</div> : !inputsResult.data.length ? <div className="auth-message workspace-message">Nenhum material ativo cadastrado. <Link href="/engenharia/insumos">Abrir cadastro de insumos</Link></div> : null}
+    {supplyError ? <div className="auth-message error workspace-message">Previsões ou saldos de suprimentos indisponíveis. Os valores não devem ser interpretados como zero. <Link href="/suprimentos/controle-integrado">Verificar suprimentos</Link></div> : null}
     {!projectId ? <div className="material-requests-empty-page">Selecione uma obra no topo.</div> : null}
     {projectId && !approvedBudget ? <div className="auth-message error workspace-message">A obra precisa ter um orçamento <strong>aprovado e salvo como orçamento base</strong> antes de solicitar materiais.</div> : null}
     {projectId && approvedBudget && !baseCenters.length ? <div className="auth-message error workspace-message">O orçamento base desta obra ainda não possui serviços vinculados aos centros de custo. Revise os serviços do orçamento; o Elos não exibirá serviços de outras obras como alternativa.</div> : null}
@@ -234,8 +241,8 @@ export default async function MaterialRequestsPage({ searchParams }: {
                 <code>{item.input_code}</code><span>{item.input_name}</span>
                 <b>Previsto {quantity(plan?.required_quantity ?? 0)} · Comprado {quantity(plan?.ordered_quantity ?? 0)} · Saldo {quantity(plan?.remaining_to_buy_quantity ?? 0)} {item.unit_snapshot}</b>
                 <small>Solicitado {quantity(item.requested_quantity)} · por compra {quantity(item.ordered_quantity)} · por estoque {quantity(item.stock_fulfilled_quantity)} · saldo desta solicitação {quantity(requestBalance)}</small>
-                {plan ? <small>{coverageLabels[plan.coverage_status] ?? plan.coverage_status} · estoque disponível {quantity(plan.available_quantity)} · a receber {quantity(plan.outstanding_order_quantity)} · pedir até {dateBR(plan.order_deadline)}</small> : <small>Material fora do planejamento de suprimentos atual.</small>}
-                {canFulfillStock && ["approved","partially_ordered"].includes(request.status) && requestBalance > 0 && stockAvailable > 0 ? <details>
+                {supplyError ? <small>Previsão e saldos indisponíveis.</small> : plan ? <small>{coverageLabels[plan.coverage_status] ?? plan.coverage_status} · estoque disponível {quantity(plan.available_quantity)} · a receber {quantity(plan.outstanding_order_quantity)} · pedir até {dateBR(plan.order_deadline)}</small> : <small>Material fora do planejamento de suprimentos atual.</small>}
+                {!supplyError && canFulfillStock && ["approved","partially_ordered"].includes(request.status) && requestBalance > 0 && stockAvailable > 0 ? <details>
                   <summary>Atender com estoque ({quantity(stockAvailable)} disponível)</summary>
                   <form action={fulfillMaterialRequestFromStock}>
                     <input type="hidden" name="request_item_id" value={item.id} />

@@ -129,7 +129,8 @@ export async function saveDailyLog(formData: FormData) {
     }
   }
 
-  await supabase.rpc("refresh_execution_daily_log_completion", { p_log_id: logId });
+  const completion = await supabase.rpc("refresh_execution_daily_log_completion", { p_log_id: logId });
+  if (completion.error) redirect(resultUrl("Os dados foram salvos, mas não foi possível atualizar as pendências. Reabra o diário.", "error", { month, diary: logId }));
   revalidatePath(LIST_PATH);
   redirect(resultUrl("Diário salvo. O percentual de preenchimento foi atualizado.", "success", { month, diary: logId }));
 }
@@ -151,7 +152,8 @@ export async function removeDailyLogPhoto(formData: FormData) {
   const deletion = await supabase.from("execution_daily_log_photos").delete().eq("id", photoId);
   if (deletion.error) redirect(resultUrl(deletion.error.message, "error", { month, diary: logId }));
   await supabase.storage.from("daily-log-photos").remove([photo.storage_path]);
-  await supabase.rpc("refresh_execution_daily_log_completion", { p_log_id: logId });
+  const completion = await supabase.rpc("refresh_execution_daily_log_completion", { p_log_id: logId });
+  if (completion.error) redirect(resultUrl("Os dados foram salvos, mas não foi possível atualizar as pendências. Reabra o diário.", "error", { month, diary: logId }));
   revalidatePath(LIST_PATH);
   redirect(resultUrl("Foto removida.", "success", { month, diary: logId }));
 }

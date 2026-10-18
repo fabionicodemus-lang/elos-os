@@ -323,6 +323,7 @@ export async function loadProjectForecast({
       const { data, error } = await supabase
         .from("engineering_schedule_progress_measurements")
         .select("id, activity_id, measurement_date, progress_percent, actual_cost, current_start, current_finish, actual_start, actual_finish, created_at")
+        .is("voided_at", null)
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .eq("baseline_id", baseline.id)

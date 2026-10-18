@@ -1,5 +1,6 @@
 "use server";
 
+import { qualityLabel } from "@/lib/quality-labels";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCompanyPermission } from "@/lib/workspace";
@@ -109,7 +110,7 @@ export async function completeInspection(formData: FormData) {
   const { data, error } = await supabase.rpc("complete_quality_inspection", { p_company_id: companyId, p_project_id: projectId, p_inspection_id: inspectionId });
   if (error) redirect(url(error.message, "error", { inspection: inspectionId }));
   revalidatePath(PATH);
-  redirect(url(`Vistoria concluída: ${String(data).replaceAll("_", " ")}.`, "success", { inspection: inspectionId }));
+  redirect(url(`Vistoria concluída: ${qualityLabel(String(data))}.`, "success", { inspection: inspectionId }));
 }
 
 export async function cancelInspection(formData: FormData) {
@@ -157,7 +158,7 @@ export async function reinspectNonconformity(formData: FormData) {
   const { data, error } = await supabase.rpc("reinspect_quality_nonconformity", { p_company_id: companyId, p_project_id: projectId, p_nonconformity_id: ncId, p_approved: approved, p_notes: text(formData, "notes") });
   if (error) redirect(url(error.message, "error", { nc: ncId }));
   revalidatePath(PATH);
-  redirect(url(`Reinspeção registrada: ${String(data).replaceAll("_", " ")}.`, "success", { tab: "nc", nc: ncId }));
+  redirect(url(`Reinspeção registrada: ${qualityLabel(String(data))}.`, "success", { tab: "nc", nc: ncId }));
 }
 
 export async function saveQualitySettings(formData: FormData) {

@@ -60,6 +60,7 @@ type Props = {
   inputs: MaterialInputOption[];
   centers: MaterialCostCenterOption[];
   supplyPlan: SupplyPlanReference[];
+  supplyUnavailable?: boolean;
   approvedBudgetId: string;
   request?: MaterialRequestDialogData;
 };
@@ -94,7 +95,7 @@ function initialRows(request?: MaterialRequestDialogData): EditableItem[] {
   return (request?.items ?? []).map((item, index) => ({ ...item, row_id: item.id ?? `${item.input_id}-${index}` }));
 }
 
-function MaterialRequestDialog({ inputs, centers, supplyPlan, approvedBudgetId, request }: Props) {
+function MaterialRequestDialog({ inputs, centers, supplyPlan, supplyUnavailable = false, approvedBudgetId, request }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [rows, setRows] = useState<EditableItem[]>(() => initialRows(request));
   const [search, setSearch] = useState("");
@@ -205,7 +206,7 @@ function MaterialRequestDialog({ inputs, centers, supplyPlan, approvedBudgetId, 
               {filteredInputs.map((input) => {
                 const planned = supplyMap.get(input.id);
                 return <button key={input.id} type="button" onClick={() => add(input.id)} title={`${input.code} · ${input.description}`}>
-                  <code>{input.code}</code><span><strong>{input.description}</strong><small>{categoryLabels[input.category] ?? input.category} · {input.unit}{planned ? ` · previsto ${quantity(planned.required_quantity)} · comprado ${quantity(planned.ordered_quantity)} · saldo ${quantity(planned.remaining_to_buy_quantity)}` : " · fora do planejamento"}</small></span><b>Inserir</b>
+                  <code>{input.code}</code><span><strong>{input.description}</strong><small>{categoryLabels[input.category] ?? input.category} · {input.unit}{planned ? ` · previsto ${quantity(planned.required_quantity)} · comprado ${quantity(planned.ordered_quantity)} · saldo ${quantity(planned.remaining_to_buy_quantity)}` : supplyUnavailable ? " · previsão indisponível" : " · fora do planejamento"}</small></span><b>Inserir</b>
                 </button>;
               })}
               {!filteredInputs.length ? <p>Nenhum material disponível para essa pesquisa.</p> : null}
@@ -226,7 +227,7 @@ function MaterialRequestDialog({ inputs, centers, supplyPlan, approvedBudgetId, 
                   const exceedsBalance = Boolean(planned && Number(row.quantity) > Number(planned.remaining_to_buy_quantity) + 0.000001);
                   return <tr key={row.row_id}>
                     <td><strong>{input?.code ?? "—"}</strong><span>{input?.description ?? "Material não encontrado"}</span><small>{input?.unit ?? "un"}</small></td>
-                    <td>{planned ? <><strong>Previsto {quantity(planned.required_quantity)} {planned.unit_snapshot}</strong><span>Comprado {quantity(planned.ordered_quantity)} · a receber {quantity(planned.outstanding_order_quantity)}</span><span>Estoque {quantity(planned.available_quantity)} · saldo a comprar <b>{quantity(planned.remaining_to_buy_quantity)}</b></span><small>{coverageLabels[planned.coverage_status] ?? planned.coverage_status} · pedir até {dateBR(planned.order_deadline)} · 1º uso {dateBR(planned.first_use_date)}</small></> : <span>Fora do planejamento atual</span>}</td>
+                    <td>{supplyUnavailable ? <span>Previsão e saldos indisponíveis</span> : planned ? <><strong>Previsto {quantity(planned.required_quantity)} {planned.unit_snapshot}</strong><span>Comprado {quantity(planned.ordered_quantity)} · a receber {quantity(planned.outstanding_order_quantity)}</span><span>Estoque {quantity(planned.available_quantity)} · saldo a comprar <b>{quantity(planned.remaining_to_buy_quantity)}</b></span><small>{coverageLabels[planned.coverage_status] ?? planned.coverage_status} · pedir até {dateBR(planned.order_deadline)} · 1º uso {dateBR(planned.first_use_date)}</small></> : <span>Fora do planejamento atual</span>}</td>
                     <td><input type="number" min="0.000001" step="0.000001" value={row.quantity} onChange={(event) => update(row.row_id, { quantity: Number(event.target.value) })} />{exceedsBalance ? <small>⚠ Quantidade acima do saldo a comprar. O Elos permite, mas exige conferência.</small> : null}</td>
                     <td className="material-center-cell">
                       <div className="material-center-picker">

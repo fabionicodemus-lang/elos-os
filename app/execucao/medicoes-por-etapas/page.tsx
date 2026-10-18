@@ -82,7 +82,7 @@ export default async function StageMeasurementsPage({ searchParams }: {
 
   return <AppShell activeGroup="execution" activeItem="stage-measurements" eyebrow="Execução · Contratos" title="Medições por Etapas"
     description={`${company.name} · ${context} · produção medida por chapisco, reboco, requadros e demais etapas contratuais.`}
-    actions={canManage && projectId ? <StageMeasurementDialog contracts={configuredContracts} stages={stages} measurement={selected} measurementItems={selectedItems} selectedContractId={selectedContractId} autoOpen={params.new === "1" || Boolean(selected)} label={selected ? "Editar medição" : "+ Nova medição por etapas"} /> : undefined}>
+    actions={canManage && projectId ? <StageMeasurementDialog key={`${selected?.id ?? "new"}:${selectedContractId}`} contracts={configuredContracts} stages={stages} measurement={selected} measurementItems={selectedItems} selectedContractId={selectedContractId} autoOpen={params.new === "1" || Boolean(selected)} label={selected ? "Editar medição" : "+ Nova medição por etapas"} /> : undefined}>
     {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
     {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
     {structureError ? <div className="auth-message error workspace-message">A estrutura de etapas ainda não está instalada. Execute a migration <strong>20260801_0067_service_contract_procurement.sql</strong>.</div> : null}

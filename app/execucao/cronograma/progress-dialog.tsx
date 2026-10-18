@@ -35,6 +35,8 @@ export type ExecutionScheduleMeasurement = {
   actual_finish: string | null;
   notes: string | null;
   created_at: string;
+  voided_at?: string | null;
+  void_reason?: string | null;
 };
 
 function numberBR(value: number | string | null | undefined, digits = 2) {
@@ -59,7 +61,7 @@ export function ScheduleProgressDialog({
 
   return (
     <>
-      <button className="execution-measure-button" type="button" onClick={() => dialogRef.current?.showModal()}>
+      <button aria-label={`${measurement ? "Atualizar" : "Medir avanço"}: ${activity.code} · ${activity.name}`} className="execution-measure-button" type="button" onClick={() => dialogRef.current?.showModal()}>
         {measurement ? "Atualizar" : "Medir avanço"}
       </button>
       <dialog ref={dialogRef} className="budget-modal execution-progress-modal">
@@ -87,7 +89,7 @@ export function ScheduleProgressDialog({
               <label><span>Início realizado</span><input name="actual_start" type="date" defaultValue={measurement?.actual_start ?? ""} /></label>
               <label><span>Término realizado</span><input name="actual_finish" type="date" defaultValue={measurement?.actual_finish ?? ""} /></label>
               <label><span>Custo realizado acumulado</span><input name="actual_cost" inputMode="decimal" defaultValue={measurement?.actual_cost ?? 0} /></label>
-              <label className="execution-progress-notes"><span>Observações da medição</span><textarea name="notes" rows={4} defaultValue={measurement?.notes ?? ""} placeholder="Desvios, restrições, decisões e justificativa da reprogramação." /></label>
+              <label className="execution-progress-notes"><span>Observações da medição</span><textarea name="notes" rows={4} defaultValue={measurement?.notes ?? ""} placeholder="Justificativa obrigatória ao retificar uma data já lançada. Informe desvios, restrições e decisões." /></label>
             </div>
           </div>
           <footer className="budget-modal-foot">

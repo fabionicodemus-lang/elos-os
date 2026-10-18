@@ -120,6 +120,7 @@ async function loadPhysicalMonths(): Promise<PhysicalMonth[] | null> {
       const { data, error } = await supabase
         .from("engineering_schedule_progress_measurements")
         .select("activity_id,measurement_date,progress_percent,created_at")
+        .is("voided_at", null)
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .order("measurement_date")
