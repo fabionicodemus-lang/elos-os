@@ -27,7 +27,9 @@ Plano completo: documento "Importação limpa Koper → Elos OS" (Claude Docs). 
 | Notas manuais (3b) | 1.864 NM, R$ 12.425.297,19 líquido = títulos; 262 ligadas a contrato, 47 a medição |
 | Demais títulos (4) | 2.560 títulos, R$ 14.850.110,42 = origem (tributos, contas avulsas, créditos, vendas, comissões, medições) |
 | Comercial (5) | 39 unidades, 35 vendas ativas (VD-0001…0035) e 5 distratos (VD-0036…0040); 3.698 parcelas, R$ 13.730.856,26 recebidos |
-| Bancos (6) | 5.672 movimentos ligados aos títulos; transferências entre contas ainda não vêm da origem |
+| Bancos (6) | 5.672 movimentos ligados aos títulos (+9 recebimentos da Beatriz/Marcela em 18/10) |
+| Transferências e avulsos (7) | extrato completo das 11 contas do Flow (5.969 movimentos) lido da tela Contas bancárias: 5 transferências entre contas do Flow, 168 transferências com outras empresas do grupo e 130 lançamentos avulsos (tarifas, integralização, pró-labore, ajustes). Saldo de cada conta do Flow no Elos = extrato da origem, ao centavo |
+| Distratos | 7 distratos com data, valor recebido, devolvido (títulos "Distrato VD-…" no contas a pagar) e retido nas observações da venda |
 | Total a pagar | 4.083 títulos, R$ 19.433.182,83 = origem (títulos agrupadores ficam de fora para não duplicar) |
 
 ## Pendências abertas
@@ -37,7 +39,7 @@ Plano completo: documento "Importação limpa Koper → Elos OS" (Claude Docs). 
 - Tela de Vendas da origem (18/10): 51 unidades (37 vendidas R$ 26.177.197,59 + 14 disponíveis R$ 14.455.127,30) = Elos; 12 unidades disponíveis criadas. 37 vendas ativas = origem. Distratos: 7 no Elos (VD-0036…0040 com valor e data corrigidos pela origem; VD-0043 Joaquim/503 e VD-0044 Marilei/803 criados, sem parcelas). A venda cancelada da Atmosfera (901) foi refeita no mesmo dia para o mesmo cliente e não entrou como distrato — confirmar com o Fábio.
 - Contas a receber: 3.797 parcelas, R$ 14.233.282,83 recebidos = origem.
 - A rotina antiga do Flow também está travada no banco (`elos_import.block_old_flow_sync`): títulos `koper_flow` e fornecedores automáticos na Flow Aptos são recusados.
-- Transferências entre contas e diários de obra: não estão no espelho da origem; precisam ser lidos do sistema de origem.
+- Diários de obra: 1.180 registros do Flow na origem (tela Diário de obras do app novo); leitura em andamento.
 - Exclusão do Flow2 após a conciliação final.
 
 ## Conciliação do orçamento (analítico × RESUMO GRUPOS)
