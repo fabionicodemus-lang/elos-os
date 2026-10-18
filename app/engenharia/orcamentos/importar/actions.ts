@@ -262,11 +262,43 @@ export async function stageBudgetImport(formData: FormData) {
 export async function cancelBudgetImport(formData: FormData) {
   const batchId = String(formData.get("batch_id") ?? "").trim();
   if (!batchId) redirect(resultUrl("Lote inválido."));
-  const { supabase, companyId } = await requireCompanyPermission("budgets.manage");
-  const { error } = await supabase.from("engineering_budget_import_batches")
+
+  const { supabase, companyId, projectId } = await requireCompanyPermission("budgets.manage");
+  if (!projectId) redirect(resultUrl("Selecione a obra do lote antes de cancelá-lo."));
+
+  // Cancela somente o staging da obra selecionada; revisões promovidas permanecem intocadas.
+  const { data: batch, error: lookupError } = await supabase
+    .from("engineering_budget_import_batches")
+    .select("id,status,promoted_budget_id")
+    .eq("id", batchId)
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (lookupError) redirect(resultUrl(lookupError.message));
+  if (!batch) redirect(resultUrl("Lote não encontrado nesta obra."));
+  if (batch.promoted_budget_id || batch.status === "promoted") {
+    redirect(resultUrl("O orçamento deste lote já foi importado e não pode ser cancelado aqui."));
+  }
+  if (batch.status === "cancelled") {
+    redirect(resultUrl("Este lote já foi cancelado. Você pode enviar a planilha novamente.", "success"));
+  }
+
+  const { data: cancelled, error } = await supabase
+    .from("engineering_budget_import_batches")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", batchId).eq("company_id", companyId).neq("status", "promoted");
+    .eq("id", batchId)
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .is("promoted_budget_id", null)
+    .in("status", ["staged", "review", "ready", "failed"])
+    .select("id")
+    .maybeSingle();
+
   if (error) redirect(resultUrl(error.message));
+  if (!cancelled) redirect(resultUrl("O lote foi alterado antes do cancelamento. Atualize a página e confira o status."));
+
   revalidatePath(IMPORT_PATH);
-  redirect(resultUrl("Lote cancelado. Nenhum dado canônico foi alterado.", "success"));
+  revalidatePath(`${IMPORT_PATH}/${batchId}`);
+  redirect(resultUrl("Importação cancelada. Você pode enviar o XLSX novamente; nenhum orçamento oficial foi alterado.", "success"));
 }
