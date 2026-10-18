@@ -4,7 +4,7 @@ import { ImportSubmitButton } from "../submit-button";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
-import { cancelBudgetImport } from "../actions";
+import { CancelBudgetImportButton } from "../cancel-import-button";
 import { promoteBudgetImport, resolveBudgetImportEntity } from "../review-actions";
 
 function money(value: number | null | undefined) {
@@ -152,7 +152,12 @@ export default async function BudgetImportReviewPage({
       eyebrow="Engenharia · Importação de orçamento"
       title="Revisar e promover"
       description={`${company.name} · ${batch.file_name} · origem preservada até a promoção.`}
-      actions={<Link prefetch={false} className="elos-button" href="/engenharia/orcamentos/importar">← Importações</Link>}
+      actions={
+        <div className="budget-header-actions">
+          <Link prefetch={false} className="elos-button" href="/engenharia/orcamentos/importar">← Importações</Link>
+          {canManage && editable && !batch.promoted_budget_id ? <CancelBudgetImportButton batchId={batchId} fileName={batch.file_name} /> : null}
+        </div>
+      }
     >
       {filters.success ? <div className="auth-message success workspace-message">{filters.success}</div> : null}
       {filters.error ? <div className="auth-message error workspace-message">{filters.error}</div> : null}
@@ -322,11 +327,6 @@ export default async function BudgetImportReviewPage({
         {page * pageSize < (rowsResult.count ?? 0) ? <Link prefetch={false} className="elos-button" href={pageHref(page + 1)}>Próxima →</Link> : null}
       </nav>
 
-      {canManage && editable ? (
-        <section className="budget-toolbar-card">
-          <form action={cancelBudgetImport}><input type="hidden" name="batch_id" value={batchId} /><button type="submit">Cancelar lote</button></form>
-        </section>
-      ) : null}
     </AppShell>
   );
 }
