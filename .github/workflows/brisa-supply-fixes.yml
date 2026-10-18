@@ -7,11 +7,15 @@ on:
       - tests/preconstruction/supply-needs.test.mjs
       - .github/workflows/brisa-supply-fixes.yml
       - .github/scripts/apply-brisa-supply-fixes.sh
+      - supabase/migrations/*brisa_quotation*
+      - tests/procurement/quotation-refresh.test.mjs
   push:
     branches: [main]
     paths:
       - .github/workflows/brisa-supply-fixes.yml
       - .github/scripts/apply-brisa-supply-fixes.sh
+      - supabase/migrations/*brisa_quotation*
+      - tests/procurement/quotation-refresh.test.mjs
 permissions:
   contents: read
 jobs:
