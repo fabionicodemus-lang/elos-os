@@ -3,7 +3,7 @@
 -- * A origem financeira (títulos a receber) não traz unidade nem contrato de venda. Por isso a base
 --   comercial (unidades, clientes e vendas ativas) vem da carga comercial anterior, conferida, e é
 --   copiada para a Flow Aptos com numeração Elos (VD-0001...) e sem referências ao sistema de origem.
---   Vendas canceladas (distratos) não entram, conforme a regra da importação.
+--   Vendas canceladas entram como distrato (status cancelado), com as parcelas que o cliente pagou.
 -- * As parcelas vêm dos títulos a receber da empresa Flow na origem (fonte do dinheiro recebido):
 --   - títulos "desdobrados" (o original que foi quebrado em outros) não entram: os pedaços carregam o valor;
 --   - cada parcela é ligada à venda do cliente (cada cliente tem uma venda ativa no Flow);
@@ -43,15 +43,17 @@ begin
   -- Vendas ativas
   for s in
     select sa.*, un.code unit_code from sales sa join units un on un.id = sa.unit_id
-    where sa.project_id = p_from_project_id and sa.status = 'active' order by sa.sale_date, sa.number
+    where sa.project_id = p_from_project_id and sa.status in ('active', 'cancelled') order by (sa.status = 'cancelled'), sa.sale_date, sa.number
   loop
     v_seq := v_seq + 1;
     if elos_import.map_get(p_company_id, p_project_id, 'sale', s.id::text) is not null then continue; end if;
     insert into sales(company_id, project_id, unit_id, client_id, number, sale_date, total_amount, commission_pct, commission_amount, broker_name, broker_id,
       status, payment_plan_available, notes, source_system, source_id, created_by, correction_start_month)
     values (p_company_id, p_project_id, elos_import.map_get(p_company_id, p_project_id, 'unit', s.unit_code), s.client_id, 'VD-' || lpad(v_seq::text, 4, '0'),
-      s.sale_date, s.total_amount, s.commission_pct, s.commission_amount, s.broker_name, s.broker_id, 'active', s.payment_plan_available,
-      nullif(btrim(coalesce(s.notes, '')), ''), 'elos_import', 'flow:sale:' || s.id, p_user_id, s.correction_start_month)
+      s.sale_date, s.total_amount, case when s.status = 'active' then s.commission_pct else 0 end, s.commission_amount,
+      case when s.status = 'active' then s.broker_name end, case when s.status = 'active' then s.broker_id end, s.status, s.payment_plan_available,
+      case when s.status = 'cancelled' then 'Distrato. Venda cancelada; os valores recebidos do cliente estão nas parcelas pagas desta venda.'
+           else nullif(btrim(coalesce(s.notes, '')), '') end, 'elos_import', 'flow:sale:' || s.id, p_user_id, s.correction_start_month)
     returning id into v_sale;
     perform elos_import.map_put(p_company_id, p_project_id, 'sale', s.id::text, 'sale', v_sale, 'imported', 'VD-' || lpad(v_seq::text, 4, '0'));
     v_n_sales := v_n_sales + 1;
@@ -61,9 +63,9 @@ begin
   for r in
     select m.payload->'data' d,
       (select sn.id from sales sn join clients c on c.id = sn.client_id
-        where sn.project_id = p_project_id and sn.status = 'active'
+        where sn.project_id = p_project_id
           and lower(regexp_replace(c.name, '\s+', ' ', 'g')) = lower(regexp_replace(m.payload->'data'->>'customerName', '\s+', ' ', 'g'))
-        limit 1) sale_id
+        order by (sn.status = 'active') desc limit 1) sale_id
     from koper_staging_records m
     where m.entity = 'mirror.bill_to_receive' and m.payload->>'_enterprise' = 'flow'
       and not coalesce((m.payload->'data'->>'splitted')::boolean, false)

@@ -26,12 +26,16 @@ Plano completo: documento "Importação limpa Koper → Elos OS" (Claude Docs). 
 | Contratos e medições (3a) | 22 CT (cadeia SS → MC → CT), R$ 5,16 mi contratados; 138 MED aprovadas, R$ 2.325.837,44 |
 | Notas manuais (3b) | 1.864 NM, R$ 12.425.297,19 líquido = títulos; 262 ligadas a contrato, 47 a medição |
 | Demais títulos (4) | 2.560 títulos, R$ 14.850.110,42 = origem (tributos, contas avulsas, créditos, vendas, comissões, medições) |
+| Comercial (5) | 39 unidades, 35 vendas ativas (VD-0001…0035) e 5 distratos (VD-0036…0040); 3.698 parcelas, R$ 13.730.856,26 recebidos |
+| Bancos (6) | 5.672 movimentos ligados aos títulos; transferências entre contas ainda não vêm da origem |
 | Total a pagar | 4.083 títulos, R$ 19.433.182,83 = origem (títulos agrupadores ficam de fora para não duplicar) |
 
 ## Pendências abertas
 - R$ 4,86 mi sem centro de custo na origem (SEM-CC): sugestão por regras em `elos_import.sem_cc_groups` (291 grupos), planilha enviada ao Fábio para decisão.
-- 4 títulos duplicados que o atualizador antigo gravou na Flow Aptos foram cancelados; o atualizador antigo precisa ser desligado para o Flow.
-- Contas a receber / comercial (onda 5), saldos bancários e exclusão do Flow2 após a conciliação final.
+- 4 títulos duplicados que o atualizador antigo gravou na Flow Aptos foram cancelados; a rotina antiga (koper-audit-runner) foi desligada em 18/10 (comando trocado por um aviso). Não aceitar a mudança antiga que está pendente nesse serviço.
+- Vendas da Beatriz Cristina Marques Almeida e da Marcela Gomes Lourenço: parcelas existem na origem, mas a venda (unidade) não; 99 parcelas aguardando.
+- Transferências entre contas e diários de obra: não estão no espelho da origem; precisam ser lidos do sistema de origem.
+- Exclusão do Flow2 após a conciliação final.
 
 ## Conciliação do orçamento (analítico × RESUMO GRUPOS)
 O RESUMO soma R$ 19.959.432,07. O orçamento no Elos fecha em R$ 20.031.838,33 (+R$ 72.406,26), diferença que vem do próprio analítico:
