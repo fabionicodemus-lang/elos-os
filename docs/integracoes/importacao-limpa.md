@@ -29,6 +29,7 @@ Plano completo: documento "Importação limpa Koper → Elos OS" (Claude Docs). 
 | Comercial (5) | 39 unidades, 35 vendas ativas (VD-0001…0035) e 5 distratos (VD-0036…0040); 3.698 parcelas, R$ 13.730.856,26 recebidos |
 | Bancos (6) | 5.672 movimentos ligados aos títulos (+9 recebimentos da Beatriz/Marcela em 18/10) |
 | Transferências e avulsos (7) | extrato completo das 11 contas do Flow (5.969 movimentos) lido da tela Contas bancárias: 5 transferências entre contas do Flow, 168 transferências com outras empresas do grupo e 130 lançamentos avulsos (tarifas, integralização, pró-labore, ajustes). Saldo de cada conta do Flow no Elos = extrato da origem, ao centavo |
+| Diário de obra (8) | 599 RDOs aprovados (09/10/2023 a 30/09/2026) com os 1.180 registros da origem: efetivo nas observações do dia, 590 ocorrências e 4 reuniões, clima de manhã/tarde/noite (1.078). Clima da origem lido como 1 ensolarado, 2 nublado, 3 chuva, 4 tempestade. Os 6 anexos ficam para a etapa de anexos |
 | Distratos | 7 distratos com data, valor recebido, devolvido (títulos "Distrato VD-…" no contas a pagar) e retido nas observações da venda |
 | Total a pagar | 4.083 títulos, R$ 19.433.182,83 = origem (títulos agrupadores ficam de fora para não duplicar) |
 
@@ -39,7 +40,6 @@ Plano completo: documento "Importação limpa Koper → Elos OS" (Claude Docs). 
 - Tela de Vendas da origem (18/10): 51 unidades (37 vendidas R$ 26.177.197,59 + 14 disponíveis R$ 14.455.127,30) = Elos; 12 unidades disponíveis criadas. 37 vendas ativas = origem. Distratos: 7 no Elos (VD-0036…0040 com valor e data corrigidos pela origem; VD-0043 Joaquim/503 e VD-0044 Marilei/803 criados, sem parcelas). A venda cancelada da Atmosfera (901) foi refeita no mesmo dia para o mesmo cliente e não entrou como distrato — confirmar com o Fábio.
 - Contas a receber: 3.797 parcelas, R$ 14.233.282,83 recebidos = origem.
 - A rotina antiga do Flow também está travada no banco (`elos_import.block_old_flow_sync`): títulos `koper_flow` e fornecedores automáticos na Flow Aptos são recusados.
-- Diários de obra: 1.180 registros do Flow na origem (tela Diário de obras do app novo); leitura em andamento.
 - Exclusão do Flow2 após a conciliação final.
 
 ## Conciliação do orçamento (analítico × RESUMO GRUPOS)
