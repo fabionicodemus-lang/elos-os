@@ -1,0 +1,23 @@
+name: Elos OS — Corrigir listagem de ambientes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout do código aprovado
+        uses: actions/checkout@v4
+      - name: Instalar PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Aplicar e validar correção pontual
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: "10"
+        run: bash .github/scripts/apply-platform-list-fix.sh
