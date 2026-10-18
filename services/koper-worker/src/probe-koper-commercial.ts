@@ -36,9 +36,7 @@ const DEFAULT_ROUTES = [
   "https://web.koper.com.br/engenharia/diario-de-obras/133",
 ];
 // Depois de abrir a tela, clica num texto visível (navegação somente leitura; escrita bloqueada pelo interceptor).
-const CLICK_AFTER: Record<string, string[]> = {
-  "https://web.koper.com.br/engenharia/diario-de-obras/133": ["Dia - 16/10/2026", "Dia - 02/10/2026"],
-};
+const CLICK_AFTER: Record<string, string[]> = {};
 // Diário: lista completa dos registros e tentativas do endpoint do registro (somente GET).
 const DIARY_GETS: string[] = [];
 void DEFAULT_ROUTES_V1;
@@ -264,6 +262,15 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
     }
     let movementPages = 0;
     for (const path of DIARY_GETS) await direct(path);
+    // Diário completo do Flow: lista de dias e o conteúdo (info) de cada um, 3 de cada vez (CLAUDE.md 13).
+    const today = new Date().toISOString().slice(0, 10);
+    await direct(`/engineering/v3/daily-report/133?search=&start_date=2023-01-01&end_date=${today}`);
+    const days = (captured[captured.length - 1]?.body as Array<{ dailyReportId: number }> | null) ?? [];
+    const ids = Array.isArray(days) ? days.map((d) => d.dailyReportId) : [];
+    for (let i = 0; i < ids.length; i += 3) {
+      await Promise.all(ids.slice(i, i + 3).map((id) => direct(`/engineering/v3/daily-report/info/${id}`)));
+    }
+    console.log("KOPER_PROBE_DIARY", JSON.stringify({ days: ids.length }));
     if (process.env.KOPER_PROBE_MOVEMENTS !== "1") accountIds.clear();
     for (const id of accountIds) {
       await direct(`/financial/v3/bank_account_details/${id}`);
@@ -276,7 +283,7 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
     }
     console.log("KOPER_PROBE_MOVEMENTS", JSON.stringify({ accounts: accountIds.size, pages: movementPages, auth: Boolean(authHeader) }));
     console.log("KOPER_PROBE_VISITS", JSON.stringify({ blocked, blockedPaths, visits: visits.map((v) => ({ route: v.route, finalUrl: v.finalUrl, title: v.title, text: v.text.slice(0, 200) })) }));
-  }, { sessionTimeoutMs: 600_000 });
+  }, { sessionTimeoutMs: 1_500_000 });
 
   const summary = captured.map((c) => ({ route: c.route, path: c.path, keys: Object.keys(c.query), status: c.status }));
   console.log("KOPER_PROBE_API", JSON.stringify(summary));
