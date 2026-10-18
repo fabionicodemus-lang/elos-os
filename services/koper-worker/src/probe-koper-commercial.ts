@@ -93,6 +93,7 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
     const login = await performKoperLogin(page);
     if (!login.authenticated) throw new Error(`KOPER_AUTH_FAILED: ${login.message ?? "unknown"}`);
     let blocked = 0;
+    const blockedPaths: string[] = [];
     await page.route("**/*", async (route) => {
       const request = route.request();
       try {
@@ -100,6 +101,8 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
         const isKoper = url.hostname === "koper.com.br" || url.hostname.endsWith(".koper.com.br");
         if (isKoper && !["GET", "HEAD", "OPTIONS"].includes(request.method()) && !isAllowedCompanySwitch(url, request.method(), request.postData())) {
           blocked += 1;
+          // Só método + host + caminho (sem query, sem corpo): para saber o que a tela tentou gravar.
+          if (blockedPaths.length < 40) blockedPaths.push(`${request.method()} ${url.hostname}${url.pathname}`);
           await route.abort("blockedbyclient");
           return;
         }
@@ -214,7 +217,7 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
       }
     }
     console.log("KOPER_PROBE_MOVEMENTS", JSON.stringify({ accounts: accountIds.size, pages: movementPages, auth: Boolean(authHeader) }));
-    console.log("KOPER_PROBE_VISITS", JSON.stringify({ blocked, visits: visits.map((v) => ({ route: v.route, finalUrl: v.finalUrl, title: v.title, text: v.text.slice(0, 200) })) }));
+    console.log("KOPER_PROBE_VISITS", JSON.stringify({ blocked, blockedPaths, visits: visits.map((v) => ({ route: v.route, finalUrl: v.finalUrl, title: v.title, text: v.text.slice(0, 200) })) }));
   }, { sessionTimeoutMs: 600_000 });
 
   const summary = captured.map((c) => ({ route: c.route, path: c.path, keys: Object.keys(c.query), status: c.status }));
