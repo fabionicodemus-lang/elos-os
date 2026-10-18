@@ -76,6 +76,23 @@ function stripSecrets(url: URL): Record<string, string> {
   return query;
 }
 
+/**
+ * CLAUDE.md 3.1: POST só para GraphQL de leitura. Aceita quando TODAS as operações do corpo têm
+ * operationName começando por query/list/get/find/search/read e o texto não contém mutation/subscription.
+ */
+const READ_OPERATION = /^(query|list|get|find|search|read)/i;
+function isReadOnlyGraphql(url: URL, method: string, postData: string | null): boolean {
+  if (method !== "POST" || url.hostname !== "graphql.koper.com.br" || !postData) return false;
+  try {
+    const parsed = JSON.parse(postData) as unknown;
+    const ops = (Array.isArray(parsed) ? parsed : [parsed]) as Array<{ operationName?: unknown; query?: unknown }>;
+    return ops.length > 0 && ops.every((op) => typeof op.operationName === "string" && READ_OPERATION.test(op.operationName)
+      && (typeof op.query !== "string" || !/\b(mutation|subscription)\b/i.test(op.query)));
+  } catch {
+    return false;
+  }
+}
+
 async function collectLinks(page: Page): Promise<string[]> {
   return page.evaluate(() => Array.from(document.querySelectorAll("a[href]"))
     .map((a) => (a as HTMLAnchorElement).href)
@@ -99,10 +116,13 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
       try {
         const url = new URL(request.url());
         const isKoper = url.hostname === "koper.com.br" || url.hostname.endsWith(".koper.com.br");
-        if (isKoper && !["GET", "HEAD", "OPTIONS"].includes(request.method()) && !isAllowedCompanySwitch(url, request.method(), request.postData())) {
+        if (isKoper && !["GET", "HEAD", "OPTIONS"].includes(request.method()) && !isAllowedCompanySwitch(url, request.method(), request.postData())
+            && !isReadOnlyGraphql(url, request.method(), request.postData())) {
           blocked += 1;
           // Só método + host + caminho (sem query, sem corpo): para saber o que a tela tentou gravar.
-          if (blockedPaths.length < 40) blockedPaths.push(`${request.method()} ${url.hostname}${url.pathname}`);
+          let op = "";
+          try { const b = JSON.parse(request.postData() ?? "{}") as { operationName?: string }; op = typeof b.operationName === "string" ? ` ${b.operationName}` : ""; } catch { /* sem corpo JSON */ }
+          if (blockedPaths.length < 40) blockedPaths.push(`${request.method()} ${url.hostname}${url.pathname}${op}`);
           await route.abort("blockedbyclient");
           return;
         }
@@ -135,6 +155,21 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
       void (async () => {
         try {
           const url = new URL(response.url());
+          if (url.hostname === "graphql.koper.com.br" && response.request().method() === "POST") {
+            // Leitura GraphQL liberada pelo interceptor: guarda operação + variáveis + resposta.
+            let op = "unknown"; let variables: Record<string, string> = {};
+            try {
+              const b = JSON.parse(response.request().postData() ?? "{}") as { operationName?: string; variables?: Record<string, unknown> };
+              op = b.operationName ?? "unknown";
+              variables = Object.fromEntries(Object.entries(b.variables ?? {}).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v)]));
+            } catch { /* ignora */ }
+            const text = await response.text().catch(() => "");
+            if (!text || text.length > MAX_BODY_CHARS) return;
+            let body: unknown = null;
+            try { body = JSON.parse(text); } catch { return; }
+            captured.push({ method: "POST", path: `graphql:${op}`, query: variables, status: response.status(), route: currentRoute, body });
+            return;
+          }
           if (!url.hostname.endsWith("koper.com.br") || url.hostname.startsWith("files") || response.request().method() !== "GET") return;
           if (!(response.headers()["content-type"] ?? "").includes("json")) return;
           const text = await response.text().catch(() => "");
