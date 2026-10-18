@@ -45,8 +45,8 @@ export default async function PlatformEnvironmentsPage({
               globais cadastrados no banco.
             </p>
           </div>
-          <Link prefetch={false} className={styles.back} href="/dashboard">
-            Voltar ao Elos OS
+          <Link prefetch={false} className={styles.back} href="/plataforma">
+            Voltar à visão geral
           </Link>
         </header>
 
