@@ -80,14 +80,22 @@ function stripSecrets(url: URL): Record<string, string> {
  * CLAUDE.md 3.1: POST só para GraphQL de leitura. Aceita quando TODAS as operações do corpo têm
  * operationName começando por query/list/get/find/search/read e o texto não contém mutation/subscription.
  */
+// O app novo nomeia as consultas com sufixo "Query" (ex.: CostCentersQuery). Aceito também esse sufixo,
+// mas então o texto da operação precisa existir e começar com "query" (é consulta, não gravação).
 const READ_OPERATION = /^(query|list|get|find|search|read)/i;
+const READ_SUFFIX = /Query$/;
 function isReadOnlyGraphql(url: URL, method: string, postData: string | null): boolean {
   if (method !== "POST" || url.hostname !== "graphql.koper.com.br" || !postData) return false;
   try {
     const parsed = JSON.parse(postData) as unknown;
     const ops = (Array.isArray(parsed) ? parsed : [parsed]) as Array<{ operationName?: unknown; query?: unknown }>;
-    return ops.length > 0 && ops.every((op) => typeof op.operationName === "string" && READ_OPERATION.test(op.operationName)
-      && (typeof op.query !== "string" || !/\b(mutation|subscription)\b/i.test(op.query)));
+    return ops.length > 0 && ops.every((op) => {
+      if (typeof op.operationName !== "string") return false;
+      const text = typeof op.query === "string" ? op.query : null;
+      if (text && /\b(mutation|subscription)\b/i.test(text)) return false;
+      if (READ_OPERATION.test(op.operationName)) return true;
+      return READ_SUFFIX.test(op.operationName) && text !== null && /^\s*query\b/i.test(text);
+    });
   } catch {
     return false;
   }
@@ -189,6 +197,17 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
       await page.mouse.wheel(0, 4000).catch(() => undefined);
       await page.waitForTimeout(2_000);
       for (const label of CLICK_AFTER[route] ?? []) {
+        // Estrutura da linha (tags, classes, atributos — sem texto além do rótulo) para acertar o clique.
+        const structure = await page.evaluate((needle) => {
+          const el = Array.from(document.querySelectorAll("body *")).find((node) => node.childElementCount === 0 && (node.textContent ?? "").includes(needle));
+          const chain: string[] = [];
+          for (let node: Element | null = el ?? null, i = 0; node && i < 8; node = node.parentElement, i += 1) {
+            const attrs = Array.from(node.attributes).map((a) => `${a.name}=${a.value.slice(0, 60)}`).join(" ");
+            chain.push(`<${node.tagName.toLowerCase()} ${attrs}>`);
+          }
+          return chain;
+        }, label).catch(() => []);
+        console.log("KOPER_PROBE_CLICK_TARGET", JSON.stringify({ label, structure }));
         await page.getByText(label, { exact: false }).first().click({ timeout: 8_000 }).catch(() => undefined);
         await page.waitForTimeout(9_000);
         await page.mouse.wheel(0, 4000).catch(() => undefined);
