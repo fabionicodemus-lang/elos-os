@@ -1,0 +1,28 @@
+name: Brisa composition diagnostic
+on:
+  push:
+    branches: [fix/brisa-composition-diagnostic]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Inspect composition initialization in rollback transaction
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: '10'
+        run: |
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          select set_config('request.jwt.claim.sub', (select id::text from auth.users where email='fabio.nicodemus+elos.teste@gmail.com'), true) is not null as test_user_found;
+          set local role authenticated;
+          select public.ensure_engineering_budget_item_composition(
+            (select company_id from public.engineering_budgets where id='29d98d31-956b-479f-ac49-465a52076bda'),
+            '29d98d31-956b-479f-ac49-465a52076bda',
+            'd0ef15c2-3136-4aee-9bc5-469f1fb914ed'
+          ) is not null as composition_initialized;
+          rollback;
+          SQL
