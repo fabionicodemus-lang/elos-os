@@ -32,15 +32,27 @@ const DEFAULT_ROUTES_V1 = [
 ];
 // Segunda rodada: telas do app novo (web.koper.com.br) e créditos/débitos.
 const DEFAULT_ROUTES = [
-  "https://web.koper.com.br/engenharia/diario-de-obras",
-  "https://web.koper.com.br/engenharia/diario-de-obras/133",
   "https://web.koper.com.br/financeiro/contas-bancarias",
+  "https://web.koper.com.br/engenharia/diario-de-obras/133",
+  "https://web.koper.com.br/engenharia/diario-de-obras/133/19893",
 ];
 // Depois de abrir a tela, clica num texto visível (navegação somente leitura; escrita bloqueada pelo interceptor).
 const CLICK_AFTER: Record<string, string[]> = {
-  "https://web.koper.com.br/engenharia/diario-de-obras": ["Flow Aptos"],
-  "https://web.koper.com.br/financeiro/contas-bancarias": ["DIVERSOS AJUSTES"],
+  "https://web.koper.com.br/engenharia/diario-de-obras/133": ["17/10/2026", "17 de outubro", "Sexta", "17"],
 };
+// Diário: lista completa dos registros e tentativas do endpoint do registro (somente GET).
+const DIARY_GETS = [
+  "/engineering/v3/daily-report/133?search=&start_date=2022-01-01&end_date=2026-10-18",
+  "/engineering/v3/daily-report/133/19893",
+  "/engineering/v3/daily-report/detail/19893",
+  "/engineering/v3/daily-report-details/19893",
+  "/engineering/v3/daily-reports/19893",
+  "/engineering/v3/daily-report/133/19893/topics",
+  "/engineering/v3/daily-report/19893",
+  "/engineering/v3/daily-report/19893/items",
+  "/engineering/v3/construction-diary/19893",
+  "/engineering/v3/work-diary/19893",
+];
 void DEFAULT_ROUTES_V1;
 // GETs diretos (somente leitura). {SALE} é trocado pelos ids de venda lidos da listagem.
 const DIRECT_GETS = [
@@ -202,6 +214,8 @@ export async function probeKoperCommercial(write: boolean): Promise<void> {
       for (const group of items) for (const account of group.accounts ?? []) accountIds.add(String(account.fncAccountId));
     }
     let movementPages = 0;
+    for (const path of DIARY_GETS) await direct(path);
+    if (process.env.KOPER_PROBE_MOVEMENTS !== "1") accountIds.clear();
     for (const id of accountIds) {
       await direct(`/financial/v3/bank_account_details/${id}`);
       for (let pageNo = 1; pageNo <= 200; pageNo += 1) {
