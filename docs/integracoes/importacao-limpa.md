@@ -40,7 +40,7 @@ Plano completo: documento "Importação limpa Koper → Elos OS" (Claude Docs). 
 - Tela de Vendas da origem (18/10): 51 unidades (37 vendidas R$ 26.177.197,59 + 14 disponíveis R$ 14.455.127,30) = Elos; 12 unidades disponíveis criadas. 37 vendas ativas = origem. Distratos: 7 no Elos (VD-0036…0040 com valor e data corrigidos pela origem; VD-0043 Joaquim/503 e VD-0044 Marilei/803 criados, sem parcelas). A venda cancelada da Atmosfera (901) foi refeita no mesmo dia para o mesmo cliente; o Fábio confirmou em 18/10 que não foi distrato.
 - Contas a receber: 3.797 parcelas, R$ 14.233.282,83 recebidos = origem.
 - A rotina antiga do Flow também está travada no banco (`elos_import.block_old_flow_sync`): títulos `koper_flow` e fornecedores automáticos na Flow Aptos são recusados.
-- Exclusão do Flow2: autorizada pelo Fábio em 18/10. Cópia de segurança de 49.502 linhas em `elos_import.backup_rows` (reason `exclusao_flow2_2026-10-18`). Nada da Flow Aptos aponta para o Flow2; a exclusão é um comando só (`delete from public.projects where id = 'ffe8b7ec-1f01-4f6c-8a03-2bd6d3ae94fc'`, o resto apaga em cascata), executado pelo Fábio no SQL Editor.
+- Exclusão do Flow2: autorizada pelo Fábio em 18/10. Cópia de segurança de 41.483 linhas em `elos_import.backup_rows` (reason `exclusao_flow2_2026-10-18`). Nada da Flow Aptos aponta para o Flow2; a exclusão é um comando só (`delete from public.projects where id = 'ffe8b7ec-1f01-4f6c-8a03-2bd6d3ae94fc'`, o resto apaga em cascata), executado pelo Fábio no SQL Editor.
 
 ## Conciliação do orçamento (analítico × RESUMO GRUPOS)
 O RESUMO soma R$ 19.959.432,07. O orçamento no Elos fecha em R$ 20.031.838,33 (+R$ 72.406,26), diferença que vem do próprio analítico:
