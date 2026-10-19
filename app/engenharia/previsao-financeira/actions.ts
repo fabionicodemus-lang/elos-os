@@ -57,6 +57,45 @@ export async function updateForecastSettings(formData: FormData) {
   redirect(pageUrl("Prazo padrão da previsão atualizado.", "success"));
 }
 
+export async function updateServiceFinancialMode(formData: FormData) {
+  const serviceId = String(formData.get("service_id") ?? "").trim();
+  const mode = String(formData.get("financial_mode") ?? "").trim();
+  const baselineId = String(formData.get("baseline_id") ?? "").trim() || null;
+  const planGroup = String(formData.get("plan_group") ?? "").trim().slice(0, 120) || null;
+  if (!isUuid(serviceId)) redirect(pageUrl("Serviço inválido.", "error", baselineId));
+  if (mode !== "schedule" && mode !== "payment_plan") redirect(pageUrl("Modo de previsão inválido.", "error", baselineId));
+
+  const { supabase, companyId, projectId, userId } = await requireCompanyPermission("schedule.manage");
+  if (!projectId) redirect(pageUrl("Selecione uma obra antes de alterar a previsão."));
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("forecast_service_settings")
+    .upsert({
+      company_id: companyId,
+      project_id: projectId,
+      service_id: serviceId,
+      financial_mode: mode,
+      plan_group: mode === "payment_plan" ? planGroup : null,
+      created_by: userId,
+      updated_by: userId,
+      updated_at: now,
+    }, { onConflict: "project_id,service_id" });
+
+  if (error) redirect(pageUrl(error.message, "error", baselineId));
+
+  revalidatePath(PATH);
+  revalidatePath("/engenharia/curvas");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  redirect(pageUrl(
+    mode === "payment_plan"
+      ? "Serviço passou a usar as parcelas do contrato na previsão financeira. O prazo continua no cronograma."
+      : "Serviço voltou a ter a previsão financeira distribuída pelo cronograma.",
+    "success",
+    baselineId,
+  ));
+}
+
 export async function createForecastSnapshot(formData: FormData) {
   const baselineId = String(formData.get("baseline_id") ?? "").trim();
   const { supabase, companyId, projectId } = await requireCompanyPermission("schedule.manage");

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { loadProjectForecast } from "@/lib/forecast/server";
 import { requireCompanyPermission } from "@/lib/workspace";
-import { createForecastSnapshot, updateForecastSettings } from "./actions";
+import { createForecastSnapshot, updateForecastSettings, updateServiceFinancialMode } from "./actions";
 
 function todayIso() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -159,13 +159,35 @@ export default async function ForecastByServicePage({
 
           <section className="registry-table-panel forecast-service-panel">
             <div className="section-heading"><div><span>Gestão por serviço</span><h2>Orçamento e custo final projetado</h2></div><p>{forecast.services.length} linha(s)</p></div>
+            <datalist id="forecast-plan-groups">
+              {[...new Set(forecast.services.map((service) => service.planGroup).filter(Boolean))].map((group) => <option key={group} value={group ?? ""} />)}
+            </datalist>
+            <p className="forecast-mode-hint">“Usar parcelas”: a previsão do serviço passa a ser as parcelas do contrato no contas a pagar; o prazo continua no cronograma. Serviços com o mesmo contrato dividem as parcelas pelo orçamento de cada um.</p>
             <div className="registry-table-wrap">
               <table className="registry-table forecast-service-table">
-                <thead><tr><th>Serviço</th><th>Orçamento</th><th>Realizado</th><th>Comprometido</th><th>A comprometer</th><th>Custo final</th><th>Desvio</th></tr></thead>
+                <thead><tr><th>Serviço</th><th>Previsão</th><th>Orçamento</th><th>Realizado</th><th>Comprometido</th><th>A comprometer</th><th>Custo final</th><th>Desvio</th></tr></thead>
                 <tbody>
                   {forecast.services.map((service) => (
                     <tr key={service.id} className={service.deviation > 0 ? "danger" : ""}>
                       <td><strong>{service.code ? `${service.code} · ` : ""}{service.name}</strong>{service.committedPayable > 0 ? <small>{money(service.committedPayable)} em payables abertas</small> : null}</td>
+                      <td>
+                        {service.budgetAmount > 0 ? (
+                          <form action={updateServiceFinancialMode} className="forecast-mode-form">
+                            <input type="hidden" name="service_id" value={service.id} />
+                            <input type="hidden" name="baseline_id" value={context.baseline?.id ?? ""} />
+                            <input type="hidden" name="financial_mode" value={service.financialMode === "payment_plan" ? "schedule" : "payment_plan"} />
+                            <span className={`forecast-mode-badge ${service.financialMode === "payment_plan" ? "payment-plan" : "schedule"}`}>
+                              {service.financialMode === "payment_plan" ? `Parcelas${service.planGroup ? ` · ${service.planGroup}` : " do contrato"}` : "Cronograma"}
+                            </span>
+                            {service.financialMode === "payment_plan" ? null : (
+                              <input name="plan_group" placeholder="Contrato (opcional)" list="forecast-plan-groups" aria-label="Contrato que agrupa serviços" />
+                            )}
+                            <button type="submit" title={service.financialMode === "payment_plan" ? "Voltar a distribuir o saldo pelo cronograma" : "Usar as parcelas do contrato lançadas no contas a pagar"}>
+                              {service.financialMode === "payment_plan" ? "Usar cronograma" : "Usar parcelas"}
+                            </button>
+                          </form>
+                        ) : <small>—</small>}
+                      </td>
                       <td>{money(service.budgetAmount)}</td>
                       <td>{money(service.actual)}</td>
                       <td>{money(service.committed)}</td>
@@ -175,7 +197,7 @@ export default async function ForecastByServicePage({
                     </tr>
                   ))}
                 </tbody>
-                <tfoot><tr><th>Total da obra</th><th>{money(forecast.totals.budget)}</th><th>{money(forecast.totals.actual)}</th><th>{money(forecast.totals.committed)}</th><th>{money(forecast.totals.toCommit)}</th><th>{money(forecast.totals.projectedCost)}</th><th className={forecast.totals.deviation > 0 ? "forecast-danger" : ""}>{forecast.totals.deviation >= 0 ? "+" : ""}{money(forecast.totals.deviation)}</th></tr></tfoot>
+                <tfoot><tr><th>Total da obra</th><th /><th>{money(forecast.totals.budget)}</th><th>{money(forecast.totals.actual)}</th><th>{money(forecast.totals.committed)}</th><th>{money(forecast.totals.toCommit)}</th><th>{money(forecast.totals.projectedCost)}</th><th className={forecast.totals.deviation > 0 ? "forecast-danger" : ""}>{forecast.totals.deviation >= 0 ? "+" : ""}{money(forecast.totals.deviation)}</th></tr></tfoot>
               </table>
             </div>
           </section>

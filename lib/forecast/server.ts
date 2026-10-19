@@ -118,6 +118,20 @@ type Payable = {
   source_id: string | null;
 };
 
+type PayableAllocation = {
+  payable_id: string;
+  service_id: string | null;
+  allocation_amount: number;
+};
+
+type ServiceFinancialSetting = {
+  service_id: string;
+  financial_mode: "schedule" | "payment_plan";
+  plan_group: string | null;
+};
+
+export type ServiceFinancialMode = ServiceFinancialSetting["financial_mode"];
+
 type AllocatedFinancialSource = {
   id: string;
   contractId: string | null;
@@ -137,6 +151,8 @@ export type ProjectForecastContext = {
   activities: Activity[];
   progressMeasurements: ProgressMeasurement[];
   assignedCosts: Map<string, number>;
+  /** Modo da previsão por serviço (só os que não estão no padrão "schedule"). */
+  serviceFinancialModes: Map<string, ServiceFinancialMode>;
   forecast: UnifiedForecastResult | null;
   errors: string[];
 };
@@ -170,14 +186,28 @@ function measurementFromPayable(
   return byPayableId.get(payable.id) ?? (payable.source_id ? bySourceId.get(payable.source_id) : null) ?? null;
 }
 
+function allocateByCostAllocations(payable: Payable, amount: number, allocations: PayableAllocation[] | undefined): AllocatedFinancialSource[] {
+  const rows = (allocations ?? []).filter((row) => row.service_id && number(row.allocation_amount) > 0);
+  const total = rows.reduce((sum, row) => sum + number(row.allocation_amount), 0);
+  if (!rows.length || total <= 0) return [{ id: payable.id, contractId: null, serviceId: null, amount }];
+  let allocated = 0;
+  return rows.map((row, index) => {
+    const value = index === rows.length - 1 ? amount - allocated : amount * number(row.allocation_amount) / total;
+    allocated += value;
+    return { id: `${payable.id}:${row.service_id}:${index}`, contractId: null, serviceId: row.service_id, amount: value };
+  });
+}
+
 function allocatePayable(
   payable: Payable,
   amount: number,
   measurement: ContractMeasurement | null,
   itemsByMeasurement: Map<string, ContractMeasurementItem[]>,
+  allocationsByPayable: Map<string, PayableAllocation[]>,
 ): AllocatedFinancialSource[] {
   if (!measurement) {
-    return [{ id: payable.id, contractId: null, serviceId: null, amount }];
+    // Título sem medição (nota fiscal, nota manual, avulso): usa o rateio por serviço do próprio título.
+    return allocateByCostAllocations(payable, amount, allocationsByPayable.get(payable.id));
   }
   const items = itemsByMeasurement.get(measurement.id) ?? [];
   const itemTotal = items.reduce((sum, item) => sum + Math.max(0, number(item.current_amount)), 0);
@@ -233,6 +263,7 @@ export async function loadProjectForecast({
       activities: [],
       progressMeasurements: [],
       assignedCosts: new Map(),
+      serviceFinancialModes: new Map(),
       forecast: null,
       errors: [],
     };
@@ -276,12 +307,13 @@ export async function loadProjectForecast({
       activities: [],
       progressMeasurements: [],
       assignedCosts: new Map(),
+      serviceFinancialModes: new Map(),
       forecast: null,
       errors,
     };
   }
 
-  const [budgetResult, budgetItemsResult, servicesResult, activitiesResult, progressResult, contractsResult, contractItemsResult, amendmentItemsResult, contractMeasurementsResult, measurementItemsResult, payablesResult] = await Promise.all([
+  const [budgetResult, budgetItemsResult, servicesResult, activitiesResult, progressResult, contractsResult, contractItemsResult, amendmentItemsResult, contractMeasurementsResult, measurementItemsResult, payablesResult, allocationsResult, settingsResult] = await Promise.all([
     supabase
       .from("engineering_budgets")
       .select("id, code, name, version, status, is_base, area_m2")
@@ -390,9 +422,28 @@ export async function loadProjectForecast({
         .range(from, to);
       return { data: (data ?? []) as Payable[], error };
     }),
+    fetchAllRows<PayableAllocation>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("payable_cost_allocations")
+        .select("payable_id, service_id, allocation_amount")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .order("id")
+        .range(from, to);
+      return { data: (data ?? []) as PayableAllocation[], error };
+    }),
+    fetchAllRows<ServiceFinancialSetting>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("forecast_service_settings")
+        .select("service_id, financial_mode, plan_group")
+        .eq("company_id", companyId)
+        .eq("project_id", projectId)
+        .range(from, to);
+      return { data: (data ?? []) as ServiceFinancialSetting[], error };
+    }),
   ]);
 
-  for (const result of [budgetResult, budgetItemsResult, servicesResult, activitiesResult, progressResult, contractsResult, contractItemsResult, amendmentItemsResult, contractMeasurementsResult, measurementItemsResult, payablesResult]) {
+  for (const result of [budgetResult, budgetItemsResult, servicesResult, activitiesResult, progressResult, contractsResult, contractItemsResult, amendmentItemsResult, contractMeasurementsResult, measurementItemsResult, payablesResult, allocationsResult, settingsResult]) {
     if (result.error?.message) errors.push(result.error.message);
   }
 
@@ -414,10 +465,35 @@ export async function loadProjectForecast({
     }
     budgetByService.set(item.service_id, number(budgetByService.get(item.service_id)) + number(item.total_direct_cost));
   }
-  const forecastServices = [...budgetByService.entries()].map(([serviceId, budgetAmount]) => {
+  const serviceFinancialModes = new Map<string, ServiceFinancialMode>();
+  const servicePlanGroups = new Map<string, string>();
+  for (const setting of settingsResult.data) {
+    if (setting.financial_mode !== "payment_plan") continue;
+    serviceFinancialModes.set(setting.service_id, "payment_plan");
+    if (setting.plan_group?.trim()) servicePlanGroups.set(setting.service_id, setting.plan_group.trim());
+  }
+  const forecastServices: Array<{ id: string; code: string; name: string; budgetAmount: number; financialMode?: ServiceFinancialMode; planGroup?: string | null }> = [...budgetByService.entries()].map(([serviceId, budgetAmount]) => {
     const metadata = serviceMetadata.get(serviceId);
-    return { id: serviceId, code: metadata?.code ?? "", name: metadata?.description ?? "Serviço", budgetAmount };
+    return {
+      id: serviceId,
+      code: metadata?.code ?? "",
+      name: metadata?.description ?? "Serviço",
+      budgetAmount,
+      financialMode: serviceFinancialModes.get(serviceId) ?? "schedule",
+      planGroup: servicePlanGroups.get(serviceId) ?? null,
+    };
   });
+  const allocationsByPayable = new Map<string, PayableAllocation[]>();
+  for (const allocation of allocationsResult.data) {
+    const rows = allocationsByPayable.get(allocation.payable_id) ?? [];
+    rows.push(allocation);
+    allocationsByPayable.set(allocation.payable_id, rows);
+    // Serviço com gasto rateado mas fora do orçamento: aparece com o nome certo (orçamento zero).
+    if (allocation.service_id && !budgetByService.has(allocation.service_id) && !forecastServices.some((service) => service.id === allocation.service_id)) {
+      const metadata = serviceMetadata.get(allocation.service_id);
+      forecastServices.push({ id: allocation.service_id, code: metadata?.code ?? "", name: metadata?.description ?? "Serviço fora do orçamento", budgetAmount: 0 });
+    }
+  }
   if (budgetWithoutService > 0) {
     forecastServices.push({ id: BUDGET_WITHOUT_SERVICE_ID, code: "SEM-SERVIÇO", name: "Itens do orçamento sem serviço", budgetAmount: budgetWithoutService });
   }
@@ -454,10 +530,10 @@ export async function loadProjectForecast({
   for (const payable of payablesResult.data) {
     const measurement = measurementFromPayable(payable, measurementByPayableId, measurementBySourceId);
     if (payable.status === "paid" && payable.paid_at) {
-      const allocated = allocatePayable(payable, number(payable.paid_amount ?? payable.amount), measurement, itemsByMeasurement);
+      const allocated = allocatePayable(payable, number(payable.paid_amount ?? payable.amount), measurement, itemsByMeasurement, allocationsByPayable);
       actualPayments.push(...allocated.map((source) => ({ ...source, paidAt: payable.paid_at!.slice(0, 10) })));
     } else if (payable.status === "open") {
-      const allocated = allocatePayable(payable, number(payable.amount), measurement, itemsByMeasurement);
+      const allocated = allocatePayable(payable, number(payable.amount), measurement, itemsByMeasurement, allocationsByPayable);
       openPayables.push(...allocated.map((source) => ({ ...source, dueDate: payable.due_date })));
     }
   }
@@ -539,6 +615,7 @@ export async function loadProjectForecast({
     activities,
     progressMeasurements,
     assignedCosts,
+    serviceFinancialModes,
     forecast,
     errors,
   };
