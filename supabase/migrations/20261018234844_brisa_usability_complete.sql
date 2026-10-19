@@ -245,7 +245,8 @@ begin
  return new;
 end; $$;
 drop trigger if exists budget_service_identity_guard on public.engineering_budget_items;
-create trigger budget_service_identity_guard before insert or update of service_id on public.engineering_budget_items for each row execute function public.guard_budget_service_identity();
+-- Copied legacy snapshots retain their original identity; explicit relinking must be compatible.
+create trigger budget_service_identity_guard before update of service_id on public.engineering_budget_items for each row execute function public.guard_budget_service_identity();
 
 create or replace function public.guard_historical_quotation_identity()
 returns trigger language plpgsql set search_path=public as $$
