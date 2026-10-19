@@ -61,6 +61,7 @@ export async function updateServiceFinancialMode(formData: FormData) {
   const serviceId = String(formData.get("service_id") ?? "").trim();
   const mode = String(formData.get("financial_mode") ?? "").trim();
   const baselineId = String(formData.get("baseline_id") ?? "").trim() || null;
+  const planGroup = String(formData.get("plan_group") ?? "").trim().slice(0, 120) || null;
   if (!isUuid(serviceId)) redirect(pageUrl("Serviço inválido.", "error", baselineId));
   if (mode !== "schedule" && mode !== "payment_plan") redirect(pageUrl("Modo de previsão inválido.", "error", baselineId));
 
@@ -75,6 +76,7 @@ export async function updateServiceFinancialMode(formData: FormData) {
       project_id: projectId,
       service_id: serviceId,
       financial_mode: mode,
+      plan_group: mode === "payment_plan" ? planGroup : null,
       created_by: userId,
       updated_by: userId,
       updated_at: now,

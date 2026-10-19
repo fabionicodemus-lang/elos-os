@@ -127,6 +127,7 @@ type PayableAllocation = {
 type ServiceFinancialSetting = {
   service_id: string;
   financial_mode: "schedule" | "payment_plan";
+  plan_group: string | null;
 };
 
 export type ServiceFinancialMode = ServiceFinancialSetting["financial_mode"];
@@ -433,7 +434,7 @@ export async function loadProjectForecast({
     fetchAllRows<ServiceFinancialSetting>(async (from, to) => {
       const { data, error } = await supabase
         .from("forecast_service_settings")
-        .select("service_id, financial_mode")
+        .select("service_id, financial_mode, plan_group")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .range(from, to);
@@ -464,12 +465,22 @@ export async function loadProjectForecast({
     budgetByService.set(item.service_id, number(budgetByService.get(item.service_id)) + number(item.total_direct_cost));
   }
   const serviceFinancialModes = new Map<string, ServiceFinancialMode>();
+  const servicePlanGroups = new Map<string, string>();
   for (const setting of settingsResult.data) {
-    if (setting.financial_mode === "payment_plan") serviceFinancialModes.set(setting.service_id, "payment_plan");
+    if (setting.financial_mode !== "payment_plan") continue;
+    serviceFinancialModes.set(setting.service_id, "payment_plan");
+    if (setting.plan_group?.trim()) servicePlanGroups.set(setting.service_id, setting.plan_group.trim());
   }
-  const forecastServices: Array<{ id: string; code: string; name: string; budgetAmount: number; financialMode?: ServiceFinancialMode }> = [...budgetByService.entries()].map(([serviceId, budgetAmount]) => {
+  const forecastServices: Array<{ id: string; code: string; name: string; budgetAmount: number; financialMode?: ServiceFinancialMode; planGroup?: string | null }> = [...budgetByService.entries()].map(([serviceId, budgetAmount]) => {
     const metadata = serviceMetadata.get(serviceId);
-    return { id: serviceId, code: metadata?.code ?? "", name: metadata?.description ?? "Serviço", budgetAmount, financialMode: serviceFinancialModes.get(serviceId) ?? "schedule" };
+    return {
+      id: serviceId,
+      code: metadata?.code ?? "",
+      name: metadata?.description ?? "Serviço",
+      budgetAmount,
+      financialMode: serviceFinancialModes.get(serviceId) ?? "schedule",
+      planGroup: servicePlanGroups.get(serviceId) ?? null,
+    };
   });
   const allocationsByPayable = new Map<string, PayableAllocation[]>();
   for (const allocation of allocationsResult.data) {

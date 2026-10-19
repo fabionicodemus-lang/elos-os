@@ -25,10 +25,16 @@ Tabela `forecast_service_settings` (uma linha por obra + serviço), com RLS por 
 
 O cronograma continua controlando o prazo e o avanço físico do serviço; só a camada financeira muda.
 
+**Grupo do mesmo contrato (`plan_group`).** Serviços marcados com o mesmo grupo somam as parcelas
+de todos eles, mês a mês, e redistribuem na proporção do orçamento de cada serviço. Serve para contrato
+global rateado num só serviço que cobre vários serviços do orçamento.
+
 Tela: **Engenharia → Previsão Financeira por Serviço**, coluna **Previsão**, botão "Usar parcelas" / "Usar cronograma".
 Aviso `payment_plan_without_installments` quando o serviço está marcado mas não tem parcelas lançadas.
 
-Primeiro uso (18/10/2026, Flow Aptos): 10.01 Janelas em alumínio (Liv Esquadrias, 18 parcelas) e 21.01 Elevadores (Elo Elevadores, 27 parcelas).
+Primeiro uso (18/10/2026, Flow Aptos):
+- grupo "Liv Esquadrias" (esquadrias de alumínio, vidros, gradis e guarda-corpos): 10.01, 10.02, 10.04, 10.07 e 18.01 — orçamento R$ 1.177.144, parcelas R$ 1.009.250;
+- grupo "Elo Elevadores": 21.01 — orçamento R$ 900.000, parcelas R$ 953.481.
 
 ## Testes
 

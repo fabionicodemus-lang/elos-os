@@ -10,6 +10,9 @@ export type ForecastBudgetService = {
   /** "payment_plan": previsão financeira pelas parcelas do contrato (títulos), sem distribuir pelo cronograma. */
   financialMode?: ForecastFinancialMode | null;
   financial_mode?: ForecastFinancialMode | null;
+  /** Serviços com o mesmo grupo dividem as parcelas do contrato na proporção do orçamento. */
+  planGroup?: string | null;
+  plan_group?: string | null;
 };
 
 export type ForecastFinancialMode = "schedule" | "payment_plan";
@@ -82,6 +85,7 @@ export type ForecastServiceRow = {
   name: string;
   budgetAmount: number;
   financialMode: ForecastFinancialMode;
+  planGroup: string | null;
   actual: number;
   committedPayable: number;
   committedFuture: number;
