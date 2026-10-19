@@ -7,7 +7,12 @@ export type ForecastBudgetService = {
   description?: string | null;
   budgetAmount?: number | string | null;
   budget_amount?: number | string | null;
+  /** "payment_plan": previsão financeira pelas parcelas do contrato (títulos), sem distribuir pelo cronograma. */
+  financialMode?: ForecastFinancialMode | null;
+  financial_mode?: ForecastFinancialMode | null;
 };
+
+export type ForecastFinancialMode = "schedule" | "payment_plan";
 
 export type ForecastActivity = {
   id: string;
@@ -76,6 +81,7 @@ export type ForecastServiceRow = {
   code: string;
   name: string;
   budgetAmount: number;
+  financialMode: ForecastFinancialMode;
   actual: number;
   committedPayable: number;
   committedFuture: number;
