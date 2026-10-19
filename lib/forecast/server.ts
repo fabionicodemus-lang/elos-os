@@ -43,7 +43,7 @@ type BudgetItem = {
   status: "active" | "inactive";
 };
 
-type Service = { id: string; code: string; description: string };
+type Service = { id: string; code: string; description: string; development_cost_category: string | null };
 
 type Activity = {
   id: string;
@@ -186,13 +186,26 @@ function measurementFromPayable(
   return byPayableId.get(payable.id) ?? (payable.source_id ? bySourceId.get(payable.source_id) : null) ?? null;
 }
 
-function allocateByCostAllocations(payable: Payable, amount: number, allocations: PayableAllocation[] | undefined): AllocatedFinancialSource[] {
+function allocateByCostAllocations(
+  payable: Payable,
+  amount: number,
+  allocations: PayableAllocation[] | undefined,
+  developmentServiceIds: Set<string>,
+): AllocatedFinancialSource[] {
   const rows = (allocations ?? []).filter((row) => row.service_id && number(row.allocation_amount) > 0);
   const total = rows.reduce((sum, row) => sum + number(row.allocation_amount), 0);
   if (!rows.length || total <= 0) return [{ id: payable.id, contractId: null, serviceId: null, amount }];
+  // A parte rateada em centros de incorporação (terreno, outorga, comissões...) não é custo de obra:
+  // fica fora da previsão da obra e é controlada no Resultado da incorporação.
+  const constructionRows = rows.filter((row) => !developmentServiceIds.has(row.service_id!));
+  if (!constructionRows.length) return [];
+  const constructionAmount = amount * constructionRows.reduce((sum, row) => sum + number(row.allocation_amount), 0) / total;
+  const constructionTotal = constructionRows.reduce((sum, row) => sum + number(row.allocation_amount), 0);
   let allocated = 0;
-  return rows.map((row, index) => {
-    const value = index === rows.length - 1 ? amount - allocated : amount * number(row.allocation_amount) / total;
+  return constructionRows.map((row, index) => {
+    const value = index === constructionRows.length - 1
+      ? constructionAmount - allocated
+      : constructionAmount * number(row.allocation_amount) / constructionTotal;
     allocated += value;
     return { id: `${payable.id}:${row.service_id}:${index}`, contractId: null, serviceId: row.service_id, amount: value };
   });
@@ -204,10 +217,11 @@ function allocatePayable(
   measurement: ContractMeasurement | null,
   itemsByMeasurement: Map<string, ContractMeasurementItem[]>,
   allocationsByPayable: Map<string, PayableAllocation[]>,
+  developmentServiceIds: Set<string>,
 ): AllocatedFinancialSource[] {
   if (!measurement) {
     // Título sem medição (nota fiscal, nota manual, avulso): usa o rateio por serviço do próprio título.
-    return allocateByCostAllocations(payable, amount, allocationsByPayable.get(payable.id));
+    return allocateByCostAllocations(payable, amount, allocationsByPayable.get(payable.id), developmentServiceIds);
   }
   const items = itemsByMeasurement.get(measurement.id) ?? [];
   const itemTotal = items.reduce((sum, item) => sum + Math.max(0, number(item.current_amount)), 0);
@@ -333,7 +347,7 @@ export async function loadProjectForecast({
     fetchAllRows<Service>(async (from, to) => {
       const { data, error } = await supabase
         .from("engineering_services")
-        .select("id, code, description")
+        .select("id, code, description, development_cost_category")
         .eq("company_id", companyId)
         .order("code")
         .range(from, to);
@@ -455,6 +469,7 @@ export async function loadProjectForecast({
   const progressMeasurements = progressResult.data;
   const assignedCosts = assignActivityCosts(activities, budgetItems);
   const serviceMetadata = new Map(services.map((service) => [service.id, service]));
+  const developmentServiceIds = new Set(services.filter((service) => service.development_cost_category).map((service) => service.id));
   const budgetByService = new Map<string, number>();
   let budgetWithoutService = 0;
   for (const item of budgetItems) {
@@ -489,7 +504,7 @@ export async function loadProjectForecast({
     rows.push(allocation);
     allocationsByPayable.set(allocation.payable_id, rows);
     // Serviço com gasto rateado mas fora do orçamento: aparece com o nome certo (orçamento zero).
-    if (allocation.service_id && !budgetByService.has(allocation.service_id) && !forecastServices.some((service) => service.id === allocation.service_id)) {
+    if (allocation.service_id && !developmentServiceIds.has(allocation.service_id) && !budgetByService.has(allocation.service_id) && !forecastServices.some((service) => service.id === allocation.service_id)) {
       const metadata = serviceMetadata.get(allocation.service_id);
       forecastServices.push({ id: allocation.service_id, code: metadata?.code ?? "", name: metadata?.description ?? "Serviço fora do orçamento", budgetAmount: 0 });
     }
@@ -530,10 +545,10 @@ export async function loadProjectForecast({
   for (const payable of payablesResult.data) {
     const measurement = measurementFromPayable(payable, measurementByPayableId, measurementBySourceId);
     if (payable.status === "paid" && payable.paid_at) {
-      const allocated = allocatePayable(payable, number(payable.paid_amount ?? payable.amount), measurement, itemsByMeasurement, allocationsByPayable);
+      const allocated = allocatePayable(payable, number(payable.paid_amount ?? payable.amount), measurement, itemsByMeasurement, allocationsByPayable, developmentServiceIds);
       actualPayments.push(...allocated.map((source) => ({ ...source, paidAt: payable.paid_at!.slice(0, 10) })));
     } else if (payable.status === "open") {
-      const allocated = allocatePayable(payable, number(payable.amount), measurement, itemsByMeasurement, allocationsByPayable);
+      const allocated = allocatePayable(payable, number(payable.amount), measurement, itemsByMeasurement, allocationsByPayable, developmentServiceIds);
       openPayables.push(...allocated.map((source) => ({ ...source, dueDate: payable.due_date })));
     }
   }

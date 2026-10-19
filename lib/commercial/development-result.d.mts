@@ -1,4 +1,5 @@
 import type { UnifiedForecastResult } from "../forecast/engine.mjs";
+import type { DevelopmentCostSummary } from "../development-costs/summary.mjs";
 
 export type DevelopmentBaselineMetrics = {
   available_vgv?: number | string | null;
@@ -64,7 +65,9 @@ export type DevelopmentResult = {
   cost: {
     engineeringBudget:number; engineeringActual:number; engineeringCommitted:number; engineeringToCommit:number;
     engineeringProjected:number; unallocatedActual:number; unallocatedCommitted:number; unallocatedSourceProjected:number;
-    unallocatedProjected:number; unallocatedExcess:number; projectedOtherCost:number; projectedCommission:number;
+    unallocatedProjected:number; unallocatedExcess:number; projectedOtherCost:number; rateCommission:number; rateTaxes:number;
+    developmentCentersBudget:number; developmentCentersAppropriated:number; developmentCentersProjected:number;
+    baselineOtherRemainder:number; projectedCommission:number;
     projectedTaxes:number; projectedTotalCost:number;
   };
   result: {
@@ -84,5 +87,6 @@ export function calculateDevelopmentResult(input?: {
   receivables?: DevelopmentReceivable[];
   payables?: DevelopmentPayable[];
   forecast?: UnifiedForecastResult | null;
+  developmentCosts?: Pick<DevelopmentCostSummary, "rows"> | null;
   today?: string;
 }): DevelopmentResult;
