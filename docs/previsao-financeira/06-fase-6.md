@@ -33,7 +33,7 @@ Tela: **Engenharia → Previsão Financeira por Serviço**, coluna **Previsão**
 Aviso `payment_plan_without_installments` quando o serviço está marcado mas não tem parcelas lançadas.
 
 Primeiro uso (18/10/2026, Flow Aptos):
-- grupo "Liv Esquadrias" (esquadrias de alumínio, vidros, gradis e guarda-corpos): 10.01, 10.02, 10.04, 10.07 e 18.01 — orçamento R$ 1.177.144, parcelas R$ 1.009.250;
+- grupo "Liv Esquadrias" (esquadrias de alumínio, vidros, pele de vidro, porta de vidro da entrada, gradis e guarda-corpos): 10.01, 10.02, 10.04, 10.07, 18.01, 18.02 e 18.03 — orçamento R$ 1.992.092, parcelas R$ 1.009.250;
 - grupo "Elo Elevadores": 21.01 — orçamento R$ 900.000, parcelas R$ 953.481.
 
 ## Testes
