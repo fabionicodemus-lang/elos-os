@@ -30,6 +30,7 @@ Plano completo: documento "Importação limpa Koper → Elos OS" (Claude Docs). 
 | Bancos (6) | 5.672 movimentos ligados aos títulos (+9 recebimentos da Beatriz/Marcela em 18/10) |
 | Transferências e avulsos (7) | extrato completo das 11 contas do Flow (5.969 movimentos) lido da tela Contas bancárias: 5 transferências entre contas do Flow, 168 transferências com outras empresas do grupo e 130 lançamentos avulsos (tarifas, integralização, pró-labore, ajustes). Saldo de cada conta do Flow no Elos = extrato da origem, ao centavo |
 | Diário de obra (8) | 599 RDOs aprovados (09/10/2023 a 30/09/2026) com os 1.180 registros da origem: efetivo nas observações do dia, 590 ocorrências e 4 reuniões, clima de manhã/tarde/noite (1.078). Clima da origem lido como 1 ensolarado, 2 nublado, 3 chuva, 4 tempestade. Os 6 anexos ficam para a etapa de anexos |
+| Cronograma | linha de base "Baseline 01 — Cronograma 14.07.2026" copiada do Flow2 em 18/10 a pedido do Fábio: 40 locais, 395 atividades (01/11/2023 a 26/11/2027) e 377 dependências, ligada ao orçamento Rev03; status rascunho (como estava). Decoração religada ao 28.01 do Rev03; as 27 atividades de "04.14 Mão de obra de estrutura" seguem nesse serviço, que não está no Rev03 |
 | Distratos | 7 distratos com data, valor recebido, devolvido (títulos "Distrato VD-…" no contas a pagar) e retido nas observações da venda |
 | Total a pagar | 4.083 títulos, R$ 19.433.182,83 = origem (títulos agrupadores ficam de fora para não duplicar) |
 
