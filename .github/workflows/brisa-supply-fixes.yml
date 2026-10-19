@@ -12,6 +12,7 @@ on:
       - supabase/migrations/*brisa_contract*
       - supabase/migrations/*brisa_order*
       - supabase/migrations/*brisa_receipt*
+      - supabase/migrations/*brisa_usability*
   push:
     branches: [main]
     paths:
@@ -22,6 +23,7 @@ on:
       - supabase/migrations/*brisa_contract*
       - supabase/migrations/*brisa_order*
       - supabase/migrations/*brisa_receipt*
+      - supabase/migrations/*brisa_usability*
 permissions:
   contents: read
 jobs:
