@@ -279,6 +279,10 @@ export default async function InventoryPage({ searchParams }: {
 
   const stockValue = balances.reduce((sum, balance) => sum + Number(balance.total_value), 0);
   const activeBalances = balances.filter((balance) => Number(balance.quantity_on_hand) > 0);
+  const materialCount = new Set(activeBalances.map(balance => balance.input_id)).size;
+  const quantityByUnit = new Map<string, number>();
+  activeBalances.forEach(balance => quantityByUnit.set(balance.unit_snapshot, (quantityByUnit.get(balance.unit_snapshot) ?? 0) + Number(balance.quantity_on_hand)));
+  const stockQuantityLabel = [...quantityByUnit].sort(([a],[b]) => a.localeCompare(b)).map(([unit, amount]) => `${quantity(amount)} ${unit}`).join(" · ");
   const lowBalances = activeBalances.filter((balance) => (
     Number(balance.minimum_quantity) > 0 && Number(balance.available_quantity) <= Number(balance.minimum_quantity)
   ));
@@ -325,7 +329,7 @@ export default async function InventoryPage({ searchParams }: {
       {!projectId ? <div className="inventory-empty">Selecione uma obra no topo.</div> : <>
         <section className="inventory-kpis">
           <article><span>Valor em estoque</span><strong>{money(stockValue)}</strong><small>custo médio dos saldos atuais</small></article>
-          <article><span>Materiais com saldo</span><strong>{activeBalances.length}</strong><small>{quantity(activeBalances.reduce((sum, balance) => sum + Number(balance.quantity_on_hand), 0))} unidades consolidadas</small></article>
+          <article><span>Materiais com saldo</span><strong>{materialCount}</strong><small>{stockQuantityLabel || "Sem saldo"} · {activeBalances.length} registros por local/lote</small></article>
           <article className={lowBalances.length ? "warning" : ""}><span>Abaixo do mínimo</span><strong>{lowBalances.length}</strong><small>necessitam reposição ou revisão</small></article>
           <article className={expiring.length ? "warning" : ""}><span>Validade em 60 dias</span><strong>{expiring.length}</strong><small>lotes para consumo prioritário</small></article>
           <article><span>Locais ativos</span><strong>{locations.filter((location) => location.status === "active").length}</strong><small>almoxarifados e frentes</small></article>

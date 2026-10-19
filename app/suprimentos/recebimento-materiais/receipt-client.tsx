@@ -5,14 +5,15 @@ import { saveMaterialReceipt } from "./actions";
 
 export type OrderOption = { id:string; order_number:string; supplier_id:string; supplier_name:string; status:string; expected_delivery_date:string|null };
 export type OrderItemOption = { id:string; order_id:string; input_code:string; input_name:string; unit_snapshot:string; cost_center_code:string; cost_center_name:string; ordered_quantity:number; accepted_quantity:number; rejected_quantity:number; delivered_unit_cost:number; brand:string|null; manufacturer:string|null };
-export type ReceiptRecord = { id:string; order_id:string; receipt_date:string; arrival_time:string|null; invoice_number:string|null; invoice_series:string|null; invoice_access_key:string|null; invoice_date:string|null; invoice_amount:number|null; carrier_name:string|null; vehicle_plate:string|null; driver_name:string|null; delivery_document:string|null; warehouse_location:string|null; general_condition:string|null; notes:string|null; status:string };
+export type ReceiptLocation = {id:string;code:string;name:string};
+export type ReceiptRecord = {warehouse_location_id?:string|null;delivery_instructions?:string|null; id:string; order_id:string; receipt_date:string; arrival_time:string|null; invoice_number:string|null; invoice_series:string|null; invoice_access_key:string|null; invoice_date:string|null; invoice_amount:number|null; carrier_name:string|null; vehicle_plate:string|null; driver_name:string|null; delivery_document:string|null; warehouse_location:string|null; general_condition:string|null; notes:string|null; status:string };
 export type ReceiptItemRecord = { order_item_id:string; delivered_quantity:number; accepted_quantity:number; rejected_quantity:number; batch_number:string|null; expiration_date:string|null; condition:string; rejection_reason:string|null; destination_location:string|null; notes:string|null };
 
 type Row = ReceiptItemRecord & { input_code:string; input_name:string; unit_snapshot:string; cost_center_name:string; ordered_quantity:number; previously_accepted:number; available:number };
 function today(){return new Date().toISOString().slice(0,10);}
 function qty(value:number){return new Intl.NumberFormat("pt-BR",{maximumFractionDigits:4}).format(Number(value||0));}
 
-export function MaterialReceiptDialog({orders,orderItems,receipt,items,autoOpen=false,label}:{orders:OrderOption[];orderItems:OrderItemOption[];receipt?:ReceiptRecord|null;items?:ReceiptItemRecord[];autoOpen?:boolean;label?:string}){
+export function MaterialReceiptDialog({orders,orderItems,receipt,items,autoOpen=false,label,locations}:{locations:ReceiptLocation[];orders:OrderOption[];orderItems:OrderItemOption[];receipt?:ReceiptRecord|null;items?:ReceiptItemRecord[];autoOpen?:boolean;label?:string}){
   const ref=useRef<HTMLDialogElement>(null);
   const [orderId,setOrderId]=useState(receipt?.order_id??orders[0]?.id??"");
   const orderMap=useMemo(()=>new Map(orders.map(order=>[order.id,order])),[orders]);
@@ -38,7 +39,8 @@ export function MaterialReceiptDialog({orders,orderItems,receipt,items,autoOpen=
           <label className="span2">Chave de acesso<input name="invoice_access_key" defaultValue={receipt?.invoice_access_key??""} maxLength={60}/></label>
           <label>Transportadora<input name="carrier_name" defaultValue={receipt?.carrier_name??""}/></label><label>Placa<input name="vehicle_plate" defaultValue={receipt?.vehicle_plate??""}/></label>
           <label>Motorista<input name="driver_name" defaultValue={receipt?.driver_name??""}/></label><label>Romaneio / documento<input name="delivery_document" defaultValue={receipt?.delivery_document??""}/></label>
-          <label>Destino / depósito<input name="warehouse_location" defaultValue={receipt?.warehouse_location??""}/></label>
+          <label>Destino / depósito<select name="warehouse_location_id" required defaultValue={receipt?.warehouse_location_id ?? locations.find(location=>location.name===receipt?.warehouse_location)?.id ?? ""}><option value="">Selecione um local cadastrado</option>{locations.map(location=><option key={location.id} value={location.id}>{location.code} · {location.name}</option>)}</select></label>
+          <label className="span2">Instruções de entrega<input name="delivery_instructions" defaultValue={receipt?.delivery_instructions??""} placeholder="Horário, acesso e orientações para o depósito selecionado"/></label>
           <label>Condição geral<select name="general_condition" defaultValue={receipt?.general_condition??"good"}><option value="good">Boa</option><option value="partial_damage">Danos parciais</option><option value="damaged">Danificada</option><option value="divergent">Divergente</option></select></label>
         </section>
         <section className="receipt-items-card"><div className="receipt-section-title"><div><span>Pedido {selectedOrder?.order_number??""}</span><h3>Conferência por material</h3></div><strong>{payload.length} item(ns) informados</strong></div>
@@ -48,7 +50,7 @@ export function MaterialReceiptDialog({orders,orderItems,receipt,items,autoOpen=
             <label>Rejeitado<input type="number" min="0" step="0.000001" max={row.delivered_quantity} value={row.rejected_quantity} onChange={e=>{const rejected=Number(e.target.value);update(index,{rejected_quantity:rejected,accepted_quantity:Math.max(0,row.delivered_quantity-rejected)});}}/></label>
             <label>Condição<select value={row.condition} onChange={e=>update(index,{condition:e.target.value})}><option value="good">Boa</option><option value="damaged">Danificado</option><option value="wrong_specification">Especificação incorreta</option><option value="shortage">Falta</option><option value="excess">Excesso</option><option value="other">Outra</option></select></label>
             <label>Lote<input value={row.batch_number??""} onChange={e=>update(index,{batch_number:e.target.value})}/></label><label>Validade<input type="date" value={row.expiration_date??""} onChange={e=>update(index,{expiration_date:e.target.value||null})}/></label>
-            <label>Destino<input value={row.destination_location??""} onChange={e=>update(index,{destination_location:e.target.value})}/></label>
+            <label>Instrução do item<input value={row.destination_location??""} onChange={e=>update(index,{destination_location:e.target.value})}/></label>
             <label className="wide">Motivo da rejeição<input value={row.rejection_reason??""} onChange={e=>update(index,{rejection_reason:e.target.value})} placeholder={row.rejected_quantity>0?"Obrigatório para quantidade rejeitada":""}/></label>
             <label className="wide">Observações<input value={row.notes??""} onChange={e=>update(index,{notes:e.target.value})}/></label>
           </div></article>)}</div>

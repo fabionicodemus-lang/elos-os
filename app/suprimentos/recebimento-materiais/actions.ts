@@ -16,14 +16,11 @@ export async function saveMaterialReceipt(formData: FormData) {
   const receiptId = optional(formData, "receipt_id");
   const { supabase, companyId, projectId } = await requireCompanyPermission("procurement.receipts.manage");
   if (!projectId) redirect(resultUrl("Selecione uma obra.", "error"));
-  const { data, error } = await supabase.rpc("save_procurement_material_receipt", {
-    p_company_id: companyId, p_project_id: projectId, p_receipt_id: receiptId, p_order_id: optional(formData, "order_id"),
-    p_receipt_date: optional(formData, "receipt_date"), p_arrival_time: optional(formData, "arrival_time"),
-    p_invoice_number: optional(formData, "invoice_number"), p_invoice_series: optional(formData, "invoice_series"), p_invoice_access_key: optional(formData, "invoice_access_key"),
-    p_invoice_date: optional(formData, "invoice_date"), p_invoice_amount: numberValue(formData, "invoice_amount"),
-    p_carrier_name: optional(formData, "carrier_name"), p_vehicle_plate: optional(formData, "vehicle_plate"), p_driver_name: optional(formData, "driver_name"),
-    p_delivery_document: optional(formData, "delivery_document"), p_warehouse_location: optional(formData, "warehouse_location"),
-    p_general_condition: optional(formData, "general_condition"), p_notes: optional(formData, "notes"), p_items: jsonArray(formData, "items_json"),
+  const detailKeys=["order_id","receipt_date","arrival_time","invoice_number","invoice_series","invoice_access_key","invoice_date","carrier_name","vehicle_plate","driver_name","delivery_document","general_condition","notes","delivery_instructions"];
+  const details: Record<string,string|number|null>=Object.fromEntries(detailKeys.map(key=>[key,optional(formData,key)]));
+  details.invoice_amount=numberValue(formData,"invoice_amount");
+  const {data,error}=await supabase.rpc("save_procurement_material_receipt_at_location", {
+    p_company_id:companyId,p_project_id:projectId,p_receipt_id:receiptId,p_location_id:optional(formData,"warehouse_location_id"),p_details:details,p_items:jsonArray(formData,"items_json"),
   });
   if (error || !data) redirect(resultUrl(error?.message ?? "Não foi possível salvar o recebimento.", "error", receiptId ?? undefined));
   refresh(); redirect(resultUrl(receiptId ? "Recebimento atualizado." : "Recebimento criado em elaboração.", "success", String(data)));
@@ -62,4 +59,14 @@ export async function uploadMaterialReceiptDocuments(formData: FormData) {
     uploaded += 1;
   }
   refresh(); redirect(resultUrl(`${uploaded} documento(s) anexado(s).`, "success", receiptId));
+}
+
+export async function treatReceiptDiscrepancy(formData: FormData) {
+  const {supabase,companyId,projectId}=await requireCompanyPermission("procurement.receipts.discrepancies");
+  const receiptId=text(formData,"receipt_id");
+  if(!projectId) redirect(resultUrl("Selecione uma obra.","error"));
+  const {error}=await supabase.rpc("treat_procurement_receipt_discrepancy",{p_company_id:companyId,p_project_id:projectId,p_discrepancy_id:text(formData,"discrepancy_id"),p_status:text(formData,"status"),p_assignee_user_id:optional(formData,"assignee_user_id"),p_replacement_receipt_id:optional(formData,"replacement_receipt_id"),p_notes:text(formData,"resolution_notes")});
+  if(error) redirect(resultUrl(error.message,"error",receiptId));
+  refresh();revalidatePath("/suprimentos/estoque");
+  redirect(resultUrl("Tratamento da divergência registrado no histórico.","success",receiptId));
 }

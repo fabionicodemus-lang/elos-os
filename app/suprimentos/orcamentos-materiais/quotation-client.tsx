@@ -11,9 +11,10 @@ export type SupplierOption = { id: string; legal_name: string; trade_name: strin
 export type EligibleRequestItem = {
   id: string; request_id: string; request_number: string; input_code: string; input_name: string; unit_snapshot: string;
   category_snapshot: string; cost_center_code: string; cost_center_name: string; requested_quantity: number;
-  ordered_quantity: number; needed_date: string; notes: string | null;
+  ordered_quantity: number; stock_fulfilled_quantity?: number; needed_date: string; notes: string | null;
 };
 export type QuotationRecord = {
+  is_historical?: boolean; original_date?: string | null; history_reason?: string | null;
   id: string; title: string; award_mode: string; response_deadline: string; desired_delivery_date: string | null;
   payment_terms: string | null; delivery_address: string | null; notes: string | null; status: string;
 };
@@ -43,11 +44,12 @@ function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "
 function quantity(value: number, digits = 4) { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: digits }).format(Number(value || 0)); }
 function supplierName(supplier: SupplierOption) { return supplier.trade_name || supplier.legal_name; }
 
-export function MaterialQuotationDialog({ eligibleItems, suppliers, quotation, quotationItems = EMPTY_LIST, invitedSuppliers = EMPTY_LIST, autoOpen = false, label }: {
+export function MaterialQuotationDialog({ eligibleItems, suppliers, quotation, quotationItems = EMPTY_LIST, invitedSuppliers = EMPTY_LIST, autoOpen = false, label, canHistorical = false }: {
   eligibleItems: EligibleRequestItem[]; suppliers: SupplierOption[]; quotation?: QuotationRecord | null;
-  quotationItems?: QuotationItemRecord[]; invitedSuppliers?: QuotationSupplierRecord[]; autoOpen?: boolean; label?: string;
+  quotationItems?: QuotationItemRecord[]; invitedSuppliers?: QuotationSupplierRecord[]; autoOpen?: boolean; label?: string; canHistorical?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [historical,setHistorical] = useState(Boolean(quotation?.is_historical));
   const initialItems = new Map<string, number>(quotationItems.map((item) => [item.request_item_id, Number(item.quantity_to_quote)]));
   const initialSuppliers = new Set(invitedSuppliers.map((item) => item.supplier_id));
   const [selectedItems, setSelectedItems] = useState<Map<string, number>>(initialItems);
@@ -76,7 +78,7 @@ export function MaterialQuotationDialog({ eligibleItems, suppliers, quotation, q
   const selectedQuantity = itemPayload.reduce((sum, item) => sum + Number(item.quantity_to_quote || 0), 0);
 
   function toggleItem(item: EligibleRequestItem, checked: boolean) {
-    setSelectedItems((current) => { const next = new Map(current); if (checked) next.set(item.id, Math.max(0, Number(item.requested_quantity) - Number(item.ordered_quantity))); else next.delete(item.id); return next; });
+    setSelectedItems((current) => { const next = new Map(current); if (checked) next.set(item.id, Math.max(0, Number(item.requested_quantity) - Number(item.ordered_quantity) - Number(item.stock_fulfilled_quantity??0))); else next.delete(item.id); return next; });
   }
   function toggleSupplier(id: string, checked: boolean) {
     setSelectedSuppliers((current) => { const next = new Set(current); if (checked) next.add(id); else next.delete(id); return next; });
@@ -91,10 +93,11 @@ export function MaterialQuotationDialog({ eligibleItems, suppliers, quotation, q
         <input type="hidden" name="suppliers_json" value={JSON.stringify(supplierPayload)} />
         <div className="quotation-dialog-head"><div><span>Suprimentos · Orçamentos</span><h2>{quotation ? "Editar cotação em elaboração" : "Nova cotação de materiais"}</h2><p>Selecione necessidades aprovadas e os fornecedores que participarão do mapa comparativo.</p></div><button type="button" onClick={() => ref.current?.close()}>×</button></div>
         <div className="quotation-dialog-body">
+          {canHistorical ? <section className="quotation-form-grid"><label className="span2"><input type="checkbox" name="is_historical" checked={historical} onChange={event=>setHistorical(event.target.checked)}/>Implantação histórica</label>{historical ? <><label>Data original da cotação<input name="original_date" type="date" max={isoDate()} defaultValue={quotation?.original_date ?? ""} required/></label><label className="span2">Justificativa da implantação<input name="history_reason" defaultValue={quotation?.history_reason ?? ""} required/></label><p>As datas originais serão preservadas. O registro e o responsável ficam auditados na data atual.</p></> : null}</section> : null}
           <section className="quotation-form-grid">
             <label className="span2">Título da cotação<input name="title" defaultValue={quotation?.title ?? ""} placeholder="Ex.: Porcelanatos e argamassas — pavimentos 5 ao 10" required /></label>
             <label>Forma de fechamento<select name="award_mode" defaultValue={quotation?.award_mode ?? "item"}><option value="item">Melhor fornecedor por item</option><option value="lot">Fornecedor único por lote</option></select></label>
-            <label>Prazo para resposta<input name="response_deadline" type="date" min={isoDate()} defaultValue={quotation?.response_deadline ?? isoDate(5)} required /></label>
+            <label>Prazo para resposta<input name="response_deadline" type="date" min={historical ? undefined : isoDate()} defaultValue={quotation?.response_deadline ?? isoDate(5)} required /></label>
             <label>Entrega desejada<input name="desired_delivery_date" type="date" defaultValue={quotation?.desired_delivery_date ?? isoDate(15)} /></label>
             <label>Condição desejada<input name="payment_terms" defaultValue={quotation?.payment_terms ?? ""} placeholder="Ex.: 28/35/42 dias" /></label>
             <label className="span2">Endereço / instrução de entrega<input name="delivery_address" defaultValue={quotation?.delivery_address ?? ""} placeholder="Obra, almoxarifado, horário e contato de recebimento" /></label>
@@ -105,9 +108,9 @@ export function MaterialQuotationDialog({ eligibleItems, suppliers, quotation, q
             <div className="quotation-section-title"><div><span>Origem da demanda</span><h3>Itens das solicitações aprovadas</h3></div><strong>{selectedItems.size} item(ns) · {quantity(selectedQuantity)} un.</strong></div>
             <input className="quotation-search" value={itemQuery} onChange={(event) => setItemQuery(event.target.value)} placeholder="Buscar solicitação, material ou serviço" />
             <div className="quotation-request-items">{visibleItems.map((item) => {
-              const remaining = Math.max(0, Number(item.requested_quantity) - Number(item.ordered_quantity));
+              const remaining = Math.max(0, Number(item.requested_quantity) - Number(item.ordered_quantity) - Number(item.stock_fulfilled_quantity??0));
               const selected = selectedItems.has(item.id);
-              return <article key={item.id} className={selected ? "selected" : ""}><label className="quotation-check"><input type="checkbox" checked={selected} onChange={(event) => toggleItem(item,event.target.checked)} /><span /></label><div><strong>{item.input_code} · {item.input_name}</strong><span>{item.request_number} · {item.cost_center_code} · {item.cost_center_name}</span><small>Necessidade: {item.needed_date.split("-").reverse().join("/")} · saldo {quantity(remaining)} {item.unit_snapshot}</small></div><label className="quotation-qty">Qtd. a cotar<input type="number" min="0.000001" max={remaining} step="0.000001" disabled={!selected} value={selectedItems.get(item.id) ?? remaining} onChange={(event) => setSelectedItems((current) => { const next=new Map(current); next.set(item.id,Number(event.target.value)); return next; })} /></label></article>;
+              return <article key={item.id} className={selected ? "selected" : ""}><label className="quotation-check"><input id={`quote-item-${item.id}`} aria-label={`Selecionar ${item.input_code} · ${item.input_name} · ${item.request_number}`} type="checkbox" checked={selected} onChange={(event) => toggleItem(item,event.target.checked)} /><span /></label><label htmlFor={`quote-item-${item.id}`} className="quotation-item-label"><strong>{item.input_code} · {item.input_name}</strong><span>{item.request_number} · {item.cost_center_code} · {item.cost_center_name}</span><small>Necessidade: {item.needed_date.split("-").reverse().join("/")} · saldo {quantity(remaining)} {item.unit_snapshot}</small></label><label className="quotation-qty">Qtd. a cotar<input type="number" min="0.000001" max={remaining} step="0.000001" disabled={!selected} value={selectedItems.get(item.id) ?? remaining} onChange={(event) => setSelectedItems((current) => { const next=new Map(current); next.set(item.id,Number(event.target.value)); return next; })} /></label></article>;
             })}{!visibleItems.length ? <p className="quotation-muted">Nenhum item pendente encontrado.</p> : null}</div>
           </section>
 

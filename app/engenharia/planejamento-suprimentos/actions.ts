@@ -247,6 +247,9 @@ export async function generateSupplyPlanFromSchedule(form: FormData) {
     if (saveError) redirect(target(saveError.message, "error", ctx.baseline.id));
   }
 
+  const { error: stockError } = await ctx.supabase.rpc("refresh_supply_plan_stock", {p_company_id: ctx.companyId, p_project_id: ctx.projectId, p_baseline_id: ctx.baseline.id});
+  if (stockError) redirect(target(`Plano salvo, mas o estoque não foi sincronizado: ${stockError.message}`, "error", ctx.baseline.id));
+
   const generatedIds = new Set(rows.map((row) => row.input_id));
   const staleIds = existingResult.data.filter((item) => !generatedIds.has(item.input_id)).map((item) => item.id);
   for (let index = 0; index < staleIds.length; index += 400) {
@@ -268,7 +271,7 @@ export async function updateSupplyPlanItem(form: FormData) {
   if (!itemId || !firstUse || !STATUSES.has(status)) redirect(target("Revise os dados do insumo.", "error", ctx.baseline.id));
 
   const { data: current, error: readError } = await ctx.supabase.from("engineering_supply_plan_items")
-    .select("required_quantity")
+    .select("required_quantity, available_stock, physical_stock, consumed_stock")
     .eq("id", itemId).eq("baseline_id", ctx.baseline.id).eq("company_id", ctx.companyId).eq("project_id", ctx.projectId!).maybeSingle();
   if (readError || !current) redirect(target(readError?.message ?? "Insumo do plano não encontrado.", "error", ctx.baseline.id));
 
@@ -276,13 +279,13 @@ export async function updateSupplyPlanItem(form: FormData) {
   const purchasing = Math.max(0, Math.trunc(numberValue(form, "purchasing_lead_days")));
   const delivery = Math.max(0, Math.trunc(numberValue(form, "delivery_lead_days")));
   const safety = Math.max(0, Math.trunc(numberValue(form, "safety_days")));
-  const stock = Math.max(0, numberValue(form, "available_stock"));
+  const stock = Math.max(0, Number(current.available_stock ?? 0));
   const required = Math.max(0, Number(current.required_quantity ?? 0));
 
   const { error } = await ctx.supabase.from("engineering_supply_plan_items").update({
     supplier_id: optional(form, "supplier_id"),
     available_stock: stock,
-    purchase_quantity: Math.max(0, required - stock),
+    purchase_quantity: Math.max(0, required - Number(current.physical_stock ?? stock) - Number(current.consumed_stock ?? 0)),
     planned_unit_cost: Math.max(0, numberValue(form, "planned_unit_cost")),
     first_use_date: firstUseText,
     quotation_lead_days: quotation,

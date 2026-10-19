@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { normalizedPercentages } from "@/lib/preconstruction/physical-weights.mjs";
 import { saveScheduleServiceWeights } from "./physical-weight-actions";
 import type { ExecutionScheduleActivity, ExecutionScheduleMeasurement } from "./progress-dialog";
 import type { ExecutionScheduleService } from "./execution-schedule-workbench";
@@ -49,20 +50,6 @@ function numberBR(value: number | string | null | undefined, digits = 1) {
 function dateBR(value: string | null | undefined) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("pt-BR").format(parseDate(value));
-}
-
-function normalizedPercentages(values: number[]) {
-  const total = values.reduce((sum, value) => sum + value, 0);
-  if (values.length === 0) return [];
-  if (total <= 0) {
-    const equal = 100 / values.length;
-    const result = values.map(() => Number(equal.toFixed(4)));
-    result[result.length - 1] = Number((result[result.length - 1] + 100 - result.reduce((sum, value) => sum + value, 0)).toFixed(4));
-    return result;
-  }
-  const result = values.map((value) => Number((value / total * 100).toFixed(4)));
-  result[result.length - 1] = Number((result[result.length - 1] + 100 - result.reduce((sum, value) => sum + value, 0)).toFixed(4));
-  return result;
 }
 
 function distributionValue(activity: ExecutionScheduleActivity, method: PhysicalWeightRecord["distribution_method"]) {

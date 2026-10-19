@@ -1,3 +1,5 @@
+import { fetchAllRows } from "@/lib/supabase-pagination";
+import { compatibleService } from "@/lib/preconstruction/service-identity.mjs";
 import { Fragment } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -6,6 +8,7 @@ import { CreatableCombobox } from "@/components/creatable-combobox";
 import { requireCompanyPermission } from "@/lib/workspace";
 import {
   archiveBudget,
+  reconcileBudgetService,
   deactivateBudgetItem,
   updateBudgetGroup,
   updateBudgetItem,
@@ -36,6 +39,7 @@ type BudgetGroup = {
 
 type BudgetItem = {
   id: string;
+  service_id: string | null;
   group_id: string | null;
   code: string | null;
   description: string;
@@ -129,7 +133,7 @@ export default async function BudgetDetailPage({
     .order("code");
   let itemsQuery = supabase
     .from("engineering_budget_items")
-    .select("id, group_id, code, description, unit, quantity, material_unit_cost, labor_unit_cost, equipment_unit_cost, other_unit_cost, unit_direct_cost, total_direct_cost, sort_order, notes")
+    .select("id, service_id, group_id, code, description, unit, quantity, material_unit_cost, labor_unit_cost, equipment_unit_cost, other_unit_cost, unit_direct_cost, total_direct_cost, sort_order, notes")
     .eq("budget_id", budgetId)
     .eq("company_id", companyId)
     .eq("status", "active")
@@ -152,11 +156,10 @@ export default async function BudgetDetailPage({
         target_company_id: companyId,
         target_permission: "budgets.manage",
       });
-  const serviceUnitsQuery = supabase
-    .from("engineering_services")
-    .select("unit")
-    .eq("company_id", companyId)
-    .limit(10000);
+  const serviceUnitsQuery = fetchAllRows<UnitRecord & {id:string;code:string;description:string;status:string}>(async (from,to) => {
+    const {data,error}=await supabase.from("engineering_services").select("id,code,description,unit,status").eq("company_id",companyId).order("id").range(from,to);
+    return {data:data??[],error};
+  });
   const inputUnitsQuery = supabase
     .from("engineering_inputs")
     .select("unit")
@@ -207,7 +210,8 @@ export default async function BudgetDetailPage({
   const budget = budgetResult.data as Budget;
   const groups = (groupsResult.data ?? []) as BudgetGroup[];
   const items = (itemsResult.data ?? []) as BudgetItem[];
-  const serviceUnits = (serviceUnitsResult.data ?? []) as UnitRecord[];
+  const serviceUnits = (serviceUnitsResult.data ?? []) as (UnitRecord & {id:string;code:string;description:string;status:string})[];
+  const incompatibleItems = items.filter(item => {const service=serviceUnits.find(service=>service.id===item.service_id);return service && !compatibleService(item,service);});
   const inputUnits = (inputUnitsResult.data ?? []) as UnitRecord[];
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const hasCostCenterTransactions = Number(transactionsResult.count ?? 0) > 0;
@@ -293,6 +297,7 @@ export default async function BudgetDetailPage({
           Revisão aprovada{budget.is_base ? " e definida como orçamento base" : ""}. Alterações em grupos e serviços mudam valores já oficializados — para mudanças de escopo, prefira criar uma nova revisão.
         </div>
       ) : null}
+      {incompatibleItems.length ? <section className="auth-message warning workspace-message"><h3>Conferir vínculos com o catálogo</h3><p>Há descrição ou unidade diferente entre a revisão e o cadastro. Nenhum cadastro de outra obra será alterado.</p>{incompatibleItems.map(item => {const service=serviceUnits.find(s=>s.id===item.service_id);return <div key={item.id}><strong>{item.code} · {item.description} ({item.unit})</strong><p>Catálogo: {service?.code} · {service?.description} ({service?.unit})</p>{canManage && ["draft","in_progress"].includes(budget.status) ? <form action={reconcileBudgetService}><input type="hidden" name="budget_id" value={budget.id}/><input type="hidden" name="item_id" value={item.id}/><label>Vínculo correto<select name="service_id"><option value="">Criar cadastro compatível, preservando o atual</option>{serviceUnits.filter(s=>s.status==="active" && compatibleService(item,s)).map(s=><option key={s.id} value={s.id}>{s.code} · {s.description} · {s.unit}</option>)}</select></label><button type="submit">Reconciliar vínculo</button></form> : <p>Faça a reconciliação em uma revisão em elaboração; a revisão aprovada mantém seu histórico.</p>}</div>;})}</section> : null}
       {structureError ? <div className="auth-message error workspace-message">Não foi possível carregar todos os dados da revisão.</div> : null}
 
       <nav className="budget-module-nav" aria-label="Etapas do orçamento de obras">
