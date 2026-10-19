@@ -34,6 +34,7 @@ type Service = {
   id: string;
   code: string;
   description: string;
+  development_cost_category: string | null;
 };
 
 type InventoryMovement = {
@@ -297,7 +298,7 @@ export async function loadCostVsBudget({
     fetchAllRows<Service>(async (from, to) => {
       const { data, error } = await supabase
         .from("engineering_services")
-        .select("id, code, description")
+        .select("id, code, description, development_cost_category")
         .eq("company_id", companyId)
         .order("code")
         .range(from, to);
@@ -489,6 +490,8 @@ export async function loadCostVsBudget({
   ].filter(Boolean) as string[];
 
   const serviceById = new Map(servicesResult.data.map((service) => [service.id, service]));
+  // Centros de incorporação (terreno, outorga, projetos, comissões...) são controlados no Resultado da incorporação.
+  const developmentServiceIds = new Set(servicesResult.data.filter((service) => service.development_cost_category).map((service) => service.id));
   const rows = new Map<string, WorkingRow>();
 
   const ensureRow = (id: string, serviceId: string | null, fallbackCode: string, fallbackName: string) => {
@@ -685,6 +688,7 @@ export async function loadCostVsBudget({
         status: classifyRow(row, forecastCost),
       };
     })
+    .filter((row) => !(row.serviceId && developmentServiceIds.has(row.serviceId)))
     .filter((row) => Math.abs(row.budgetAmount) > 0.01 || Math.abs(row.forecastCost) > 0.01)
     .sort((a, b) => statusOrder[a.status] - statusOrder[b.status]
       || a.code.localeCompare(b.code, "pt-BR", { numeric: true }));

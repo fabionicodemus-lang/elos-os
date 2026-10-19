@@ -2,6 +2,9 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { calculateDevelopmentResult } from "@/lib/commercial/development-result.mjs";
 import { loadProjectForecast } from "@/lib/forecast/server";
+import { loadDevelopmentCosts } from "@/lib/development-costs/server";
+import type { DevelopmentCostStatus } from "@/lib/development-costs/summary.mjs";
+import { applyFeasibilityDevelopmentBudget, updateDevelopmentBudget } from "./actions";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
 import "./result.css";
@@ -53,7 +56,32 @@ function deltaClass(value: number, positiveIsGood = true) {
   return (value > 0) === positiveIsGood ? "positive" : "negative";
 }
 
-export default async function DevelopmentResultPage() {
+const centerStatusLabels: Record<DevelopmentCostStatus, string> = {
+  ok: "Dentro",
+  attention: "Atenção",
+  over: "Acima",
+  no_budget: "Sem orçado",
+};
+
+function centerStatusBadge(status: DevelopmentCostStatus) {
+  if (status === "ok") return <span className="cashflow-direction in">{centerStatusLabels[status]}</span>;
+  if (status === "over" || status === "no_budget") return <span className="cashflow-direction out">{centerStatusLabels[status]}</span>;
+  return <span className="cashflow-direction" style={{ color:"#8b5a15", background:"#fff4da" }}>{centerStatusLabels[status]}</span>;
+}
+
+function consumptionBar(status: DevelopmentCostStatus, value: number) {
+  const width = Math.max(0, Math.min(100, value));
+  return <>
+    <strong>{percent(value)}</strong>
+    <div style={{ width:96, height:7, marginTop:6, marginLeft:"auto", overflow:"hidden", borderRadius:999, background:"#e7eeed" }}>
+      <span style={{ display:"block", width:`${width}%`, height:"100%", borderRadius:999,
+        background: status === "over" || status === "no_budget" ? "#b75d50" : status === "attention" ? "#c89236" : "#087f72" }} />
+    </div>
+  </>;
+}
+
+export default async function DevelopmentResultPage({ searchParams }: { searchParams: Promise<{ error?:string; success?:string }> }) {
+  const params = await searchParams;
   const { supabase, company, companyId, projectId } = await requireCompanyPermission("commercial.incorporation.view");
 
   if (!projectId) {
@@ -94,7 +122,12 @@ export default async function DevelopmentResultPage() {
   const study = studyResult.data as Study | null;
 
   const asOfDate = todayIso();
-  const forecastContext = await loadProjectForecast({ supabase, companyId, projectId, asOfDate });
+  const [forecastContext, developmentCosts, manageResult] = await Promise.all([
+    loadProjectForecast({ supabase, companyId, projectId, asOfDate }),
+    loadDevelopmentCosts({ supabase, companyId, projectId }),
+    supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "commercial.incorporation.manage" }),
+  ]);
+  const canManage = manageResult.data === true;
   const result = calculateDevelopmentResult({
     baselineMetrics: profile?.baseline_metrics ?? {},
     baselineStudy: study ?? {},
@@ -104,10 +137,11 @@ export default async function DevelopmentResultPage() {
     receivables: receivablesResult.data,
     payables: payablesResult.data,
     forecast: forecastContext.forecast,
+    developmentCosts,
     today: asOfDate,
   }) as Result;
 
-  const sourceErrors = [projectResult.error?.message, profileResult.error?.message, salesResult.error?.message, unitsResult.error?.message, receivablesResult.error?.message, payablesResult.error?.message, studyResult.error?.message, ...forecastContext.errors].filter(Boolean) as string[];
+  const sourceErrors = [projectResult.error?.message, profileResult.error?.message, salesResult.error?.message, unitsResult.error?.message, receivablesResult.error?.message, payablesResult.error?.message, studyResult.error?.message, ...forecastContext.errors, ...developmentCosts.errors].filter(Boolean) as string[];
   const costDeviation = result.cost.engineeringProjected - result.baseline.engineeringCost;
   const costDeviationPct = result.baseline.engineeringCost > 0 ? costDeviation / result.baseline.engineeringCost * 100 : 0;
   const healthLabel = result.result.health === "above" ? "Acima do baseline" : result.result.health === "attention" ? "Atenção à margem" : "Abaixo do baseline";
@@ -117,7 +151,7 @@ export default async function DevelopmentResultPage() {
     { label:"Custo de obra + contingência", baseline:result.baseline.engineeringCost, current:result.cost.engineeringProjected, delta:costDeviation, good:false },
     { label:"Comissões", baseline:result.baseline.commission, current:result.cost.projectedCommission, delta:result.cost.projectedCommission-result.baseline.commission, good:false },
     { label:"Impostos sobre vendas", baseline:result.baseline.taxes, current:result.cost.projectedTaxes, delta:result.cost.projectedTaxes-result.baseline.taxes, good:false },
-    { label:"Demais custos do baseline", baseline:result.baseline.otherCost, current:result.baseline.otherCost+result.cost.unallocatedProjected, delta:result.cost.unallocatedProjected, good:false },
+    { label:"Terreno, outorga, projetos e demais custos", baseline:result.baseline.otherCost, current:result.cost.projectedOtherCost, delta:result.cost.projectedOtherCost-result.baseline.otherCost, good:false },
     { label:"Custo total", baseline:result.baseline.totalCost, current:result.cost.projectedTotalCost, delta:result.cost.projectedTotalCost-result.baseline.totalCost, good:false, strong:true },
     { label:"Lucro", baseline:result.baseline.profit, current:result.result.projectedProfit, delta:result.result.profitDeviation, good:true, strong:true },
   ];
@@ -131,6 +165,8 @@ export default async function DevelopmentResultPage() {
       <Link className="elos-button" prefetch={false} href="/comercial/incorporacao">Carteira</Link>
     </>}>
 
+    {params.error ? <div className="auth-message error workspace-message">{params.error}</div> : null}
+    {params.success ? <div className="auth-message success workspace-message">{params.success}</div> : null}
     {sourceErrors.length ? <div className="auth-message error workspace-message">Parte das fontes não pôde ser lida: {sourceErrors[0]}</div> : null}
     {!profile ? <div className="result-warning"><strong>Sem baseline de viabilidade vinculado.</strong><span>O painel continua mostrando o realizado disponível, mas a comparação inicial só fica completa para empreendimentos criados/aprovados pelo Estudo de Viabilidade.</span></div> : null}
 
@@ -208,6 +244,49 @@ export default async function DevelopmentResultPage() {
           <span>Regime / impostos <strong>{study?.tax_regime?.toUpperCase() ?? "—"} · {percent(result.rates.taxRate)}</strong></span>
         </div>
       </article>
+    </section>
+
+    <section className="result-panel" id="centros-incorporacao" style={{ marginBottom:16 }}>
+      <div className="result-heading">
+        <div><span>Custos de incorporação</span><h2>Centros de custo · orçado × apropriado</h2></div>
+        <small>Orçado do estudo de viabilidade aprovado; apropriado = títulos rateados no centro (pagos e em aberto). Esses centros não entram no custo da obra.</small>
+      </div>
+      {canManage && profile ? <form action={applyFeasibilityDevelopmentBudget} style={{ marginBottom:12 }}>
+        <button className="elos-button" type="submit">{developmentCosts.rows.length ? "Atualizar orçado pelo estudo" : "Gerar centros pelo estudo de viabilidade"}</button>
+      </form> : null}
+      {developmentCosts.rows.length ? <div className="result-table-wrap"><table className="result-table">
+        <thead><tr><th>Centro</th><th>Orçado</th><th>Pago</th><th>Em aberto</th><th>Apropriado</th><th>Saldo</th><th>Consumo</th><th>Status</th><th>Projeção</th></tr></thead>
+        <tbody>
+          {developmentCosts.rows.map((row) => {
+            const projected = row.category === "commission" ? result.cost.projectedCommission
+              : row.category === "taxes" ? result.cost.projectedTaxes
+              : Math.max(row.budget, row.appropriated);
+            return <tr key={row.serviceId}>
+              <td><strong>{row.code}</strong> · {row.name}<br /><small style={{ color:"#64748b" }}>{row.titleCount} título(s){row.budgetSource === "manual" ? " · orçado ajustado à mão" : ""}</small></td>
+              <td>{canManage ? <form action={updateDevelopmentBudget} style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
+                <input type="hidden" name="service_id" value={row.serviceId} />
+                <input name="budget_amount" defaultValue={number(row.budget, 2)} inputMode="decimal" aria-label={`Orçado de ${row.code}`} style={{ width:120, textAlign:"right" }} />
+                <button className="elos-button" type="submit" title="Salvar orçado">OK</button>
+              </form> : money(row.budget)}</td>
+              <td>{money(row.paid)}</td>
+              <td>{money(row.open)}</td>
+              <td>{money(row.appropriated)}</td>
+              <td className={deltaClass(row.balance, true)}>{signedMoney(row.balance)}</td>
+              <td>{consumptionBar(row.status, row.consumptionPct)}</td>
+              <td>{centerStatusBadge(row.status)}</td>
+              <td title={row.rateBased ? "Taxa do estudo sobre o VGV projetado, nunca abaixo do apropriado" : "Maior entre orçado e apropriado"}>{money(projected)}</td>
+            </tr>;
+          })}
+          <tr className="strong">
+            <td>Total</td><td>{money(developmentCosts.totals.budget)}</td><td>{money(developmentCosts.totals.paid)}</td><td>{money(developmentCosts.totals.open)}</td>
+            <td>{money(developmentCosts.totals.appropriated)}</td><td className={deltaClass(developmentCosts.totals.balance, true)}>{signedMoney(developmentCosts.totals.balance)}</td>
+            <td></td><td></td><td>{money(result.cost.developmentCentersProjected + result.cost.projectedCommission + result.cost.projectedTaxes)}</td>
+          </tr>
+        </tbody>
+      </table></div> : <p style={{ margin:0, color:"#64748b" }}>Os centros de incorporação ainda não foram gerados para esta obra.{profile ? "" : " É preciso ter o estudo de viabilidade aprovado (baseline)."}</p>}
+      {result.cost.unallocatedSourceProjected > 0 ? <p style={{ margin:"10px 0 0", color:"#64748b", fontSize:".82rem" }}>
+        Há {money(result.cost.unallocatedSourceProjected)} em títulos sem centro de custo (obra ou incorporação ainda não classificados). Eles consomem primeiro o saldo destes centros; só o excesso aumenta o custo projetado.
+      </p> : null}
     </section>
 
     {result.warnings.length ? <section className="result-panel result-warnings"><div className="result-heading"><div><span>Qualidade dos dados</span><h2>Pontos que afetam a precisão</h2></div></div><ul>{result.warnings.map((warning:string) => <li key={warning}>{warning}</li>)}</ul></section> : null}
