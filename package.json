@@ -11,6 +11,7 @@
     "test:performance": "node --test --test-concurrency=1 tests/performance/forecast-load-scenarios.test.mjs",
     "test:banking": "node --test lib/banking/ofx.test.mjs tests/banking/bank-operations.test.mjs",
     "test:incorporation": "node --test tests/commercial/*.test.mjs",
+    "test:homologation": "node --test tests/homologation/*.test.mjs",
     "test:preconstruction": "node --test tests/preconstruction/*.test.mjs"
   },
   "dependencies": {

@@ -4,13 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
+import { calculateSupplyNeeds } from "@/lib/preconstruction/supply-needs.mjs";
 
 const PATH = "/engenharia/planejamento-suprimentos";
 const STATUSES = new Set(["planned", "quotation", "approval", "ordered", "partial", "delivered", "canceled"]);
-const PURCHASABLE = new Set(["material", "equipment", "freight", "other"]);
 
 type Activity = { service_id: string | null; quantity_snapshot: number; planned_start: string };
-type BudgetItem = { service_id: string | null; quantity: number };
+type BudgetItem = { id: string; service_id: string | null; quantity: number };
+type SnapshotComposition = { id: string; budget_item_id: string };
 type Composition = { id: string; service_id: string; status: string };
 type CompositionItem = { composition_id: string; input_id: string; effective_coefficient: number; status: string };
 type Input = { id: string; code: string; description: string; unit: string; category: string };
@@ -103,7 +104,7 @@ async function context(form: FormData) {
 export async function generateSupplyPlanFromSchedule(form: FormData) {
   const ctx = await context(form);
 
-  const [activitiesResult, budgetItemsResult, compositionsResult, compositionItemsResult, inputsResult, pricesResult, existingResult] = await Promise.all([
+  const [activitiesResult, budgetItemsResult, compositionsResult, compositionItemsResult, inputsResult, pricesResult, existingResult, snapshotsResult] = await Promise.all([
     fetchAllRows<Activity>(async (from, to) => {
       const { data, error } = await ctx.supabase.from("engineering_schedule_activities")
         .select("service_id, quantity_snapshot, planned_start")
@@ -113,7 +114,7 @@ export async function generateSupplyPlanFromSchedule(form: FormData) {
     }),
     fetchAllRows<BudgetItem>(async (from, to) => {
       const { data, error } = await ctx.supabase.from("engineering_budget_items")
-        .select("service_id, quantity").eq("budget_id", ctx.baseline.budget_id)
+        .select("id, service_id, quantity").eq("budget_id", ctx.baseline.budget_id)
         .eq("company_id", ctx.companyId).eq("project_id", ctx.projectId!).eq("status", "active").range(from, to);
       return { data: (data ?? []) as BudgetItem[], error };
     }),
@@ -146,31 +147,32 @@ export async function generateSupplyPlanFromSchedule(form: FormData) {
         .eq("baseline_id", ctx.baseline.id).eq("company_id", ctx.companyId).range(from, to);
       return { data: (data ?? []) as ExistingItem[], error };
     }),
+    fetchAllRows<SnapshotComposition>(async (from, to) => {
+      const { data, error } = await ctx.supabase.from("engineering_budget_item_compositions")
+        .select("id,budget_item_id").eq("company_id", ctx.companyId)
+        .eq("project_id", ctx.projectId!).eq("budget_id", ctx.baseline.budget_id)
+        .eq("status", "active").range(from, to);
+      return { data: (data ?? []) as SnapshotComposition[], error };
+    }),
   ]);
 
-  const error = activitiesResult.error || budgetItemsResult.error || compositionsResult.error || compositionItemsResult.error || inputsResult.error || pricesResult.error || existingResult.error;
+  const error = activitiesResult.error || budgetItemsResult.error || compositionsResult.error || compositionItemsResult.error || inputsResult.error || pricesResult.error || existingResult.error || snapshotsResult.error;
   if (error) redirect(target(error.message, "error", ctx.baseline.id));
 
-  const earliestByService = new Map<string, string>();
-  const activityQuantityByService = new Map<string, number>();
-  activitiesResult.data.forEach((activity) => {
-    if (!activity.service_id) return;
-    const earliest = earliestByService.get(activity.service_id);
-    if (!earliest || activity.planned_start < earliest) earliestByService.set(activity.service_id, activity.planned_start);
-    activityQuantityByService.set(activity.service_id, (activityQuantityByService.get(activity.service_id) ?? 0) + Math.max(0, Number(activity.quantity_snapshot ?? 0)));
-  });
+  const snapshotItems: CompositionItem[] = [];
+  for (let offset = 0; offset < snapshotsResult.data.length; offset += 100) {
+    const ids = snapshotsResult.data.slice(offset, offset + 100).map(row => row.id);
+    const result = await fetchAllRows<CompositionItem>(async (from, to) => {
+      const { data, error } = await ctx.supabase.from("engineering_budget_item_composition_items")
+        .select("composition_id,input_id,effective_coefficient,status")
+        .eq("company_id", ctx.companyId).eq("status", "active")
+        .in("composition_id", ids).range(from, to);
+      return { data: (data ?? []) as CompositionItem[], error };
+    });
+    if (result.error) redirect(target(result.error.message, "error", ctx.baseline.id));
+    snapshotItems.push(...result.data);
+  }
 
-  const budgetQuantityByService = new Map<string, number>();
-  budgetItemsResult.data.forEach((item) => {
-    if (!item.service_id) return;
-    budgetQuantityByService.set(item.service_id, (budgetQuantityByService.get(item.service_id) ?? 0) + Math.max(0, Number(item.quantity ?? 0)));
-  });
-
-  const compositionByService = new Map(compositionsResult.data.map((item) => [item.service_id, item.id]));
-  const itemsByComposition = new Map<string, CompositionItem[]>();
-  compositionItemsResult.data.forEach((item) => {
-    itemsByComposition.set(item.composition_id, [...(itemsByComposition.get(item.composition_id) ?? []), item]);
-  });
   const inputMap = new Map(inputsResult.data.map((item) => [item.id, item]));
   const existingMap = new Map(existingResult.data.map((item) => [item.input_id, item]));
 
@@ -183,25 +185,15 @@ export async function generateSupplyPlanFromSchedule(form: FormData) {
     if (!current || rank > currentRank || (rank === currentRank && price.price_date > current.price_date)) priceMap.set(price.input_id, price);
   });
 
-  const needs = new Map<string, { required: number; firstUse: string }>();
-  earliestByService.forEach((firstUse, serviceId) => {
-    const compositionId = compositionByService.get(serviceId);
-    if (!compositionId) return;
-    const serviceQuantity = budgetQuantityByService.get(serviceId) ?? activityQuantityByService.get(serviceId) ?? 0;
-    if (serviceQuantity <= 0) return;
-
-    (itemsByComposition.get(compositionId) ?? []).forEach((item) => {
-      const input = inputMap.get(item.input_id);
-      if (!input || !PURCHASABLE.has(input.category)) return;
-      const quantity = serviceQuantity * Math.max(0, Number(item.effective_coefficient ?? 0));
-      if (quantity <= 0) return;
-      const current = needs.get(item.input_id);
-      needs.set(item.input_id, {
-        required: (current?.required ?? 0) + quantity,
-        firstUse: !current || firstUse < current.firstUse ? firstUse : current.firstUse,
-      });
-    });
-  });
+  const needs = calculateSupplyNeeds({
+    activities: activitiesResult.data,
+    budgetItems: budgetItemsResult.data,
+    snapshots: snapshotsResult.data,
+    snapshotItems,
+    compositions: compositionsResult.data,
+    compositionItems: compositionItemsResult.data,
+    inputs: inputsResult.data,
+  }) as Map<string, { required: number; firstUse: string }>;
 
   const now = new Date().toISOString();
   const rows = [...needs].flatMap(([inputId, need]) => {

@@ -1,3 +1,4 @@
+import { qualityLabel } from "@/lib/quality-labels";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { fetchAllRows } from "@/lib/supabase-pagination";
@@ -1036,8 +1037,8 @@ function InspectionList({
                       </span>
                     </td>
                     <td>
-                      <span className={`quality-release ${row.release_status}`}>
-                        {row.release_status}
+                      <span className={`quality-release ${qualityLabel(row.release_status)}`}>
+                        {qualityLabel(row.release_status)}
                       </span>
                     </td>
                   </tr>
@@ -1167,7 +1168,7 @@ function NonconformityDetail({
           <p>{locationName} · {supplierName}</p>
         </div>
         <div>
-          <span className={`quality-severity ${nc.severity}`}>{nc.severity}</span>
+          <span className={`quality-severity ${qualityLabel(nc.severity)}`}>{qualityLabel(nc.severity)}</span>
           <strong>{overdue ? "Vencida" : ncLabels[nc.status]}</strong>
         </div>
       </header>
@@ -1520,8 +1521,8 @@ function TemplatesArea({
                   <span>{template.code} · v{version?.version_no ?? 1}</span>
                   <h3>{template.name}</h3>
                 </div>
-                <span className={`quality-criticality ${template.criticality}`}>
-                  {template.criticality}
+                <span className={`quality-criticality ${qualityLabel(template.criticality)}`}>
+                  {qualityLabel(template.criticality)}
                 </span>
               </header>
               <p>{template.description || "Sem descrição."}</p>

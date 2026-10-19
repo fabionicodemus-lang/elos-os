@@ -314,7 +314,8 @@ function loadSchedule(context: ElosIaToolContext, projectId: string) {
         const { data, error } = await context.supabase
           .from("engineering_schedule_progress_measurements")
           .select("id, activity_id, measurement_date, progress_percent, current_start, current_finish, created_at")
-          .eq("company_id", context.companyId)
+          .is("voided_at", null)
+        .eq("company_id", context.companyId)
           .eq("project_id", projectId)
           .order("measurement_date")
           .order("id")

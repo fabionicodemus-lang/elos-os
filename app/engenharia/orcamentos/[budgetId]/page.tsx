@@ -362,7 +362,7 @@ export default async function BudgetDetailPage({
                   {section.visibleItems.map((item) => (
                     <tr key={item.id} className={itemIncomplete(item) ? "budget-item-incomplete" : ""}>
                       <td><strong className="budget-code">{item.code ?? "—"}</strong></td>
-                      <td><strong>{item.description}</strong>{item.notes ? <span>{item.notes}</span> : null}</td>
+                      <td><strong>{item.description}</strong>{item.notes ? <span>{item.notes}</span> : null}<Link prefetch={false} className="table-action" href={`/engenharia/orcamentos/${budget.id}/itens/${item.id}`}>Composição</Link></td>
                       <td>{item.unit}</td><td>{decimal(item.quantity, 3)}</td><td>{money(item.material_unit_cost)}</td><td>{money(item.labor_unit_cost)}</td><td>{money(item.equipment_unit_cost)}</td><td>{money(item.other_unit_cost)}</td><td><strong>{money(item.unit_direct_cost)}</strong></td><td><strong>{money(item.total_direct_cost)}</strong></td>
                       <td>{itemIncomplete(item) ? <span className="budget-situation review">Revisar</span> : <span className="budget-situation complete">Completo</span>}</td>
                       <td>

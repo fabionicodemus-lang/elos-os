@@ -38,22 +38,24 @@ export function StageMeasurementDialog({ contracts, stages, measurement, measure
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const range = useMemo(() => monthRange(), []);
-  const initialContractId = measurement?.contract_id ?? selectedContractId ?? contracts[0]?.id ?? "";
+  const initialContractId = measurement?.contract_id || selectedContractId || "";
   const [contractId, setContractId] = useState(initialContractId);
-  const [rows, setRows] = useState<Row[]>([]);
+  function initialRows(id: string): Row[] {
+    const saved = new Map(measurementItems.map((item) => [item.contract_stage_id, item]));
+    return stages.filter((stage) => stage.contract_id === id).map((stage) => ({
+      ...stage, current_quantity: Number(saved.get(stage.id)?.current_quantity ?? 0), notes: saved.get(stage.id)?.notes ?? "",
+    }));
+  }
+  const [rows, setRows] = useState<Row[]>(() => initialRows(initialContractId));
   const [tax, setTax] = useState(Number(measurement?.tax_withholding_amount ?? 0));
   const [advance, setAdvance] = useState(Number(measurement?.advance_deduction_amount ?? 0));
   const [other, setOther] = useState(Number(measurement?.other_discount_amount ?? 0));
-  const editMap = useMemo(() => new Map(measurementItems.filter((item) => item.contract_stage_id).map((item) => [item.contract_stage_id!, item])), [measurementItems]);
   const selectedContract = contracts.find((contract) => contract.id === contractId) ?? null;
-
-  useEffect(() => {
-    setRows(stages.filter((stage) => stage.contract_id === contractId).map((stage) => ({
-      ...stage,
-      current_quantity: Number(editMap.get(stage.id)?.current_quantity ?? 0),
-      notes: editMap.get(stage.id)?.notes ?? "",
-    })));
-  }, [contractId, stages, editMap]);
+  function changeContract(id: string) {
+    if (rows.some((row) => row.current_quantity > 0 || row.notes.trim()) && !window.confirm("Trocar o contrato descarta as etapas ainda não salvas. Deseja trocar?")) return;
+    setContractId(id);
+    setRows(initialRows(id));
+  }
   useEffect(() => { if (autoOpen) dialog.current?.showModal(); }, [autoOpen]);
 
   const gross = rows.reduce((sum, row) => sum + Number(row.current_quantity || 0) * Number(row.unit_price || 0), 0);
@@ -73,7 +75,7 @@ export function StageMeasurementDialog({ contracts, stages, measurement, measure
         <header><div><span>Execução · Contratos</span><h2>{measurement ? "Editar medição por etapas" : "Nova medição por etapas"}</h2><p>Meça chapisco, reboco, requadros ou qualquer etapa configurada no contrato.</p></div><button type="button" onClick={() => dialog.current?.close()}>×</button></header>
         <div className="stage-measurement-body">
           <section className="stage-measurement-form-grid">
-            <label className="span2">Contrato<select name="contract_id" value={contractId} onChange={(event) => setContractId(event.target.value)} disabled={Boolean(measurement)} required><option value="">Selecione</option>{contracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.contract_number} · {contract.title} · {contract.supplier_name}</option>)}</select>{measurement ? <input type="hidden" name="contract_id" value={contractId} /> : null}</label>
+            <label className="span2">Contrato<select name="contract_id" value={contractId} onChange={(event) => changeContract(event.target.value)} disabled={Boolean(measurement)} required><option value="">Selecione</option>{contracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.contract_number} · {contract.title} · {contract.supplier_name}</option>)}</select>{measurement ? <input type="hidden" name="contract_id" value={contractId} /> : null}</label>
             <label>Início do período<input name="period_start" type="date" defaultValue={measurement?.period_start ?? range.start} min={selectedContract?.start_date} max={selectedContract?.end_date} required /></label>
             <label>Fim do período<input name="period_end" type="date" defaultValue={measurement?.period_end ?? range.end} min={selectedContract?.start_date} max={selectedContract?.end_date} required /></label>
             <div className="stage-contract-summary span4"><div><span>Fornecedor</span><strong>{selectedContract?.supplier_name ?? "—"}</strong></div><div><span>Valor atualizado</span><strong>{money(selectedContract?.current_value ?? 0)}</strong></div><div><span>Já medido</span><strong>{money(selectedContract?.measured_value ?? 0)}</strong></div><div><span>Saldo contratual</span><strong>{money(Math.max(0, Number(selectedContract?.current_value ?? 0) - Number(selectedContract?.measured_value ?? 0)))}</strong></div></div>

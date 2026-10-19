@@ -144,6 +144,10 @@ export default async function DailyLogsPage({ searchParams }: {
   const monthLogs = current.filter((item) => item.log_date.startsWith(month) && item.diary_type === "principal" && item.status !== "cancelled");
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Selecione uma obra";
 
+  const requirementsResult = selectedDiary
+    ? await supabase.rpc("execution_daily_log_requirements", { p_log_id: selectedDiary.id })
+    : { data: [], error: null };
+  const requirements = Array.isArray(requirementsResult.data) ? requirementsResult.data as { key: string; label: string; complete: boolean }[] : [];
   return <AppShell
     activeGroup="execution" activeItem="daily-logs" eyebrow="Execução · Controle de Campo" title="Diário de Obras"
     description={`${company.name} · ${context} · registro oficial diário de clima, equipes, serviços, ocorrências e evidências.`}
@@ -166,6 +170,9 @@ export default async function DailyLogsPage({ searchParams }: {
       {selectedDiary ? <>
         <div className="daily-log-back"><Link prefetch={false} href={`?month=${selectedDiary.log_date.slice(0, 7)}&tab=${tab}`}>← Voltar</Link><span>{diaries.filter((item) => item.log_number === selectedDiary.log_number).length} versão(ões) preservada(s)</span></div>
         <DailyLogEditor
+          key={selectedDiary.id}
+          requirements={requirements}
+          requirementsUnavailable={Boolean(requirementsResult.error)}
           diary={selectedDiary}
           initialWeather={weatherMap.get(selectedDiary.id) ?? []}
           initialWorkforce={workforceMap.get(selectedDiary.id) ?? []}

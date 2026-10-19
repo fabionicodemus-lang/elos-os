@@ -175,6 +175,7 @@ export default async function BudgetItemCompositionPage({
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const canEdit = canManage && budget.status !== "archived";
 
+  let compositionInitError: { code?: string; message: string } | null = null;
   let compositionResult = await supabase
     .from("engineering_budget_item_compositions")
     .select("id, source_service_id, source_composition_id, is_customized")
@@ -193,6 +194,8 @@ export default async function BudgetItemCompositionPage({
       p_budget_item_id: itemId,
     });
 
+    compositionInitError = ensureResult.error;
+    if (compositionInitError) console.error("budget-composition-init", { code: compositionInitError.code, budgetId, itemId });
     if (!ensureResult.error) {
       compositionResult = await supabase
         .from("engineering_budget_item_compositions")
@@ -336,6 +339,7 @@ export default async function BudgetItemCompositionPage({
         </div>
       ) : null}
 
+      {compositionInitError ? <div className="auth-message error workspace-message">Não foi possível preparar a composição ({compositionInitError.code ?? "erro"}). Tente adicionar o primeiro insumo abaixo para inicializá-la.</div> : null}
       <section className="budget-item-composition-context">
         <div>
           <span>Serviço desta revisão</span>
@@ -372,7 +376,7 @@ export default async function BudgetItemCompositionPage({
         </div>
       ) : null}
 
-      {canEdit && composition ? (
+      {canEdit && !schemaMissing ? (
         <section className="budget-toolbar-card budget-composition-add-card">
           <div className="budget-section-head">
             <div><span>Composição desta revisão</span><h2>Adicionar insumo ou mão de obra</h2></div>

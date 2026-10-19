@@ -1,0 +1,48 @@
+name: Aurora regression and database fixes
+on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "lib/**"
+      - "tests/homologation/**"
+      - "supabase/migrations/*aurora*"
+      - "package.json"
+      - ".github/workflows/aurora-homologation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/*aurora*"
+      - ".github/workflows/aurora-homologation.yml"
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:homologation
+      - run: npm run test:incorporation
+      - run: npm run test:preconstruction
+      - run: npx tsc --noEmit
+      - run: npm run build
+  migrate:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency: aurora-database-migration
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply additive fixes to configured Elos database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: '10'
+        run: bash .github/scripts/apply-aurora-fixes.sh
