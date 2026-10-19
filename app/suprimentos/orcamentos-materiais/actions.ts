@@ -32,7 +32,7 @@ export async function saveMaterialQuotation(formData: FormData) {
   if (!projectId) redirect(resultUrl("Selecione uma obra antes de criar a cotação.", "error"));
   const items = jsonArray(formData, "items_json");
   const suppliers = jsonArray(formData, "suppliers_json");
-  const { data, error } = await supabase.rpc("save_procurement_material_quotation", {
+  const { data, error } = await supabase.rpc("save_procurement_material_quotation_v2", {
     p_company_id: companyId,
     p_project_id: projectId,
     p_quotation_id: quotationId,
@@ -45,6 +45,9 @@ export async function saveMaterialQuotation(formData: FormData) {
     p_notes: optional(formData, "notes"),
     p_items: items,
     p_suppliers: suppliers,
+    p_historical: text(formData,"is_historical")==="on",
+    p_original_date: optional(formData,"original_date"),
+    p_history_reason: optional(formData,"history_reason"),
   });
   if (error || !data) redirect(resultUrl(error?.message ?? "Não foi possível salvar a cotação.", "error", quotationId ?? undefined));
   refresh();

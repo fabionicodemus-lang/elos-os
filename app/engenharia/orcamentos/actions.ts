@@ -332,7 +332,7 @@ export async function createBudgetItem(formData: FormData) {
   const link = await linkBudgetItemsToCatalog({ supabase, companyId, budgetId, userId });
   revalidatePath(detailPath(budgetId));
   revalidatePath(LIST_PATH);
-  redirect(detailUrl(budgetId, link.error ? `Serviço incluído, mas não foi vinculado ao catálogo: ${link.error}` : "Serviço incluído no orçamento.", link.error ? "error" : "success"));
+  redirect(detailUrl(budgetId, link.error ? `Serviço incluído, mas não foi vinculado ao catálogo: ${link.error}` : `Serviço incluído no orçamento. ${link.warnings.join(" ")}`, link.error ? "error" : "success"));
 }
 
 export async function updateBudgetItem(formData: FormData) {
@@ -403,4 +403,13 @@ export async function deactivateBudgetItem(formData: FormData) {
   revalidatePath(detailPath(budgetId));
   revalidatePath(LIST_PATH);
   redirect(detailUrl(budgetId, "Serviço removido do orçamento.", "success"));
+}
+
+export async function reconcileBudgetService(formData: FormData) {
+  const budgetId=text(formData,"budget_id");
+  const {supabase,companyId}=await requireCompanyPermission("budgets.manage");
+  const {error}=await supabase.rpc("reconcile_engineering_budget_service", {p_company_id:companyId,p_budget_id:budgetId,p_item_id:text(formData,"item_id"),p_service_id:optional(formData,"service_id")});
+  if(error) redirect(detailUrl(budgetId,error.message));
+  revalidatePath(detailPath(budgetId));
+  redirect(detailUrl(budgetId,"Vínculo reconciliado; os demais orçamentos foram preservados.","success"));
 }
