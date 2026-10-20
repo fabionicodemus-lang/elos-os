@@ -13,9 +13,14 @@ export type ForecastBudgetService = {
   /** Serviços com o mesmo grupo dividem as parcelas do contrato na proporção do orçamento. */
   planGroup?: string | null;
   plan_group?: string | null;
+  /** "fixed_term": saldo dividido igualmente entre estes meses (início/fim), sem cronograma. */
+  distributionStart?: string | null;
+  distribution_start?: string | null;
+  distributionEnd?: string | null;
+  distribution_end?: string | null;
 };
 
-export type ForecastFinancialMode = "schedule" | "payment_plan";
+export type ForecastFinancialMode = "schedule" | "payment_plan" | "fixed_term";
 
 export type ForecastActivity = {
   id: string;
@@ -86,6 +91,8 @@ export type ForecastServiceRow = {
   budgetAmount: number;
   financialMode: ForecastFinancialMode;
   planGroup: string | null;
+  distributionStart: string | null;
+  distributionEnd: string | null;
   actual: number;
   committedPayable: number;
   committedFuture: number;

@@ -39,3 +39,20 @@ Primeiro uso (18/10/2026, Flow Aptos):
 ## Testes
 
 `lib/forecast/engine.test.mjs`: parcelas sem distribuição pelo cronograma, aviso sem parcelas, padrão continua pelo cronograma.
+
+## 3. Prazo fixo (contratos fixos fora do cronograma)
+
+`forecast_service_settings.financial_mode = 'fixed_term'`, com `distribution_start` e `distribution_end`.
+
+- Saldo = contratado ainda não faturado (comprometido futuro) + a contratar até o orçado.
+- O saldo é dividido em parcelas mensais iguais entre o mês de início (nunca antes do mês atual) e o mês de fim.
+  Fim no passado concentra o saldo no mês atual.
+- Títulos já lançados no contas a pagar continuam no vencimento; pagamentos continuam no realizado.
+- O cronograma não é usado para o dinheiro desses serviços (o prazo físico, se houver, continua lá).
+
+Tela: **Engenharia → Previsão Financeira → Prazo fixo** (`/engenharia/previsao-financeira/prazo-fixo`):
+lista dos serviços em prazo fixo, prazo editável (mês de início e fim), saldo, valor por mês, custo final,
+inclusão de serviço, "Usar cronograma" para tirar, e a tabela mês a mês da saída prevista.
+
+Primeiro uso (20/10/2026, Flow Aptos): 25.10 Empreiteiro Estrutura (out–dez/2026), 25.11 Empreiteiro
+Instalações Elétricas e 25.12 Empreiteiro Instalações Hidrossanitárias (out/2026–ago/2027).

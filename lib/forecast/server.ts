@@ -126,8 +126,10 @@ type PayableAllocation = {
 
 type ServiceFinancialSetting = {
   service_id: string;
-  financial_mode: "schedule" | "payment_plan";
+  financial_mode: "schedule" | "payment_plan" | "fixed_term";
   plan_group: string | null;
+  distribution_start: string | null;
+  distribution_end: string | null;
 };
 
 export type ServiceFinancialMode = ServiceFinancialSetting["financial_mode"];
@@ -449,7 +451,7 @@ export async function loadProjectForecast({
     fetchAllRows<ServiceFinancialSetting>(async (from, to) => {
       const { data, error } = await supabase
         .from("forecast_service_settings")
-        .select("service_id, financial_mode, plan_group")
+        .select("service_id, financial_mode, plan_group, distribution_start, distribution_end")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .range(from, to);
@@ -482,12 +484,18 @@ export async function loadProjectForecast({
   }
   const serviceFinancialModes = new Map<string, ServiceFinancialMode>();
   const servicePlanGroups = new Map<string, string>();
+  const serviceDistribution = new Map<string, { start: string | null; end: string | null }>();
   for (const setting of settingsResult.data) {
+    if (setting.financial_mode === "fixed_term") {
+      serviceFinancialModes.set(setting.service_id, "fixed_term");
+      serviceDistribution.set(setting.service_id, { start: setting.distribution_start, end: setting.distribution_end });
+      continue;
+    }
     if (setting.financial_mode !== "payment_plan") continue;
     serviceFinancialModes.set(setting.service_id, "payment_plan");
     if (setting.plan_group?.trim()) servicePlanGroups.set(setting.service_id, setting.plan_group.trim());
   }
-  const forecastServices: Array<{ id: string; code: string; name: string; budgetAmount: number; financialMode?: ServiceFinancialMode; planGroup?: string | null }> = [...budgetByService.entries()].map(([serviceId, budgetAmount]) => {
+  const forecastServices: Array<{ id: string; code: string; name: string; budgetAmount: number; financialMode?: ServiceFinancialMode; planGroup?: string | null; distributionStart?: string | null; distributionEnd?: string | null }> = [...budgetByService.entries()].map(([serviceId, budgetAmount]) => {
     const metadata = serviceMetadata.get(serviceId);
     return {
       id: serviceId,
@@ -496,6 +504,8 @@ export async function loadProjectForecast({
       budgetAmount,
       financialMode: serviceFinancialModes.get(serviceId) ?? "schedule",
       planGroup: servicePlanGroups.get(serviceId) ?? null,
+      distributionStart: serviceDistribution.get(serviceId)?.start ?? null,
+      distributionEnd: serviceDistribution.get(serviceId)?.end ?? null,
     };
   });
   const allocationsByPayable = new Map<string, PayableAllocation[]>();
