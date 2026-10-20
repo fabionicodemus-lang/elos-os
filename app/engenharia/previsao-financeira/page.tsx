@@ -69,6 +69,7 @@ export default async function ForecastByServicePage({
       description={`${company.name} · ${projectLabel} · realizado, comprometido e a comprometer sem dupla contagem.`}
       actions={
         <>
+          <Link prefetch={false} className="elos-button" href="/engenharia/previsao-financeira/prazo-fixo">Prazo fixo</Link>
           <Link prefetch={false} className="elos-button" href="/engenharia/previsao-financeira/historico">Histórico de previsões</Link>
           <Link prefetch={false} className="elos-button" href="/engenharia/curvas">Curvas</Link>
           <Link prefetch={false} className="elos-button" href="/financeiro/fluxo-de-caixa">Fluxo de Caixa</Link>
@@ -171,7 +172,11 @@ export default async function ForecastByServicePage({
                     <tr key={service.id} className={service.deviation > 0 ? "danger" : ""}>
                       <td><strong>{service.code ? `${service.code} · ` : ""}{service.name}</strong>{service.committedPayable > 0 ? <small>{money(service.committedPayable)} em payables abertas</small> : null}</td>
                       <td>
-                        {service.budgetAmount > 0 ? (
+                        {service.financialMode === "fixed_term" ? (
+                          <Link prefetch={false} href="/engenharia/previsao-financeira/prazo-fixo" className="forecast-mode-badge fixed-term" title="Saldo dividido igualmente por mês, fora do cronograma">
+                            Prazo fixo{service.distributionStart && service.distributionEnd ? ` · ${monthLabel(service.distributionStart.slice(0, 7))} a ${monthLabel(service.distributionEnd.slice(0, 7))}` : ""}
+                          </Link>
+                        ) : service.budgetAmount > 0 ? (
                           <form action={updateServiceFinancialMode} className="forecast-mode-form">
                             <input type="hidden" name="service_id" value={service.id} />
                             <input type="hidden" name="baseline_id" value={context.baseline?.id ?? ""} />

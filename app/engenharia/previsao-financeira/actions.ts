@@ -196,3 +196,73 @@ export async function archiveForecastSnapshot(formData: FormData) {
   revalidatePath(HISTORY_PATH);
   redirect(historyUrl("Snapshot arquivado. O conteúdo congelado foi preservado.", "success"));
 }
+
+const FIXED_TERM_PATH = `${PATH}/prazo-fixo`;
+
+function fixedTermUrl(message: string, type: "error" | "success" = "error") {
+  return `${FIXED_TERM_PATH}?${new URLSearchParams({ [type]: message }).toString()}`;
+}
+
+function monthToDate(value: FormDataEntryValue | null, end = false) {
+  const raw = String(value ?? "").trim();
+  if (!/^\d{4}-\d{2}$/.test(raw)) return null;
+  if (!end) return `${raw}-01`;
+  const [year, month] = raw.split("-").map(Number);
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${raw}-${String(last).padStart(2, "0")}`;
+}
+
+/** Marca (ou atualiza) um serviço como prazo fixo: saldo dividido igualmente entre os meses informados. */
+export async function saveFixedTermService(formData: FormData) {
+  const serviceId = String(formData.get("service_id") ?? "").trim();
+  const start = monthToDate(formData.get("distribution_start"));
+  const end = monthToDate(formData.get("distribution_end"), true);
+  if (!isUuid(serviceId)) redirect(fixedTermUrl("Escolha o serviço."));
+  if (!start || !end) redirect(fixedTermUrl("Informe o mês de início e o mês de fim."));
+  if (end < start) redirect(fixedTermUrl("O mês de fim precisa ser igual ou posterior ao de início."));
+
+  const { supabase, companyId, projectId, userId } = await requireCompanyPermission("schedule.manage");
+  if (!projectId) redirect(fixedTermUrl("Selecione uma obra."));
+
+  const { error } = await supabase
+    .from("forecast_service_settings")
+    .upsert({
+      company_id: companyId,
+      project_id: projectId,
+      service_id: serviceId,
+      financial_mode: "fixed_term",
+      plan_group: null,
+      distribution_start: start,
+      distribution_end: end,
+      created_by: userId,
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "project_id,service_id" });
+  if (error) redirect(fixedTermUrl(error.message));
+
+  revalidatePath(PATH);
+  revalidatePath(FIXED_TERM_PATH);
+  revalidatePath("/engenharia/curvas");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  redirect(fixedTermUrl("Prazo fixo salvo. O saldo do serviço foi redistribuído por mês.", "success"));
+}
+
+/** Tira o serviço do prazo fixo: volta a ser distribuído pelo cronograma. */
+export async function removeFixedTermService(formData: FormData) {
+  const serviceId = String(formData.get("service_id") ?? "").trim();
+  if (!isUuid(serviceId)) redirect(fixedTermUrl("Serviço inválido."));
+  const { supabase, companyId, projectId, userId } = await requireCompanyPermission("schedule.manage");
+  if (!projectId) redirect(fixedTermUrl("Selecione uma obra."));
+
+  const { error } = await supabase
+    .from("forecast_service_settings")
+    .update({ financial_mode: "schedule", distribution_start: null, distribution_end: null, updated_by: userId, updated_at: new Date().toISOString() })
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .eq("service_id", serviceId);
+  if (error) redirect(fixedTermUrl(error.message));
+
+  revalidatePath(PATH);
+  revalidatePath(FIXED_TERM_PATH);
+  redirect(fixedTermUrl("Serviço voltou a seguir o cronograma.", "success"));
+}
