@@ -152,6 +152,7 @@ export default async function DevelopmentResultPage({ searchParams }: { searchPa
     { label:"Comissões", baseline:result.baseline.commission, current:result.cost.projectedCommission, delta:result.cost.projectedCommission-result.baseline.commission, good:false },
     { label:"Impostos sobre vendas", baseline:result.baseline.taxes, current:result.cost.projectedTaxes, delta:result.cost.projectedTaxes-result.baseline.taxes, good:false },
     { label:"Terreno, outorga, projetos e demais custos", baseline:result.baseline.otherCost, current:result.cost.projectedOtherCost, delta:result.cost.projectedOtherCost-result.baseline.otherCost, good:false },
+    { label:"Distratos (devoluções a clientes)", baseline:0, current:result.cost.projectedCancellations, delta:result.cost.projectedCancellations, good:false },
     { label:"Custo total", baseline:result.baseline.totalCost, current:result.cost.projectedTotalCost, delta:result.cost.projectedTotalCost-result.baseline.totalCost, good:false, strong:true },
     { label:"Lucro", baseline:result.baseline.profit, current:result.result.projectedProfit, delta:result.result.profitDeviation, good:true, strong:true },
   ];
@@ -258,7 +259,8 @@ export default async function DevelopmentResultPage({ searchParams }: { searchPa
         <thead><tr><th>Centro</th><th>Orçado</th><th>Pago</th><th>Em aberto</th><th>Apropriado</th><th>Saldo</th><th>Consumo</th><th>Status</th><th>Projeção</th></tr></thead>
         <tbody>
           {developmentCosts.rows.map((row) => {
-            const projected = row.category === "commission" ? result.cost.projectedCommission
+            const projected = row.category === "cancellations" ? row.appropriated
+              : row.category === "commission" ? result.cost.projectedCommission
               : row.category === "taxes" ? result.cost.projectedTaxes
               : Math.max(row.budget, row.appropriated);
             return <tr key={row.serviceId}>
@@ -273,14 +275,14 @@ export default async function DevelopmentResultPage({ searchParams }: { searchPa
               <td>{money(row.appropriated)}</td>
               <td className={deltaClass(row.balance, true)}>{signedMoney(row.balance)}</td>
               <td>{consumptionBar(row.status, row.consumptionPct)}</td>
-              <td>{centerStatusBadge(row.status)}</td>
+              <td>{row.category === "cancellations" ? <span className="cashflow-direction" style={{ color:"#536164", background:"#edf2f1" }}>Grupo próprio</span> : centerStatusBadge(row.status)}</td>
               <td title={row.rateBased ? "Taxa do estudo sobre o VGV projetado, nunca abaixo do apropriado" : "Maior entre orçado e apropriado"}>{money(projected)}</td>
             </tr>;
           })}
           <tr className="strong">
             <td>Total</td><td>{money(developmentCosts.totals.budget)}</td><td>{money(developmentCosts.totals.paid)}</td><td>{money(developmentCosts.totals.open)}</td>
             <td>{money(developmentCosts.totals.appropriated)}</td><td className={deltaClass(developmentCosts.totals.balance, true)}>{signedMoney(developmentCosts.totals.balance)}</td>
-            <td></td><td></td><td>{money(result.cost.developmentCentersProjected + result.cost.projectedCommission + result.cost.projectedTaxes)}</td>
+            <td></td><td></td><td>{money(result.cost.developmentCentersProjected + result.cost.projectedCommission + result.cost.projectedTaxes + result.cost.projectedCancellations)}</td>
           </tr>
         </tbody>
       </table></div> : <p style={{ margin:0, color:"#64748b" }}>Os centros de incorporação ainda não foram gerados para esta obra.{profile ? "" : " É preciso ter o estudo de viabilidade aprovado (baseline)."}</p>}

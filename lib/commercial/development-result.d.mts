@@ -67,7 +67,7 @@ export type DevelopmentResult = {
     engineeringProjected:number; unallocatedActual:number; unallocatedCommitted:number; unallocatedSourceProjected:number;
     unallocatedProjected:number; unallocatedExcess:number; projectedOtherCost:number; rateCommission:number; rateTaxes:number;
     developmentCentersBudget:number; developmentCentersAppropriated:number; developmentCentersProjected:number;
-    baselineOtherRemainder:number; projectedCommission:number;
+    baselineOtherRemainder:number; projectedCancellations:number; projectedCommission:number;
     projectedTaxes:number; projectedTotalCost:number;
   };
   result: {
