@@ -48,6 +48,31 @@ export default async function FixedTermForecastPage({
     .map((month) => month.key)))].sort();
   const projectLabel = context.project ? `${context.project.code ? `${context.project.code} · ` : ""}${context.project.name}` : "Selecione uma obra";
 
+  // Verificador: o orçado de cada serviço precisa estar inteiro na previsão (realizado + títulos + saldo distribuído).
+  const checks = fixed.map((service) => {
+    const balance = service.committedFuture + service.toCommit;
+    const distributed = service.monthly.filter((month) => month.key >= currentMonth).reduce((sum, month) => sum + month.committedFuture + month.toCommit, 0);
+    const overdue = service.monthly.filter((month) => month.key < currentMonth).reduce((sum, month) => sum + month.committedPayable, 0);
+    const forecastTotal = service.actual + service.committedPayable + distributed;
+    const gap = service.budgetAmount - forecastTotal;
+    const status = Math.abs(balance - distributed) > 1 ? "lost"
+      : gap > 1 ? "missing"
+      : gap < -1 ? "over"
+      : "ok";
+    return { service, balance, distributed, overdue, forecastTotal, gap, status };
+  });
+  const checkTotals = checks.reduce((sum, check) => ({
+    budget: sum.budget + check.service.budgetAmount,
+    forecast: sum.forecast + check.forecastTotal,
+    overdue: sum.overdue + check.overdue,
+  }), { budget: 0, forecast: 0, overdue: 0 });
+  const checkLabels: Record<string, string> = {
+    ok: "100% previsto",
+    over: "Previsto acima do orçado",
+    missing: "Orçado não previsto",
+    lost: "Saldo fora da distribuição",
+  };
+
   const totals = fixed.reduce((sum, service) => ({
     budget: sum.budget + service.budgetAmount,
     actual: sum.actual + service.actual,
@@ -137,6 +162,40 @@ export default async function FixedTermForecastPage({
               </table>
             </div>
           </section>
+
+          {fixed.length ? (
+            <section className="registry-table-panel forecast-service-panel">
+              <div className="section-heading">
+                <div><span>Verificador do orçamento</span><h2>O orçado está todo previsto?</h2></div>
+                <p className={checks.every((check) => check.status === "ok" || check.status === "over") && checkTotals.overdue < 1 ? "fixed-term-check ok" : "fixed-term-check warn"}>
+                  {checks.every((check) => check.status === "ok" || check.status === "over")
+                    ? `Sim · previsto ${money(checkTotals.forecast)} para ${money(checkTotals.budget)} orçados`
+                    : `Não · faltam ${money(checks.reduce((sum, check) => sum + Math.max(0, check.gap), 0))} na previsão`}
+                </p>
+              </div>
+              <div className="registry-table-wrap">
+                <table className="registry-table forecast-service-table">
+                  <thead><tr><th>Serviço</th><th>Orçado</th><th>Realizado</th><th>Títulos abertos</th><th>Distribuído</th><th>Total previsto</th><th>Diferença</th><th>Situação</th></tr></thead>
+                  <tbody>
+                    {checks.map((check) => (
+                      <tr key={check.service.id}>
+                        <td><strong>{check.service.code}</strong> · {check.service.name}{check.overdue > 0.5 ? <small className="forecast-danger">{money(check.overdue)} em títulos vencidos e não pagos</small> : null}</td>
+                        <td>{money(check.service.budgetAmount)}</td>
+                        <td>{money(check.service.actual)}</td>
+                        <td>{money(check.service.committedPayable)}</td>
+                        <td>{money(check.distributed)}</td>
+                        <td><strong>{money(check.forecastTotal)}</strong></td>
+                        <td className={check.gap > 1 ? "forecast-danger" : ""}>{check.gap > 0 ? "falta " : check.gap < 0 ? "excede " : ""}{money(Math.abs(check.gap))}</td>
+                        <td><span className={`forecast-mode-badge ${check.status === "ok" ? "payment-plan" : "fixed-term"}`}>{checkLabels[check.status]}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot><tr><th>Total</th><th>{money(checkTotals.budget)}</th><th /><th /><th /><th>{money(checkTotals.forecast)}</th><th>{money(checkTotals.forecast - checkTotals.budget)}</th><th /></tr></tfoot>
+                </table>
+              </div>
+              <p className="forecast-mode-hint">“Previsto acima do orçado”: o contratado passa do orçado e a diferença já está na previsão (é desvio, não falta). “Títulos vencidos e não pagos” ficam no mês do vencimento: pague, reprograme ou cancele para que entrem no mês certo.</p>
+            </section>
+          ) : null}
 
           {canManage ? (
             <section className="registry-table-panel forecast-service-panel">
