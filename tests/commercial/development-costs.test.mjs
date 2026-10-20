@@ -96,3 +96,12 @@ test("sem centros gerados mantém o bloco único do baseline", () => {
   assert.equal(result.cost.projectedCommission, 500_000);
   assert.ok(result.warnings.some((warning) => warning.includes("ainda não gerados")));
 });
+
+test("distratos têm grupo próprio: entram pelo apropriado, fora dos demais custos", () => {
+  const withCancellations = [...rows, { category: "cancellations", budget: 0, appropriated: 208_000, status: "no_budget" }];
+  const result = calculateDevelopmentResult({ baselineMetrics, baselineStudy, units, forecast: forecast(0), developmentCosts: { rows: withCancellations }, today: "2026-10-19" });
+  assert.equal(result.cost.projectedCancellations, 208_000);
+  assert.equal(result.cost.projectedOtherCost, 2_200_000);
+  assert.equal(result.cost.projectedTotalCost, 4_000_000 + 2_200_000 + 208_000 + 650_000 + 400_000);
+  assert.ok(!result.warnings.some((warning) => warning.includes("INC.09")));
+});
