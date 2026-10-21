@@ -29,6 +29,8 @@ jobs:
         run: node --test lib/elos-ia/usage-cost.test.mjs
       - name: Test safe write utilities
         run: node --test lib/elos-ia/action-utils.test.mjs
+      - name: Test conversational schedule updates
+        run: node --test lib/elos-ia/schedule-action-utils.test.mjs
       - name: Test safe write database
         run: node --test lib/elos-ia/safe-write-db.test.mjs
       - name: Test safe write Financeiro
