@@ -4,6 +4,11 @@ on:
     paths:
       - 'lib/koper-finance/**'
       - 'lib/forecast/**'
+      - 'lib/finance-core/**'
+      - 'tests/finance-core/**'
+      - 'app/financeiro/**'
+      - 'supabase/migrations/20261021160000_financial_settlement_ledger.sql'
+      - 'supabase/migrations/20261021163000_financial_ai_settlements.sql'
       - 'tests/koper-finance/**'
       - 'supabase/migrations/20261021140000_koper_financial_snapshots.sql'
       - 'lib/money*'
@@ -38,6 +43,9 @@ jobs:
       - run: npm run test:koper-finance
         env:
           KOPER_EVIDENCE_DIR: ${{ runner.temp }}/koper-validation
+      - run: npm run test:finance-core
+        env:
+          FINANCE7_EVIDENCE_DIR: ${{ runner.temp }}/finance-core-validation
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -45,3 +53,4 @@ jobs:
           path: |
             ${{ env.FINANCE_EVIDENCE_DIR }}/
             ${{ runner.temp }}/koper-validation/
+            ${{ runner.temp }}/finance-core-validation/

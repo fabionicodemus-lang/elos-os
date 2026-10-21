@@ -1,3 +1,7 @@
+import { loadSettlementCash } from "../finance-core/server";
+import { financialCoverage,contractRemainder } from "../finance-core/coverage.mjs";
+import { titlePosition } from "../finance-core/titles.mjs";
+import { FINANCE_TITLE_COLUMNS, openTitleAmount, paidTitleCash, paidTitlePrincipal, type FinancialTitleFields } from "@/lib/finance-core/titles.mjs";
 import { allocatePersistedCosts } from "./cost-allocation.mjs";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { assignActivityCosts } from "@/app/engenharia/curvas/curve-calculations.mjs";
@@ -108,7 +112,7 @@ type ContractMeasurementItem = {
   current_amount: number;
 };
 
-type Payable = {
+type Payable = FinancialTitleFields & {
   id: string;
   status: "open" | "paid" | "cancelled";
   due_date: string;
@@ -158,6 +162,7 @@ export type ProjectForecastContext = {
   /** Modo da previsão por serviço (só os que não estão no padrão "schedule"). */
   serviceFinancialModes: Map<string, ServiceFinancialMode>;
   forecast: UnifiedForecastResult | null;
+  financialIndicators:Record<string,unknown>;
   errors: string[];
 };
 
@@ -266,6 +271,7 @@ export async function loadProjectForecast({
       progressMeasurements: [],
       assignedCosts: new Map(),
       serviceFinancialModes: new Map(),
+      financialIndicators:financialCoverage({R_cents:null,P_cents:null,coverageComplete:false}),
       forecast: null,
       errors: [],
     };
@@ -310,6 +316,7 @@ export async function loadProjectForecast({
       progressMeasurements: [],
       assignedCosts: new Map(),
       serviceFinancialModes: new Map(),
+      financialIndicators:financialCoverage({R_cents:null,P_cents:null,coverageComplete:false}),
       forecast: null,
       errors,
     };
@@ -417,12 +424,12 @@ export async function loadProjectForecast({
     fetchAllRows<Payable>(async (from, to) => {
       const { data, error } = await supabase
         .from("payables")
-        .select("id, status, due_date, amount, paid_at, paid_amount, source_system, source_id")
+        .select(`id, status, due_date, amount, paid_at, paid_amount, source_system, source_id,${FINANCE_TITLE_COLUMNS}`)
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .neq("status", "cancelled")
         .range(from, to);
-      return { data: (data ?? []) as Payable[], error };
+      return { data: (data ?? []) as unknown as Payable[], error };
     }),
     fetchAllRows<PayableAllocation>(async (from, to) => {
       const { data, error } = await supabase
@@ -526,6 +533,20 @@ export async function loadProjectForecast({
     };
   });
 
+  const [nativeInvoices,nativeInstallments] = await Promise.all([
+    fetchAllRows<{id:string;contract_id:string|null;measurement_id:string|null}>(async(from,to)=>{
+      const {data,error}=await supabase.from("finance_manual_invoices").select("id,contract_id,measurement_id").eq("company_id",companyId).eq("project_id",projectId).eq("status","approved").range(from,to);
+      return {data:(data??[]) as {id:string;contract_id:string|null;measurement_id:string|null}[],error};
+    }),
+    fetchAllRows<{invoice_id:string;payable_id:string|null}>(async(from,to)=>{
+      const {data,error}=await supabase.from("finance_manual_invoice_installments").select("invoice_id,payable_id").eq("company_id",companyId).eq("project_id",projectId).range(from,to);
+      return {data:(data??[]) as {invoice_id:string;payable_id:string|null}[],error};
+    }),
+  ]);
+  if(nativeInvoices.error) errors.push(nativeInvoices.error.message);
+  if(nativeInstallments.error) errors.push(nativeInstallments.error.message);
+  const invoiceById=new Map(nativeInvoices.data.map(x=>[x.id,x]));
+  const directContractByPayable=new Map<string,string>();
   const contractMeasurements = contractMeasurementsResult.data;
   const measurementByPayableId = new Map(contractMeasurements.filter((measurement) => measurement.payable_id).map((measurement) => [measurement.payable_id!, measurement]));
   const measurementBySourceId = new Map(contractMeasurements.map((measurement) => [`measurement:${measurement.id}`, measurement]));
@@ -536,16 +557,46 @@ export async function loadProjectForecast({
     itemsByMeasurement.set(item.measurement_id, rows);
   }
 
+  for(const link of nativeInstallments.data){
+    const invoice=invoiceById.get(link.invoice_id);if(!link.payable_id||!invoice?.contract_id)continue;
+    const measured=invoice.measurement_id?contractMeasurements.find(x=>x.id===invoice.measurement_id):null;
+    if(measured) measurementByPayableId.set(link.payable_id,measured);
+    else directContractByPayable.set(link.payable_id,invoice.contract_id);
+  }
+  const directRepresentation:AllocatedFinancialSource[]=[];
+  const principalSettlements:AllocatedFinancialSource[]=[];
+  const principalOpen:AllocatedFinancialSource[]=[];
+  const reductions:AllocatedFinancialSource[]=[];
+  const datedCash=await loadSettlementCash(supabase,companyId,projectId);
   const actualPayments: AllocatedFinancialSource[] = [];
   const openPayables: AllocatedFinancialSource[] = [];
   for (const payable of payablesResult.data) {
     const measurement = measurementFromPayable(payable, measurementByPayableId, measurementBySourceId);
-    if (payable.status === "paid" && payable.paid_at) {
-      const allocated = allocatePayable(payable, number(payable.paid_amount ?? payable.amount), measurement, itemsByMeasurement, allocationsByPayable, developmentServiceIds);
-      actualPayments.push(...allocated.map((source) => ({ ...source, paidAt: payable.paid_at!.slice(0, 10) })));
-    } else if (payable.status === "open") {
-      const allocated = allocatePayable(payable, number(payable.amount), measurement, itemsByMeasurement, allocationsByPayable, developmentServiceIds);
-      openPayables.push(...allocated.map((source) => ({ ...source, dueDate: payable.due_date })));
+    const position=titlePosition(payable);
+    if((payable.source_id?.startsWith('manual_invoice:')||payable.source_id?.startsWith('measurement:'))&&!measurement&&!directContractByPayable.has(payable.id))errors.push(`Título ${payable.id}: vínculo documental não comprovado; não certificar cobertura contratual.`);
+    const contract=measurement?.contract_id??directContractByPayable.get(payable.id)??null;
+    const allocate=(amount:number)=>allocatePayable(payable,amount,measurement,itemsByMeasurement,allocationsByPayable,developmentServiceIds).map(x=>({...x,contractId:contract}));
+    if(!measurement&&contract){
+      const represented=allocate(payable.amount);directRepresentation.push(...represented);
+      if(represented.some(x=>!x.serviceId))errors.push(`Título ${payable.id}: vínculo contratual sem rateio monetário por serviço; cobertura incompleta.`);
+    }
+    principalSettlements.push(...allocate(paidTitlePrincipal(payable)));
+    principalOpen.push(...allocate((position.principalCents!-position.paidPrincipalCents!-(position.discountCents??0)-(position.noncashCents??0))/100));
+    reductions.push(...allocate(((position.discountCents??0)+(position.noncashCents??0)-Math.round((payable.finance_advance_applied??0)*100))/100));
+
+    if(payable.finance_managed){
+      for(const fact of datedCash.filter(x=>x.title_type==='AP'&&x.title_id===payable.id)){
+        const signed=Number(fact.cash_signed);if(!signed)continue;
+        const allocated=allocatePayable(payable,Math.abs(signed),measurement,itemsByMeasurement,allocationsByPayable,developmentServiceIds);
+        actualPayments.push(...allocated.map(x=>({...x,amount:x.amount*Math.sign(signed),paidAt:fact.effective_date})));
+      }
+    }else if(payable.paid_at && paidTitleCash(payable)>0){
+      const allocated=allocatePayable(payable,paidTitleCash(payable),measurement,itemsByMeasurement,allocationsByPayable,developmentServiceIds);
+      actualPayments.push(...allocated.map(x=>({...x,paidAt:payable.paid_at!.slice(0,10)})));
+    }
+    if (payable.status === "open" && openTitleAmount(payable)>0) {
+      const allocated = allocatePayable(payable, openTitleAmount(payable), measurement, itemsByMeasurement, allocationsByPayable, developmentServiceIds);
+      openPayables.push(...allocated.map(source=>({...source,dueDate:payable.due_date})));
     }
   }
 
@@ -557,8 +608,10 @@ export async function loadProjectForecast({
     approvedGrossByContractService.set(key, number(approvedGrossByContractService.get(key)) + number(item.current_amount));
   }
 
-  const actualByContractService = sumByContractService(actualPayments);
-  const openByContractService = sumByContractService(openPayables);
+  const actualByContractService = sumByContractService(principalSettlements);
+  const directByContractService=sumByContractService(directRepresentation);
+  const reductionsByContractService=sumByContractService(reductions);
+  const openByContractService = sumByContractService(principalOpen);
   const amendmentsByContractItem = new Map<string, number>();
   for (const amendment of amendmentItemsResult.data) {
     const key = `${amendment.contract_id}:${amendment.contract_item_id}`;
@@ -572,6 +625,8 @@ export async function loadProjectForecast({
   }
 
   const contractsById = new Map(contractsResult.data.map((contract) => [contract.id, contract]));
+  let provisionalOpen=0;
+  const normativeContractItems:Array<{valueCents:number;paidPrincipalCents:number;noncashReductionCents:number;representedOpenCents:number;complete:boolean}>=[];
   const commitments: Array<{ id: string; kind: "contract" | "purchase_order"; serviceId: string; amount: number; paymentDays?: number; dueDate?: string; fallbackDate?: string }> = [];
   for (const [key, contractValue] of contractValueByContractService.entries()) {
     const separator = key.indexOf(":");
@@ -582,8 +637,14 @@ export async function loadProjectForecast({
     const approvedGross = number(approvedGrossByContractService.get(key));
     const actual = number(actualByContractService.get(key));
     const open = number(openByContractService.get(key));
-    const unbilled = Math.max(0, contractValue - approvedGross);
-    const approvedResidual = Math.max(0, approvedGross - actual - open);
+    const direct=number(directByContractService.get(key));
+    const unbilled = Math.max(0, contractValue - approvedGross-direct);
+    const reduced=number(reductionsByContractService.get(key));
+    const approvedResidual = Math.max(0, approvedGross+direct - actual - reduced - open);
+    provisionalOpen+=approvedResidual;
+    normativeContractItems.push({valueCents:Math.round(contractValue*100),paidPrincipalCents:Math.round(actual*100),noncashReductionCents:Math.round(reduced*100),representedOpenCents:Math.round((open+approvedResidual)*100),complete:errors.length===0});
+    const coverage=contractRemainder({valueCents:Math.round(contractValue*100),paidPrincipalCents:Math.round(actual*100),noncashReductionCents:Math.round(reduced*100),representedOpenCents:Math.round(open*100)});
+    if(!coverage.complete)errors.push(`Contrato ${contractId}/${serviceId}: cobertura excedente ou incompleta; requer conciliação.`);
     if (unbilled > 0) {
       commitments.push({
         id: `${contractId}:${serviceId}:unbilled`,
@@ -628,6 +689,7 @@ export async function loadProjectForecast({
     assignedCosts,
     serviceFinancialModes,
     forecast,
+    financialIndicators:{...financialCoverage({R_cents:Math.round((openPayables.reduce((sum,x)=>sum+x.amount,0)+provisionalOpen)*100),items:normativeContractItems.map(x=>({...x,complete:x.complete&&errors.length===0})),P_cents:null,coverageComplete:false,reportedContractFutureCents:Math.round(commitments.reduce((sum,x)=>sum+x.amount,0)*100)}),provisional_open_cents:Math.round(provisionalOpen*100),scope:"Custos da obra; incorporação separada"},
     errors,
   };
 }

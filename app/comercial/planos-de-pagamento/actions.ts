@@ -1,5 +1,6 @@
 "use server";
 
+import {revalidateFinancialViews} from "@/lib/finance-core/revalidate";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { financialInstallmentSummary, type FinancialInstallmentDraft } from "@/lib/financial-installments";
@@ -210,21 +211,22 @@ export async function markReceivablePaid(formData: FormData) {
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("receivables.manage");
   const receivableResult = await supabase.from("receivables").select("id,project_id,status").eq("id", receivableId).eq("company_id", companyId).maybeSingle();
-  if (!receivableResult.data || receivableResult.data.status !== "open") {
+  if (!receivableResult.data) {
     redirect(pageUrl("A parcela não está disponível para recebimento.", "error", saleId, returnPath));
   }
 
-  const resolvedProjectId = projectId ?? receivableResult.data.project_id;
-  const result = await supabase.rpc("receive_finance_receivable", {
-    p_company_id: companyId,
-    p_project_id: resolvedProjectId,
-    p_receivable_id: receivableId,
-    p_account_id: bankAccountId,
-    p_paid_at: paidAt,
-    p_paid_amount: paidAmount,
+  if (projectId && projectId !== receivableResult.data.project_id) redirect(pageUrl("Selecione a obra da parcela.", "error", saleId, returnPath));
+  const commandId = String(formData.get("command_id") ?? "");
+  const result = await supabase.rpc("settle_finance_titles", {
+    p_company: companyId, p_command: commandId, p_account: bankAccountId, p_date: paidAt,
+    p_lines: [{ type: "AR", title_id: receivableId, principal: paidAmount,
+      interest: parseMoney(formData.get("interest_amount") ?? "0"), discount: parseMoney(formData.get("discount_amount") ?? "0"),
+      evidence: String(formData.get("evidence") ?? "") }],
+    p_reason: String(formData.get("reason") ?? "Registro financeiro de título"),
   });
   if (result.error) redirect(pageUrl(result.error.message, "error", saleId, returnPath));
 
+  revalidateFinancialViews();
   revalidatePath(PATH);
   revalidatePath("/financeiro/contas-a-receber");
   revalidatePath("/financeiro/contas-bancarias");

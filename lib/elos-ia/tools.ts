@@ -1,3 +1,5 @@
+import {loadSettlementCash} from "@/lib/finance-core/server";
+import { FINANCE_TITLE_COLUMNS, type FinancialTitleFields } from "@/lib/finance-core/titles.mjs";
 // Elos IA — ferramentas de consulta ao Elos OS.
 //
 // Segurança:
@@ -177,7 +179,7 @@ const FORECAST_PERMISSIONS = ["schedule.view", "budgets.view", "payables.view", 
 // Carregadores (com cache por pergunta)
 // ---------------------------------------------------------------------------
 
-type PayableRecord = {
+type PayableRecord = FinancialTitleFields & {
   id: string; due_date: string; amount: number; status: string; document: string | null; installment_label: string | null;
   paid_at: string | null; paid_amount: number | null;
   suppliers: { legal_name: string; trade_name: string | null } | { legal_name: string; trade_name: string | null }[] | null;
@@ -188,7 +190,7 @@ function loadPayables(context: ElosIaToolContext, projectId: string | null) {
     const result = await fetchAllRows<PayableRecord>(async (from, to) => {
       let query = context.supabase
         .from("payables")
-        .select("id, due_date, amount, status, document, installment_label, paid_at, paid_amount, suppliers(legal_name, trade_name)")
+        .select(`id, due_date, amount, status, document, installment_label, paid_at, paid_amount, suppliers(legal_name, trade_name),${FINANCE_TITLE_COLUMNS}`)
         .eq("company_id", context.companyId)
         .neq("status", "cancelled");
       if (projectId) query = query.eq("project_id", projectId);
@@ -199,6 +201,7 @@ function loadPayables(context: ElosIaToolContext, projectId: string | null) {
     return result.data.map((row) => {
       const supplier = relatedOne(row.suppliers);
       return {
+        ...row,
         id: row.id,
         status: row.status,
         dueDate: row.due_date,
@@ -213,7 +216,7 @@ function loadPayables(context: ElosIaToolContext, projectId: string | null) {
   });
 }
 
-type ReceivableRecord = {
+type ReceivableRecord = FinancialTitleFields & {
   id: string; due_date: string; amount: number; adjusted_amount: number | null; status: string; category: string;
   sequence_number: number | null; sequence_total: number | null; paid_at: string | null; paid_amount: number | null;
   clients: { name: string } | { name: string }[] | null;
@@ -225,7 +228,7 @@ function loadReceivables(context: ElosIaToolContext, projectId: string | null) {
     const result = await fetchAllRows<ReceivableRecord>(async (from, to) => {
       let query = context.supabase
         .from("receivables")
-        .select("id, due_date, amount, adjusted_amount, status, category, sequence_number, sequence_total, paid_at, paid_amount, clients(name), units(code)")
+        .select(`id, due_date, amount, adjusted_amount, status, category, sequence_number, sequence_total, paid_at, paid_amount, clients(name), units(code),${FINANCE_TITLE_COLUMNS}`)
         .eq("company_id", context.companyId)
         .neq("status", "cancelled");
       if (projectId) query = query.eq("project_id", projectId);
@@ -234,6 +237,7 @@ function loadReceivables(context: ElosIaToolContext, projectId: string | null) {
     });
     failIfErrors([result.error?.message]);
     return result.data.map((row) => ({
+      ...row,
       id: row.id,
       status: row.status,
       dueDate: row.due_date,
@@ -474,6 +478,7 @@ async function runContasAPagar(context: ElosIaToolContext, args: ToolArgs): Prom
     obra: scope.label,
     data_de_hoje: context.today,
     ...summarizePayables(rows, {
+      cashRows:await loadSettlementCash(context.supabase,context.companyId,scope.project?.id??null),
       today: context.today,
       from: dateArg(args.de),
       to: dateArg(args.ate),
@@ -491,6 +496,7 @@ async function runContasAReceber(context: ElosIaToolContext, args: ToolArgs): Pr
     obra: scope.label,
     data_de_hoje: context.today,
     ...summarizeReceivables(rows, {
+      cashRows:await loadSettlementCash(context.supabase,context.companyId,scope.project?.id??null),
       today: context.today,
       from: dateArg(args.de),
       to: dateArg(args.ate),
@@ -526,6 +532,7 @@ async function runFluxoDeCaixa(context: ElosIaToolContext, args: ToolArgs): Prom
             ? "não incluída: o Elos OS não conseguiu ler a previsão de custos agora (avise o usuário que o saldo completo está sem a projeção)"
             : "não incluída: a obra não tem cronograma linha de base com orçamento",
     ...buildCashflowMonths({
+      cashRows:await loadSettlementCash(context.supabase,context.companyId,scope.project?.id??null),
       payables,
       receivables,
       engineeringMonths: forecast?.months.map((month) => ({ key: month.key, engineeringProjected: month.engineeringProjected })) ?? [],
@@ -912,8 +919,8 @@ async function runResumoDaObra(context: ElosIaToolContext, args: ToolArgs): Prom
       if (!forecastContext.forecast) return { erro: "Obra sem cronograma linha de base ligado a um orçamento; previsão de custos indisponível." };
       return { ...costTotals(forecastContext.forecast), servicos_com_estouro: forecastContext.forecast.services.filter((row) => row.deviation > 0.005).length };
     }),
-    block(context.can("payables.view"), async () => summarizePayables(await loadPayables(context, project.id), { today: context.today, limit: 1 }).resumo_geral as ToolResult),
-    block(context.can("receivables.view"), async () => summarizeReceivables(await loadReceivables(context, project.id), { today: context.today, limit: 1 }).resumo_geral as ToolResult),
+    block(context.can("payables.view"), async () => summarizePayables(await loadPayables(context, project.id), { cashRows:await loadSettlementCash(context.supabase,context.companyId,project.id),today: context.today, limit: 1 }).resumo_geral as ToolResult),
+    block(context.can("receivables.view"), async () => summarizeReceivables(await loadReceivables(context, project.id), { cashRows:await loadSettlementCash(context.supabase,context.companyId,project.id),today: context.today, limit: 1 }).resumo_geral as ToolResult),
     block(["cashflow.view", "payables.view", "receivables.view"].every(context.can), async () => {
       const [payables, receivables, forecastContext] = await Promise.all([
         loadPayables(context, project.id),
@@ -922,6 +929,7 @@ async function runResumoDaObra(context: ElosIaToolContext, args: ToolArgs): Prom
       ]);
       const forecast = forecastContext?.errors.length ? null : forecastContext?.forecast ?? null;
       const cashflow = buildCashflowMonths({
+        cashRows:await loadSettlementCash(context.supabase,context.companyId,project.id),
         payables,
         receivables,
         engineeringMonths: forecast?.months.map((month) => ({ key: month.key, engineeringProjected: month.engineeringProjected })) ?? [],

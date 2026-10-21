@@ -1,3 +1,4 @@
+import {FINANCE_TITLE_COLUMNS,openTitleAmount,type FinancialTitleFields} from "@/lib/finance-core/titles.mjs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
@@ -17,7 +18,7 @@ type Contract={id:string;kind:string;document_number:string|null;signed_at:strin
 type Consideration={id:string;kind:string;description:string;asset_identifier:string|null;appraised_value:number|null;accepted_value:number;due_date:string|null;received_at:string|null;status:string;notes:string|null};
 type Amendment={id:string;kind:string;effective_date:string;reason:string;financial_impact:number;status:string;notes:string|null;created_at:string};
 type Transfer={id:string;bank_name:string|null;financing_type:string;requested_amount:number|null;approved_amount:number|null;released_amount:number|null;expected_release_date:string|null;released_at:string|null;protocol:string|null;status:string;notes:string|null};
-type Receivable={id:string;description:string;due_date:string;amount:number;adjusted_amount:number;paid_amount:number|null;status:string};
+type Receivable=FinancialTitleFields & {id:string;description:string;due_date:string;amount:number;adjusted_amount:number;paid_amount:number|null;status:string};
 type Collection={id:string;receivable_id:string|null;stage:string;status:string;opened_at:string;last_contact_at:string|null;promised_date:string|null;promised_amount:number|null;notes:string|null};
 type Termination={id:string;reason:string;paid_amount_snapshot:number;retention_percent:number;retention_amount:number;refund_amount:number;refund_due_date:string|null;refund_payable_id:string|null;commission_review_required:boolean;status:string;created_at:string};
 type Commission={id:string;role:string;commission_amount:number;due_date:string;status:string;paid_amount:number|null};
@@ -40,7 +41,7 @@ export default async function IncorporationSalePage({params,searchParams}:{param
     supabase.from("commercial_sale_considerations").select("id,kind,description,asset_identifier,appraised_value,accepted_value,due_date,received_at,status,notes").eq("company_id",companyId).eq("sale_id",saleId).order("created_at"),
     supabase.from("commercial_sale_amendments").select("id,kind,effective_date,reason,financial_impact,status,notes,created_at").eq("company_id",companyId).eq("sale_id",saleId).order("effective_date",{ascending:false}),
     supabase.from("commercial_transfer_processes").select("id,bank_name,financing_type,requested_amount,approved_amount,released_amount,expected_release_date,released_at,protocol,status,notes").eq("company_id",companyId).eq("sale_id",saleId).maybeSingle(),
-    supabase.from("receivables").select("id,description,due_date,amount,adjusted_amount,paid_amount,status").eq("company_id",companyId).eq("sale_id",saleId).order("due_date"),
+    supabase.from("receivables").select(`id,description,due_date,amount,adjusted_amount,paid_amount,status,${FINANCE_TITLE_COLUMNS}`).eq("company_id",companyId).eq("sale_id",saleId).order("due_date"),
     supabase.from("commercial_collection_cases").select("id,receivable_id,stage,status,opened_at,last_contact_at,promised_date,promised_amount,notes").eq("company_id",companyId).eq("sale_id",saleId).order("opened_at",{ascending:false}),
     supabase.from("commercial_sale_terminations").select("id,reason,paid_amount_snapshot,retention_percent,retention_amount,refund_amount,refund_due_date,refund_payable_id,commission_review_required,status,created_at").eq("company_id",companyId).eq("sale_id",saleId).maybeSingle(),
     supabase.from("commercial_sale_commissions").select("id,role,commission_amount,due_date,status,paid_amount").eq("company_id",companyId).eq("sale_id",saleId).order("due_date"),
@@ -50,7 +51,7 @@ export default async function IncorporationSalePage({params,searchParams}:{param
   const privileged=roleKey==="owner"||roleKey==="admin";
   const canManage=permissionsR[0].data===true||privileged, canApprove=permissionsR[1].data===true||privileged, canFinance=permissionsR[2].data===true||privileged;
   const parties=(partiesR.data??[]) as unknown as Party[], contracts=(contractsR.data??[]) as Contract[], considerations=(considerationsR.data??[]) as Consideration[], amendments=(amendmentsR.data??[]) as Amendment[];
-  const transfer=transferR.data as Transfer|null, receivables=(receivablesR.data??[]) as Receivable[], collections=(collectionsR.data??[]) as Collection[], termination=terminationR.data as Termination|null, commissions=(commissionsR.data??[]) as Commission[];
+  const transfer=transferR.data as Transfer|null, receivables=(receivablesR.data??[]) as unknown as Receivable[], collections=(collectionsR.data??[]) as Collection[], termination=terminationR.data as Termination|null, commissions=(commissionsR.data??[]) as Commission[];
   const summary=(summaryR.data??{base_amount:sale.total_amount,updated_amount:sale.total_amount,correction_amount:0,total_count:0,open_count:0,paid_count:0,overdue_count:0,open_amount:0,paid_amount:0}) as Summary;
   const barter=considerations.filter(i=>i.status!=="cancelled").reduce((s,i)=>s+Number(i.accepted_value),0);
   const overdue=receivables.filter(r=>r.status==="open"&&r.due_date<new Date().toISOString().slice(0,10));
@@ -102,7 +103,7 @@ export default async function IncorporationSalePage({params,searchParams}:{param
       </details>
 
       <details className="registry-create" open={overdue.length>0}><summary>Cobrança e inadimplência ({overdue.length} vencida(s))</summary>
-        {overdue.map(r=><p key={r.id}><strong>{r.description}</strong> · venceu {dateBR(r.due_date)} · saldo {money(Math.max(Number(r.adjusted_amount??r.amount)-Number(r.paid_amount??0),0))}</p>)}
+        {overdue.map(r=><p key={r.id}><strong>{r.description}</strong> · venceu {dateBR(r.due_date)} · saldo {money(openTitleAmount(r))}</p>)}
         {collections.map(c=><p key={c.id}>Caso {c.stage} · {c.status} · aberto em {dateBR(c.opened_at)}{c.promised_date?` · promessa ${dateBR(c.promised_date)} ${money(c.promised_amount)}`:""}<br/><small>{c.notes}</small></p>)}
         {canFinance?<form action={saveCollectionCase} className="registry-form-grid"><input type="hidden" name="sale_id" value={saleId}/><label>Parcela<select name="receivable_id"><option value="">Carteira geral</option>{receivables.filter(r=>r.status==="open").map(r=><option key={r.id} value={r.id}>{r.due_date} · {r.description}</option>)}</select></label><label>Etapa<select name="stage"><option value="contact">Contato</option><option value="notice">Notificação</option><option value="agreement">Acordo</option><option value="legal">Jurídico</option></select></label><label>Status<select name="status"><option value="open">Aberto</option><option value="negotiating">Negociando</option><option value="promise">Promessa</option><option value="agreement">Acordo</option><option value="legal">Jurídico</option><option value="closed">Encerrado</option></select></label><label>Último contato<input name="last_contact_at" type="date"/></label><label>Promessa para<input name="promised_date" type="date"/></label><label>Valor prometido<input name="promised_amount" inputMode="decimal"/></label><label className="registry-wide">Registro do contato<textarea name="notes" rows={2}/></label><button type="submit">Registrar cobrança</button></form>:null}
       </details>

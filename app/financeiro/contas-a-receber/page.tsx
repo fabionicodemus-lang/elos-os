@@ -1,3 +1,4 @@
+import {FINANCE_TITLE_COLUMNS,openTitleAmount,titleStatusLabel,type FinancialTitleFields} from "@/lib/finance-core/titles.mjs";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
@@ -7,7 +8,7 @@ import { requireCompanyPermission } from "@/lib/workspace";
 type Client = { id: string; name: string; tax_id: string | null };
 type Unit = { id: string; code: string };
 type Sale = { id: string; number: string; sale_date: string; clients: Client | Client[] | null; units: Unit | Unit[] | null };
-type Receivable = {
+type Receivable = FinancialTitleFields & {
   id: string;
   sale_id: string;
   category: string;
@@ -124,7 +125,7 @@ export default async function AccountsReceivablePage({
   let listQuery = supabase
     .from("receivables")
     .select(
-      "id, sale_id, category, description, sequence_number, sequence_total, due_date, amount, adjusted_amount, correction_amount, adjustment_index, correction_base_month, correction_base_value, correction_reference_month, correction_reference_value, correction_locked, status, paid_at, paid_amount, paid_account_name, clients(id, name, tax_id), units(id, code), sales(id, number)",
+      `id, sale_id, category, description, sequence_number, sequence_total, due_date, amount, adjusted_amount, correction_amount, adjustment_index, correction_base_month, correction_base_value, correction_reference_month, correction_reference_value, correction_locked, status, paid_at, paid_amount, paid_account_name, clients(id, name, tax_id), units(id, code), sales(id, number),${FINANCE_TITLE_COLUMNS}`,
       { count: "exact" },
     )
     .eq("company_id", companyId)
@@ -249,9 +250,9 @@ export default async function AccountsReceivablePage({
                     <td><strong>{categoryLabels[receivable.category] || receivable.category}</strong><span>{receivable.description}</span><small>{receivable.sequence_number} / {receivable.sequence_total}</small></td>
                     <td>{dateBR(receivable.due_date)}</td>
                     <td><strong>{money(receivable.amount)}</strong><small>lançamento original</small></td>
-                    <td><strong>{money(updatedValue)}</strong><small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small></td>
+                    <td><strong>{money(updatedValue)}</strong><small>Saldo: {money(openTitleAmount(receivable))}</small><small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small></td>
                     <td><span>{receivable.adjustment_index || "Sem correção"}</span><small>{correctionDetails}</small></td>
-                    <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{overdue ? "Vencida" : receivable.status === "open" ? "Em aberto" : receivable.status === "paid" ? "Recebida" : "Cancelada"}</span></td>
+                    <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{titleStatusLabel(receivable)}</span></td>
                     <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : "—"}</span><small>{receivable.paid_at ? `${money(receivable.paid_amount ?? updatedValue)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
                     <td><Link prefetch={false} className="table-action" href={`/comercial/vendas/${receivable.sale_id}`}>Abrir venda</Link></td>
                   </tr>

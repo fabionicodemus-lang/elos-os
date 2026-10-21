@@ -1,3 +1,7 @@
+import {fetchAllRows} from "@/lib/supabase-pagination";
+import { financialTitleEntries } from "@/lib/finance-core/cash.mjs";
+import { loadSettlementCash } from "@/lib/finance-core/server";
+import { FINANCE_TITLE_COLUMNS, type FinancialTitleFields } from "@/lib/finance-core/titles.mjs";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
@@ -20,7 +24,7 @@ type Unit = {
   code: string;
 };
 
-type Payable = {
+type Payable = FinancialTitleFields & {
   id: string;
   due_date: string;
   amount: number;
@@ -30,7 +34,7 @@ type Payable = {
   suppliers: Supplier | Supplier[] | null;
 };
 
-type Receivable = {
+type Receivable = FinancialTitleFields & {
   id: string;
   due_date: string;
   amount: number;
@@ -163,19 +167,19 @@ export default async function FinancialReportsPage({
 
   let payablesQuery = supabase
     .from("payables")
-    .select("id, due_date, amount, status, paid_at, paid_amount, suppliers(id, legal_name, trade_name)")
+    .select(`id, due_date, amount, status, paid_at, paid_amount, suppliers(id, legal_name, trade_name),${FINANCE_TITLE_COLUMNS}`)
     .eq("company_id", companyId)
     .neq("status", "cancelled")
     .order("due_date", { ascending: true })
-    .limit(10000);
+    ;
 
   let receivablesQuery = supabase
     .from("receivables")
-    .select("id, due_date, amount, adjusted_amount, status, category, paid_at, paid_amount, clients(id, name), units(id, code)")
+    .select(`id, due_date, amount, adjusted_amount, status, category, paid_at, paid_amount, clients(id, name), units(id, code),${FINANCE_TITLE_COLUMNS}`)
     .eq("company_id", companyId)
     .neq("status", "cancelled")
     .order("due_date", { ascending: true })
-    .limit(10000);
+    ;
 
   if (projectId) {
     payablesQuery = payablesQuery.eq("project_id", projectId);
@@ -184,24 +188,27 @@ export default async function FinancialReportsPage({
 
   const [projectResult, payablesResult, receivablesResult] = await Promise.all([
     projectQuery,
-    payablesQuery,
-    receivablesQuery,
+    fetchAllRows<Payable>(async(from,to)=>{const {data,error}=await payablesQuery.order("id").range(from,to);return {data:(data??[]) as unknown as Payable[],error};}),
+    fetchAllRows<Receivable>(async(from,to)=>{const {data,error}=await receivablesQuery.order("id").range(from,to);return {data:(data??[]) as unknown as Receivable[],error};}),
   ]);
 
   const project = projectResult.data;
   const payables = (payablesResult.data ?? []) as unknown as Payable[];
   const receivables = (receivablesResult.data ?? []) as unknown as Receivable[];
 
-  const payableEntries: ReportEntry[] = payables.map((payable) => {
+  if (payablesResult.error || receivablesResult.error) throw new Error(payablesResult.error?.message ?? receivablesResult.error?.message);
+  const cashRows=await loadSettlementCash(supabase,companyId,projectId);
+  const payableEntries: ReportEntry[] = financialTitleEntries(payables,"AP",cashRows).map((fact) => {
+    const payable=fact.source;
     const supplier = relatedOne(payable.suppliers);
-    const paid = payable.status === "paid";
+
     return {
-      id: `out-${payable.id}`,
+      id: fact.id,
       direction: "out",
-      situation: paid ? "realized" : "forecast",
-      effectiveDate: cleanDate(paid ? payable.paid_at : payable.due_date),
+      situation: fact.situation,
+      effectiveDate: fact.effectiveDate,
       dueDate: cleanDate(payable.due_date),
-      amount: Number(paid ? payable.paid_amount ?? payable.amount : payable.amount),
+      amount: fact.amount,
       partyId: supplier?.id ?? "supplier-unknown",
       partyName: supplier?.trade_name || supplier?.legal_name || "Fornecedor não identificado",
       category: "payable",
@@ -209,17 +216,18 @@ export default async function FinancialReportsPage({
     };
   });
 
-  const receivableEntries: ReportEntry[] = receivables.map((receivable) => {
+  const receivableEntries: ReportEntry[] = financialTitleEntries(receivables,"AR",cashRows).map((fact) => {
+    const receivable=fact.source;
     const client = relatedOne(receivable.clients);
     const unit = relatedOne(receivable.units);
-    const paid = receivable.status === "paid";
+
     return {
-      id: `in-${receivable.id}`,
+      id: fact.id,
       direction: "in",
-      situation: paid ? "realized" : "forecast",
-      effectiveDate: cleanDate(paid ? receivable.paid_at : receivable.due_date),
+      situation: fact.situation,
+      effectiveDate: fact.effectiveDate,
       dueDate: cleanDate(receivable.due_date),
-      amount: Number(paid ? receivable.paid_amount ?? receivable.adjusted_amount ?? receivable.amount : receivable.adjusted_amount ?? receivable.amount),
+      amount: fact.amount,
       partyId: client?.id ?? "client-unknown",
       partyName: client?.name || "Cliente não identificado",
       category: receivable.category,
@@ -382,7 +390,7 @@ export default async function FinancialReportsPage({
         <article><span>Resultado realizado</span><strong className={realizedResult < 0 ? "reports-negative" : ""}>{money(realizedResult)}</strong><small>recebido menos pago</small></article>
         <article><span>Resultado projetado</span><strong className={projectedResult < 0 ? "reports-negative" : ""}>{money(projectedResult)}</strong><small>receitas totais menos despesas totais</small></article>
         <article><span>Títulos vencidos</span><strong className={overdueTotal > 0 ? "reports-alert" : ""}>{money(overdueTotal)}</strong><small>{overdueInPeriod.length} título(s) no período</small></article>
-        <article><span>Inadimplência da carteira</span><strong className={delinquencyRate > 0 ? "reports-alert" : ""}>{percent(delinquencyRate)}</strong><small>vencido sobre toda a carteira aberta</small></article>
+        <article><span>Parcela da carteira vencida</span><strong className={delinquencyRate > 0 ? "reports-alert" : ""}>{percent(delinquencyRate)}</strong><small>vencido sobre toda a carteira aberta</small></article>
       </section>
 
       <section className="reports-panel reports-period-panel">

@@ -80,6 +80,7 @@ test('carregador real de custos inclui título Elos sem duplicar medição ao ge
  const compile=(path,replacements={})=>{
   let source=ts.transpileModule(readFileSync(new URL('../../'+path,import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
   for(const [from,to] of Object.entries(replacements))source=source.replaceAll(from,to);
+  source=source.replaceAll("@/lib/finance-core/titles.mjs",new URL("../../lib/finance-core/titles.mjs",import.meta.url).href);
   return moduleUrl(source);
  };
  const pagination=compile('lib/supabase-pagination.ts');

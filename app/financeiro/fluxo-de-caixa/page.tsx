@@ -1,3 +1,7 @@
+import {fetchAllRows} from "@/lib/supabase-pagination";
+import { financialTitleEntries } from "@/lib/finance-core/cash.mjs";
+import { loadSettlementCash } from "@/lib/finance-core/server";
+import { FINANCE_TITLE_COLUMNS, type FinancialTitleFields } from "@/lib/finance-core/titles.mjs";
 import Link from "next/link";
 import "../../forecast.css";
 import { AppShell } from "@/components/app-shell";
@@ -10,13 +14,13 @@ type Supplier = { id: string; legal_name: string; trade_name: string | null };
 type Client = { id: string; name: string };
 type Unit = { id: string; code: string };
 type Sale = { id: string; number: string };
-type Payable = {
+type Payable = FinancialTitleFields & {
   id: string; due_date: string; amount: number; status: "open" | "paid" | "cancelled";
   document: string | null; installment_label: string | null; paid_at: string | null; paid_amount: number | null;
   paid_account_name: string | null; source_system: string | null; notes: string | null;
   suppliers: Supplier | Supplier[] | null;
 };
-type Receivable = {
+type Receivable = FinancialTitleFields & {
   id: string; sale_id: string; due_date: string; amount: number; adjusted_amount: number | null;
   status: "open" | "paid" | "cancelled"; category: string; description: string;
   sequence_number: number; sequence_total: number; paid_at: string | null; paid_amount: number | null;
@@ -73,18 +77,18 @@ export default async function CashFlowPage({
     : Promise.resolve({ data: null, error: null });
   let payablesQuery = supabase
     .from("payables")
-    .select("id, due_date, amount, status, document, installment_label, paid_at, paid_amount, paid_account_name, source_system, notes, suppliers(id, legal_name, trade_name)")
-    .eq("company_id", companyId).neq("status", "cancelled").order("due_date", { ascending: true }).limit(10000);
+    .select(`id, due_date, amount, status, document, installment_label, paid_at, paid_amount, paid_account_name, source_system, notes, suppliers(id, legal_name, trade_name),${FINANCE_TITLE_COLUMNS}`)
+    .eq("company_id", companyId).neq("status", "cancelled").order("due_date", { ascending: true });
   let receivablesQuery = supabase
     .from("receivables")
-    .select("id, sale_id, due_date, amount, adjusted_amount, status, category, description, sequence_number, sequence_total, paid_at, paid_amount, paid_account_name, source_system, clients(id, name), units(id, code), sales(id, number)")
-    .eq("company_id", companyId).neq("status", "cancelled").order("due_date", { ascending: true }).limit(10000);
+    .select(`id, sale_id, due_date, amount, adjusted_amount, status, category, description, sequence_number, sequence_total, paid_at, paid_amount, paid_account_name, source_system, clients(id, name), units(id, code), sales(id, number),${FINANCE_TITLE_COLUMNS}`)
+    .eq("company_id", companyId).neq("status", "cancelled").order("due_date", { ascending: true });
   if (projectId) { payablesQuery = payablesQuery.eq("project_id", projectId); receivablesQuery = receivablesQuery.eq("project_id", projectId); }
 
   const [projectResult, payablesResult, receivablesResult, forecastContext] = await Promise.all([
     projectQuery,
-    payablesQuery,
-    receivablesQuery,
+    fetchAllRows<Payable>(async(from,to)=>{const {data,error}=await payablesQuery.order("id").range(from,to);return {data:(data??[]) as unknown as Payable[],error};}),
+    fetchAllRows<Receivable>(async(from,to)=>{const {data,error}=await receivablesQuery.order("id").range(from,to);return {data:(data??[]) as unknown as Receivable[],error};}),
     projectId
       ? loadProjectForecast({ supabase, companyId, projectId, asOfDate: todayIso() })
       : Promise.resolve(null),
@@ -94,23 +98,27 @@ export default async function CashFlowPage({
   const project = projectResult.data;
   const forecast = forecastContext?.forecast ?? null;
 
-  const payableEntries: CashEntry[] = payables.map((payable) => {
+  if (payablesResult.error || receivablesResult.error) throw new Error(payablesResult.error?.message ?? receivablesResult.error?.message);
+  const cashRows=await loadSettlementCash(supabase,companyId,projectId);
+  const payableEntries: CashEntry[] = financialTitleEntries(payables,"AP",cashRows).map((fact) => {
+    const payable=fact.source;
     const supplier = relatedOne(payable.suppliers);
-    const paid = payable.status === "paid";
+
     return {
-      id: `out-${payable.id}`, direction: "out", situation: paid ? "realized" : "forecast",
-      effectiveDate: cleanDate(paid ? payable.paid_at : payable.due_date), dueDate: cleanDate(payable.due_date), paidAt: cleanDate(payable.paid_at) || null,
-      amount: Number(paid ? payable.paid_amount ?? payable.amount : payable.amount), party: supplier?.trade_name || supplier?.legal_name || "Fornecedor",
+      id: fact.id, direction: "out", situation: fact.situation,
+      effectiveDate: fact.effectiveDate, dueDate: cleanDate(payable.due_date), paidAt: fact.paidAt,
+      amount: fact.amount, party: supplier?.trade_name || supplier?.legal_name || "Fornecedor",
       reference: payable.document || payable.notes || "Conta a pagar", installment: payable.installment_label || "—", account: payable.paid_account_name || "—",
       origin: originLabel(payable.source_system, "Contas a Pagar"), link: "/financeiro/contas-a-pagar",
     };
   });
-  const receivableEntries: CashEntry[] = receivables.map((receivable) => {
-    const client = relatedOne(receivable.clients); const unit = relatedOne(receivable.units); const sale = relatedOne(receivable.sales); const paid = receivable.status === "paid";
+  const receivableEntries: CashEntry[] = financialTitleEntries(receivables,"AR",cashRows).map((fact) => {
+    const receivable=fact.source;
+    const client = relatedOne(receivable.clients); const unit = relatedOne(receivable.units); const sale = relatedOne(receivable.sales);
     return {
-      id: `in-${receivable.id}`, direction: "in", situation: paid ? "realized" : "forecast",
-      effectiveDate: cleanDate(paid ? receivable.paid_at : receivable.due_date), dueDate: cleanDate(receivable.due_date), paidAt: cleanDate(receivable.paid_at) || null,
-      amount: Number(paid ? receivable.paid_amount ?? receivable.adjusted_amount ?? receivable.amount : receivable.adjusted_amount ?? receivable.amount),
+      id: fact.id, direction: "in", situation: fact.situation,
+      effectiveDate: fact.effectiveDate, dueDate: cleanDate(receivable.due_date), paidAt: fact.paidAt,
+      amount: fact.amount,
       party: client?.name || "Cliente", reference: `${unit?.code ? `Unidade ${unit.code}` : "Unidade"}${sale?.number ? ` · Venda ${sale.number}` : ""}`,
       installment: `${categoryLabels[receivable.category] || receivable.description} · ${receivable.sequence_number}/${receivable.sequence_total}`,
       account: receivable.paid_account_name || "—", origin: originLabel(receivable.source_system, "Contas a Receber"), link: `/comercial/vendas/${receivable.sale_id}`,

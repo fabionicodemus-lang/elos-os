@@ -1,3 +1,4 @@
+import {FINANCE_TITLE_COLUMNS,paidTitlePrincipal,openPrincipalTitleAmount,type FinancialTitleFields} from "@/lib/finance-core/titles.mjs";
 import { loadNativeMeasurementTitles } from "./native-measurement-titles";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 
@@ -108,7 +109,7 @@ type ElectronicInvoiceItem = {
   receipt_item_id: string | null;
 };
 
-type KoperPayable = {
+type KoperPayable = FinancialTitleFields & {
   id: string;
   status: "open" | "paid";
   source_id: string | null;
@@ -148,6 +149,7 @@ export type CostVsBudgetStatus = "ok" | "attention" | "over" | "no_budget" | "un
 
 export type CostVsBudgetRow = WorkingRow & {
   allocatedCost: number;
+  economicEvidencePending: number;
   /** Tudo o que compõe o custo previsto e ainda não foi pago (custo previsto − títulos pagos). */
   unpaidCost: number;
   openCommitment: number;
@@ -441,13 +443,13 @@ export async function loadCostVsBudget({
     fetchAllRows<KoperPayable>(async (from, to) => {
       const { data, error } = await supabase
         .from("payables")
-        .select("id, status, source_id, amount")
+        .select(`id, status, source_id, amount,paid_amount,${FINANCE_TITLE_COLUMNS}`)
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .in("source_system", ["koper_flow", "koper_alma", "koper_bossa"])
         .in("status", ["open", "paid"])
         .range(from, to);
-      return { data: (data ?? []) as KoperPayable[], error };
+      return { data: (data ?? []) as unknown as KoperPayable[], error };
     }),
     fetchAllRows<PayableCostAllocation>(async (from, to) => {
       const { data, error } = await supabase
@@ -575,8 +577,9 @@ export async function loadCostVsBudget({
       allocation.service_name_snapshot ?? "Título financeiro sem serviço identificado",
     );
     const amount = Math.max(0, number(allocation.allocation_amount));
-    if (payable.status === "paid") row.payablePaidCost += amount;
-    else row.payableOpenCost += amount;
+    const principal=number(payable.amount);
+    row.payablePaidCost += principal>0?amount*paidTitlePrincipal(payable)/principal:0;
+    row.payableOpenCost += principal>0?amount*openPrincipalTitleAmount(payable)/principal:0;
 
     const linkedOrderIds = nativeOrderSourceIds(allocation.evidence)
       .map((sourceId) => activePurchaseOrderBySource.get(sourceId))
@@ -664,13 +667,14 @@ export async function loadCostVsBudget({
 
   const resultRows = [...rows.values()]
     .map<CostVsBudgetRow>((row) => {
-      const allocatedCost = row.materialCost + row.serviceCost + row.directCost + row.payablePaidCost - row.nativeMeasurementPaidCost;
+      const allocatedCost = row.materialCost + row.serviceCost + row.directCost;
+      const economicEvidencePending=Math.max(0,row.payablePaidCost-row.nativeMeasurementPaidCost);
       const residualPurchaseOrder = Math.max(
         0,
         row.purchaseOrderCost - row.coveredPurchaseOrderCost - Math.max(0, row.materialCost),
       );
       const openCommitment = row.payableOpenCost + residualPurchaseOrder;
-      const forecastCost = allocatedCost + openCommitment;
+      const forecastCost = allocatedCost + openCommitment + economicEvidencePending;
       const balance = row.budgetAmount - forecastCost;
       const unpaidCost = forecastCost - row.payablePaidCost;
       const consumptionPercent = row.budgetAmount > 0
@@ -680,6 +684,7 @@ export async function loadCostVsBudget({
         ...row,
         stockValue: Math.max(0, row.stockValue),
         allocatedCost,
+        economicEvidencePending,
         unpaidCost,
         openCommitment,
         forecastCost,
@@ -709,6 +714,8 @@ export async function loadCostVsBudget({
     return summary;
   }, emptyTotals());
 
+  const pendingEconomic=resultRows.reduce((sum,row)=>sum+row.economicEvidencePending,0);
+  if(pendingEconomic>0)errors.push(`${pendingEconomic.toFixed(2)} em pagamentos sem prova econômica vinculada; mantidos separadamente do custo incorrido.`);
   totals.payablePaid = resultRows.reduce((sum, row) => sum + row.payablePaidCost, 0);
   totals.payableOpen = resultRows.reduce((sum, row) => sum + row.payableOpenCost, 0) + native.allocations.reduce((sum, a) => sum + a.title.openAllocatedAmount, 0);
   totals.payableAllocated = totals.payablePaid + totals.payableOpen;

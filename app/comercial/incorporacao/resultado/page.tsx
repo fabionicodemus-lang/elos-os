@@ -1,3 +1,4 @@
+import {FINANCE_TITLE_COLUMNS,type FinancialTitleFields} from "@/lib/finance-core/titles.mjs";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { calculateDevelopmentResult } from "@/lib/commercial/development-result.mjs";
@@ -17,8 +18,8 @@ type Profile = { baseline_study_id:string; baseline_metrics:Record<string,unknow
 type Study = { id:string; name:string; commission_pct:number|null; tax_rate_pct:number|null; tax_regime:string|null };
 type Sale = { id:string; unit_id:string|null; total_amount:number; commission_pct:number|null; commission_amount:number|null; status:string; sale_date:string };
 type Unit = { id:string; code:string; status:string; list_price:number|null };
-type Receivable = { id:string; status:string; amount:number; adjusted_amount:number|null; paid_amount:number|null; due_date:string; paid_at:string|null };
-type Payable = { id:string; status:string; amount:number; paid_amount:number|null; due_date:string; paid_at:string|null };
+type Receivable = FinancialTitleFields & { id:string; status:string; amount:number; adjusted_amount:number|null; paid_amount:number|null; due_date:string; paid_at:string|null };
+type Payable = FinancialTitleFields & { id:string; status:string; amount:number; paid_amount:number|null; due_date:string; paid_at:string|null };
 
 type Result = ReturnType<typeof calculateDevelopmentResult>;
 
@@ -105,12 +106,12 @@ export default async function DevelopmentResultPage({ searchParams }: { searchPa
       return { data:(data ?? []) as Unit[], error };
     }),
     fetchAllRows<Receivable>(async (from,to) => {
-      const { data,error } = await supabase.from("receivables").select("id,status,amount,adjusted_amount,paid_amount,due_date,paid_at").eq("company_id",companyId).eq("project_id",projectId).range(from,to);
-      return { data:(data ?? []) as Receivable[], error };
+      const { data,error } = await supabase.from("receivables").select(`id,status,amount,adjusted_amount,paid_amount,due_date,paid_at,${FINANCE_TITLE_COLUMNS}`).eq("company_id",companyId).eq("project_id",projectId).range(from,to);
+      return { data:(data ?? []) as unknown as Receivable[], error };
     }),
     fetchAllRows<Payable>(async (from,to) => {
-      const { data,error } = await supabase.from("payables").select("id,status,amount,paid_amount,due_date,paid_at").eq("company_id",companyId).eq("project_id",projectId).range(from,to);
-      return { data:(data ?? []) as Payable[], error };
+      const { data,error } = await supabase.from("payables").select(`id,status,amount,paid_amount,due_date,paid_at,${FINANCE_TITLE_COLUMNS}`).eq("company_id",companyId).eq("project_id",projectId).range(from,to);
+      return { data:(data ?? []) as unknown as Payable[], error };
     }),
   ]);
 

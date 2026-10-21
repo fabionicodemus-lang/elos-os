@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+const root=process.env.FINANCE7_EVIDENCE_DIR??'docs/financeiro/implementacao-v1/etapa7-calculos/evidencias';
+const read=p=>JSON.parse(fs.readFileSync(p));
+const original=read('tests/financeiro/fixtures/casos_financeiros.json');
+const imported=read(root+'/integracao/casos-obtidos.json');
+const ledger=read(root+'/liquidacoes.json');
+const components=read(root+'/componentes-casos.json');
+const evidence={...Object.fromEntries(imported.cases.filter(c=>c.status==='executado').map(c=>[c.id,c.actual])),...ledger.states};
+const context={implementation_version:'95d659e+etapa7-candidate',executed_at:new Date().toISOString(),environment:'PostgreSQL 17 network=none, dados fictícios; sem homologação nominal, API remota ou produção',fixture_sha256:crypto.createHash('sha256').update(fs.readFileSync('tests/financeiro/fixtures/casos_financeiros.json')).digest('hex')};
+fs.writeFileSync(root+'/casos-obtidos.json',JSON.stringify({execution_context:context,cases:original.cases.map(c=>({id:c.id,status:evidence[c.id]?'executado':'não_executado',actual:evidence[c.id]??null,evidence:evidence[c.id]?['liquidacoes.json ou integracao/integracao.json']:[]}))},null,2)+'\n');
+fs.writeFileSync(root+'/casos-componentes-obtidos.json',JSON.stringify({execution_context:{...context,environment:'Funções puras; execução de CT18/19/21 não certifica persistência ou fluxo integral'},cases:Object.entries(components.states).filter(([id])=>['CT18','CT19','CT21'].includes(id)).map(([id,actual])=>({id,status:'executado',actual,evidence:['componentes.log; componentes-casos.json — funções puras']}))},null,2)+'\n');

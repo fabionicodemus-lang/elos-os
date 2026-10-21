@@ -1,3 +1,4 @@
+import {FINANCE_TITLE_COLUMNS,openTitleAmount,openPrincipalTitleAmount,titleStatusLabel,type FinancialTitleFields} from "@/lib/finance-core/titles.mjs";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
@@ -24,7 +25,7 @@ type SaleOption = {
   clients: Client | Client[] | null;
   units: Unit | Unit[] | null;
 };
-type Receivable = {
+type Receivable = FinancialTitleFields & {
   id: string;
   sale_id: string;
   category: string;
@@ -143,7 +144,7 @@ export default async function PaymentPlansPage({
   let listQuery = supabase
     .from("receivables")
     .select(
-      "id, sale_id, category, description, sequence_number, sequence_total, due_date, amount, adjusted_amount, correction_amount, adjustment_index, correction_base_month, correction_base_value, correction_reference_month, correction_reference_value, correction_locked, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name, clients(id, name, tax_id), units(id, code), sales(id, number, total_amount)",
+      `id, sale_id, category, description, sequence_number, sequence_total, due_date, amount, adjusted_amount, correction_amount, adjustment_index, correction_base_month, correction_base_value, correction_reference_month, correction_reference_value, correction_locked, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name, clients(id, name, tax_id), units(id, code), sales(id, number, total_amount),${FINANCE_TITLE_COLUMNS}`,
       { count: "exact" },
     )
     .eq("company_id", companyId)
@@ -214,6 +215,9 @@ export default async function PaymentPlansPage({
     unit_code: relatedOne(sale.units)?.code ?? "Unidade",
   }));
 
+  const bankResult = await supabase.from("finance_bank_accounts").select("id,label").eq("company_id",companyId).eq("status","active").order("label");
+  if (bankResult.error) throw new Error(bankResult.error.message);
+  const bankAccounts = bankResult.data ?? [];
   return (
     <AppShell
       activeGroup="commercial"
@@ -323,15 +327,15 @@ export default async function PaymentPlansPage({
                       receivable.correction_reference_value ? `CUB ${decimal(receivable.correction_reference_value, 6)}` : "",
                       receivable.correction_locked ? "histórico" : "automático",
                     ].filter(Boolean).join(" · ");
-                    return (
+                      return (
                       <tr key={receivable.id}>
                         <td><strong>{unit?.code || "—"}</strong><span>{client?.name || "Cliente"}</span><small>Venda {sale?.number}</small></td>
                         <td><strong>{categoryLabels[receivable.category] || receivable.category}</strong><span>{receivable.description}</span><small>{receivable.sequence_number} / {receivable.sequence_total}</small></td>
                         <td>{dateBR(receivable.due_date)}</td>
                         <td><strong>{money(receivable.amount)}</strong><small>lançamento original</small></td>
-                        <td><strong>{money(updatedValue)}</strong><small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small></td>
+                        <td><strong>{money(updatedValue)}</strong><small>Saldo: {money(openTitleAmount(receivable))}</small><small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small></td>
                         <td><span>{receivable.adjustment_index || "Sem correção"}</span><small>{correctionDetails}</small>{receivable.interest_rate_monthly ? <small>{receivable.interest_rate_monthly}% a.m.</small> : null}</td>
-                        <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{overdue ? "Vencida" : receivable.status === "open" ? "Em aberto" : receivable.status === "paid" ? "Recebida" : "Cancelada"}</span></td>
+                        <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{titleStatusLabel(receivable)}</span></td>
                         <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : "—"}</span><small>{receivable.paid_at ? `${money(receivable.paid_amount ?? updatedValue)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
                         <td>
                           {canManage && receivable.status === "open" ? (
@@ -339,16 +343,16 @@ export default async function PaymentPlansPage({
                               <details>
                                 <summary>Baixar</summary>
                                 <form action={markReceivablePaid}>
-                                  <input type="hidden" name="receivable_id" value={receivable.id} />
+                                  <input type="hidden" name="receivable_id" value={receivable.id} /><input type="hidden" name="command_id" value={crypto.randomUUID()} />
                                   <input type="hidden" name="sale_id" value={receivable.sale_id} />
                                   <label>Data<input name="paid_at" type="date" defaultValue={today} required /></label>
-                                  <label>Valor<input name="paid_amount" defaultValue={inputMoney(updatedValue)} required /></label>
-                                  <label>Conta<input name="paid_account_name" /></label>
+                                  <label>Valor<input name="paid_amount" defaultValue={inputMoney(openPrincipalTitleAmount(receivable))} required /></label>
+                                  <label>Conta<select name="bank_account_id" required><option value="">Selecione</option>{bankAccounts.map(account=><option key={account.id} value={account.id}>{account.label}</option>)}</select></label><label>Motivo<input name="reason" minLength={5} defaultValue="Recebimento de parcela" required /></label>
                                   <button type="submit">Confirmar</button>
                                 </form>
                               </details>
                               <form action={cancelReceivable}>
-                                <input type="hidden" name="receivable_id" value={receivable.id} />
+                                <input type="hidden" name="receivable_id" value={receivable.id} /><input type="hidden" name="command_id" value={crypto.randomUUID()} />
                                 <input type="hidden" name="sale_id" value={receivable.sale_id} />
                                 <button className="table-action" type="submit">Cancelar</button>
                               </form>

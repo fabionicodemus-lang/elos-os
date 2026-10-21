@@ -1,3 +1,6 @@
+import { financialTitleEntries, type SettlementCashRow } from "@/lib/finance-core/cash.mjs";
+import { loadSettlementCash } from "@/lib/finance-core/server";
+import { FINANCE_TITLE_COLUMNS, type FinancialTitleFields } from "@/lib/finance-core/titles.mjs";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -46,7 +49,7 @@ type SalesSummary = { active_count: number; total_amount: number; average_ticket
 type PayablesSummary = { open_count: number; open_amount: number; paid_amount: number };
 type ReceivablesSummary = { open_count: number; open_amount: number; paid_amount: number; overdue_count: number };
 type AssistanceSummary = { overdue_count: number; urgent_count: number; open_count: number };
-type PayableRow = {
+type PayableRow = FinancialTitleFields & {
   id: string;
   project_id: string | null;
   due_date: string;
@@ -55,7 +58,7 @@ type PayableRow = {
   paid_at: string | null;
   paid_amount: number | null;
 };
-type ReceivableRow = {
+type ReceivableRow = FinancialTitleFields & {
   id: string;
   project_id: string | null;
   due_date: string;
@@ -136,10 +139,6 @@ function monthKey(value: string) {
 
 function monthLabel(value: string) {
   return new Intl.DateTimeFormat("pt-BR", { month: "short", year: "2-digit", timeZone: "UTC" }).format(parseDate(value)).replace(" de ", "/").replace(".", "");
-}
-
-function dateBR(value: string | null | undefined) {
-  return value ? new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(parseDate(value)) : "—";
 }
 
 function money(value: number | null | undefined) {
@@ -269,23 +268,17 @@ function buildPhysicalMonths(
   return rows;
 }
 
-function buildCashFlowMonths(payables: PayableRow[], receivables: ReceivableRow[], today: string): CashFlowMonth[] {
+function buildCashFlowMonths(payables: PayableRow[], receivables: ReceivableRow[], today: string,cashRows: SettlementCashRow[]): CashFlowMonth[] {
   const start = addMonths(`${today.slice(0, 7)}-01`, -3);
   let cumulative = 0;
   return Array.from({ length: 9 }, (_, index) => {
     const key = monthKey(addMonths(start, index));
-    const received = receivables
-      .filter((item) => item.status === "paid" && item.paid_at && monthKey(item.paid_at) === key)
-      .reduce((sum, item) => sum + Number(item.paid_amount ?? item.adjusted_amount ?? item.amount), 0);
-    const receivable = receivables
-      .filter((item) => item.status === "open" && monthKey(item.due_date) === key)
-      .reduce((sum, item) => sum + Number(item.adjusted_amount ?? item.amount), 0);
-    const paid = payables
-      .filter((item) => item.status === "paid" && item.paid_at && monthKey(item.paid_at) === key)
-      .reduce((sum, item) => sum + Number(item.paid_amount ?? item.amount), 0);
-    const payable = payables
-      .filter((item) => item.status === "open" && monthKey(item.due_date) === key)
-      .reduce((sum, item) => sum + Number(item.amount), 0);
+    const inputs=financialTitleEntries(receivables,"AR",cashRows).filter(x=>monthKey(x.effectiveDate)===key);
+    const outputs=financialTitleEntries(payables,"AP",cashRows).filter(x=>monthKey(x.effectiveDate)===key);
+    const received=inputs.filter(x=>x.situation==='realized').reduce((s,x)=>s+x.amount,0);
+    const receivable=inputs.filter(x=>x.situation==='forecast').reduce((s,x)=>s+x.amount,0);
+    const paid=outputs.filter(x=>x.situation==='realized').reduce((s,x)=>s+x.amount,0);
+    const payable=outputs.filter(x=>x.situation==='forecast').reduce((s,x)=>s+x.amount,0);
     cumulative += received + receivable - paid - payable;
     return { key, label: monthLabel(`${key}-01`), received, receivable, paid, payable, cumulative };
   });
@@ -389,13 +382,13 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
     : Promise.resolve({ data: null, error: null });
 
   let payablesPromise = can("payables.view")
-    ? supabase.from("payables").select("id,project_id,due_date,amount,status,paid_at,paid_amount")
+    ? supabase.from("payables").select(`id,project_id,due_date,amount,status,paid_at,paid_amount,${FINANCE_TITLE_COLUMNS}`)
       .eq("company_id", activeCompany.id).neq("status", "cancelled").gte("due_date", cashStart).lte("due_date", cashEnd).order("due_date").limit(10000)
     : null;
   if (payablesPromise && projectId) payablesPromise = payablesPromise.eq("project_id", projectId);
 
   let receivablesPromise = can("receivables.view")
-    ? supabase.from("receivables").select("id,project_id,due_date,amount,adjusted_amount,status,paid_at,paid_amount")
+    ? supabase.from("receivables").select(`id,project_id,due_date,amount,adjusted_amount,status,paid_at,paid_amount,${FINANCE_TITLE_COLUMNS}`)
       .eq("company_id", activeCompany.id).neq("status", "cancelled").gte("due_date", cashStart).lte("due_date", cashEnd).order("due_date").limit(10000)
     : null;
   if (receivablesPromise && projectId) receivablesPromise = receivablesPromise.eq("project_id", projectId);
@@ -527,7 +520,8 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
   const physical = calculatePhysicalSnapshot(activities, measurements, activityWeights, today, selectedBaseline);
   const physicalMonths = buildPhysicalMonths(activities, measurements, activityWeights, selectedBaseline, today);
   const stageRows = buildStageRows(activities, measurements, activityWeights, services, today, selectedBaseline);
-  const cashMonths = buildCashFlowMonths(payables, receivables, today);
+  const cashRows = can("payables.view") || can("receivables.view") ? await loadSettlementCash(supabase,activeCompany.id,projectId) : [];
+  const cashMonths = buildCashFlowMonths(payables, receivables, today,cashRows);
   const activeQuality = qualityInspections.filter((item) => item.status !== "cancelled");
   const pendingQuality = activeQuality.filter((item) => ["pending", "in_progress"].includes(item.status));
   const scoredQuality = activeQuality.filter((item) => item.first_inspection_score !== null);

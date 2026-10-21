@@ -1,5 +1,6 @@
 "use server";
 
+import {revalidateFinancialViews} from "@/lib/finance-core/revalidate";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { financialInstallmentSummary, type FinancialInstallmentDraft } from "@/lib/financial-installments";
@@ -119,23 +120,24 @@ export async function markPayablePaid(formData: FormData) {
     .eq("company_id", companyId)
     .maybeSingle();
 
-  if (!payableResult.data || payableResult.data.status !== "open") {
+  if (!payableResult.data) {
     redirect(pageUrl("A conta não está disponível para pagamento."));
   }
   if (projectId && payableResult.data.project_id !== projectId) {
     redirect(pageUrl("A conta pertence a outro empreendimento. Selecione a obra correta antes de pagar."));
   }
 
-  const result = await supabase.rpc("pay_finance_payable", {
-    p_company_id: companyId,
-    p_project_id: payableResult.data.project_id,
-    p_payable_id: payableId,
-    p_account_id: bankAccountId,
-    p_paid_at: paidAt,
-    p_paid_amount: paidAmount,
+  const commandId = String(formData.get("command_id") ?? "");
+  const result = await supabase.rpc("settle_finance_titles", {
+    p_company: companyId, p_command: commandId, p_account: bankAccountId, p_date: paidAt,
+    p_lines: [{ type: "AP", title_id: payableId, principal: paidAmount,
+      interest: parseMoney(formData.get("interest_amount") ?? "0"), discount: parseMoney(formData.get("discount_amount") ?? "0"),
+      evidence: String(formData.get("evidence") ?? "") }],
+    p_reason: String(formData.get("reason") ?? "Registro financeiro de título"),
   });
 
   if (result.error) redirect(pageUrl(result.error.message));
+  revalidateFinancialViews();
   revalidatePath(PATH);
   revalidatePath("/financeiro/contas-bancarias");
   revalidatePath("/financeiro/fluxo-de-caixa");
@@ -179,4 +181,17 @@ export async function cancelPayable(formData: FormData) {
   if (!data) redirect(pageUrl("A conta foi alterada por outro usuário. Atualize a tela e tente novamente."));
   revalidatePath(PATH);
   redirect(pageUrl("Conta cancelada.", "success"));
+}
+
+export async function reversePayableSettlement(formData: FormData){
+ const {supabase,companyId}=await requireCompanyPermission("payables.manage");
+ const choice=String(formData.get("discount_decision")??"");
+ const amount=parseMoney(formData.get("refund_amount"));
+ if(!["keep","revoke"].includes(choice)||!Number.isFinite(amount)||amount<0)redirect(pageUrl("Informe a condição do desconto e o valor da devolução."));
+ const {error}=await supabase.rpc("reverse_finance_settlement",{
+  p_company:companyId,p_event:String(formData.get("event_id")??""),p_command:String(formData.get("command_id")??""),
+  p_date:String(formData.get("effective_date")??""),p_reason:String(formData.get("reason")??""),p_keep_discount:choice==="keep",p_confirmed_refund:amount,p_evidence:String(formData.get("evidence")??"")||null,
+ });
+ if(error)redirect(pageUrl(error.message));
+ revalidateFinancialViews();redirect(pageUrl("Estorno registrado. O caixa só muda pelo valor de devolução informado com evidência.","success"));
 }

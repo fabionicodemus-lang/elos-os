@@ -1,0 +1,2 @@
+export type SettlementCashRow={event_id:string;company_id:string;project_id:string;title_type:string;title_id:string;effective_date:string;created_at:string;cash_signed:number;cash_kind:string};
+export function financialTitleEntries<T extends {id:string;status:string;finance_managed?:boolean}>(rows:T[],type:string,cashRows?:SettlementCashRow[]):{id:string;titleId:string;type:string;situation:'forecast'|'realized';effectiveDate:string;dueDate:string;paidAt:string|null;amount:number;cashKind:string;source:T}[];

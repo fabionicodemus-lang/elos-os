@@ -1,3 +1,4 @@
+import {FINANCE_TITLE_COLUMNS,openTitleAmount,openPrincipalTitleAmount,titleStatusLabel,type FinancialTitleFields} from "@/lib/finance-core/titles.mjs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
@@ -57,7 +58,7 @@ type Sale = {
     | null;
 };
 
-type Receivable = {
+type Receivable = FinancialTitleFields & {
   id: string;
   category: string;
   description: string;
@@ -182,7 +183,7 @@ export default async function SaleDetailPage({
     supabase
       .from("receivables")
       .select(
-        "id, category, description, sequence_number, sequence_total, due_date, amount, adjusted_amount, correction_amount, adjustment_index, correction_base_month, correction_base_value, correction_reference_month, correction_reference_value, correction_locked, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name",
+        `id, category, description, sequence_number, sequence_total, due_date, amount, adjusted_amount, correction_amount, adjustment_index, correction_base_month, correction_base_value, correction_reference_month, correction_reference_value, correction_locked, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name,${FINANCE_TITLE_COLUMNS}`,
       )
       .eq("company_id", companyId)
       .eq("sale_id", saleId)
@@ -214,7 +215,7 @@ export default async function SaleDetailPage({
   const project = relatedOne(sale.projects);
   const clients = (clientsResult.data ?? []) as Client[];
   const units = (unitsResult.data ?? []) as Unit[];
-  const receivables = (receivablesResult.data ?? []) as Receivable[];
+  const receivables = (receivablesResult.data ?? []) as unknown as Receivable[];
   const correctionIndices = (correctionIndicesResult.data ?? []) as CorrectionIndex[];
   const defaultCorrectionIndexId = correctionIndices.find((index) => index.code === "CUB-SC")?.id ?? "";
   const summary = (summaryResult.data ?? {
@@ -233,6 +234,9 @@ export default async function SaleDetailPage({
   const canManagePlan = receivablesManageResult.data === true || privileged;
   const returnPath = `/comercial/vendas/${saleId}`;
 
+  const bankResult = await supabase.from("finance_bank_accounts").select("id,label").eq("company_id",companyId).eq("status","active").order("label");
+  if (bankResult.error) throw new Error(bankResult.error.message);
+  const bankAccounts = bankResult.data ?? [];
   return (
     <AppShell
       activeGroup="commercial"
@@ -377,7 +381,6 @@ export default async function SaleDetailPage({
             </thead>
             <tbody>
               {receivables.map((receivable) => {
-                const overdue = receivable.status === "open" && receivable.due_date < today;
                 const updatedValue = Number(receivable.adjusted_amount ?? receivable.amount);
                 const correctionDetails = [
                   receivable.correction_base_month ? `base ${monthBR(receivable.correction_base_month)}` : "",
@@ -387,7 +390,7 @@ export default async function SaleDetailPage({
                   receivable.correction_locked ? "valor histórico" : "automático",
                 ].filter(Boolean).join(" · ");
 
-                return (
+                  return (
                   <tr key={receivable.id}>
                     <td><span>{categoryLabels[receivable.category] || "Outra"}</span></td>
                     <td><strong>{receivable.description}</strong></td>
@@ -395,7 +398,7 @@ export default async function SaleDetailPage({
                     <td>{dateBR(receivable.due_date)}</td>
                     <td><strong>{money(receivable.amount)}</strong><small>lançamento original</small></td>
                     <td>
-                      <strong>{money(updatedValue)}</strong>
+                      <strong>{money(updatedValue)}</strong><small>Saldo: {money(openTitleAmount(receivable))}</small>
                       <small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small>
                       {receivable.status === "paid" ? <small>Recebido: {money(receivable.paid_amount)}</small> : null}
                     </td>
@@ -404,24 +407,24 @@ export default async function SaleDetailPage({
                       <small>{correctionDetails}</small>
                       {receivable.interest_rate_monthly ? <small>{receivable.interest_rate_monthly}% a.m.</small> : null}
                     </td>
-                    <td><span className={`status-badge ${receivable.status}`}>{receivable.status === "paid" ? "Recebida" : receivable.status === "cancelled" ? "Cancelada" : overdue ? "Vencida" : "Em aberto"}</span></td>
+                    <td><span className={`status-badge ${receivable.status}`}>{titleStatusLabel(receivable)}</span></td>
                     <td>
                       {canManagePlan && receivable.status === "open" ? (
                         <div className="payable-actions">
                           <details>
                             <summary>Baixar</summary>
                             <form action={markReceivablePaid}>
-                              <input type="hidden" name="receivable_id" value={receivable.id} />
+                              <input type="hidden" name="receivable_id" value={receivable.id} /><input type="hidden" name="command_id" value={crypto.randomUUID()} />
                               <input type="hidden" name="sale_id" value={sale.id} />
                               <input type="hidden" name="return_path" value={returnPath} />
                               <label>Data recebida<input name="paid_at" type="date" defaultValue={today} required /></label>
-                              <label>Valor recebido<input name="paid_amount" inputMode="decimal" defaultValue={inputMoney(updatedValue)} required /></label>
-                              <label>Conta / banco<input name="paid_account_name" /></label>
+                              <label>Valor recebido<input name="paid_amount" inputMode="decimal" defaultValue={inputMoney(openPrincipalTitleAmount(receivable))} required /></label>
+                              <label>Conta<select name="bank_account_id" required><option value="">Selecione</option>{bankAccounts.map(account=><option key={account.id} value={account.id}>{account.label}</option>)}</select></label><label>Motivo<input name="reason" minLength={5} defaultValue="Recebimento de parcela" required /></label>
                               <button type="submit">Registrar recebimento</button>
                             </form>
                           </details>
                           <form action={cancelReceivable}>
-                            <input type="hidden" name="receivable_id" value={receivable.id} />
+                            <input type="hidden" name="receivable_id" value={receivable.id} /><input type="hidden" name="command_id" value={crypto.randomUUID()} />
                             <input type="hidden" name="sale_id" value={sale.id} />
                             <input type="hidden" name="return_path" value={returnPath} />
                             <button className="table-action" type="submit">Cancelar</button>

@@ -1,3 +1,4 @@
+import { FINANCE_TITLE_COLUMNS, type FinancialTitleFields } from "@/lib/finance-core/titles.mjs";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { buildDevelopmentCostSummary, type DevelopmentCostSummary } from "./summary.mjs";
 
@@ -6,7 +7,7 @@ type SupabaseClientLike = Awaited<ReturnType<(typeof import("@/lib/workspace"))[
 type Center = { id: string; code: string; description: string; development_cost_category: string };
 type Budget = { service_id: string; budget_amount: number; source: string | null };
 type Allocation = { payable_id: string; service_id: string | null; allocation_amount: number };
-type Payable = { id: string; status: string; amount: number; paid_amount: number | null };
+type Payable = FinancialTitleFields & { id: string; status: string; amount: number; paid_amount: number | null };
 
 export type DevelopmentCostContext = DevelopmentCostSummary & { errors: string[] };
 
@@ -58,11 +59,11 @@ export async function loadDevelopmentCosts({
   for (let index = 0; index < payableIds.length; index += 150) {
     const { data, error } = await supabase
       .from("payables")
-      .select("id, status, amount, paid_amount")
+      .select(`id, status, amount, paid_amount,${FINANCE_TITLE_COLUMNS}`)
       .eq("company_id", companyId)
       .in("id", payableIds.slice(index, index + 150));
     if (error?.message) errors.push(error.message);
-    payables.push(...((data ?? []) as Payable[]));
+    payables.push(...((data ?? []) as unknown as Payable[]));
   }
 
   return {

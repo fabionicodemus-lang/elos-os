@@ -1,4 +1,6 @@
-export type PayableSummaryRow = {
+import type {FinancialTitleFields} from "../finance-core/titles.mjs";
+import type {SettlementCashRow} from "../finance-core/cash.mjs";
+export type PayableSummaryRow = FinancialTitleFields & {
   id: string;
   status: string;
   dueDate: string | null;
@@ -10,7 +12,7 @@ export type PayableSummaryRow = {
   installment: string | null;
 };
 
-export type ReceivableSummaryRow = {
+export type ReceivableSummaryRow = FinancialTitleFields & {
   id: string;
   status: string;
   dueDate: string | null;
@@ -61,15 +63,16 @@ export function addMonthsKey(monthKey: string, months: number): string;
 
 export function summarizePayables(
   rows: PayableSummaryRow[],
-  options?: { today: string; from?: string | null; to?: string | null; situation?: string | null; supplierText?: string | null; limit?: number | null },
+  options?: { cashRows?:SettlementCashRow[];today: string; from?: string | null; to?: string | null; situation?: string | null; supplierText?: string | null; limit?: number | null },
 ): JsonSummary;
 
 export function summarizeReceivables(
   rows: ReceivableSummaryRow[],
-  options?: { today: string; from?: string | null; to?: string | null; situation?: string | null; clientText?: string | null; limit?: number | null },
+  options?: { cashRows?:SettlementCashRow[];today: string; from?: string | null; to?: string | null; situation?: string | null; clientText?: string | null; limit?: number | null },
 ): JsonSummary;
 
 export function buildCashflowMonths(input: {
+  cashRows?:SettlementCashRow[];
   payables?: PayableSummaryRow[];
   receivables?: ReceivableSummaryRow[];
   engineeringMonths?: Array<{ key: string; engineeringProjected: number }>;

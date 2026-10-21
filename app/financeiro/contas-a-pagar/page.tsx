@@ -1,7 +1,9 @@
+import { FINANCE_TITLE_COLUMNS, openTitleAmount, openPrincipalTitleAmount, titleStatusLabel, type FinancialTitleFields } from "@/lib/finance-core/titles.mjs";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
-import { cancelPayable, markPayablePaid } from "./actions";
+import {fetchAllRows} from "@/lib/supabase-pagination";
+import { cancelPayable, markPayablePaid, reversePayableSettlement } from "./actions";
 import { PayableCreateForm } from "./payable-create-form";
 import { resolveDateRange } from "@/lib/date-range";
 import { requireCompanyPermission } from "@/lib/workspace";
@@ -13,7 +15,7 @@ type Supplier = {
   tax_id: string | null;
 };
 
-type Payable = {
+type Payable = FinancialTitleFields & {
   id: string;
   document: string | null;
   due_date: string;
@@ -109,7 +111,7 @@ export default async function PayablesPage({
 
   let listQuery = supabase
     .from("payables")
-    .select("id, document, due_date, amount, status, installment_label, notes, paid_at, paid_amount, paid_account_name, source_system, source_category, beneficiary_name, beneficiary_tax_id, suppliers(id, legal_name, trade_name, tax_id)", { count: "exact" })
+    .select(`id, document, due_date, amount, status, installment_label, notes, paid_at, paid_amount, paid_account_name, source_system, source_category, beneficiary_name, beneficiary_tax_id, suppliers(id, legal_name, trade_name, tax_id),${FINANCE_TITLE_COLUMNS}`, { count: "exact" })
     .eq("company_id", companyId)
     .order("due_date", { ascending: false })
     .range(fromRow, toRow);
@@ -128,14 +130,16 @@ export default async function PayablesPage({
     listQuery = listQuery.or(`document.ilike.%${safe}%,notes.ilike.%${safe}%,installment_label.ilike.%${safe}%,beneficiary_name.ilike.%${safe}%,beneficiary_tax_id.ilike.%${safe}%`);
   }
 
-  const [projectResult, suppliersResult, listResult, summaryResult, manageResult] = await Promise.all([
+  const [projectResult, suppliersResult, listResult, summaryResult, manageResult, bankResult] = await Promise.all([
     projectQuery,
     suppliersQuery,
     listQuery,
     supabase.rpc("payables_summary", { p_company_id: companyId, p_project_id: projectId }),
     supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "payables.manage" }),
+    supabase.from("finance_bank_accounts").select("id,label").eq("company_id",companyId).eq("status","active").order("label"),
   ]);
 
+  const bankAccounts = bankResult.data ?? [];
   const schemaMissing = listResult.error?.code === "42P01" || listResult.error?.message.includes("payables");
   const payables = (listResult.data ?? []) as unknown as Payable[];
   const suppliers = (suppliersResult.data ?? []) as Supplier[];
@@ -151,6 +155,12 @@ export default async function PayablesPage({
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const totalPages = Math.max(1, Math.ceil((listResult.count ?? 0) / PAGE_SIZE));
   const project = projectResult.data;
+  type SettlementHistory={id:string;title_id:string;principal:number;interest:number;discount:number;noncash:number;excess_credit:number;credit_class:string|null;finance_settlement_events:{id:string;kind:string;reversal_of:string|null;effective_date:string;reason:string;created_by:string;created_at:string}|{id:string;kind:string;reversal_of:string|null;effective_date:string;reason:string;created_by:string;created_at:string}[]};
+  const historyResult=payables.length?await fetchAllRows<SettlementHistory>(async(from,to)=>{
+    const {data,error}=await supabase.from("finance_settlement_lines").select("id,title_id,principal,interest,discount,noncash,excess_credit,credit_class,finance_settlement_events!inner(id,kind,reversal_of,effective_date,reason,created_by,created_at)").eq("company_id",companyId).eq("title_type","AP").in("title_id",payables.map(x=>x.id)).order("created_at").order("id").range(from,to);
+    return {data:(data??[]) as unknown as SettlementHistory[],error};
+  }):{data:[],error:null};
+  if(historyResult.error)throw new Error(historyResult.error.message);
   const today = new Date().toISOString().slice(0, 10);
   const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Todas as obras";
   const paginationQuery = `q=${encodeURIComponent(queryText)}&status=${status}&supplier=${supplierId}&period=${dateRange.preset}&from=${dateFrom}&to=${dateTo}`;
@@ -230,19 +240,31 @@ export default async function PayablesPage({
                         <td><strong>{beneficiaryName}</strong><small>{beneficiaryTaxId}</small></td>
                         <td><span>{payable.document || "—"}</span><small>{[payable.installment_label, origin].filter(Boolean).join(" · ")}</small></td>
                         <td>{dateBR(payable.due_date)}</td>
-                        <td><strong>{money(payable.amount)}</strong></td>
-                        <td><span className={`status-badge ${payable.status}`}>{payable.status === "open" ? "Em aberto" : payable.status === "paid" ? "Pago" : "Cancelado"}</span></td>
+                        <td><strong>{money(payable.amount)}</strong><small>Saldo: {money(openTitleAmount(payable))}</small>{Number(payable.finance_cash_pending)>0?<small>Caixa aguardando reapropriação: {money(payable.finance_cash_pending)}</small>:null}</td>
+                        <td><span className={`status-badge ${payable.status}`}>{titleStatusLabel(payable)}</span></td>
                         <td><span>{payable.paid_at ? dateBR(payable.paid_at) : "—"}</span><small>{payable.paid_at ? `${money(payable.paid_amount ?? payable.amount)}${payable.paid_account_name ? ` · ${payable.paid_account_name}` : ""}` : ""}</small></td>
                         <td>
+                          <details><summary>Histórico de liquidações</summary>{historyResult.data.filter(h=>h.title_id===payable.id).map(h=>{
+                            const event=relatedOne(h.finance_settlement_events);if(!event)return null;
+                            const reversed=historyResult.data.some(other=>relatedOne(other.finance_settlement_events)?.reversal_of===event.id);
+                            return <div key={h.id}><strong>{event.kind==='reversal'?'Estorno':'Liquidação'} · {dateBR(event.effective_date)}</strong><small>Principal {money(h.principal)} · Juros {money(h.interest)} · Desconto {money(h.discount)} · Sem caixa {money(h.noncash)}</small>{Number(h.excess_credit)>0?<small>Crédito identificado: {money(h.excess_credit)} · {h.credit_class}</small>:null}<small>{event.reason} · Autor: {event.created_by} · Registro: {new Intl.DateTimeFormat("pt-BR",{dateStyle:"short",timeStyle:"short",timeZone:"America/Sao_Paulo"}).format(new Date(event.created_at))}</small>
+                            {canManage&&event.kind!=='reversal'&&!reversed?<details><summary>Estornar evento (inclui títulos agrupados)</summary><form action={reversePayableSettlement}>
+                            <input type="hidden" name="event_id" value={event.id}/><input type="hidden" name="command_id" value={crypto.randomUUID()}/>
+                            <label>Data<input name="effective_date" type="date" defaultValue={today} required/></label><label>Motivo<input name="reason" minLength={5} required/></label>
+                            <label>Condição do desconto<select name="discount_decision" required><option value="">Selecione conforme o documento</option><option value="keep">Manter desconto</option><option value="revoke">Revogar desconto</option></select></label>
+                            <label>Devolução bancária comprovada (zero se não houve)<input name="refund_amount" defaultValue="0.00" required/></label><label>Evidência da devolução<input name="evidence"/></label><button type="submit">Registrar estorno</button>
+                            </form></details>:null}</div>;
+                          })}</details>
                           {canManage && payable.status === "open" ? (
                             <div className="payable-actions">
                               <details>
                                 <summary>Baixar</summary>
                                 <form action={markPayablePaid}>
-                                  <input type="hidden" name="payable_id" value={payable.id} />
+                                  <input type="hidden" name="payable_id" value={payable.id} /><input type="hidden" name="command_id" value={crypto.randomUUID()} />
                                   <label>Data<input name="paid_at" type="date" defaultValue={today} required /></label>
-                                  <label>Valor<input name="paid_amount" defaultValue={payable.amount.toFixed(2)} required /></label>
-                                  <label>Conta<input name="paid_account_name" /></label>
+                                  <label>Valor<input name="paid_amount" defaultValue={openPrincipalTitleAmount(payable).toFixed(2)} required /></label>
+                                  <label>Conta<select name="bank_account_id" required><option value="">Selecione</option>{bankAccounts.map(account=><option key={account.id} value={account.id}>{account.label}</option>)}</select></label>
+                                  <label>Juros liquidados<input name="interest_amount" defaultValue="0.00" /></label><label>Desconto<input name="discount_amount" defaultValue="0.00" /></label><label>Documento do desconto<input name="evidence" /></label><label>Motivo<input name="reason" minLength={5} defaultValue="Pagamento de título" required /></label>
                                   <button className="auth-primary" type="submit">Confirmar</button>
                                 </form>
                               </details>
