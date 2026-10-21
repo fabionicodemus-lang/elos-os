@@ -55,6 +55,41 @@ Permissão necessária: `execution.measurements.manage`.
 - cria a medição em **rascunho**; submissão, aprovação e financeiro continuam no fluxo normal;
 - o documento-fonte é preservado como evidência da medição.
 
+## Atualização conversacional do cronograma físico
+
+A Elos IA aceita, nas personas **Engenharia** e **Diretoria**, ordens em português,
+como: *"No fechamento de setembro de 2026, a alvenaria do pavimento 1500
+está concluída; o gesso do 1400 está em 70%; pintura do 600 ainda não começou
+e será iniciada em 03/11/2026."*
+
+A IA usa duas ferramentas: `consultar_atividades_cronograma` (consulta de
+códigos, nomes, locais e percentuais do cadastro) e
+`preparar_atualizacao_cronograma` (preparação de até 25 alterações por cartão).
+
+- Identificação por obra, baseline aprovada, serviço e pavimento. Uma
+  coincidência ambígua ou serviço ausente interrompe a preparação e gera uma
+  pergunta de esclarecimento, nunca uma escolha presumida.
+- Avanço percentual é **acumulado**, de 0 a 100. A IA impede regressão e
+  gravação sobre uma data já medida. Retroações históricas devem ser
+  retificadas pelo fluxo oficial, não sobrescritas silenciosamente.
+- Reprogramação pode mudar início e/ou término. Quando só o início muda,
+  o término é deslocado pela mesma quantidade de dias e é exibido no cartão.
+- Os valores de custos e quantitativos existentes são preservados.
+- Cada cartão mostra **antes / depois**, linha de base e data da medição.
+  Apenas após o clique em **Revisado · lançar no Elos** a ação é executada.
+- No clique, o banco revalida as permissões `execution.schedule.manage`,
+  a linha de base, a identidade das atividades e a última medição.
+  As múltiplas atividades são persistidas **na mesma transação** usando
+  `record_execution_schedule_progress`, ou nenhuma é persistida.
+- A linha de base e o orçamento não são modificados. A proposta tem
+  auditoria via `ai_action_proposals` e as medições via
+  `engineering_schedule_progress_audit`.
+
+Requer a migração `20261021024500_elos_ia_schedule_update.sql`. Para validar
+sem acesso direto ao banco pelo conector, há o workflow
+`Supabase 0101 - Elos IA Cronograma` com conferência de permissão, constraint
+e executor.
+
 ## Personas
 
 | Persona | Consultas | Ações preparáveis |
