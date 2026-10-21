@@ -171,10 +171,11 @@ export default async function ExecutionSchedulePage({
                 Conciliar histórico e replanejamento do Flow (arquivo 12/10/2026)
               </summary>
               <p style={{ color: "#475569", fontSize: 13, lineHeight: 1.6 }}>
-                Importa as medições existentes no arquivo até 06/10/2026 e as datas reprogramadas
-                a partir de outubro. Faz correspondência rigorosa pelas 395 atividades Txxx.
-                A linha de base, valores do orçamento Rev03, dependências e medições já registradas são preservados.
-                Medições não presentes no arquivo (incluindo agosto) não são inventadas.
+                Preserva integralmente as medições do Elos até agosto/2026 e concilia as medições
+                de setembro/outubro do arquivo com o replanejamento a partir de outubro.
+                Confere posição, serviço e datas de linha de base das 395 atividades originais, sem incluir
+                itens extras de mão de obra ou custos. A linha de base, orçamento Rev03 e dependências ficam intocados.
+                Não cria lançamentos de agosto inexistentes na fonte.
               </p>
               {selectedBaseline.status !== "approved" ? (
                 <p className="auth-message error">
