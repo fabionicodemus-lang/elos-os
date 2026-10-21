@@ -164,8 +164,14 @@ export async function importFlowStandaloneHistory(formData: FormData) {
   } catch (error) {
     redirect(resultUrl(error instanceof Error ? error.message : "Não foi possível analisar o HTML.", "error", baselineId));
   }
-  if (snapshot.project.baselineName !== baseline.name) {
-    redirect(resultUrl("Nome da linha de base diferente do arquivo. Importe apenas na baseline de 14/07/2026.", "error", baselineId));
+  // O cronograma de 14/07 pode ter um nome diferente no cadastro do Elos:
+  // CRONO-FLOW-LB01 no sistema e "Baseline 01 — Cronograma 14.07.2026" no HTML.
+  // O nome é um rótulo editável, não uma identidade. A identificação segura usa
+  // companyId, projectId, baselineId, obra/revisão do HTML e TODOS os códigos Txxx
+  // validados abaixo. Não bloqueie a importação por diferença textual de nome.
+  if (!String(snapshot.project.sourceFile ?? "").includes("14.07")
+    || !String(snapshot.project.baselineName ?? "").includes("14.07.2026")) {
+    redirect(resultUrl("O arquivo não identifica o cronograma Flow de 14/07/2026.", "error", baselineId));
   }
 
   const [activities, measurements] = await Promise.all([
