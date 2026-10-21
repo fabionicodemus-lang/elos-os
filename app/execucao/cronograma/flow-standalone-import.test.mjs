@@ -24,7 +24,7 @@ test("parseia a fonte rigorosamente sem executar JS",()=>{
  const parsed=extractFlowSnapshot(html(source()));
  assert.equal(parsed.tasks.length,395);
  assert.throws(()=>extractFlowSnapshot("alert(1)"),/INITIAL_DATA/);
- assert.throws(()=>extractFlowSnapshot(html({...source(),project:{name:"Outro"}})),/Flow Aptos/);
+ assert.throws(()=>extractFlowSnapshot(html({...source(),project:{name:"Outro"}})),/revisão Flow/);
 });
 test("calendário acompanha dias úteis, sábados opcionais e marcos",()=>{
  assert.equal(finishWorkday("2026-10-09",5),"2026-10-15");
