@@ -13,7 +13,7 @@ export type FlowSnapshotTask = {
   measurements: { date: string; percent: number; notes?: string }[];
 };
 export type FlowSnapshot = {
-  project: { name: string; baselineName: string; scheduleRevision: { date: string } };
+  project: { name: string; sourceFile: string; baselineName: string; scheduleRevision: { date: string } };
   tasks: FlowSnapshotTask[];
 };
 export type ElosFlowActivity = {
