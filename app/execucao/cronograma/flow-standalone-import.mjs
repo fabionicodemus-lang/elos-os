@@ -113,7 +113,7 @@ export function prepareFlowImport(state, activities, existingMeasurements) {
     rows.sort((a, b) => a.measurement_date.localeCompare(b.measurement_date));
 
   const rows = [];
-  let skipped = 0, historicalCount = 0, reprogrammed = 0;
+  let skipped = 0, historicalCount = 0, reprogrammed = 0, correctedProgress = 0;
   for (let i = 0; i < state.tasks.length; i++) {
     const task = state.tasks[i], activity = ordered[i];
     const prior = byActivity.get(activity.id) ?? [];
@@ -134,17 +134,21 @@ export function prepareFlowImport(state, activities, existingMeasurements) {
       const key = activity.id + "|" + row.date;
       if (occupied.has(key)) { skipped++; continue; }
       const previous = prior.filter(m => m.measurement_date <= row.date).at(-1);
-      if (previous && Number(previous.progress_percent) > row.percent)
-        throw new Error("Avanço retrocederia na atividade " + activity.code + " em "
-          + row.date + " (" + previous.progress_percent + "% → " + row.percent + "%). Nada foi alterado.");
+      // O Elos contém avanços antigos importados até agosto que divergem da
+      // conferência de campo. Registrar CORREÇÃO auditável na data da nova fonte,
+      // sem apagar/alterar a medição anterior. A nova medição passa a valer
+      // para os painéis de setembro/outubro em diante.
+      const correction = !!(previous && Number(previous.progress_percent) > row.percent);
+      if (correction) correctedProgress++;
       const start = row.date < CUTOFF ? task.baselineStart : task.start;
       const finish = start === task.baselineStart ? activity.planned_finish
         : finishWorkday(start, task.durationDays, {
           ...task, ...(state.settings ?? {}), holidays: state.holidays, recesses: state.recesses
         });
       const quantity = Number(activity.quantity_snapshot ?? 0);
-      const actualStart = validIso(task.actualStart) && task.actualStart <= row.date
-        ? task.actualStart : (previous?.actual_start ?? (row.percent > 0 ? row.date : null));
+      const actualStart = row.percent <= 0 ? null
+        : (validIso(task.actualStart) && task.actualStart <= row.date ? task.actualStart
+          : correction ? row.date : (previous?.actual_start ?? row.date));
       const actualFinish = row.percent === 100
         ? (validIso(task.actualEnd) && task.actualEnd <= row.date
           ? task.actualEnd : (previous?.actual_finish ?? row.date)) : null;
@@ -158,7 +162,10 @@ export function prepareFlowImport(state, activities, existingMeasurements) {
         team_count: previous?.team_count ?? null,
         current_start: start, current_finish: finish,
         actual_start: actualStart, actual_finish: actualFinish,
-        notes: SOURCE + " · " + row.notes,
+        notes: SOURCE + " · " + (correction
+          ? "RETIFICAÇÃO AUDITADA: medição anterior " + previous.progress_percent
+            + "% diverge da fonte validada; novo avanço " + row.percent
+            + "% em " + row.date + ". Medição anterior preservada. · " : "") + row.notes,
       };
       rows.push(incoming);
       occupied.add(key);
@@ -172,6 +179,6 @@ export function prepareFlowImport(state, activities, existingMeasurements) {
   return { rows, summary: {
     matchedActivities: state.tasks.length,
     importedMeasurements: historicalCount, newReplans: reprogrammed,
-    existingPreserved: skipped, sourceMeasuredThrough: CUTOFF
+    existingPreserved: skipped, correctedProgress, sourceMeasuredThrough: CUTOFF
   }};
 }
