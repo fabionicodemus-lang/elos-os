@@ -1,0 +1,30 @@
+{
+  "created_at": "2026-10-21T15:06:45.844219-03:00",
+  "base_commit": "28180e0ed81823af49ebea90899672e755ce31dd",
+  "branch": "docs/financeiro-v1-t01-t02",
+  "files_sha256": {
+    "Elos_OS_Quadro_Implementacao_v1_T01_T02.xlsx": "7bd571fb811743467e1e484e333087d779796595ba2089527b205744cf75f1f3",
+    "README.md": "223edeaedf9d7e0daa2540a7080f3e4573e8157e5834ebaddea740290861dbe2",
+    "acompanhamento.md": "bbdf734778b2413e3f9f647a5829f52eb72e6320736a76c432c196b12b0ccaae",
+    "casos-e-testes.md": "a8e7304fce3f6eebf412a25d38ed143d1ba155eb67ac23f23822333af4ef44df",
+    "comandos.md": "aa2df9aa8df85a318462a040dfd2ff24807884a9d962c4b7d5cea82e3c028f10",
+    "evidencias/contexto.json": "64c6400ce5473fce0b86da639ca792c67f8ae6e0936ebf6d12e2e78eb193001c",
+    "evidencias/fontes.json": "093a88e3b908f02277a57170cb53c7dde8f5c43a0265f3a1a44fdc889d570e7e",
+    "evidencias/sondas.json": "1a566209c324840aa9bd8207a8364d16205df5963d5ec12f191d5c69acffac91",
+    "evidencias/testes-existentes.log": "9294806a2c15cb14ffad9044d22806945a9af4300b63dc8192c435827f650e52",
+    "evidencias/verificacao-quadro.json": "00c019e1670aa3379a5691c6f56068887c6cf8baaca6f00ebf778dddaf279790",
+    "indicadores.md": "df7521de2f8e94c580bcf5a85d17812594209e73377600bfa27ea9592d5d614f",
+    "inventario.md": "5daf600b06fd15d89ad7923fad62471935c9f26e7695a829a3c01c35f89d257e",
+    "jobs.md": "8ad8bfb68dcd73ff66f7b8f3af1b330d707817500566d0fd197ccf028fdd326c",
+    "matriz-diagnostico.csv": "4ad9e69732f6e889d271968868304befe5d0fe91a809076b34ad80bf73d96858",
+    "matriz-diagnostico.json": "5287116a25659f5eecf6efef1b114a312f6ad390a3f18a8815e65516e7c8344f",
+    "matriz-diagnostico.md": "3d7ef86a977c60c4539acd8deb929c656ed82885acb392e30bcf57baead339c9",
+    "parametros.json": "b0048830e861484d980b52cd8e9c91707db41d1336a4c52d30bcfecccdad339c",
+    "parametros.md": "ce26b784bdf396befd66f8789e5415307aabb16374b2fab0d190bb05fcc1aa25",
+    "referencias/Elos_OS_Regras_Financeiras_v0_1.docx": "30f19b5ef98157d72c32a9c471c8893bac3b17a60167d6a417a346c6efb36c28",
+    "scripts/conferir_fontes.py": "78cc6fb6c84c7da51fc6405485370fbd4bea12e617469e05c991f18677cee66a",
+    "scripts/sondas.mjs": "4f325af988a2155a754a7652f990bbe967b5fa3febd6e4550dbecdcbd1e03ce8",
+    "scripts/verificar_entrega.py": "489256e8fa5b7a6b8847ee420199532e6d06915bf76f396efc1885c9105252c7"
+  },
+  "scope": "T01/T02, documentação e diagnóstico isolado; não é publicação nem aceite"
+}

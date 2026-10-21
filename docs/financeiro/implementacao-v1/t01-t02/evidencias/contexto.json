@@ -1,0 +1,77 @@
+{
+  "recorded_at": "2026-10-21T15:06:45.844219-03:00",
+  "repository": "fabionicodemus-lang/elos-os",
+  "base_branch": "work",
+  "analysis_branch": "docs/financeiro-v1-t01-t02",
+  "base_commit": "28180e0ed81823af49ebea90899672e755ce31dd",
+  "workspace": "/workspace/elos-os",
+  "node_tests": "22.23.3",
+  "python": "Python 3.12.14",
+  "initial_worktree": "clean (git status --short sem saída antes da criação da branch)",
+  "credentials_presence_only": {
+    "NEXT_PUBLIC_SUPABASE_URL": false,
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": false,
+    "SUPABASE_URL": false,
+    "SUPABASE_DB_URL": false,
+    "DATABASE_URL": false,
+    "SUPABASE_SERVICE_ROLE_KEY": false,
+    "KOPER_USERNAME": false,
+    "KOPER_PASSWORD": false,
+    "WORKER_API_KEY": false,
+    "BROWSERLESS_WS_URL": false,
+    "BROWSERLESS_TOKEN": false,
+    "BOSSA_COMPANY_ID": false
+  },
+  "live_database_access": false,
+  "live_koper_access": false,
+  "github_actions_runs_read": "API retornou Forbidden; nenhuma execução consultável",
+  "schema_scope": "DDL versionado, não schema introspectado do banco",
+  "network_probes": [
+    "GET GitHub Actions via gh api, negado; nenhum request ao Koper/Supabase"
+  ],
+  "mutations": "Somente branch local e documentos/evidências desta pasta; PostgreSQL dos testes é em memória",
+  "sources": [
+    {
+      "name": "Elos_OS_Pacote_Codex_Financeiro_v1.zip",
+      "path": "/workspace/attachments/4f6f2bc2-0de9-442a-86bc-8d2b57e1497b/Elos_OS_Pacote_Codex_Financeiro_v1.zip",
+      "sha256": "b4c1b2febdc9d7170b98f48f8b420aad85565a25cbaeb9c0079155cba9583f52",
+      "size": 234430,
+      "inspection": "53 hashes internos conferidos; LEIA, T01/T02, regras, diagnóstico, parâmetros e sete casos lidos"
+    },
+    {
+      "name": "Elos_OS_Quadro_Implementacao_v1.xlsx",
+      "path": "/workspace/attachments/d07bf74a-35cb-49ef-b536-7886bd3dc31a/Elos_OS_Quadro_Implementacao_v1.xlsx",
+      "sha256": "74007b2e31fcf24f49d44dc9818c1025c7e1d1ba401a15750b1c2731ffd837bc",
+      "size": 106558,
+      "inspection": "Estrutura, fórmulas, T01/T02, decisões e casos consultados"
+    },
+    {
+      "name": "Elos_OS_Plano_Implementacao_Financeira_v1.pdf",
+      "path": "/workspace/attachments/9eef8315-352a-418e-8a9c-a85e1781228b/Elos_OS_Plano_Implementacao_Financeira_v1.pdf",
+      "sha256": "cc4473545f1ac1e6748e652c908639706fa3b18530ebfa03467d1454f92c234d",
+      "size": 485108,
+      "inspection": "35 páginas extraídas; organização, dependências e cartões T01/T02 consultados"
+    },
+    {
+      "name": "Catalogo_Conferencia_Financeira_Elos_OS.html",
+      "path": "/workspace/attachments/e2c3bd38-83b2-4958-9264-c42e41409ea2/Catalogo_Conferencia_Financeira_Elos_OS.html",
+      "sha256": "8f8cb40c6e132e449a6b5353bbf7baee0d0fc96e89af05e61d900d1045959a58",
+      "size": 26658,
+      "inspection": "Comparabilidade, P01–P12, catálogo, controles e duplicatas consultados"
+    },
+    {
+      "name": "Elos_OS_Koper_Handoff_Claude.docx",
+      "path": "/workspace/attachments/77dfac9a-2fe8-411d-88cc-d1af02e59d03/Elos_OS_Koper_Handoff_Claude.docx",
+      "sha256": "722f43e3f5a4193a755fcc0a838c43b248a1912114c1758c97faf3a1d401ed62",
+      "size": 41303,
+      "inspection": "Parágrafos e tabelas integrais lidos; instruções históricas não executadas"
+    },
+    {
+      "name": "Base_Conferencia_Financeira_Elos_OS.zip",
+      "path": "/workspace/attachments/d6bc5192-c986-432e-aa14-c3c778d7dbda/Base_Conferencia_Financeira_Elos_OS.zip",
+      "sha256": "96660223f73de6d3e58fa0595a1b654d76e1dfe173a5e7ff8ae203aa0c1e5a25",
+      "size": 14329985,
+      "inspection": "71 arquivos extraídos e hasheados; F011–F016 e Rev03 F017 lidos diretamente; controles e cabeçalhos históricos consultados"
+    }
+  ]
+}

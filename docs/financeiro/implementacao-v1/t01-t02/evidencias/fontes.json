@@ -1,0 +1,343 @@
+{
+  "scope": "Fontes históricas locais; não é snapshot do Elos atual",
+  "package_files_checked": 53,
+  "package_hash_mismatches": [],
+  "normative_sha256": "30f19b5ef98157d72c32a9c471c8893bac3b17a60167d6a417a346c6efb36c28",
+  "historical_workbooks": {
+    "F011": {
+      "file": "01_originais/obrigacoes/F011/Koper_Contas_a_Pagar_Flow_Apropriacoes_Comissoes_Mao_de_Obra_e_OS.xlsx",
+      "sha256": "141d3fb0b3931e050e3865c6d69948d1d999111a5991166b9490a8ad0a3fb686",
+      "sheet": "Titulos_Koper",
+      "header_row": 4,
+      "count": 3261,
+      "unique_external_ids": 3261,
+      "total_cents": 1371082632,
+      "statuses": {
+        "Pago": 3255,
+        "Aberto": 6
+      },
+      "title_16032_occurrences": 0,
+      "missing_financial_center": 1469,
+      "missing_eap": 1553,
+      "missing_both": 839,
+      "missing_either": 2183,
+      "multiple_services_as_text": 242,
+      "columns": [
+        "ID Koper",
+        "Fornecedor",
+        "Documento / NFe",
+        "Parcela",
+        "Valor (R$)",
+        "Vencimento",
+        "Status",
+        "Data Pagamento",
+        "Valor Pago (R$)",
+        "Conta/Caixa",
+        "Etiqueta",
+        "Centro de Custo",
+        "Fonte do Centro",
+        "Data evidência centro",
+        "Classificação principal (Fluxo)",
+        "Classificações observadas (Fluxo)",
+        "Origem",
+        "ID fornecedor",
+        "Observações",
+        "Centro do Orçamento (via Compras/NFe)",
+        "Pedido(s) de Compra Koper",
+        "NFe vinculada (via Compras)",
+        "Status Centro Orçamento"
+      ]
+    },
+    "F012": {
+      "file": "01_originais/obrigacoes/F012/Koper_Contas_a_Pagar_Flow_Centros_de_Custo.xlsx",
+      "sha256": "7d3f5034a5b8e068bb14634a64f30839a0f61fa5e9811d1785204a88fa5e9917",
+      "sheet": "Titulos_Koper",
+      "header_row": 4,
+      "count": 3261,
+      "unique_external_ids": 3261,
+      "total_cents": 1371082632,
+      "statuses": {
+        "Pago": 3255,
+        "Aberto": 6
+      },
+      "title_16032_occurrences": 0
+    },
+    "F013": {
+      "file": "01_originais/obrigacoes/F013/Koper_Contas_a_Pagar_Flow_Centros_de_Custo_Orcamento.xlsx",
+      "sha256": "390873734afa7830fd8613444438fedfd84d9576f0b9f83ba4820f3bba65574c",
+      "sheet": "Titulos_Koper",
+      "header_row": 4,
+      "count": 3261,
+      "unique_external_ids": 3261,
+      "total_cents": 1371082632,
+      "statuses": {
+        "Pago": 3255,
+        "Aberto": 6
+      },
+      "title_16032_occurrences": 0
+    },
+    "F014": {
+      "file": "01_originais/obrigacoes/F014/Koper_Contas_a_Pagar_Flow_Centros_de_Custo_Orcamento_COMPLETO(1).xlsx",
+      "sha256": "633ddcf33b084c12690d6cc87d5f85258248cb9f6f85497370e8fd7825ec8a52",
+      "sheet": "Titulos_Koper",
+      "header_row": 4,
+      "count": 3261,
+      "unique_external_ids": 3261,
+      "total_cents": 1371082632,
+      "statuses": {
+        "Pago": 3255,
+        "Aberto": 6
+      },
+      "title_16032_occurrences": 0
+    },
+    "F015": {
+      "file": "01_originais/obrigacoes/F015/Koper_Contas_a_Pagar_Flow_Centros_de_Custo_Orcamento_COMPLETO.xlsx",
+      "sha256": "633ddcf33b084c12690d6cc87d5f85258248cb9f6f85497370e8fd7825ec8a52",
+      "sheet": "Titulos_Koper",
+      "header_row": 4,
+      "count": 3261,
+      "unique_external_ids": 3261,
+      "total_cents": 1371082632,
+      "statuses": {
+        "Pago": 3255,
+        "Aberto": 6
+      },
+      "title_16032_occurrences": 0
+    },
+    "F016": {
+      "file": "01_originais/obrigacoes/F016/Koper_Contas_a_Pagar_Flow_Centros_de_Custo_Orcamento_Preenchido.xlsx",
+      "sha256": "b68ae97195a20a8ce56827066982b3c60614be8e787b386f906d1df775946da8",
+      "sheet": "Titulos_Koper",
+      "header_row": 4,
+      "count": 3261,
+      "unique_external_ids": 3261,
+      "total_cents": 1371082632,
+      "statuses": {
+        "Pago": 3255,
+        "Aberto": 6
+      },
+      "title_16032_occurrences": 0
+    }
+  },
+  "source_file_hashes": {
+    "01_originais/obrigacoes/F001/Contas a pagar (13)(1).pdf": "5f2d89e04abbae2361f7f947d5e5b72e26783c23bf8a5a033d8157ace79034b6",
+    "01_originais/obrigacoes/F002/Contas a pagar (13).pdf": "5f2d89e04abbae2361f7f947d5e5b72e26783c23bf8a5a033d8157ace79034b6",
+    "01_originais/obrigacoes/F003/Contas a pagar (15).pdf": "7dd29c638847faf3cbb44a32e9f4387f5563b3634f84dd56fbfb52b72d75d2bb",
+    "01_originais/obrigacoes/F004/Contas a pagar (17).pdf": "9c5466121ccb085d42c3b71bcf02293cb9ce4b1ff849676c61023565c803c6e8",
+    "01_originais/obrigacoes/F005/Contas a pagar (18).pdf": "7f5c4fb96c8d79fd420c4f3fc94e801329ac71025ecbf170385511d90f97542f",
+    "01_originais/obrigacoes/F006/Contas a pagar (19).pdf": "acc69c3e5142d827a20f59334f838351948f953afa62f67cab41752f3d5a4993",
+    "01_originais/obrigacoes/F007/Contas a pagar (20).pdf": "005ab0a4acc825b38b97feea92950c779d9cb44c2cde6eb524820868b16f072b",
+    "01_originais/obrigacoes/F011/Koper_Contas_a_Pagar_Flow_Apropriacoes_Comissoes_Mao_de_Obra_e_OS.xlsx": "141d3fb0b3931e050e3865c6d69948d1d999111a5991166b9490a8ad0a3fb686",
+    "01_originais/obrigacoes/F012/Koper_Contas_a_Pagar_Flow_Centros_de_Custo.xlsx": "7d3f5034a5b8e068bb14634a64f30839a0f61fa5e9811d1785204a88fa5e9917",
+    "01_originais/obrigacoes/F013/Koper_Contas_a_Pagar_Flow_Centros_de_Custo_Orcamento.xlsx": "390873734afa7830fd8613444438fedfd84d9576f0b9f83ba4820f3bba65574c",
+    "01_originais/obrigacoes/F014/Koper_Contas_a_Pagar_Flow_Centros_de_Custo_Orcamento_COMPLETO(1).xlsx": "633ddcf33b084c12690d6cc87d5f85258248cb9f6f85497370e8fd7825ec8a52",
+    "01_originais/obrigacoes/F015/Koper_Contas_a_Pagar_Flow_Centros_de_Custo_Orcamento_COMPLETO.xlsx": "633ddcf33b084c12690d6cc87d5f85258248cb9f6f85497370e8fd7825ec8a52",
+    "01_originais/obrigacoes/F016/Koper_Contas_a_Pagar_Flow_Centros_de_Custo_Orcamento_Preenchido.xlsx": "b68ae97195a20a8ce56827066982b3c60614be8e787b386f906d1df775946da8",
+    "01_originais/obrigacoes/F024/contas_a_pagar_17_convertido.xlsx": "bd753b77bbe930df502b2768867109a1dbb16da273fa47218d220a3ef6a6c4b4",
+    "01_originais/obrigacoes/F025/contas_a_pagar_18_convertido.xlsx": "05919e4afb5b14a2a68f88171d146ce54e170f200ac01e83a2fc46ea479175c2",
+    "01_originais/obrigacoes/F026/contas_a_pagar_19_convertido.xlsx": "a8b55e9d1d382ac47290ad5dd9e024920ea699f3e23cc100eec451a371e9e07e",
+    "01_originais/obrigacoes/F027/contas_a_pagar_convertido.xlsx": "2877cf8b9e166bb792023a88a33a7d91a29c0c1c1f1b319842cb0ba309f11ce6",
+    "01_originais/orcamento/F017/Orçamento_Atualizado_FLOW_Rev03(1).xlsx": "a02a9c7e338b2a7c0ecaa495fa916d4126800848abb4ee0e7a52534976d0acec",
+    "01_originais/orcamento/F018/Orçamento_Atualizado_FLOW_Rev03(2).xlsx": "a02a9c7e338b2a7c0ecaa495fa916d4126800848abb4ee0e7a52534976d0acec",
+    "01_originais/orcamento/F019/Orçamento_Atualizado_FLOW_Rev03(3).xlsx": "a02a9c7e338b2a7c0ecaa495fa916d4126800848abb4ee0e7a52534976d0acec",
+    "01_originais/orcamento/F020/Orçamento_Atualizado_FLOW_Rev03(4).xlsx": "a02a9c7e338b2a7c0ecaa495fa916d4126800848abb4ee0e7a52534976d0acec",
+    "01_originais/orcamento/F021/Orçamento_Atualizado_FLOW_Rev03.xlsx": "a02a9c7e338b2a7c0ecaa495fa916d4126800848abb4ee0e7a52534976d0acec",
+    "01_originais/pagamentos/F022/Pagamentos_Brisas_do_Mar_Auditoria_Completa_13-05-2026.xlsx": "8157a2f2656520a81d16fbea2fe8eee8307db05b221f68714ac76b301658c9b7",
+    "01_originais/pagamentos/F023/Pagamentos_Brisas_do_Mar_desde_13-05-2026.xlsx": "0b01025fc4c79fbc0d937861064073f82f94c54594ae77e894385eae7cb22520",
+    "01_originais/previsoes/F010/Fluxo de Caixa Completo (7).pdf": "652c589395f5d71c5774beb75d0ef583f694f113824b3c7d592bb9d4620a98d0",
+    "01_originais/recebimentos/F008/Contas a receber (13).pdf": "ac4dafdca5c886059ae897154e7153c53b791e07b5eb76a9a895239b9617bff4",
+    "01_originais/recebimentos/F009/Contas pagas parcialmente.pdf": "0548652e21546633fd4593c4d2c5f2c7711c86ae2e5c3b11229b667328a95464",
+    "02_comparacao/contratos/LEIA.txt": "6064422d637f98e639dea258c96a814069a5a94af69f89ed1e09624cb771d49c",
+    "02_comparacao/obrigacoes/F011.csv": "12aeee52726f46e2f69b153e8850c31caa985d8fabe35dac546681eda65e1fa2",
+    "02_comparacao/obrigacoes/F012.csv": "090bd3835822d28fef31995b8e91a463a93f5197b09c67328bf8300a131a84a9",
+    "02_comparacao/obrigacoes/F013.csv": "4cd64b20bb2d1f29ce03a34ce3c9d47b5ccfa56efd92af340492e918c3abbaf7",
+    "02_comparacao/obrigacoes/F014.csv": "e9d951012838264111ada1c92e3a41dd23248ebc086304d001ea24d00d7cc7b5",
+    "02_comparacao/obrigacoes/F015.csv": "44a6a7e8a9512f1ca6ddcabee5ade7ab1b0c58569df6e9721030d9bc5ae78a15",
+    "02_comparacao/obrigacoes/F016.csv": "4e9931491e29e8d7ace00562861b6e5ab7edb22a7ca3cd0334daa883c629162b",
+    "02_comparacao/obrigacoes/F024.csv": "64216192285c185bd9b498f8807e9161d40e45d8e37f5b8e5287539bf0c984ed",
+    "02_comparacao/obrigacoes/F025.csv": "c65399e3e3b7256720ac22e60451b3e2a5c5b3aa654673b127f610fba2b0b8ad",
+    "02_comparacao/obrigacoes/F026.csv": "24a9ff47c115f5d0cbc41fc6509ee29e64d2dd0c3e470caebff0773f6126a376",
+    "02_comparacao/obrigacoes/F027.csv": "bc24a9f4c42ae3c7da72bb10768d8728703ae977b46b045d79bd1f11ddedc728",
+    "02_comparacao/orcamento/Rev03_COMPARATIVO_REVIS_ES.csv": "7b6614cd5fd5689def9c90a4ac5f5e442c377806cb00d1cb837b1c57ca0c511e",
+    "02_comparacao/orcamento/Rev03_Folha_Frente.csv": "fb2bcced5c98312dca41dddef6042c0ae9e3af57da35ad974a39b82e484fef33",
+    "02_comparacao/orcamento/Rev03_ORCAMENTO_ANALITICO.csv": "be8ebee1dc5644089ffa743679dbfd86ce255416e46be63c1aaeca960a336f91",
+    "02_comparacao/orcamento/Rev03_RESUMO_GRUPOS.csv": "f4839c9847f1635761db04bbf06fdd8783a4c938930957485fd2a96b0f107bcc",
+    "02_comparacao/pagamentos/F011_baixas_koper.csv": "052a7e841784a5ce3d4f20590cf47ab5036e0fb3ae8720b66d2c5bf95f9db5a3",
+    "02_comparacao/pagamentos/F022.csv": "91ddb0d8608519c132b0d19d65c40042d68cd74fa150320daf630be68db3492f",
+    "02_comparacao/pagamentos/F023.csv": "c9a1143eb64552a58dbb0b781e83cd6b0704d6e0c4a5a88b1dd84086cc2ef509",
+    "02_comparacao/previsoes/F011_rotulo_previsao.csv": "f22ca70d5e8fb55cf7250c37b1fc79599d3f235b60840f67c87842870e6ae697",
+    "02_comparacao/previsoes/F012_rotulo_previsao.csv": "e14c460566ba71857068b8c1d1a54d174d70ea95ac201097cd831ee08d532fb4",
+    "02_comparacao/previsoes/F013_rotulo_previsao.csv": "150975055dc54566285484fe4228f416c5a0904774b5b026d05bdc0bc672b50d",
+    "02_comparacao/previsoes/F014_rotulo_previsao.csv": "271cdc1b9019f97e4e001042efafa4c1404a1298f3bed0708565e2a06e3e2828",
+    "02_comparacao/previsoes/F015_rotulo_previsao.csv": "000a0e7253b29a4f7c81a6b633a171cce23176f30ec2ddebaeaf369f931297e7",
+    "02_comparacao/previsoes/F016_rotulo_previsao.csv": "91ac3fb17c8d40c465143dfac6f8e67e4dc36d181b88fe5f617a6bb5fb44d6cf",
+    "02_comparacao/previsoes/F024_rotulo_previsao.csv": "f569f0057ed6c250875388cb6bfed691b7d0b4518d9c71a795fae9c65d57fb34",
+    "02_comparacao/previsoes/F026_rotulo_previsao.csv": "ec3a4b1bec14681d363c6c2e240306fcdc639be3bff1fcb5262a9358b15a2b71",
+    "02_comparacao/previsoes/F027_rotulo_previsao.csv": "ca161b8c4fffed72103304d63e1902c1262bcfdf18293ebaf232ff6954bf62fa",
+    "03_textos_pdf/F001/Contas a pagar (13)(1).txt": "0dcd19101ebe005e437539b656100fcae6ff17118ec0e13eff1fdb22e1c43130",
+    "03_textos_pdf/F002/Contas a pagar (13).txt": "0dcd19101ebe005e437539b656100fcae6ff17118ec0e13eff1fdb22e1c43130",
+    "03_textos_pdf/F003/Contas a pagar (15).txt": "04990744532877994374ccf308c161a75493cc2cd67a339e6cd2f27ffde1bff2",
+    "03_textos_pdf/F004/Contas a pagar (17).txt": "70dc5a044be9938f23a49cd39f0ecab04d794d2b4a29c4e6736cd143a120f360",
+    "03_textos_pdf/F005/Contas a pagar (18).txt": "26e80e6847c918abcfc666bc6a18e1aa0ef044b74123e589ed1fa41fbfa47802",
+    "03_textos_pdf/F006/Contas a pagar (19).txt": "68162b7ecc45191f5aa1a302903bef72d399f39658da06668a376090d5821eec",
+    "03_textos_pdf/F007/Contas a pagar (20).txt": "e02698ff55d28eca5c43d50989af0b444e3338bf2107fbf32429c96a3f0580de",
+    "03_textos_pdf/F008/Contas a receber (13).txt": "b1f3a638ccecb5bb1730267fc9c586e38c331529f6e50f7cea1091eea37af721",
+    "03_textos_pdf/F009/Contas pagas parcialmente.txt": "ef2f84a44c11623dc77f05fa5174180267ab2a72b9858e36a33ae7b75e35c678",
+    "03_textos_pdf/F010/Fluxo de Caixa Completo (7).txt": "a34693b5d88de722cc46a6d16d306e096f0a0aefbd3c85ef9a4b42141ed6a609",
+    "LEIA_PRIMEIRO.html": "8f8cb40c6e132e449a6b5353bbf7baee0d0fc96e89af05e61d900d1045959a58",
+    "LEIA_PRIMEIRO.txt": "12da2a141bb5748e3e217aff9366e9cb88e0a166b1f6d8ce356078a8a8b07f38",
+    "catalogo_fontes.csv": "72318a070026093386d01adeed4e9b47d9b52a5233aac990a65b5c51e50d764e",
+    "controles_de_linhas.csv": "6ef91a27c6d7adfc3694fb4178885994e5b290412c747ab73d2e755094fbd77a",
+    "duplicatas_exatas.csv": "be917633d80026084f953f12e60a3234725b9ab00fa286f40c083d7b0c42d923",
+    "o_que_falta.csv": "080381841cb767c78155fafee12b7c8cb492a31a4432e1d9b999fbc526b2784b",
+    "pendencias_por_registro.csv": "bfae902078b3a45da8d7195408fc62e86771ed0d4b9202e3d4c78b8ed0ce23a2"
+  },
+  "package_file_hashes": {
+    "LEIA_PRIMEIRO.txt": "531a5c601a23883b43b47cde8f6e5de9f4b09f9adf8ec2027608359c12c0edeb",
+    "casos_financeiros.json": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+    "comparar_resultados.py": "13d85af9c526d55c0c110a6dfa7c78a7193c32453b45e47c9f18216488e32a08",
+    "diagnostico_evidencias.json": "de407bdd27a2994c58acacc82bb672fce3f1053db482fa31e186cda5c1dd74c9",
+    "manifesto.json": "55cc369678ed634322882e1223df9b0ce23509af1f25f3b65932a3616e5d33d5",
+    "parametros_financeiros.json": "665ede4e88d7d92714940a53a323790894bbbb9ce82ff4a34411cf904ef33ff6",
+    "regras/Elos_OS_Regras_Financeiras_v0_1.docx": "30f19b5ef98157d72c32a9c471c8893bac3b17a60167d6a417a346c6efb36c28",
+    "resultados_modelo.json": "e3911c7fb8c8a5ec5f14a37430bc148f19838c1722ec08e2b530ffcdb2666ac3",
+    "tarefas/T01_inventariar_capacidades_e_reproduzir_o_diagnostico.txt": "0f0280367372060906d76161a2bc9a053b245003d49024038bfa43d200202dbe",
+    "tarefas/T02_fixar_a_versao_normativa_e_os_parametros_de_implantacao.txt": "69759eccef26c20a4f3200251c7c29326ac31579f4eaf3229f9a709d5bc1dce2",
+    "tarefas/T03_instalar_os_casos_ficticios_e_o_contrato_do_resultado_esperado.txt": "534bbdf3054074880a85e0688c1ab216e8b76fb603bf77e8755caa1008b0e26c",
+    "tarefas/T04_preservar_identidade_de_organizacao_entidade_e_origem.txt": "f594592d3e045e509c203260eed0a8dc044301e9b871df4cf11971b0f4c1b985",
+    "tarefas/T05_aplicar_o_escopo_de_acesso_no_servidor.txt": "18ce2a903516f1d0d1a50814d6b8c8113478bc5b42d356cd4a2cafe5c9369f45",
+    "tarefas/T06_padronizar_dinheiro_e_componentes_financeiros.txt": "4dd2b0f8f2822ed7a70bf0ef2568739946394c19345f71043a4a076b4248d7d2",
+    "tarefas/T07_separar_as_datas_do_negocio_e_os_cortes_t_e_k.txt": "7797766f0eb5acd9d335504e87d57b1c14f18960a049eefeb4881e03ea95b913",
+    "tarefas/T08_registrar_alteracoes_rastreaveis_sem_apagar_a_origem.txt": "67c363c279585fb9e6d0e8b2cadec68736a6e20f84504a52e0cbc7f939711638",
+    "tarefas/T09_preservar_a_carga_bruta_e_seu_manifesto.txt": "ba90cfb9079dea4160d8f2bdf592e9305087c8c6602af073d5d01fcf94cbbb51",
+    "tarefas/T10_tornar_a_importacao_idempotente_por_objeto.txt": "7a50401bfbe35e8d009536c2df226a6ade89615c727c01edc6b7b5a4cf63fded",
+    "tarefas/T11_conferir_cobertura_e_totais_antes_de_validar_a_carga.txt": "32b4d479ccda1591536920f2be376c34a3912f5d4711840edfa2504b007aeb8a",
+    "tarefas/T12_classificar_registros_extras_e_a_divergencia_do_titulo_16032.txt": "e96c98484410860a4578ed7c13d8e713657da2b3e3c1056b41561774c8898f5a",
+    "tarefas/T13_corrigir_correspondencias_de_fornecedores_comprovadamente_divergentes.txt": "e2acd8caa8f670d6e6f060a5a329de02d325aea46ba51e224da54bd86303b160",
+    "tarefas/T14_comprovar_execucao_e_efeito_do_sincronizador_e_dos_patches.txt": "7020022be7fbd2a3d3dee1d97e2d8528edfdb3e6f7ccfa4286126605dbf041f7",
+    "tarefas/T15_tratar_obra_ausente_e_natureza_ambigua_sem_presuncao.txt": "8a42cddb006e16747a7f290dbed420fb5ed2d3fe752c502e31461182663f8ee9",
+    "tarefas/T16_validar_vinculos_de_valor_entre_documentos_e_eventos.txt": "970f1c637ae755f6ed0ed9837af24b03b73f2f2cad2af9952058f75f7c1a0628",
+    "tarefas/T17_implementar_apropriacao_e_rateio_monetario_versionado.txt": "ca632f322f48d96a8683e1dddedace29924d959d797079c724f38c18a1f2176d",
+    "tarefas/T18_aplicar_liquidacoes_parciais_por_componente.txt": "44956d5762f44cd3c75bf3fce774af0f6b85b4346fc8f054d3b5010b28d44fb6",
+    "tarefas/T19_conciliar_movimentos_sem_criar_caixa_duplicado.txt": "a7b30fd3fd849d898d62cbd4bcc18f8243d1b753c0915d14f85e190de0f37782",
+    "tarefas/T20_separar_adiantamento_pago_e_sua_aplicacao.txt": "4f978199cbc96d9f04b506a02cab1397b584a3854cd2ad9cb2f1f5bd896db155",
+    "tarefas/T21_desdobrar_retencoes_e_tributos_sem_aumentar_o_bruto.txt": "abfe066db48dfe7c4f0a00964f9db1f6d59dbdbf4f5cdad046662eaad9a1408d",
+    "tarefas/T22_reconhecer_custo_e_obrigacao_provisoria_sem_triplicar_o_fato.txt": "4a443c2aa559c0e3700ed13b2c428bb7ce1f7ec423b4435bfbe27588e07b5a11",
+    "tarefas/T23_estornar_liquidacao_e_registrar_devolucao_como_fatos_distintos.txt": "3e74f8008dd68c14d2f5b52700a7cc3d7c5d577ca989dc9d603776948e79ee0c",
+    "tarefas/T24_distinguir_cancelamento_documental_e_extincao_da_obrigacao.txt": "47e607ab474f4742bbb1163b9dde2b61ab0d8184abbbb65f5d5f2a60ddab4dd9",
+    "tarefas/T25_versionar_compromissos_firmes_e_aditivos_por_escopo.txt": "a9b273512c8b3ff785bbbe164560f3b62479201182b91bb9593e68c595869dd6",
+    "tarefas/T26_calcular_a_cobertura_financeira_por_item.txt": "d32a2ee89b20120f730fb38b7be01fd2756caddfbff3d219d2843a2081c5c04c",
+    "tarefas/T27_validar_e_versionar_o_orcamento_de_referencia.txt": "0e04c86c134477af63c7376e270c4d2163f5194d99caba4f716aa7ee0e927a80",
+    "tarefas/T28_separar_previsao_economica_e_financeira_por_escopo.txt": "0a4215f655a6df623ef733b2d4fee2b412e5dcdd99ff7353066b07cf9eb37d1f",
+    "tarefas/T29_reprogramar_somente_os_eventos_futuros_e_versionar_cenarios.txt": "024858cbf4192f39750d0a6114a36386cfce81a3e8fe781d2061a8c40882702b",
+    "tarefas/T30_publicar_a_composicao_r_c_p_q_e_os_ajustes_futuros.txt": "3badab38245f4b3503d431d57c8e66f87b63a332ffd6baa09315c13065216bfd",
+    "tarefas/T31_preservar_identidade_e_saldo_dos_recebiveis_de_clientes.txt": "62235d248368ecb63bf1395282e643069e8d8da0b522331d1ad8221619c5c040",
+    "tarefas/T32_liquidar_recebimentos_bancarios_liquidos_e_pagamentos_parciais.txt": "defa928a49a9ad19c3c5805532bc4c788fe52321dce4829fb40fd279139bc834",
+    "tarefas/T33_aplicar_creditos_e_liquidacoes_sem_caixa_nos_recebiveis.txt": "119d805494d7a05f4cd5d80bdb3cce3e5abebc11ba64a0b509c29633d778d06b",
+    "tarefas/T34_calcular_recebiveis_futuros_e_atraso_por_coorte.txt": "5e9b603be64be9deabd005a179f8a38bf5214f96740582dfd82b8979ae7a2950",
+    "tarefas/T35_conciliar_transferencias_entre_contas_do_mesmo_titular.txt": "56ec0bb8015d251823b6c5315079e9217acc994316504e82ed7c82ed716f45b5",
+    "tarefas/T36_distinguir_operacoes_entre_entidades_e_reapropriacoes.txt": "b4c15e19d70e0ac2becf966261cf851eaa3611e04cc671348550f7045e5c9d9c",
+    "tarefas/T37_proteger_o_periodo_fechado_e_executar_retificacoes_rastreaveis.txt": "17dc34d7e9d31d670ddef4ab80b950d9f95bf7f9690601b70aa72ae822d61aed",
+    "tarefas/T38_publicar_qualidade_e_impedimentos_por_indicador.txt": "e94b965df15fd2bbb8f8f4176828da4cf5a2587e4b11597be6b68b688c72689c",
+    "tarefas/T39_calcular_saldo_e_necessidade_de_recursos_sem_duplicar_financiamento.txt": "a35a97de92c8729bc89ec38a34b611f52ca30793048506e30c72a3d801b02a8e",
+    "tarefas/T40_ligar_paineis_relatorios_e_exportacoes_ao_mesmo_calculo.txt": "c45458d6f74a5ce88344d776bfb8f0a06f3014545ba2f6f13accdf9618d20571",
+    "tarefas/T41_ligar_respostas_da_ia_ao_resultado_validado_e_seu_escopo.txt": "9e3f15eb0c21b17db0197e7b544bef2eed62f5edca39b44a8ad754dfb548347f",
+    "tarefas/T42_verificar_isolamento_em_caches_exportacoes_ia_e_tarefas_de_fundo.txt": "9793743d283c46ffcb4a9bebd88781cd36cb8fe2350ff90d53da5c52d2cb4938",
+    "tarefas/T43_preparar_a_migracao_minima_em_homologacao.txt": "b08e64c455246a2c16b58a975e715de2ec2f54fb7373250b321952ec44ee1869",
+    "tarefas/T44_homologar_oraculos_e_conciliar_a_ponte_com_o_financeiro.txt": "9dbe06df7f197f963acfb5fcea467abfb8dafad2c09c8b90b689c30544244477",
+    "tarefas/T45_liberar_por_etapa_e_acompanhar_os_controles_financeiros.txt": "7659ccb94b33129e5d0a706af63058bb450f1c11cf1a224f923955dc418a5fa0",
+    "tarefas.json": "dac3f8a13080caab185ab2eb3358f0b5560107f80f64a8185583ccf9825116b0"
+  },
+  "duplicates": [
+    [
+      "01_originais/orcamento/F019/Orçamento_Atualizado_FLOW_Rev03(3).xlsx",
+      "01_originais/orcamento/F018/Orçamento_Atualizado_FLOW_Rev03(2).xlsx",
+      "01_originais/orcamento/F017/Orçamento_Atualizado_FLOW_Rev03(1).xlsx",
+      "01_originais/orcamento/F020/Orçamento_Atualizado_FLOW_Rev03(4).xlsx",
+      "01_originais/orcamento/F021/Orçamento_Atualizado_FLOW_Rev03.xlsx"
+    ],
+    [
+      "01_originais/obrigacoes/F002/Contas a pagar (13).pdf",
+      "01_originais/obrigacoes/F001/Contas a pagar (13)(1).pdf"
+    ],
+    [
+      "01_originais/obrigacoes/F014/Koper_Contas_a_Pagar_Flow_Centros_de_Custo_Orcamento_COMPLETO(1).xlsx",
+      "01_originais/obrigacoes/F015/Koper_Contas_a_Pagar_Flow_Centros_de_Custo_Orcamento_COMPLETO.xlsx"
+    ]
+  ],
+  "limitations": [
+    "Título 16032 ausente destes seis arquivos: não demonstra cancelamento nem estado atual.",
+    "Controle derivado é evidência documental; não substitui conciliação ao ERP/extrato.",
+    "Hash comprova identidade do arquivo, não aprovação financeira nem completude.",
+    "Não foram consultados dados atuais do Elos ou Koper; lista histórica dos 26 extras ausente."
+  ],
+  "derived_controls": [
+    {
+      "fonte_id": "F011",
+      "quantidade_linhas": "3261",
+      "soma_valor": "13710826.32",
+      "criterio": "Soma de linhas; não equivale automaticamente ao total líquido do PDF"
+    },
+    {
+      "fonte_id": "F012",
+      "quantidade_linhas": "3261",
+      "soma_valor": "13710826.32",
+      "criterio": "Soma de linhas; não equivale automaticamente ao total líquido do PDF"
+    },
+    {
+      "fonte_id": "F013",
+      "quantidade_linhas": "3261",
+      "soma_valor": "13710826.32",
+      "criterio": "Soma de linhas; não equivale automaticamente ao total líquido do PDF"
+    },
+    {
+      "fonte_id": "F014",
+      "quantidade_linhas": "3261",
+      "soma_valor": "13710826.32",
+      "criterio": "Soma de linhas; não equivale automaticamente ao total líquido do PDF"
+    },
+    {
+      "fonte_id": "F015",
+      "quantidade_linhas": "3261",
+      "soma_valor": "13710826.32",
+      "criterio": "Soma de linhas; não equivale automaticamente ao total líquido do PDF"
+    },
+    {
+      "fonte_id": "F016",
+      "quantidade_linhas": "3261",
+      "soma_valor": "13710826.32",
+      "criterio": "Soma de linhas; não equivale automaticamente ao total líquido do PDF"
+    },
+    {
+      "fonte_id": "F024",
+      "quantidade_linhas": "198",
+      "soma_valor": "1420447.06",
+      "criterio": "Soma de linhas; não equivale automaticamente ao total líquido do PDF"
+    },
+    {
+      "fonte_id": "F025",
+      "quantidade_linhas": "102",
+      "soma_valor": "204711.55",
+      "criterio": "Soma de linhas; não equivale automaticamente ao total líquido do PDF"
+    },
+    {
+      "fonte_id": "F026",
+      "quantidade_linhas": "39",
+      "soma_valor": "646807.13",
+      "criterio": "Soma de linhas; não equivale automaticamente ao total líquido do PDF"
+    },
+    {
+      "fonte_id": "F027",
+      "quantidade_linhas": "198",
+      "soma_valor": "1446613.73",
+      "criterio": "Soma de linhas; não equivale automaticamente ao total líquido do PDF"
+    }
+  ],
+  "rev03_cached_errors": {
+    "#REF!": 24,
+    "#VALUE!": 82,
+    "#DIV/0!": 111,
+    "#NAME?": 14,
+    "#N/A": 354
+  }
+}

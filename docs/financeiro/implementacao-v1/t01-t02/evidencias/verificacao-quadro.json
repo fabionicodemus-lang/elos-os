@@ -1,0 +1,32 @@
+{
+  "original_sha256": "74007b2e31fcf24f49d44dc9818c1025c7e1d1ba401a15750b1c2731ffd837bc",
+  "updated_sha256": "7bd571fb811743467e1e484e333087d779796595ba2089527b205744cf75f1f3",
+  "unchanged_cells_checked": 7901,
+  "modified_cells": [
+    "Acompanhamento!F11",
+    "Acompanhamento!I11",
+    "Acompanhamento!S11",
+    "Acompanhamento!F12",
+    "Acompanhamento!I12",
+    "Acompanhamento!S12",
+    "Decisoes!L9",
+    "Decisoes!L10",
+    "Decisoes!L11",
+    "Decisoes!L12",
+    "Decisoes!L13",
+    "Decisoes!L14",
+    "Decisoes!L15",
+    "Decisoes!L16",
+    "Decisoes!L17",
+    "Decisoes!L18",
+    "Decisoes!L19",
+    "Decisoes!L20",
+    "Decisoes!L21",
+    "Decisoes!L22"
+  ],
+  "expected_and_formulas_preserved": true,
+  "financial_acceptance_marked": false,
+  "technical_acceptance_marked": false,
+  "formulas_recalculated": false,
+  "note": "openpyxl preserva fórmulas mas não recalcula; abrir em Excel/LibreOffice para atualizar valores calculados."
+}

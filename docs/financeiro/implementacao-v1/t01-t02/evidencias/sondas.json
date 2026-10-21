@@ -1,0 +1,176 @@
+{
+  "scope": "Diagnóstico T01/T02; somente fontes simuladas e PostgreSQL em memória",
+  "monetary_unit": "BRL, exceto campos explicitamente terminados em _cents",
+  "normative_contrast": {
+    "P04": "Títulos abertos não podem desaparecer por data extrema de outro evento.",
+    "P05": "Posição em T não deve incluir pagamento posterior a T.",
+    "P06": "400 no serviço e 600 pendentes; conservar valor sem atribuição presumida.",
+    "P07": "Cobertura financeira: pago 400 + futuro 600, sem criar 400 adicionais.",
+    "P09": "Receber 100 de principal 1000 conserva saldo 900; estado não pode indicar quitação integral."
+  },
+  "package_cases_certified": [],
+  "probes": [
+    {
+      "id": "P01",
+      "kind": "capacidade",
+      "expected_observation_for_reproduction": {
+        "count": 5,
+        "total_cents": 1500000,
+        "error": null
+      },
+      "actual": {
+        "count": 5,
+        "total_cents": 1500000,
+        "error": null
+      },
+      "scope": "CT26 parcial: helper Supabase por offset, não extração Koper nem manifesto/cursor.",
+      "diagnostic_reproduced": true
+    },
+    {
+      "id": "P02",
+      "kind": "capacidade",
+      "expected_observation_for_reproduction": {
+        "count": 2,
+        "total_cents": 300000,
+        "error": "503 sintético"
+      },
+      "actual": {
+        "count": 2,
+        "total_cents": 300000,
+        "error": "503 sintético"
+      },
+      "scope": "CT26 parcial: falha preserva subtotal e erro; consumidor deve propagar incompletude.",
+      "diagnostic_reproduced": true
+    },
+    {
+      "id": "P03",
+      "kind": "lacuna",
+      "expected_observation_for_reproduction": {
+        "rows": 4,
+        "unique": 2,
+        "error": null
+      },
+      "actual": {
+        "rows": 4,
+        "unique": 2,
+        "error": null
+      },
+      "scope": "Helper aceita páginas com IDs repetidos. Não há afirmação de cursor Koper atual.",
+      "diagnostic_reproduced": true
+    },
+    {
+      "id": "P04",
+      "kind": "lacuna",
+      "expected_observation_for_reproduction": {
+        "actual": 100,
+        "committedPayable": 0,
+        "toCommit": 900
+      },
+      "actual": {
+        "actual": 100,
+        "committedPayable": 0,
+        "toCommit": 900
+      },
+      "scope": "Data extrema provoca curto-circuito e não agrega títulos abertos.",
+      "diagnostic_reproduced": true
+    },
+    {
+      "id": "P05",
+      "kind": "lacuna",
+      "expected_observation_for_reproduction": {
+        "actual": 100,
+        "committedPayable": 200,
+        "toCommit": 700
+      },
+      "actual": {
+        "actual": 100,
+        "committedPayable": 200,
+        "toCommit": 700
+      },
+      "scope": "Data de corte não exclui pagamento posterior do realizado.",
+      "diagnostic_reproduced": true
+    },
+    {
+      "id": "P06",
+      "kind": "lacuna",
+      "expected_observation_for_reproduction": [
+        {
+          "serviceId": "s",
+          "amount": 1000
+        }
+      ],
+      "actual": [
+        {
+          "serviceId": "s",
+          "amount": 1000
+        }
+      ],
+      "scope": "Rateio misto 400 classificado + 600 pendente: esperado normativo é preservar 600 pendente; observado transfere tudo.",
+      "diagnostic_reproduced": true
+    },
+    {
+      "id": "P07",
+      "kind": "lacuna",
+      "expected_observation_for_reproduction": {
+        "actual": 400,
+        "committedFuture": 1000,
+        "projectedCost": 1400,
+        "errors": []
+      },
+      "actual": {
+        "actual": 400,
+        "committedFuture": 1000,
+        "projectedCost": 1400,
+        "errors": []
+      },
+      "scope": "Contrato 1000; nota vinculada sem medição; título pago 400. Carregador real mantém contrato inteiro no futuro. Não é posição real.",
+      "diagnostic_reproduced": true
+    },
+    {
+      "id": "P08",
+      "kind": "capacidade",
+      "expected_observation_for_reproduction": {
+        "actions": [
+          "inserted",
+          "unchanged",
+          "unchanged"
+        ],
+        "rows": 2,
+        "companies": [
+          "A",
+          "B"
+        ]
+      },
+      "actual": {
+        "actions": [
+          "inserted",
+          "unchanged",
+          "unchanged"
+        ],
+        "rows": 2,
+        "companies": [
+          "A",
+          "B"
+        ]
+      },
+      "scope": "CT01/CT24 apenas identidade da staging com requester simulado; não valida promoção de títulos, RLS, banco ou papéis.",
+      "diagnostic_reproduced": true
+    },
+    {
+      "id": "P09",
+      "kind": "lacuna",
+      "expected_observation_for_reproduction": {
+        "status": "paid",
+        "amount": 1000,
+        "paid_amount": 100
+      },
+      "actual": {
+        "status": "paid",
+        "amount": 1000,
+        "paid_amount": 100
+      },
+      "scope": "RPC real extraída, schema mínimo e permissões simuladas; recebimento de 100 encerra título de 1000. Não valida segurança.",
+      "diagnostic_reproduced": true
+    }
+  ]
+}
