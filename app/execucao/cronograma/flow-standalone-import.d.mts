@@ -77,6 +77,7 @@ export function prepareFlowImport(
     importedMeasurements: number;
     newReplans: number;
     existingPreserved: number;
+    correctedProgress: number;
     sourceMeasuredThrough: string;
   };
 };
