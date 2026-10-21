@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { importFlowStandaloneHistory } from "./actions";
 import { AppShell } from "@/components/app-shell";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { requireCompanyPermission } from "@/lib/workspace";
@@ -163,6 +164,41 @@ export default async function ExecutionSchedulePage({
       {projectId && !selectedBaseline ? <div className="schedule-empty">Esta obra ainda não possui cronograma. Crie e aprove a linha de base em Engenharia.</div> : null}
       {projectId && selectedBaseline ? (
         <>
+
+          {canManage && project?.name === "Flow Aptos" ? (
+            <details className="prevision-card" style={{ padding: 18, marginBottom: 18 }}>
+              <summary style={{ cursor: "pointer", fontWeight: 700 }}>
+                Conciliar histórico e replanejamento do Flow (arquivo 12/10/2026)
+              </summary>
+              <p style={{ color: "#475569", fontSize: 13, lineHeight: 1.6 }}>
+                Importa as medições existentes no arquivo até 06/10/2026 e as datas reprogramadas
+                a partir de outubro. Faz correspondência rigorosa pelas 395 atividades Txxx.
+                A linha de base, valores do orçamento Rev03, dependências e medições já registradas são preservados.
+                Medições não presentes no arquivo (incluindo agosto) não são inventadas.
+              </p>
+              {selectedBaseline.status !== "approved" ? (
+                <p className="auth-message error">
+                  A linha de base está em {selectedBaseline.status}. Antes de registrar execução, aprove-a em
+                  <Link href={`/engenharia/cronograma?baseline=${selectedBaseline.id}`}> Engenharia › Cronograma</Link>.
+                </p>
+              ) : null}
+              <form action={importFlowStandaloneHistory} style={{ display: "grid", gap: 12, maxWidth: 780 }}>
+                <input type="hidden" name="baseline_id" value={selectedBaseline.id} />
+                <label style={{ display: "grid", gap: 6 }}>
+                  <strong>HTML standalone do Flow, versão de 12/10/2026</strong>
+                  <input type="file" name="file" accept=".html,text/html" required />
+                </label>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <input type="checkbox" name="confirm_history" required />
+                  <span>Conferi a obra e a linha de base. Quero incorporar o histórico documentado e
+                    o replanejamento de 06/10, preservando medições existentes.</span>
+                </label>
+                <button className="elos-button" type="submit" disabled={selectedBaseline.status !== "approved"}>
+                  Importar histórico e reprogramação do Flow
+                </button>
+              </form>
+            </details>
+          ) : null}
           <PhysicalProgressPanel
             baselineId={selectedBaseline.id}
             selectedDate={selectedDate}
