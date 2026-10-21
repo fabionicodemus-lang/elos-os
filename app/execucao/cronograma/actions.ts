@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { fetchAllRows } from "@/lib/supabase-pagination";
+import { extractFlowSnapshot, prepareFlowImport, type ElosFlowActivity, type ElosExistingMeasurement } from "./flow-standalone-import.mjs";
 import { redirect } from "next/navigation";
 import { requireCompanyPermission } from "@/lib/workspace";
 
@@ -113,4 +115,102 @@ export async function voidScheduleProgress(formData: FormData) {
   const { error } = await supabase.rpc("void_execution_schedule_progress", { p_company_id: companyId, p_project_id: projectId, p_measurement_id: text(formData, "measurement_id"), p_reason: text(formData, "reason") });
   for (const path of [LIST_PATH, "/dashboard", "/engenharia/curvas", "/engenharia/previsao-financeira"]) revalidatePath(path);
   redirect(resultUrl(error ? error.message : "Lançamento anulado. Histórico preservado e avanço recalculado.", error ? "error" : "success", text(formData, "baseline_id"), text(formData, "date")));
+}
+
+
+/**
+ * Importação histórica do Flow (referência 12/10/2026).
+ * Deliberadamente NÃO modifica engineering_schedule_activities, dependências,
+ * quantidades ou orçamento. Datas replanejadas ficam nas medições de execução
+ * com data de referência 06/10; a baseline permanece comparável.
+ *
+ * Um único INSERT transacional via PostgREST evita aplicação parcial.
+ * O gatilho existente registra auditoria e atualiza o tracking da atividade.
+ */
+export async function importFlowStandaloneHistory(formData: FormData) {
+  const baselineId = text(formData, "baseline_id");
+  const file = formData.get("file");
+  if (!baselineId || !(file instanceof File) || file.size === 0 || file.size > 8 * 1024 * 1024) {
+    redirect(resultUrl("Envie o HTML do Flow (até 8 MB) e selecione uma linha de base.", "error", baselineId));
+  }
+  if (formData.get("confirm_history") !== "on") {
+    redirect(resultUrl("Confirme a conciliação do histórico antes de importar.", "error", baselineId));
+  }
+
+  const { supabase, companyId, projectId } = await requireCompanyPermission("execution.schedule.manage");
+  if (!projectId) redirect(resultUrl("Selecione a obra Flow Aptos.", "error", baselineId));
+
+  const [projectQuery, baselineQuery] = await Promise.all([
+    supabase.from("projects").select("id, name")
+      .eq("id", projectId).eq("company_id", companyId).maybeSingle(),
+    supabase.from("engineering_schedule_baselines").select("id, project_id, name, status")
+      .eq("id", baselineId).eq("company_id", companyId).eq("project_id", projectId).maybeSingle(),
+  ]);
+  if (projectQuery.error || baselineQuery.error || !projectQuery.data || !baselineQuery.data) {
+    redirect(resultUrl("Obra ou linha de base não encontrada.", "error", baselineId));
+  }
+  const project = projectQuery.data;
+  const baseline = baselineQuery.data;
+  if (project.name !== "Flow Aptos") {
+    redirect(resultUrl("Esta conciliação é exclusiva da obra Flow Aptos.", "error", baselineId));
+  }
+  if (baseline.status !== "approved") {
+    redirect(resultUrl("Aprove a linha de base em Engenharia antes de importar o histórico de execução.", "error", baselineId));
+  }
+
+  let snapshot: ReturnType<typeof extractFlowSnapshot>;
+  try {
+    snapshot = extractFlowSnapshot(await file.text());
+  } catch (error) {
+    redirect(resultUrl(error instanceof Error ? error.message : "Não foi possível analisar o HTML.", "error", baselineId));
+  }
+  if (snapshot.project.baselineName !== baseline.name) {
+    redirect(resultUrl("Nome da linha de base diferente do arquivo. Importe apenas na baseline de 14/07/2026.", "error", baselineId));
+  }
+
+  const [activities, measurements] = await Promise.all([
+    fetchAllRows<ElosFlowActivity>(async (from, to) => {
+      const { data, error } = await supabase.from("engineering_schedule_activities")
+        .select("id, code, planned_start, planned_finish, duration_days")
+        .eq("company_id", companyId).eq("project_id", projectId)
+        .eq("baseline_id", baselineId).eq("record_status", "active").range(from, to);
+      return { data: (data ?? []) as ElosFlowActivity[], error };
+    }),
+    fetchAllRows<ElosExistingMeasurement>(async (from, to) => {
+      const { data, error } = await supabase.from("engineering_schedule_progress_measurements")
+        .select("activity_id, measurement_date, voided_at")
+        .eq("company_id", companyId).eq("project_id", projectId)
+        .eq("baseline_id", baselineId).range(from, to);
+      return { data: (data ?? []) as ElosExistingMeasurement[], error };
+    }),
+  ]);
+  if (activities.error || measurements.error) {
+    redirect(resultUrl("Falha ao consultar atividades ou medições existentes. Nada foi alterado.", "error", baselineId));
+  }
+
+  let result: ReturnType<typeof prepareFlowImport>;
+  try {
+    result = prepareFlowImport(snapshot, activities.data, measurements.data);
+  } catch (error) {
+    redirect(resultUrl(error instanceof Error ? error.message : "Conciliação inválida.", "error", baselineId));
+  }
+
+  if (result.rows.length > 0) {
+    const rows = result.rows.map((row) => ({
+      ...row, company_id: companyId, project_id: projectId, baseline_id: baselineId,
+    }));
+    // A inserção em lote é atômica: caso falhe, nem uma única medição é gravada.
+    // As datas no arquivo são <= 06/10 e nunca substituem medições existentes.
+    const { error } = await supabase.from("engineering_schedule_progress_measurements").insert(rows);
+    if (error) {
+      redirect(resultUrl("A importação não foi aplicada: " + error.message, "error", baselineId));
+    }
+  }
+
+  for (const path of [LIST_PATH, "/engenharia/cronograma", "/engenharia/curvas", "/dashboard"]) revalidatePath(path);
+  const s = result.summary;
+  redirect(resultUrl(
+    `Flow conciliado: ${s.matchedActivities} atividades, ${s.importedMeasurements} medições históricas, ${s.newReplans} reprogramações; ${s.existingPreserved} registros existentes preservados. Baseline e orçamento intocados.`,
+    "success", baselineId, "2026-10-20",
+  ));
 }
