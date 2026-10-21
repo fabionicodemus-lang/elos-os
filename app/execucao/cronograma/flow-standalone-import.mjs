@@ -78,7 +78,7 @@ export function prepareFlowImport(state, activities, existingMeasurements) {
   }
   const missing = state.tasks.filter((t) => !activityByCode.has(t.id)).map((t) => t.id);
   if (missing.length) throw new Error("Importação suspensa: " + missing.length + " atividades sem correspondência: " + missing.slice(0, 15).join(", ") + ".");
-  const occupied = new Set(existingMeasurements.filter((m) => !m.voided_at)
+  const occupied = new Set(existingMeasurements
     .map((m) => m.activity_id + "|" + m.measurement_date));
   const incoming = [];
   let skipped = 0, historicalCount = 0, reprogrammed = 0;
@@ -109,8 +109,8 @@ export function prepareFlowImport(state, activities, existingMeasurements) {
         team_count: null,
         current_start: currentStart,
         current_finish: currentFinish,
-        actual_start: validIso(task.actualStart) ? task.actualStart : null,
-        actual_finish: row.percent === 100 && validIso(task.actualEnd) ? task.actualEnd : null,
+        actual_start: validIso(task.actualStart) && task.actualStart <= row.date ? task.actualStart : null,
+        actual_finish: row.percent === 100 && validIso(task.actualEnd) && task.actualEnd <= row.date ? task.actualEnd : null,
         notes: SOURCE + " · " + row.notes,
       });
       if (row.isReplan) reprogrammed += 1;
