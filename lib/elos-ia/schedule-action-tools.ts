@@ -105,7 +105,7 @@ export async function runScheduleActionTool(ctx:ScheduleActionContext,allowed:Sc
       try{
         if(raw.percentual==null && !raw.novo_inicio && !raw.novo_fim)throw new Error("Informe percentual executado ou alguma nova data.");
         if(raw.novo_inicio!=null&&!validScheduleDate(raw.novo_inicio)||raw.novo_fim!=null&&!validScheduleDate(raw.novo_fim))throw new Error("Data reprogramada inválida.");
-        const row=planScheduleRow({percentual:raw.percentual,novo_inicio:raw.novo_inicio,novo_fim:raw.novo_fim,observacoes:raw.observacoes},activity,last.get(activity.id)||null,date);
+        const row=planScheduleRow({percentual:typeof raw.percentual==="number"?raw.percentual:null,novo_inicio:str(raw.novo_inicio)||null,novo_fim:str(raw.novo_fim)||null,observacoes:str(raw.observacoes)||null},activity,last.get(activity.id)||null,date);
         if(row.progressPercent===100 && row.actualFinish && row.actualFinish>date)throw new Error("Conclusão real não pode ser posterior à data da medição.");
         rows.push(row);
       }catch(e){errors.push(activity.code+" · "+activity.name+" · "+activity.location+": "+(e instanceof Error?e.message:"Valor inválido"));}
