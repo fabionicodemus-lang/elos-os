@@ -1,0 +1,27 @@
+name: Supabase 0101 - Elos IA Cronograma
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/run/supabase-0101.md"
+
+permissions:
+  contents: read
+
+jobs:
+  apply-and-validate:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.head_ref == 'feature/elos-ia-atualizar-cronograma-conversa' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Aplicar e validar atualização por Elos IA
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGSSLMODE: require
+          PGCONNECT_TIMEOUT: "10"
+        run: bash .github/scripts/apply-supabase-0101.sh
