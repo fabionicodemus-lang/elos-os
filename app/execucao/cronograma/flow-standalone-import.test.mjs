@@ -58,13 +58,18 @@ test("não recria agosto e preserva registro existente inclusive anulado",()=>{
  assert.equal(result.rows.length,0);
  assert.equal(result.summary.existingPreserved,1);
 });
-test("protege contra regressão física e correspondência parcial",()=>{
+test("audita divergência de avanço histórico e protege contra correspondência parcial",()=>{
  const snapshot=source();
  snapshot.tasks[0].measurements=[{date:"2026-09-30",percent:30}];
  const activities=existingActivities(snapshot);
- assert.throws(()=>prepareFlowImport(snapshot,activities,[{
-  activity_id:"db-T001",measurement_date:"2026-08-31",progress_percent:80
- }]),/retrocederia/);
+ const correction=prepareFlowImport(snapshot,activities,[{
+  activity_id:"db-T001",measurement_date:"2026-08-31",progress_percent:80,
+  actual_quantity:8,actual_start:"2026-08-20"
+ }]);
+ assert.equal(correction.summary.correctedProgress,1);
+ assert.equal(correction.rows[0].progress_percent,30);
+ assert.equal(correction.rows[0].actual_start,"2026-09-30");
+ assert.match(correction.rows[0].notes,/RETIFICAÇÃO AUDITADA/);
  assert.throws(()=>prepareFlowImport(snapshot,activities.slice(0,394),[]),/faltam atividades/);
  activities[0].planned_start="2026-09-02";
  assert.throws(()=>prepareFlowImport(snapshot,activities,[]),/divergente/);
