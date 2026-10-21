@@ -10,6 +10,10 @@ export type FlowSnapshotTask = {
   actualStart?: string;
   actualEnd?: string;
   actualNotes?: string;
+  worksSaturday?: boolean;
+  worksHolidays?: boolean;
+  worksRecesses?: boolean;
+  milestone?: boolean;
   measurements: { date: string; percent: number; notes?: string }[];
 };
 export type FlowSnapshot = {
@@ -19,6 +23,9 @@ export type FlowSnapshot = {
 export type ElosFlowActivity = {
   id: string;
   code: string;
+  name?: string;
+  sort_order: number;
+  quantity_snapshot: number | string | null;
   planned_start: string;
   planned_finish: string;
   duration_days: number;
@@ -27,6 +34,12 @@ export type ElosExistingMeasurement = {
   activity_id: string;
   measurement_date: string;
   voided_at?: string | null;
+  progress_percent?: number | string;
+  actual_quantity?: number | string;
+  actual_cost?: number | string;
+  team_count?: number | null;
+  actual_start?: string | null;
+  actual_finish?: string | null;
 };
 export type FlowPreparedMeasurement = {
   activity_id: string;
@@ -42,7 +55,17 @@ export type FlowPreparedMeasurement = {
   notes: string;
 };
 export function extractFlowSnapshot(html: string): FlowSnapshot;
-export function finishWorkday(start: string, durationDays: number): string;
+export function finishWorkday(start: string, durationDays: number, options?: {
+  milestone?: boolean;
+  worksSaturday?: boolean;
+  worksHolidays?: boolean;
+  worksRecesses?: boolean;
+  globalSaturday?: boolean;
+  globalHolidays?: boolean;
+  globalRecesses?: boolean;
+  holidays?: { date: string }[];
+  recesses?: { start: string; end: string }[];
+}): string;
 export function prepareFlowImport(
   state: FlowSnapshot,
   activities: ElosFlowActivity[],
