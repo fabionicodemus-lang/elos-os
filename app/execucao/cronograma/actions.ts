@@ -217,7 +217,7 @@ export async function importFlowStandaloneHistory(formData: FormData) {
   for (const path of [LIST_PATH, "/engenharia/cronograma", "/engenharia/curvas", "/dashboard"]) revalidatePath(path);
   const s = result.summary;
   redirect(resultUrl(
-    `Flow conciliado: ${s.matchedActivities} atividades, ${s.importedMeasurements} medições históricas, ${s.newReplans} reprogramações; ${s.existingPreserved} registros existentes preservados. Baseline e orçamento intocados.`,
+    `Flow conciliado: ${s.matchedActivities} atividades, ${s.importedMeasurements} medições históricas, ${s.newReplans} reprogramações; ${s.existingPreserved} registros existentes preservados; ${s.correctedProgress} retificações auditadas. Baseline e orçamento intocados.`,
     "success", baselineId, "2026-10-06",
   ));
 }
