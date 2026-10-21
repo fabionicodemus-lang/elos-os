@@ -1,0 +1,20 @@
+✔ CT18: R/C/P exclusivos e AF sai quando encargo é constituído (1.762812ms)
+✔ CT19: ETC independente do orçamento e aditivo proposto não vira compromisso (0.357762ms)
+✔ CT21: desconhecido não vira zero nem Q artificial de 980 mil (0.339455ms)
+✔ CT04: janelas 30/90 cumulativas, hoje e desconhecido separados (1.374275ms)
+✔ CT13: coorte de principal exigível exclui carteira futura e juros (0.478051ms)
+✔ mesma parcial em resumo IA, agenda de relatório e mês financeiro (8.828654ms)
+✔ rateio não elimina A Apropriar; sobrecobertura não vira C zero certificado (0.570669ms)
+✔ resultado comercial usa os mesmos saldos de recebimento e pagamento parciais (2.243598ms)
+✔ nota ligada a contrato sem medição cobre 400: futuro 600, nunca 1000+400 (6.530615ms)
+✔ medição e nota do mesmo escopo usam um vínculo financeiro (0.990073ms)
+✔ vínculo ausente torna cobertura incompleta, sem certificar Q/EAC (1.078314ms)
+✔ medição não reabre desconto já liquidado como saldo artificial (18.963292ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 420.832581

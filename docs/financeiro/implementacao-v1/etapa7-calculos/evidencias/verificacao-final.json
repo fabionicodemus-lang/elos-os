@@ -1,0 +1,129 @@
+{
+  "verified_at_utc": "2026-10-21T21:14:50.384356+00:00",
+  "branch": "feat/financeiro-etapa7-calculos",
+  "implementation_commit": "3daa96e3c0ccb64f2ffd18bd31045b2f52cde75e",
+  "stage5_ancestor": true,
+  "stage6_ancestor": true,
+  "prior_stages_expected_and_historical_evidence_unchanged": true,
+  "source_files_sha256": {
+    ".github/workflows/finance-foundation.yml": "2dd311989b57e67c09da800e25e91f52b9872ddb2bf62e8ce42f3cd44a35c740",
+    "app/comercial/incorporacao/[saleId]/page.tsx": "e80d5820d8c2d7e7009fb0afc0cfef141249ad2e3db9ce22164658b18e4bdccf",
+    "app/comercial/incorporacao/resultado/page.tsx": "c6687275146af70aa85f0db34e06f423d9c20c87128026b573e0ae3507499c37",
+    "app/comercial/planos-de-pagamento/actions.ts": "28173524ce991b2049d924b1fb0cb330b546bb5ee8acbace01684eeea940cbc6",
+    "app/comercial/planos-de-pagamento/page.tsx": "935b9daa373bf8c1259a6a8e8a75a89c40cfe91acdb76c81fbe295cb7e5cc204",
+    "app/comercial/vendas/[saleId]/page.tsx": "f0311259aa2c1850d9a9541de894bec1be284f4a8d51956986e881fb6c1838cb",
+    "app/dashboard/model-dashboard.tsx": "e32d1d742e75e640b585516ef2d37072c0d9c70839813360a238daf5e34f013a",
+    "app/financeiro/contas-a-pagar/actions.ts": "1ca0f4b1ce0d74af8b1f0066496f9dcc32350476d81bad20b0dfad5fcf80dafe",
+    "app/financeiro/contas-a-pagar/page.tsx": "58f8b0282a3ffd489e3348cea0652b0898021125db4e5246b40f18668c9b0b19",
+    "app/financeiro/contas-a-receber/page.tsx": "d55183db67f5ec98d1f499d1b2f06c3e1e19a416874248fd396854a66e17bd4f",
+    "app/financeiro/fluxo-de-caixa/page.tsx": "ce39a8c6f074d2b7b8717e62dd235206112f6c0b699180c0d4befa221d33abf2",
+    "app/financeiro/relatorios/page.tsx": "f66b43ef45ded446cb4859818a1e8dd945c7870081fd35a2fabff76e2fbd5f4c",
+    "lib/commercial/development-result.mjs": "4ad4e39027a9ed6550072d293e301148ee4363318a7ffd9fc441416f7cd94633",
+    "lib/cost-vs-budget/native-allocation.mjs": "50268b1be55a075b9f81f78b94c291c1410df178d85b72d79375ec98161ef2db",
+    "lib/cost-vs-budget/native-measurement-titles.ts": "6e85da381ebb0cf14f77b78898f24fc43816513887be924c1e41be77f3229ea6",
+    "lib/cost-vs-budget/server.ts": "0e633affed9d875cfa724236175f974fba553737b7caced9e1e84b1deab3c851",
+    "lib/development-costs/server.ts": "477228064411085ed1f444f29090339b97a3bd6610112f8e52e7d858c4a89aa2",
+    "lib/development-costs/summary.mjs": "e10eb04c8a66d58e804f2fa8f63b5be614a02761ccb10089070c89389a6bd7bd",
+    "lib/elos-ia/summaries.d.mts": "d0079c10e89470e714854d998d6c04b038c2d40445364d2b654133cd139e0495",
+    "lib/elos-ia/summaries.mjs": "2bf136be8cf5eb4d9aa9fad23fb5963674446cdeafc8547653fc2c8df1df3b8c",
+    "lib/elos-ia/tools.ts": "8209fda078a8264b421d6a6dc5f8d562a41424421debd29de1ca0469655ef92f",
+    "lib/finance-core/cash.d.mts": "4a3900b21677829d1594c0f694b87b308ec1e4a917d737ad236b809f8d999d4c",
+    "lib/finance-core/cash.mjs": "789c565372b6348edf5490ecef647e042a94d9b3cd5815c417143613c8316a66",
+    "lib/finance-core/cohort.d.mts": "7b0f03b091c723cba2c49d7ce7370ef83a84a28c3507a49d21e1e268bca21958",
+    "lib/finance-core/cohort.mjs": "03cdcbbd45529b0d3e438166dd5ec7d331ee2c640445c84576d785a3b0bfa20b",
+    "lib/finance-core/coverage.d.mts": "0737f54849e1595cb873d4c64a39201f4c3d101a370dcc432497f253f04226af",
+    "lib/finance-core/coverage.mjs": "02fc2f9bc2b239cdb4dd0fc451804d711e87a297df9de5468e32186338a1e041",
+    "lib/finance-core/due.d.mts": "bf76dbdf9924a08ec078fee422cb170109318095f353384bcf524d780166a47e",
+    "lib/finance-core/due.mjs": "9d13f0cecbe1f04685214f3c0ca7127e5041cd63c3eca23e57af08119ce64db0",
+    "lib/finance-core/revalidate.ts": "d6d3c7abb0c1318eae55ffceb5890efed1bb5180cff9f4ddf75c0356239e8929",
+    "lib/finance-core/server.ts": "40d0d648a5417ca450dbf259a8fc0bbf4405a33b852a664cac3673331c1de8e1",
+    "lib/finance-core/titles.d.mts": "343370fe7efe0c51fe443df51e8c7b24acb71cbcd681d7eb2ed342a8c4bd60d4",
+    "lib/finance-core/titles.mjs": "50e2fc7252d1d06154eea5ba15c8a32b093379ca3ba392831fdf0693ada37ed1",
+    "lib/forecast/server.ts": "d444ac17e54a0666d16db7783b8b424682904d1f2e14e97337e0be33b9888370",
+    "package.json": "4df78418b62c04f6e30e1e894d05fb77becdc065caf8d34ce1f5a5d4d7553f9a",
+    "supabase/migrations/20261021160000_financial_settlement_ledger.sql": "06e3549bc0a2b30c2c64994e6b7247fc4abc91cbd7111aa90e3916d668adb75c",
+    "supabase/migrations/20261021163000_financial_ai_settlements.sql": "a8f46436355b79bc132741551851a0d6cee584c9b2c6aa954b1bb3271fd8c123",
+    "tests/finance-core/compare.mjs": "529cbd6338e6b7bab2eefdf1f3872973b54430ff1551a9c192e87225942ad8c7",
+    "tests/finance-core/components.test.mjs": "f4c464d0503610a74f8add8c826ac197b0c86d5b71a60efe1472dc1994312188",
+    "tests/finance-core/forecast.test.mjs": "830f3c0ca40884c4ffbb5ebf2c560c7f0289517a97d672bb54c77b53aeb2246b",
+    "tests/finance-core/prior-stages.mjs": "af084cbe484c597b05d002b24bf92532cddef90d5a1c87c65586fb3d524187e5",
+    "tests/finance-core/render.test.mjs": "8e1de3946fa018280f440d866b57b14b27866cc524dfe84c79fd3080cabdd532",
+    "tests/finance-core/settlements.mjs": "e335bd4e189fbaabb318a0eea9e8469e5f6b986dccc468e245d40635e6eb242d",
+    "tests/finance-core/validate.mjs": "ce565fbd3375f6426562e17c56040c521941b2a797fcc48b4d9eab186c5729d1",
+    "tests/homologation/aurora-regressions.test.mjs": "e887eb492b20ce2a4da0da24e8c18f8db84bfef56aba240438bdd49e2df3e049"
+  },
+  "evidence_files_sha256": {
+    "adaptacao-casos.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "adaptadores-anteriores.json": "7c1147311850b3d3f636c8cea02aefc2429ba9d2bb33ab296700033fc494340b",
+    "casos-componentes-obtidos.json": "236b0d917a39c4ec6d3b77a907db4e2042c38651b80b9140e06f44f4d43dea96",
+    "casos-obtidos.json": "5973d0c66ca972d50ceba4f5bb3c471d23c8f256cefec6b1e19d36d5483a534d",
+    "comparacao-componentes.json": "1ce1b9d43e5c548d8fde7d8c33b17fd5008e69b6755aa68f59fb7e944d299acc",
+    "comparacao-componentes.log": "1ce1b9d43e5c548d8fde7d8c33b17fd5008e69b6755aa68f59fb7e944d299acc",
+    "comparacao-integrais.json": "43f864972c1601a9eabf12a33487b2dd28965dc542a258b84721960ebf1e53c7",
+    "comparacao-integrais.log": "43f864972c1601a9eabf12a33487b2dd28965dc542a258b84721960ebf1e53c7",
+    "componentes-casos.json": "3afb24a220b731e0731cb3ac6519cdd52d992f9798a721b395e5334e65de7e16",
+    "componentes.log": "d83ba6c1eace499eab145bfc80607ce724dd85730f27926013b5574260f33218",
+    "eslint-final.log": "76162e465989f3f070a9de8db711fbf358e53b74d09ce1bbdb57c727e4c4a16d",
+    "eslint.log": "76162e465989f3f070a9de8db711fbf358e53b74d09ce1bbdb57c727e4c4a16d",
+    "etapas-anteriores.log": "514d149eba0f64635a4ac8bf128c42cb7331708b2ccabcf5df77c2606ea761a8",
+    "execucoes.json": "7ea7670703190b54f69fe3012e5ca27197602984d513d5a15709be1264058f05",
+    "fundacao/banco-final.json": "4923baf0e4635240893a8d36b89e312957bc03a569db401f8c502fad5f036da1",
+    "fundacao/casos-iniciais.json": "6c8b49de4590019007be28f184164cb1525e01c8a371fd357d37a49b2bbd0055",
+    "fundacao/comparacao-casos.json": "b47fed03f79594219cbeb1c653a664d5d28170b1cc1acc2f35f63116e05256f8",
+    "fundacao/comparacao-casos.log": "b47fed03f79594219cbeb1c653a664d5d28170b1cc1acc2f35f63116e05256f8",
+    "integracao/baseline.json": "848674a9e6de9851b031cb7398a9bca044e45178ed3d918f4aa0049d5a6e3d15",
+    "integracao/casos-obtidos.json": "ad7664e86ac2a77c6e60046a4e583e7f2a882fb2a14c35d93f55b498c6eef3ec",
+    "integracao/integracao.json": "6c9d5019dd50ba597bda22a806b356174d96cd9ae4b1024e32de319b711c38ce",
+    "liquidacoes.json": "2c0dd85e2cd3a7701ffa9337d4555cfbc41edc31cce37c7e3b91434328dd685f",
+    "liquidacoes.log": "c64f42008d5514b00580cfe23db38f2fae54ecbdd5539644f4500b517e913483",
+    "matriz-30.json": "a229905c94aea5f973e514968cc0751fc1893c21f9de897721bed2f0ddf89088",
+    "regressao-81.log": "0976f29db376b34cf03ba0d0f93dbacdb04a4bda0d9559250fcefd020cb4e302",
+    "render.log": "1b1262f333a591db737bab546aedff1c642ac7f08e4eabe14cd4747a823945ff",
+    "typescript.log": "76162e465989f3f070a9de8db711fbf358e53b74d09ce1bbdb57c727e4c4a16d",
+    "verificacao-quadro.json": "cdbdd9619dbb4cf2a4ed55b3d491be18506803d0d24ccb351804b3e8b84da2ea"
+  },
+  "test_results": {
+    "fundacao/banco-final.json": {
+      "passed": 25,
+      "failed": 0
+    },
+    "integracao/integracao.json": {
+      "passed": 24,
+      "failed": 0
+    },
+    "liquidacoes.json": {
+      "passed": 16,
+      "failed": 0
+    },
+    "comparacao-integrais.json": {
+      "passed": 6
+    },
+    "comparacao-componentes.json": {
+      "passed": 3
+    },
+    "componentes.log": {
+      "passed": 12,
+      "failed": 0
+    },
+    "render.log": {
+      "passed": 1,
+      "failed": 0
+    },
+    "regressao-81.log": {
+      "passed": 81,
+      "failed": 0
+    }
+  },
+  "case_coverage": {
+    "Integralmente aprovado no perímetro isolado": 6,
+    "Parcialmente coberto": 17,
+    "Não executado": 6,
+    "Reprovado no fluxo integral": 1
+  },
+  "financial_homologation": false,
+  "production_writes_performed": false,
+  "remote_koper_calls_performed": false,
+  "production_statement_basis": "Comandos executados exclusivamente sobre arquivos locais e runtime descartável com --network none; nenhuma credencial/URL real usada. Não é inspeção do servidor remoto.",
+  "no_fixture_containers_left_running": true,
+  "legacy_runner_base_commit_metadata": "Rótulos históricos dos runners anteriores são preservados; implementation_commit e hashes acima identificam a versão candidata efetivamente testada."
+}

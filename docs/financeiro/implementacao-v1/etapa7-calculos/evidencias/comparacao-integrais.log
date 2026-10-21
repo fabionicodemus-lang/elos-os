@@ -1,0 +1,46 @@
+{
+  "scope": "Comparação das saídas fornecidas. Este script não executa o Elos e não verifica a autenticidade dos links de evidência.",
+  "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+  "context_errors": [],
+  "selected_count": 6,
+  "passed_count": 6,
+  "complete": true,
+  "cases": [
+    {
+      "id": "CT01",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT07",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT08",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT23",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT26",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT30",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    }
+  ]
+}

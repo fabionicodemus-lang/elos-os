@@ -1,0 +1,188 @@
+[
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "tests/finance-core/components.test.mjs",
+      "tests/finance-core/forecast.test.mjs"
+    ],
+    "log": "componentes.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-core/settlements.mjs"
+    ],
+    "log": "liquidacoes.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "tests/finance-core/render.test.mjs"
+    ],
+    "log": "render.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-core/prior-stages.mjs",
+      "--backup"
+    ],
+    "log": "etapas-anteriores.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-core/compare.mjs"
+    ],
+    "log": "adaptacao-casos.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "python3",
+      "tests/financeiro/fixtures/comparar_resultados.py",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa7-calculos/evidencias/casos-obtidos.json",
+      "--only",
+      "CT01",
+      "CT07",
+      "CT08",
+      "CT23",
+      "CT26",
+      "CT30",
+      "--report",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa7-calculos/evidencias/comparacao-integrais.json"
+    ],
+    "log": "comparacao-integrais.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "python3",
+      "tests/financeiro/fixtures/comparar_resultados.py",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa7-calculos/evidencias/casos-componentes-obtidos.json",
+      "--only",
+      "CT18",
+      "CT19",
+      "CT21",
+      "--report",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa7-calculos/evidencias/comparacao-componentes.json"
+    ],
+    "log": "comparacao-componentes.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "--test-reporter=spec",
+      "lib/forecast/engine.test.mjs",
+      "lib/forecast/snapshot-comparison.test.mjs",
+      "lib/elos-ia/summaries.test.mjs",
+      "app/engenharia/contratos/contract-calculations.test.mjs",
+      "lib/banking/ofx.test.mjs",
+      "tests/banking/bank-operations.test.mjs",
+      "lib/elos-ia/finance-safe-write-db.test.mjs",
+      "tests/homologation/aurora-regressions.test.mjs",
+      "tests/commercial/development-costs.test.mjs",
+      "tests/commercial/development-result.test.mjs",
+      "tests/financeiro/money.test.mjs"
+    ],
+    "log": "regressao-81.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npx",
+      "tsc",
+      "--noEmit"
+    ],
+    "log": "typescript.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npx",
+      "eslint",
+      "lib/finance-core",
+      "lib/forecast/server.ts",
+      "lib/cost-vs-budget/server.ts",
+      "lib/cost-vs-budget/native-allocation.mjs",
+      "lib/cost-vs-budget/native-measurement-titles.ts",
+      "lib/development-costs",
+      "lib/commercial/development-result.mjs",
+      "app/comercial/incorporacao/resultado/page.tsx",
+      "app/comercial/incorporacao/[saleId]/page.tsx",
+      "lib/elos-ia/summaries.mjs",
+      "lib/elos-ia/tools.ts",
+      "app/financeiro/contas-a-pagar",
+      "app/financeiro/contas-a-receber",
+      "app/financeiro/relatorios",
+      "app/financeiro/fluxo-de-caixa",
+      "app/comercial/planos-de-pagamento",
+      "app/comercial/vendas/[saleId]/page.tsx",
+      "app/dashboard/model-dashboard.tsx",
+      "tests/finance-core"
+    ],
+    "log": "eslint.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "tests/finance-core/components.test.mjs",
+      "tests/finance-core/forecast.test.mjs"
+    ],
+    "log": "componentes.log",
+    "exit_code": 0,
+    "repeat_reason": "Verificação após correção localizada do saldo da medição com desconto; mesmas suítes e esperados"
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "--test-reporter=spec",
+      "lib/forecast/engine.test.mjs",
+      "lib/forecast/snapshot-comparison.test.mjs",
+      "lib/elos-ia/summaries.test.mjs",
+      "app/engenharia/contratos/contract-calculations.test.mjs",
+      "lib/banking/ofx.test.mjs",
+      "tests/banking/bank-operations.test.mjs",
+      "lib/elos-ia/finance-safe-write-db.test.mjs",
+      "tests/homologation/aurora-regressions.test.mjs",
+      "tests/commercial/development-costs.test.mjs",
+      "tests/commercial/development-result.test.mjs",
+      "tests/financeiro/money.test.mjs"
+    ],
+    "log": "regressao-81.log",
+    "exit_code": 0,
+    "repeat_reason": "Verificação após correção localizada do saldo da medição com desconto; mesmas suítes e esperados"
+  },
+  {
+    "command": [
+      "npx",
+      "tsc",
+      "--noEmit"
+    ],
+    "log": "typescript.log",
+    "exit_code": 0,
+    "repeat_reason": "Verificação após correção localizada do saldo da medição com desconto; mesmas suítes e esperados"
+  },
+  {
+    "command": [
+      "npx",
+      "eslint",
+      "lib/cost-vs-budget/native-measurement-titles.ts",
+      "tests/finance-core/forecast.test.mjs"
+    ],
+    "log": "eslint-final.log",
+    "exit_code": 0,
+    "repeat_reason": "Última correção localizada"
+  }
+]
