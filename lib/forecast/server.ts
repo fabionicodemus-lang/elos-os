@@ -1,3 +1,4 @@
+import { allocatePersistedCosts } from "./cost-allocation.mjs";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { assignActivityCosts } from "@/app/engenharia/curvas/curve-calculations.mjs";
 import { buildUnifiedForecast, type UnifiedForecastResult } from "./engine.mjs";
@@ -119,6 +120,7 @@ type Payable = {
 };
 
 type PayableAllocation = {
+  id?: string;
   payable_id: string;
   service_id: string | null;
   allocation_amount: number;
@@ -194,23 +196,7 @@ function allocateByCostAllocations(
   allocations: PayableAllocation[] | undefined,
   developmentServiceIds: Set<string>,
 ): AllocatedFinancialSource[] {
-  const rows = (allocations ?? []).filter((row) => row.service_id && number(row.allocation_amount) > 0);
-  const total = rows.reduce((sum, row) => sum + number(row.allocation_amount), 0);
-  if (!rows.length || total <= 0) return [{ id: payable.id, contractId: null, serviceId: null, amount }];
-  // A parte rateada em centros de incorporação (terreno, outorga, comissões...) não é custo de obra:
-  // fica fora da previsão da obra e é controlada no Resultado da incorporação.
-  const constructionRows = rows.filter((row) => !developmentServiceIds.has(row.service_id!));
-  if (!constructionRows.length) return [];
-  const constructionAmount = amount * constructionRows.reduce((sum, row) => sum + number(row.allocation_amount), 0) / total;
-  const constructionTotal = constructionRows.reduce((sum, row) => sum + number(row.allocation_amount), 0);
-  let allocated = 0;
-  return constructionRows.map((row, index) => {
-    const value = index === constructionRows.length - 1
-      ? constructionAmount - allocated
-      : constructionAmount * number(row.allocation_amount) / constructionTotal;
-    allocated += value;
-    return { id: `${payable.id}:${row.service_id}:${index}`, contractId: null, serviceId: row.service_id, amount: value };
-  });
+  return allocatePersistedCosts(payable, amount, allocations, developmentServiceIds);
 }
 
 function allocatePayable(
@@ -441,7 +427,7 @@ export async function loadProjectForecast({
     fetchAllRows<PayableAllocation>(async (from, to) => {
       const { data, error } = await supabase
         .from("payable_cost_allocations")
-        .select("payable_id, service_id, allocation_amount")
+        .select("id, payable_id, service_id, allocation_amount")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
         .order("id")

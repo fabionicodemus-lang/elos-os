@@ -1,0 +1,190 @@
+{
+  "scope": "Comparação das saídas fornecidas. Este script não executa o Elos e não verifica a autenticidade dos links de evidência.",
+  "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+  "context_errors": [],
+  "selected_count": 30,
+  "passed_count": 2,
+  "complete": false,
+  "cases": [
+    {
+      "id": "CT01",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT02",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT03",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT04",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT05",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT06",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT07",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT08",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT09",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT10",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT11",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT12",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT13",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT14",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT15",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT16",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT17",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT18",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT19",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT20",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT21",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT22",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT23",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT24",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT25",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT26",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT27",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT28",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT29",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT30",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    }
+  ]
+}

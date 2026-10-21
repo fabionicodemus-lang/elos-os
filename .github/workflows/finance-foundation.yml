@@ -2,6 +2,10 @@ name: Financial foundation (isolated)
 on:
   pull_request:
     paths:
+      - 'lib/koper-finance/**'
+      - 'lib/forecast/**'
+      - 'tests/koper-finance/**'
+      - 'supabase/migrations/20261021140000_koper_financial_snapshots.sql'
       - 'lib/money*'
       - 'lib/financial-installments.ts'
       - 'lib/cost-vs-budget/native-allocation.mjs'
@@ -31,8 +35,13 @@ jobs:
       - run: npm ci
       - run: docker pull postgres@sha256:a63c1ea3f6a3a5a1621f97d2aba3b30faecfab4224c1b0000cc85ced57bb1939
       - run: npm run test:finance
+      - run: npm run test:koper-finance
+        env:
+          KOPER_EVIDENCE_DIR: ${{ runner.temp }}/koper-validation
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: finance-foundation-evidence
-          path: ${{ env.FINANCE_EVIDENCE_DIR }}/
+          path: |
+            ${{ env.FINANCE_EVIDENCE_DIR }}/
+            ${{ runner.temp }}/koper-validation/

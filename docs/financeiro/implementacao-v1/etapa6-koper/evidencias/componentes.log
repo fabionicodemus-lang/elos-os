@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: CT26: 3 páginas completas; página ausente, retry e cursor repetido
+ok 1 - CT26: 3 páginas completas; página ausente, retry e cursor repetido
+  ---
+  duration_ms: 2.013353
+  type: 'test'
+  ...
+# Subtest: Universo desconhecido, repetição de ID e total divergente nunca certificam
+ok 2 - Universo desconhecido, repetição de ID e total divergente nunca certificam
+  ---
+  duration_ms: 0.499533
+  type: 'test'
+  ...
+# Subtest: Baixa parcial, valores desconhecidos e contexto sem obra não são inventados
+ok 3 - Baixa parcial, valores desconhecidos e contexto sem obra não são inventados
+  ---
+  duration_ms: 0.513914
+  type: 'test'
+  ...
+# Subtest: A Apropriar conserva valor explícito e valor omitido; parcial usa denominador do título
+ok 4 - A Apropriar conserva valor explícito e valor omitido; parcial usa denominador do título
+  ---
+  duration_ms: 1.970129
+  type: 'test'
+  ...
+# Subtest: Excedente de pagamento não vira custo de serviço nem desaparece
+ok 5 - Excedente de pagamento não vira custo de serviço nem desaparece
+  ---
+  duration_ms: 1.425489
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 76.999971

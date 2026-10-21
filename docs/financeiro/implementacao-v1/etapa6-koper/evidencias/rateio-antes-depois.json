@@ -1,0 +1,26 @@
+{
+  "base_commit": "494c55c",
+  "before": {
+    "service_cents": 100000,
+    "unallocated_cents": 0,
+    "source": "baseline.json"
+  },
+  "after": {
+    "service_cents": 60000,
+    "unallocated_cents": 40000
+  },
+  "output": [
+    {
+      "id": "p:known",
+      "contractId": null,
+      "serviceId": "S",
+      "amount": 600
+    },
+    {
+      "id": "p:pending",
+      "contractId": null,
+      "serviceId": null,
+      "amount": 400
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+export function allocatePersistedCosts(payable: {id: string; amount: number}, amount: number, allocations: {id?: string; service_id: string | null; allocation_amount: number}[] | undefined, developmentServiceIds?: Set<string>): {id: string; contractId: null; serviceId: string | null; amount: number}[];

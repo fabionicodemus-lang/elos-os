@@ -1,0 +1,64 @@
+{
+  "base_commit": "494c55c",
+  "branch": "feat/financeiro-etapa6-koper",
+  "recorded_at": "2026-10-21T20:21:39.353974+00:00",
+  "tests": {
+    "integration": {
+      "passed": 24,
+      "failed": 0,
+      "exit": 0
+    },
+    "components": {
+      "passed": 5,
+      "failed": 0,
+      "exit": 0
+    },
+    "foundation_same_assertions_with_new_schema": {
+      "passed": 25,
+      "failed": 0,
+      "exit": 0
+    },
+    "regression": {
+      "passed": 81,
+      "failed": 0,
+      "exit": 0
+    },
+    "typescript": {
+      "exit": 0
+    },
+    "eslint_changed_files": {
+      "exit": 0
+    },
+    "comparator_CT01_CT26": {
+      "passed": 2,
+      "exit": 0
+    },
+    "comparator_all_cases": {
+      "passed": 2,
+      "not_integrally_executed_this_round": 28,
+      "exit": 1
+    }
+  },
+  "backup_tables": 46,
+  "financial_acceptance_recorded": false,
+  "live_database_access": false,
+  "live_koper_access": false,
+  "production_migrations_applied": false,
+  "remote_jobs_or_deploys_run": false,
+  "previous_stage_paths_preserved": [
+    "tests/financeiro",
+    "docs/financeiro/implementacao-v1/base-validacao",
+    "docs/financeiro/implementacao-v1/t01-t02",
+    "lib/money.mjs",
+    "lib/money.d.mts",
+    "supabase/migrations/20261021120000_financial_foundation_guards.sql"
+  ],
+  "normative_sha256": "30f19b5ef98157d72c32a9c471c8893bac3b17a60167d6a417a346c6efb36c28",
+  "original_fixture_hashes_preserved": {
+    "tests/financeiro/fixtures/parametros_financeiros.json": "665ede4e88d7d92714940a53a323790894bbbb9ce82ff4a34411cf904ef33ff6",
+    "tests/financeiro/fixtures/comparar_resultados.py": "13d85af9c526d55c0c110a6dfa7c78a7193c32453b45e47c9f18216488e32a08",
+    "tests/financeiro/fixtures/resultados_modelo.json": "e3911c7fb8c8a5ec5f14a37430bc148f19838c1722ec08e2b530ffcdb2666ac3",
+    "tests/financeiro/fixtures/casos_financeiros.json": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb"
+  },
+  "CT07": "Crítico: parcial na RPC operacional encerra título; snapshot parcial novo retido sem baixa automática; ledger por componentes para Etapa 7."
+}
