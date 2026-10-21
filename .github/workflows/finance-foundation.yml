@@ -1,0 +1,38 @@
+name: Financial foundation (isolated)
+on:
+  pull_request:
+    paths:
+      - 'lib/money*'
+      - 'lib/financial-installments.ts'
+      - 'lib/cost-vs-budget/native-allocation.mjs'
+      - 'tests/financeiro/**'
+      - 'supabase/migrations/20261021120000_financial_foundation_guards.sql'
+      - 'supabase/migrations/20260729_0048_finance_bank_accounts.sql'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/scripts/*backup*'
+      - '.github/scripts/restore-test.sh'
+      - '.github/workflows/finance-foundation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FINANCE_EVIDENCE_DIR: ${{ runner.temp }}/finance-validation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: docker pull postgres@sha256:a63c1ea3f6a3a5a1621f97d2aba3b30faecfab4224c1b0000cc85ced57bb1939
+      - run: npm run test:finance
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: finance-foundation-evidence
+          path: ${{ env.FINANCE_EVIDENCE_DIR }}/

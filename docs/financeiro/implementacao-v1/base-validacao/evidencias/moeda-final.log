@@ -1,0 +1,15 @@
+✔ T06: 1.005 preserva arredondamento decimal para 101 centavos (1.085327ms)
+✔ T06: dinheiro desconhecido não vira zero (0.192066ms)
+✔ T06: centavos fora do intervalo seguro são rejeitados (0.153729ms)
+✔ T07: 31/02 não é vencimento válido (0.299066ms)
+✔ T06/CT11 componente: maior resto desempata por ID, independente da ordem (0.869446ms)
+✔ T06/CT11 componente: rateio 60/40 e parcial conservam centavos (0.162402ms)
+✔ T06: divisão de parcelas preserva soma (0.313978ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 439.964783

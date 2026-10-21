@@ -1,0 +1,146 @@
+{
+  "executed_at": "2026-10-21T18:54:16.773Z",
+  "base_commit": "16188348c18e06d816acb576f3f63494c14599fd",
+  "mode": "baseline_sem_extensao",
+  "image": "postgres@sha256:a63c1ea3f6a3a5a1621f97d2aba3b30faecfab4224c1b0000cc85ced57bb1939",
+  "postgres_version": "PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+  "postgres_container": "elos-finance-test-61907",
+  "network": "none",
+  "published_ports": {},
+  "tmpfs": {
+    "/var/lib/postgresql/data": "rw,size=512m"
+  },
+  "fixture_count": 30,
+  "supabase_auth": "auth.uid() lê claim em GUC local, sem servidor Auth",
+  "surface": "PostgreSQL/RLS/RPC; não inclui navegador/API Next/Storage real",
+  "candidate_migration_sha256": "4aab50fe4f34711108f243f55d013b08e0b945afe61e61ac6fbbbc80123ef531",
+  "results": [
+    {
+      "id": "dataset_30_casos_hash_preservado",
+      "passed": true,
+      "evidence": {
+        "cases": 30,
+        "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb"
+      }
+    },
+    {
+      "id": "empresa_A_nao_le_empresa_B",
+      "passed": true,
+      "evidence": {
+        "count": 0
+      }
+    },
+    {
+      "id": "perfil_leitura_nao_altera",
+      "passed": true,
+      "evidence": {
+        "changes": 0
+      }
+    },
+    {
+      "id": "entidade_A1_nao_le_A2",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\n1 !== 0\n"
+    },
+    {
+      "id": "recebiveis_tambem_respeitam_entidade",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\n1 !== 0\n"
+    },
+    {
+      "id": "agregado_respeita_entidade",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\n400000 !== 100000\n"
+    },
+    {
+      "id": "usuario_multientidade_consolida_autorizado",
+      "passed": true,
+      "evidence": {
+        "open_cents": 400000
+      }
+    },
+    {
+      "id": "RPC_saldo_nao_expoe_entidade_alheia",
+      "passed": false,
+      "error": "Missing expected rejection."
+    },
+    {
+      "id": "RPC_importacao_nao_aceita_conta_de_A2",
+      "passed": false,
+      "error": "Missing expected rejection."
+    },
+    {
+      "id": "fornecedor_de_outra_empresa_recusado",
+      "passed": false,
+      "error": "Missing expected rejection."
+    },
+    {
+      "id": "obra_de_outra_empresa_recusada",
+      "passed": false,
+      "error": "Missing expected rejection."
+    },
+    {
+      "id": "NaN_nao_persiste_como_dinheiro",
+      "passed": false,
+      "error": "Missing expected rejection."
+    },
+    {
+      "id": "concorrencia_liquidacao_exatamente_uma",
+      "passed": true,
+      "evidence": {
+        "movements": 1,
+        "cash": 1000,
+        "connections": 2,
+        "accepted": 1,
+        "rejected": 1
+      }
+    },
+    {
+      "id": "concorrencia_mesma_identidade_nao_duplica",
+      "passed": true,
+      "evidence": {
+        "count": 1,
+        "sum": 10
+      }
+    },
+    {
+      "id": "concorrencia_recebimento_exatamente_um",
+      "passed": true,
+      "evidence": {
+        "movements": 1,
+        "received": 1000,
+        "connections": 2,
+        "accepted": 1,
+        "rejected": 1
+      }
+    },
+    {
+      "id": "revisao_idempotente_autoria_motivo_antes_depois_T_K",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\n0 !== 2\n"
+    },
+    {
+      "id": "atualizacao_sem_motivo_recusada",
+      "passed": false,
+      "error": "Missing expected rejection."
+    },
+    {
+      "id": "identidade_origem_nao_e_reescrita",
+      "passed": false,
+      "error": "Missing expected rejection."
+    },
+    {
+      "id": "autoria_de_origem_nao_e_forjada",
+      "passed": false,
+      "error": "Missing expected rejection."
+    },
+    {
+      "id": "RPC_revisao_nao_aceita_centavo_fracionario",
+      "passed": false,
+      "error": "The validation function is expected to return \"true\". Received false\n\nCaught error:\n\nError: ERROR:  function revise_finance_payable(unknown, unknown, unknown, integer, numeric, unknown, unknown, unknown) does not exist\nLINE 1: select revise_finance_payable('00000000-0000-4000-8000-00000...\n               ^\nHINT:  No function matches the given name and argument types. You might need to add explicit type casts."
+    }
+  ],
+  "passed": 7,
+  "failed": 13,
+  "container_removed": true
+}

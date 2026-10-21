@@ -1,0 +1,2031 @@
+{
+  "metadata": {
+    "schema_version": "1.0",
+    "purpose": "Oráculos fictícios de aceite derivados da regra financeira, independentes da implementação atual",
+    "rule_base": {
+      "filename": "Elos_OS_Regras_Financeiras_v0_1.docx",
+      "library_file_id": "libfile_e6af18c8109881918be78c6510c7af25",
+      "section_reference_convention": "§ identifica seção da regra; I identifica indicador; D identifica decisão/política"
+    },
+    "currency": "BRL",
+    "monetary_encoding": "Todo campo terminado em _cents contém inteiro em centavos. None/null significa desconhecido, não zero. Percentuais são textos decimais exatos.",
+    "default_timezone": "America/Sao_Paulo",
+    "default_cutoff": "2026-10-21",
+    "global_policies": [
+      "Dados e nomes totalmente fictícios. Cada caso começa em base limpa, salvo dependência explicitamente informada.",
+      "As variantes internas são independentes e não devem ser somadas.",
+      "Os estados esperados são fixos e devem ser comparados a adaptador do sistema, nunca recalculados pelo serviço sob teste.",
+      "Resultados financeiros aceitam igualdade exata de centavos. Arredondamento só quando a política do caso o declara. Contagens, IDs, escopo e autorizações exigem igualdade exata.",
+      "D01–D14 ainda requerem valores operacionais, responsável, vigência e alcance do legado. A referência do usuário às regras aprovadas é base para o plano; estes testes explicitam as escolhas didáticas, sem fingir que escolhas nominais foram registradas.",
+      "Caixa confirmado pressupõe o extrato completo e conciliação correspondentes nos casos, salvo quando a ausência é o objeto do teste.",
+      "Valores de contratos e previsões são da mesma moeda e base nos testes; sem inflação, tributos ou encargos implícitos."
+    ]
+  },
+  "cases": [
+    {
+      "id": "CT01",
+      "title": "Importação repetida e arquivos de cobertura parcial",
+      "rule_refs": [
+        "§4",
+        "§14 item 1",
+        "I03",
+        "I22"
+      ],
+      "policy_assumptions": [
+        "Fonte com IDs estáveis e natureza de obrigação comprovada. Não há pagamentos."
+      ],
+      "inputs": {
+        "organization_id": "ORG_A",
+        "source": "KOPER_TEST",
+        "currency": "BRL",
+        "titles": [
+          {
+            "external_id": "77",
+            "installment": 1,
+            "principal_cents": 1000000
+          },
+          {
+            "external_id": "78",
+            "installment": 1,
+            "principal_cents": 2000000
+          }
+        ],
+        "same_file_import_count": 3,
+        "later_partial_snapshot_ids": [
+          "77"
+        ]
+      },
+      "steps": [
+        "Importar o mesmo arquivo três vezes.",
+        "Importar depois um arquivo declarado parcial que contenha apenas o ID 77, sem cancelamento do ID 78."
+      ],
+      "expected": {
+        "canonical_title_count": 2,
+        "I03_open_payables_cents": 3000000,
+        "extra_obligations_from_retries": 0,
+        "title_78_remains_open_cents": 2000000,
+        "deletions_due_to_absence": 0
+      },
+      "calculations": [
+        "10.000,00 + 20.000,00 = 30.000,00, após cada repetição. O arquivo parcial posterior não reduz 30.000,00 para 10.000,00."
+      ],
+      "assertions": [
+        "Mesma chave organização + origem + tipo + ID externo + parcela não cria outra obrigação.",
+        "Manifestos de todas as tentativas permanecem rastreáveis. A ausência em recorte parcial não cria cancelamento."
+      ],
+      "task_ids": [
+        "T01",
+        "T03",
+        "T04",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T31",
+        "T43",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT02",
+      "title": "Nova versão do mesmo título e preservação do corte histórico",
+      "rule_refs": [
+        "§3",
+        "§4",
+        "§10",
+        "I03"
+      ],
+      "policy_assumptions": [
+        "Alteração de 2.000,00 tem suporte documental válido, vigência em 20/10 e período aberto. Não é simples divergência não validada."
+      ],
+      "inputs": {
+        "key": [
+          "ORG_A",
+          "KOPER_TEST",
+          "AP",
+          "77",
+          1
+        ],
+        "original_principal_cents": 1000000,
+        "adjustment_cents": 200000,
+        "effective_date": "2026-10-20",
+        "original_known_at": "2026-10-19T18:00:00-03:00",
+        "revision_known_at": "2026-10-21T09:00:00-03:00"
+      },
+      "steps": [
+        "Carregar versão original.",
+        "Carregar revisão do mesmo ID com acréscimo autorizado.",
+        "Consultar T=19/10, K original, e T=21/10, K revisado.",
+        "Consultar ainda o mesmo T=21/10 com K=20/10 antes do registro da revisão: saldo deve continuar R$ 10.000."
+      ],
+      "expected": {
+        "canonical_title_count": 1,
+        "original_snapshot_open_cents": 1000000,
+        "revised_snapshot_open_cents": 1200000,
+        "documented_bridge_cents": 200000,
+        "at_T_2026_10_21_K_2026_10_20_open_cents": 1000000
+      },
+      "calculations": [
+        "Versão revisada: 10.000,00 + 2.000,00 = 12.000,00. A dívida nunca é 10.000,00 + 12.000,00."
+      ],
+      "assertions": [
+        "Histórico de valores, origem e aprovação permanece consultável.",
+        "Se a mudança não tiver suporte, conservar exceção em vez de validar os 12.000,00 automaticamente."
+      ],
+      "negative_assertions": [
+        {
+          "path": "revised_snapshot_open_cents",
+          "operator": "not_equal",
+          "forbidden_value": 2200000
+        }
+      ],
+      "task_ids": [
+        "T03",
+        "T04",
+        "T07",
+        "T08",
+        "T10",
+        "T13",
+        "T37",
+        "T43",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT03",
+      "title": "Pagamento parcial e conciliação posterior sem novo caixa",
+      "rule_refs": [
+        "§5",
+        "§8.1",
+        "I02",
+        "I03"
+      ],
+      "policy_assumptions": [
+        "D06: baixa aplicada integralmente ao principal, sem encargos, com extrato e evidência."
+      ],
+      "inputs": {
+        "principal_cents": 1000000,
+        "payments": [
+          {
+            "id": "P1",
+            "cash_cents": 300000,
+            "date": "2026-10-15"
+          },
+          {
+            "id": "P2",
+            "cash_cents": 200000,
+            "date": "2026-10-20"
+          }
+        ],
+        "bank_transaction_ids": [
+          "BANK1",
+          "BANK2"
+        ]
+      },
+      "steps": [
+        "Efetivar P1.",
+        "Efetivar P2.",
+        "Conciliar P1 e P2 aos dois débitos já existentes e reimportar o extrato."
+      ],
+      "expected": {
+        "after_P1_open_cents": 700000,
+        "after_P2_open_cents": 500000,
+        "I02_gross_disbursed_cents": 500000,
+        "bank_debit_count": 2,
+        "payment_count": 2,
+        "cash_created_by_reconciliation_cents": 0,
+        "I01_extra_cost_created_by_payments_cents": 0
+      },
+      "calculations": [
+        "Saldo: 10.000,00 − 3.000,00 − 2.000,00 = 5.000,00. Caixa: 3.000,00 + 2.000,00 = 5.000,00."
+      ],
+      "assertions": [
+        "A conciliação apenas acrescenta evidência e vínculo.",
+        "O custo reconhecido antes do pagamento permanece com o mesmo valor."
+      ],
+      "task_ids": [
+        "T03",
+        "T12",
+        "T18",
+        "T19",
+        "T32",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT04",
+      "title": "Competência emissão vencimento caixa conciliação e limites de horizonte",
+      "rule_refs": [
+        "§3",
+        "I01",
+        "I02",
+        "I06",
+        "I07"
+      ],
+      "policy_assumptions": [
+        "D02: America/Sao_Paulo, corte ao fim do dia; vencimento anterior ao corte é vencido. Dias corridos nestas datas fictícias. D03: serviço aceito. D06: caixa na data bancária."
+      ],
+      "inputs": {
+        "date_fixture": {
+          "amount_cents": 1000000,
+          "competence": "2026-09",
+          "issued": "2026-10-05",
+          "due": "2026-10-20",
+          "paid": "2026-10-22",
+          "bank_date": "2026-10-22",
+          "reconciled": "2026-10-24"
+        },
+        "separate_bucket_fixture": {
+          "cutoff": "2026-10-21",
+          "amounts_cents_by_due": {
+            "2026-10-20": 100000,
+            "2026-10-21": 200000,
+            "2026-11-20": 300000,
+            "2026-11-21": 400000,
+            "2027-01-19": 500000,
+            "2027-01-20": 600000,
+            "unknown": 700000
+          }
+        }
+      },
+      "steps": [
+        "Consultar o primeiro fixture em 21/10 e após a conciliação de 24/10.",
+        "Consultar o segundo fixture, independente do primeiro, com horizontes de 30 e 90 dias."
+      ],
+      "expected": {
+        "date_fixture": {
+          "september_cost_cents": 1000000,
+          "open_at_2026_10_21_cents": 1000000,
+          "overdue_at_2026_10_21_cents": 1000000,
+          "cash_at_2026_10_21_cents": 0,
+          "bank_cash_on_2026_10_22_cents": 1000000,
+          "new_cash_on_2026_10_24_cents": 0
+        },
+        "bucket_fixture": {
+          "R_cents": 2800000,
+          "overdue_cents": 100000,
+          "due_today_cents": 200000,
+          "next_30_days_cents": 300000,
+          "next_90_days_cents": 1200000,
+          "beyond_90_days_cents": 600000,
+          "unknown_due_cents": 700000,
+          "immediate_need_through_30_days_cents": 600000
+        }
+      },
+      "calculations": [
+        "T+30 = 20/11/2026; T+90 = 19/01/2027. Próximos 90 dias: 3.000,00 + 4.000,00 + 5.000,00 = 12.000,00.",
+        "Necessidade imediata em 30 dias: vencidos 1.000,00 + hoje 2.000,00 + futuros 3.000,00 = 6.000,00. Não somar a janela de 30 dias à de 90."
+      ],
+      "assertions": [
+        "Os dois fixtures têm populações independentes e não devem ser somados.",
+        "A conciliação em 24/10 não desloca o caixa do dia 22. Valor sem vencimento fica em faixa própria."
+      ],
+      "task_ids": [
+        "T02",
+        "T03",
+        "T07",
+        "T30",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT05",
+      "title": "Adiantamento antes da execução e aplicação sem segundo abatimento",
+      "rule_refs": [
+        "§7.1",
+        "§8.2",
+        "§12.1",
+        "I05",
+        "I09",
+        "I10",
+        "I12",
+        "I13"
+      ],
+      "policy_assumptions": [
+        "D03/D06: adiantamento exigível reconhecido como obrigação antes do pagamento. Serviço só gera custo quando medição aceita. Sem AF."
+      ],
+      "inputs": {
+        "contract_value_cents": 10000000,
+        "advance_due_cents": 2000000,
+        "accepted_measurement_cents": 4000000,
+        "advance_application_cents": 2000000
+      },
+      "steps": [
+        "A: contrato firme, sem título.",
+        "B: constituir adiantamento exigível.",
+        "C: pagar e conciliar o adiantamento.",
+        "D: aceitar medição de 40.000,00 e aplicar 20.000,00.",
+        "E: pagar o saldo de 20.000,00 da medição."
+      ],
+      "expected": {
+        "states": [
+          {
+            "stage": "A",
+            "H_cents": 0,
+            "R_cents": 0,
+            "C_cents": 10000000,
+            "Q_cents": 10000000,
+            "cost_cents": 0,
+            "ETC_cents": 10000000,
+            "advance_available_cents": 0
+          },
+          {
+            "stage": "B",
+            "H_cents": 0,
+            "R_cents": 2000000,
+            "C_cents": 8000000,
+            "Q_cents": 10000000,
+            "cost_cents": 0,
+            "ETC_cents": 10000000,
+            "advance_available_cents": 0
+          },
+          {
+            "stage": "C",
+            "H_cents": 2000000,
+            "R_cents": 0,
+            "C_cents": 8000000,
+            "Q_cents": 8000000,
+            "cost_cents": 0,
+            "ETC_cents": 10000000,
+            "advance_available_cents": 2000000
+          },
+          {
+            "stage": "D",
+            "H_cents": 2000000,
+            "R_cents": 2000000,
+            "C_cents": 6000000,
+            "Q_cents": 8000000,
+            "cost_cents": 4000000,
+            "ETC_cents": 6000000,
+            "advance_available_cents": 0
+          },
+          {
+            "stage": "E",
+            "H_cents": 4000000,
+            "R_cents": 0,
+            "C_cents": 6000000,
+            "Q_cents": 6000000,
+            "cost_cents": 4000000,
+            "ETC_cents": 6000000,
+            "advance_available_cents": 0
+          }
+        ],
+        "new_cash_on_application_cents": 0
+      },
+      "calculations": [
+        "Na etapa D: C = 100.000,00 − H 20.000,00 − N 0,00 − Rv 20.000,00 = 60.000,00. Q = 20.000,00 + 60.000,00 = 80.000,00.",
+        "Aplicar o crédito não soma H nem N e não deduz 20.000,00 novamente de Q. EAC permanece 40.000,00 + 60.000,00 = 100.000,00."
+      ],
+      "assertions": [
+        "Não confundir cobertura financeira com execução econômica.",
+        "Aplicação exige adiantamento pago, contraparte, contrato e medição beneficiada."
+      ],
+      "task_ids": [
+        "T03",
+        "T20",
+        "T26",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT06",
+      "title": "Retenção contratual e tributo retido sem soma do documento pai",
+      "rule_refs": [
+        "§8.2",
+        "I03",
+        "I05",
+        "I08",
+        "I10",
+        "I12"
+      ],
+      "policy_assumptions": [
+        "D08: exemplo didático com preço integral de 100.000,00, retenção contratual de 10% e tributária de 5%; nenhum tributo recuperável. Não são alíquotas recomendadas. Todo o serviço foi aceito."
+      ],
+      "inputs": {
+        "contract_value_cents": 10000000,
+        "gross_measurement_cents": 10000000,
+        "supplier_component_cents": 8500000,
+        "contract_retention_cents": 1000000,
+        "withheld_tax_cents": 500000
+      },
+      "steps": [
+        "Desdobrar o bruto em fornecedor, retenção e tributo.",
+        "Pagar 85.000,00 ao fornecedor.",
+        "Recolher 5.000,00 ao destinatário tributário.",
+        "Liberar e pagar 10.000,00 de retenção após comprovar a condição contratual de liberação."
+      ],
+      "expected": {
+        "initial_R_cents": 10000000,
+        "initial_C_cents": 0,
+        "initial_Q_cents": 10000000,
+        "after_supplier_R_cents": 1500000,
+        "after_supplier_retention_cents": 1000000,
+        "after_tax_R_cents": 1000000,
+        "after_tax_H_cents": 9000000,
+        "final_R_cents": 0,
+        "final_H_cents": 10000000,
+        "total_cash_cents": 10000000,
+        "cost_cents": 10000000
+      },
+      "calculations": [
+        "85.000,00 + 10.000,00 + 5.000,00 = 100.000,00. Após pagar fornecedor: R = 10.000,00 + 5.000,00 = 15.000,00.",
+        "Após tributo: C = 100.000,00 − 90.000,00 − 10.000,00 = 0,00. A retenção é parte de R, nunca acréscimo a ele."
+      ],
+      "assertions": [
+        "Cabeçalho não participa como quarta obrigação. Cada componente mantém credor e exigibilidade próprios."
+      ],
+      "task_ids": [
+        "T03",
+        "T16",
+        "T21",
+        "T26",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT07",
+      "title": "Parciais juros e desconto com componentes separados",
+      "rule_refs": [
+        "§5",
+        "§8.3",
+        "§12.3",
+        "I02",
+        "I03",
+        "I10"
+      ],
+      "policy_assumptions": [
+        "D06/D07: primeiro pagamento somente principal; desconto de quitação válido de 5.000,00; juros constituídos de 2.000,00; desconto não está embutido no preço V."
+      ],
+      "inputs": {
+        "V_cents": 10000000,
+        "principal_cents": 10000000,
+        "first_payment_principal_cents": 4000000,
+        "valid_discount_cents": 500000,
+        "interest_cents": 200000,
+        "second_payment_cents": 5700000
+      },
+      "steps": [
+        "Pagar 40.000,00.",
+        "Conceder o desconto e constituir juros.",
+        "Pagar 57.000,00, sendo 55.000,00 de principal e 2.000,00 de juros."
+      ],
+      "expected": {
+        "after_first_open_principal_cents": 6000000,
+        "second_principal_cents": 5500000,
+        "final_open_cents": 0,
+        "H_principal_cents": 9500000,
+        "N_discount_cents": 500000,
+        "interest_paid_cents": 200000,
+        "I02_cash_cents": 9700000,
+        "C_cents": 0
+      },
+      "calculations": [
+        "Segundo pagamento: 100.000,00 − 40.000,00 − 5.000,00 + 2.000,00 = 57.000,00.",
+        "Caixa total = 40.000,00 + 57.000,00 = 97.000,00. C = 100.000,00 − 95.000,00 − 5.000,00 = 0,00."
+      ],
+      "assertions": [
+        "H não inclui os 2.000,00 de juros. O desconto não pode reduzir novamente um principal já líquido."
+      ],
+      "task_ids": [
+        "T03",
+        "T06",
+        "T18",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT08",
+      "title": "Estorno de liquidação e devolução bancária são eventos distintos",
+      "rule_refs": [
+        "§8.3",
+        "§12.3",
+        "I02",
+        "I03"
+      ],
+      "policy_assumptions": [
+        "Estado inicial é o fim de CT07. D07 define documentalmente se o desconto permanece após a devolução. As variantes são execuções independentes."
+      ],
+      "inputs": {
+        "previous_total_cash_cents": 9700000,
+        "reversed_payment_cents": 5700000,
+        "reversed_principal_cents": 5500000,
+        "interest_still_due_cents": 200000,
+        "discount_cents": 500000
+      },
+      "steps": [
+        "A: reverter a baixa e confirmar devolução bancária de 57.000,00, mantendo desconto válido.",
+        "B: repetir em cópia limpa, revogando o desconto porque a condição foi perdida.",
+        "C: em outra cópia, reverter apenas a associação da baixa, sem extrato de devolução."
+      ],
+      "expected": {
+        "A": {
+          "open_principal_cents": 5500000,
+          "open_interest_cents": 200000,
+          "R_cents": 5700000,
+          "gross_historical_outflow_cents": 9700000,
+          "confirmed_refund_cents": 5700000,
+          "net_outflow_cents": 4000000
+        },
+        "B": {
+          "open_principal_cents": 6000000,
+          "open_interest_cents": 200000,
+          "R_cents": 6200000,
+          "net_outflow_cents": 4000000
+        },
+        "C": {
+          "confirmed_refund_cents": 0,
+          "gross_historical_outflow_cents": 9700000,
+          "cash_awaiting_reallocation_cents": 5700000,
+          "Q_complete": false
+        }
+      },
+      "calculations": [
+        "A: 55.000,00 + 2.000,00 = 57.000,00 reabertos. B: 60.000,00 + 2.000,00 = 62.000,00.",
+        "A e B: desembolso líquido = 97.000,00 − 57.000,00 = 40.000,00. C: sem devolução, o caixa histórico continua 97.000,00."
+      ],
+      "assertions": [
+        "Preservar pagamento original, estorno, condição de desconto e movimento de restituição separados.",
+        "Na variante C, não certificar Q enquanto o destino dos 57.000,00 efetivamente desembolsados estiver em apuração."
+      ],
+      "task_ids": [
+        "T03",
+        "T08",
+        "T12",
+        "T23",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT09",
+      "title": "Cancelamento documental e substituição de medição por nota",
+      "rule_refs": [
+        "§7.2",
+        "§8.3",
+        "I01",
+        "I03",
+        "I04",
+        "I05"
+      ],
+      "policy_assumptions": [
+        "Serviço aceito de 8.000,00 permanece devido. Cancelamento da nota é exclusivamente documental."
+      ],
+      "inputs": {
+        "accepted_service_cents": 800000,
+        "provisional_obligation_id": "MED-01",
+        "first_invoice_id": "NF-01",
+        "replacement_invoice_id": "NF-02",
+        "all_represent_same_obligation": true
+      },
+      "steps": [
+        "Reconhecer medição sem NF.",
+        "Receber NF-01 e substituir a representação provisória.",
+        "Cancelar NF-01 por erro documental e substituir por NF-02 com o mesmo escopo e valor."
+      ],
+      "expected": {
+        "before_invoice_I03_cents": 0,
+        "before_invoice_I04_cents": 800000,
+        "final_I03_cents": 800000,
+        "final_I04_cents": 0,
+        "final_R_cents": 800000,
+        "cost_cents": 800000,
+        "cash_cents": 0,
+        "active_financial_representations": 1
+      },
+      "calculations": [
+        "R antes = 0,00 + 8.000,00 = 8.000,00. R depois = 8.000,00 + 0,00 = 8.000,00. Custo continua 8.000,00."
+      ],
+      "assertions": [
+        "Nenhuma etapa apaga o fato econômico. Cancelados e substituídos continuam no histórico, sem compor novamente os saldos."
+      ],
+      "task_ids": [
+        "T03",
+        "T16",
+        "T22",
+        "T24",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT10",
+      "title": "Cancelamento econômico após pagamento e restituição parcial",
+      "rule_refs": [
+        "§7.1",
+        "§8.3",
+        "I02",
+        "I09",
+        "I10",
+        "I12"
+      ],
+      "policy_assumptions": [
+        "Compra ou escopo de 10.000,00 cancelado antes de execução/consumo, com direito integral de restituição comprovado. O antigo adiantamento deixa de pertencer ao preço vigente."
+      ],
+      "inputs": {
+        "paid_advance_cents": 1000000,
+        "cancelled_scope_cents": 1000000,
+        "cash_refunded_later_cents": 600000
+      },
+      "steps": [
+        "Pagar adiantamento de 10.000,00.",
+        "Rescindir o escopo e reconhecer direito de restituição.",
+        "Receber e conciliar restituição parcial de 6.000,00."
+      ],
+      "expected": {
+        "after_cancellation_V_cents": 0,
+        "after_cancellation_H_imputable_to_current_price_cents": 0,
+        "after_cancellation_C_cents": 0,
+        "after_cancellation_R_cents": 0,
+        "after_cancellation_Q_cents": 0,
+        "refund_right_before_receipt_cents": 1000000,
+        "refund_right_after_receipt_cents": 400000,
+        "historical_gross_outflow_cents": 1000000,
+        "confirmed_refund_cents": 600000,
+        "net_outflow_cents": 400000,
+        "cost_cents": 0
+      },
+      "calculations": [
+        "Crédito a restituir após entrada = 10.000,00 − 6.000,00 = 4.000,00. Desembolso líquido = 4.000,00.",
+        "Q = 0,00 porque o escopo foi extinto; o direito a receber de 4.000,00 é apresentado separadamente, sem C negativo."
+      ],
+      "assertions": [
+        "Cancelamento não produz entrada bancária. Não apagar os 10.000,00 desembolsados historicamente."
+      ],
+      "task_ids": [
+        "T03",
+        "T23",
+        "T24",
+        "T33",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT11",
+      "title": "Rateio monetário parcial e arredondamento conservativo",
+      "rule_refs": [
+        "§9",
+        "§12.5",
+        "I01",
+        "I02",
+        "I22"
+      ],
+      "policy_assumptions": [
+        "D05: pagamento parcial distribuído proporcionalmente; resíduos pelo maior resto e desempate por ID de obra ascendente. Duas fixtures independentes."
+      ],
+      "inputs": {
+        "proportional_fixture": {
+          "document_cents": 1000000,
+          "obra_A_weight": 60,
+          "obra_B_weight": 40,
+          "partial_payment_cents": 300000
+        },
+        "rounding_fixture": {
+          "amount_cents": 10001,
+          "weights": {
+            "A": 1,
+            "B": 1,
+            "C": 1
+          }
+        }
+      },
+      "steps": [
+        "Alocar custo de 10.000,00 em 60% e 40%; pagar 3.000,00.",
+        "Alocar separadamente 100,01 entre três obras com pesos iguais."
+      ],
+      "expected": {
+        "proportional_fixture": {
+          "cost_A_cents": 600000,
+          "cost_B_cents": 400000,
+          "cash_A_cents": 180000,
+          "cash_B_cents": 120000,
+          "remaining_A_cents": 420000,
+          "remaining_B_cents": 280000
+        },
+        "rounding_fixture": {
+          "A_cents": 3334,
+          "B_cents": 3334,
+          "C_cents": 3333,
+          "sum_cents": 10001,
+          "unallocated_cents": 0
+        }
+      },
+      "calculations": [
+        "Custo: 10.000,00×60%=6.000,00 e ×40%=4.000,00. Caixa: 3.000,00×60%=1.800,00 e ×40%=1.200,00.",
+        "100,01÷3 produz restos iguais. Aplicar os dois centavos residuais a A e B: 33,34 + 33,34 + 33,33 = 100,01."
+      ],
+      "assertions": [
+        "Não somar o título pai e suas alocações. Mesma entrada gera o mesmo centavo por obra em repetições.",
+        "Concatenar nomes A|B sem valores não satisfaz o aceite do rateio."
+      ],
+      "task_ids": [
+        "T02",
+        "T03",
+        "T06",
+        "T17",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT12",
+      "title": "Título sem obra preservado no total da entidade",
+      "rule_refs": [
+        "§9",
+        "§11",
+        "I01",
+        "I02",
+        "I03",
+        "I22",
+        "D01"
+      ],
+      "policy_assumptions": [
+        "D01: sem obra identificada permanece pendente, sem padrão Flow. Entidade e fato econômico dos dois títulos estão comprovados. Universo desta fixture é completo."
+      ],
+      "inputs": {
+        "known_obra_A_title_and_cost_cents": 600000,
+        "unassigned_title_and_cost_cents": 400000,
+        "payment_of_unassigned_title_cents": 200000
+      },
+      "steps": [
+        "Importar dois títulos e seus fatos econômicos, apenas um com obra identificada.",
+        "Pagar e conciliar 2.000,00 do título sem obra."
+      ],
+      "expected": {
+        "entity_cost_cents": 1000000,
+        "obra_A_cost_cents": 600000,
+        "unclassified_cost_cents": 400000,
+        "entity_open_payables_cents": 800000,
+        "obra_A_open_payables_cents": 600000,
+        "unclassified_open_payables_cents": 200000,
+        "entity_disbursed_cents": 200000,
+        "unclassified_disbursed_cents": 200000,
+        "automatic_Flow_allocation_cents": 0,
+        "appropriation_on_original_amounts_numerator_cents": 600000,
+        "appropriation_on_original_amounts_denominator_cents": 1000000,
+        "appropriation_on_original_amounts_percent": "60.00",
+        "obra_cost_complete": false
+      },
+      "calculations": [
+        "Custo da entidade = 6.000,00 + 4.000,00 = 10.000,00. Contas abertas = 6.000,00 + (4.000,00 − 2.000,00) = 8.000,00.",
+        "Apropriação sobre valores originais apropriáveis = 6.000,00÷10.000,00 = 60%. Não usar o denominador de saldos abertos nessa métrica."
+      ],
+      "assertions": [
+        "O título e o pagamento sem obra continuam visíveis na entidade. Obra não identificada não desaparece nem vira Flow."
+      ],
+      "task_ids": [
+        "T03",
+        "T15",
+        "T17",
+        "T38",
+        "T43",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT13",
+      "title": "Recebimento atrasado parcial e inadimplência da coorte",
+      "rule_refs": [
+        "§8.5",
+        "I16",
+        "I17",
+        "I19"
+      ],
+      "policy_assumptions": [
+        "D09: coorte com vencimento de 01 a 20/10/2026, sem carência neste exemplo. Encargo de 120,00 é constituído documentalmente, não inferido por taxa."
+      ],
+      "inputs": {
+        "cutoff": "2026-10-21",
+        "cohort": [
+          {
+            "id": "AR1",
+            "principal_cents": 1000000,
+            "due": "2026-10-10",
+            "received_principal_cents": 400000,
+            "received_date": "2026-10-18"
+          },
+          {
+            "id": "AR2",
+            "principal_cents": 1000000,
+            "due": "2026-10-15",
+            "received_principal_cents": 1000000,
+            "received_date": "2026-10-15"
+          }
+        ],
+        "future_outside_cohort_cents": 8000000,
+        "AR1_interest_still_due_cents": 12000,
+        "AR1_interest_due": "2026-10-20",
+        "future_outside_cohort_id": "AR3",
+        "future_outside_cohort_due": "2026-11-20"
+      },
+      "steps": [
+        "Constituir os recebíveis e registrar os dois recebimentos comprovados.",
+        "Consultar carteira e inadimplência no corte de 21/10."
+      ],
+      "expected": {
+        "cohort_due_principal_cents": 2000000,
+        "cohort_overdue_principal_cents": 600000,
+        "overdue_total_with_interest_cents": 612000,
+        "I16_total_open_cents": 8612000,
+        "I17_received_cents": 1400000,
+        "I19_cohort_principal_delinquency_percent": "30.00"
+      },
+      "calculations": [
+        "Principal vencido = 10.000,00 − 4.000,00 = 6.000,00. Inadimplência = 6.000,00÷20.000,00 = 30%.",
+        "Recebíveis abertos = 6.000,00 + 120,00 + 80.000,00 = 86.120,00. A carteira futura de 80.000,00 não dilui o denominador da coorte."
+      ],
+      "assertions": [
+        "Recebimento tardio preserva vencimento original e data efetiva do banco. Juros não entram no numerador de principal da taxa."
+      ],
+      "task_ids": [
+        "T03",
+        "T31",
+        "T32",
+        "T34",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT14",
+      "title": "Recebimento líquido com tarifa e permuta sem caixa fictício",
+      "rule_refs": [
+        "§8.5",
+        "§12.4",
+        "I16",
+        "I17"
+      ],
+      "policy_assumptions": [
+        "D09: documentos comprovam cobrança bruta, tarifa e liquidação. Para a segunda fixture, bem recebido por permuta aceito por 70.000,00. Fixtures independentes."
+      ],
+      "inputs": {
+        "fee_fixture": {
+          "receivable_cents": 1000000,
+          "bank_credit_cents": 980000,
+          "fee_withheld_cents": 20000
+        },
+        "barter_fixture": {
+          "receivable_cents": 10000000,
+          "cash_cents": 3000000,
+          "accepted_asset_cents": 7000000
+        }
+      },
+      "steps": [
+        "Liquidar a cobrança bruta com banco líquido e tarifa identificada.",
+        "Em fixture distinta, liquidar parcela de 100.000,00 com dinheiro e bem."
+      ],
+      "expected": {
+        "fee_fixture": {
+          "receivable_settled_cents": 1000000,
+          "open_cents": 0,
+          "I17_bank_receipt_cents": 980000,
+          "identified_fee_cents": 20000,
+          "artificial_overdue_cents": 0
+        },
+        "barter_fixture": {
+          "receivable_settled_cents": 10000000,
+          "open_cents": 0,
+          "I17_cash_received_cents": 3000000,
+          "noncash_settlement_cents": 7000000
+        }
+      },
+      "calculations": [
+        "9.800,00 de banco + 200,00 de tarifa = 10.000,00 liquidados.",
+        "30.000,00 de caixa + 70.000,00 de bem = 100.000,00 liquidados, com apenas 30.000,00 de ingresso bancário."
+      ],
+      "assertions": [
+        "A tarifa não vira recebível em atraso. Permuta não vira entrada de dinheiro. Reconhecimento de receita permanece em política própria."
+      ],
+      "task_ids": [
+        "T03",
+        "T19",
+        "T32",
+        "T33",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT15",
+      "title": "Transferência própria com tarifa e ponta em trânsito",
+      "rule_refs": [
+        "§8.6",
+        "§12.7",
+        "I02",
+        "I17",
+        "I20"
+      ],
+      "policy_assumptions": [
+        "D02/D06/D13: contas do mesmo titular e moeda, incluídas no mesmo perímetro. Trânsito identificado não disponível para novo pagamento."
+      ],
+      "inputs": {
+        "opening_A_cents": 5000000,
+        "opening_B_cents": 1000000,
+        "transfer_principal_cents": 2000000,
+        "fee_cents": 1500,
+        "debit_date": "2026-10-20",
+        "credit_date": "2026-10-21"
+      },
+      "steps": [
+        "Debitar 20.015,00 em A no dia 20, sendo transferência 20.000,00 e tarifa 15,00.",
+        "Creditar 20.000,00 em B no dia 21 e vincular as duas pontas."
+      ],
+      "expected": {
+        "end_2026_10_20": {
+          "A_bank_cents": 2998500,
+          "B_bank_cents": 1000000,
+          "sum_bank_balances_cents": 3998500,
+          "transfer_in_transit_cents": 2000000,
+          "available_bank_cash_cents": 3998500,
+          "external_outflow_cents": 1500
+        },
+        "end_2026_10_21": {
+          "A_bank_cents": 2998500,
+          "B_bank_cents": 3000000,
+          "sum_bank_balances_cents": 5998500,
+          "transfer_in_transit_cents": 0,
+          "external_outflow_cents": 1500,
+          "external_receipt_cents": 0
+        }
+      },
+      "calculations": [
+        "Dia 20: A=50.000,00−20.000,00−15,00=29.985,00; banco consolidado=29.985,00+10.000,00=39.985,00, mais 20.000,00 em trânsito identificado.",
+        "Dia 21: 29.985,00+30.000,00=59.985,00. Redução externa definitiva: 60.000,00−59.985,00=15,00."
+      ],
+      "assertions": [
+        "Não inventar crédito no dia 20. Excluir principal dos fluxos externos consolidados e manter tarifa."
+      ],
+      "task_ids": [
+        "T03",
+        "T19",
+        "T35",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT16",
+      "title": "Mútuo entre entidades e eliminação apenas no consolidado autorizado",
+      "rule_refs": [
+        "§4",
+        "§8.6",
+        "I20",
+        "I21",
+        "D13"
+      ],
+      "policy_assumptions": [
+        "D13: mesma organização de acesso com dois CNPJs e contrato de mútuo; administrador autorizado às duas entidades. Sem tarifa. Não tratar entidades diferentes como duas contas do mesmo titular.",
+        "A classificação da DFC do concedente não é decidida pelo teste; a saída é identificada como mútuo e seu ativo correspondente."
+      ],
+      "inputs": {
+        "entity_A_opening_cash_cents": 5000000,
+        "entity_B_opening_cash_cents": 1000000,
+        "loan_transfer_cents": 2000000,
+        "approved_consolidation_scope": [
+          "ENTITY_A",
+          "ENTITY_B"
+        ]
+      },
+      "steps": [
+        "A transfere 20.000,00 a B como mútuo.",
+        "Consultar cada entidade.",
+        "Consultar o consolidado explicitamente autorizado contendo ambas."
+      ],
+      "expected": {
+        "A": {
+          "cash_cents": 3000000,
+          "loan_receivable_cents": 2000000,
+          "loan_disbursement_cents": 2000000
+        },
+        "B": {
+          "cash_cents": 3000000,
+          "loan_liability_cents": 2000000,
+          "financing_inflow_cents": 2000000
+        },
+        "consolidated": {
+          "cash_cents": 6000000,
+          "external_flow_from_loan_cents": 0,
+          "eliminated_asset_cents": 2000000,
+          "eliminated_liability_cents": 2000000
+        },
+        "construction_cost_created_cents": 0,
+        "sales_revenue_created_cents": 0
+      },
+      "calculations": [
+        "A: 50.000,00−20.000,00=30.000,00. B: 10.000,00+20.000,00=30.000,00. Consolidado: 60.000,00.",
+        "O ativo e o passivo de 20.000,00 são eliminados só no perímetro com as duas partes."
+      ],
+      "assertions": [
+        "Relatórios individuais preservam a operação e sua natureza. Transferência gerencial entre obras não gera movimentação bancária adicional."
+      ],
+      "task_ids": [
+        "T03",
+        "T36",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT17",
+      "title": "Reprogramação de previsão sem reescrever execução ou vencimento",
+      "rule_refs": [
+        "§3",
+        "§7.2",
+        "§10",
+        "I06",
+        "I12",
+        "I14",
+        "I19",
+        "I21"
+      ],
+      "policy_assumptions": [
+        "D10: reprogramação altera datas estimadas de C e P, sem mudança de preços/quantidades. Vencimentos contratuais exigem aditivo próprio. D09: atraso projetado não altera direito vencido.",
+        "R corresponde aos R$ 20.000 já incorridos e não pagos. C e P correspondem integralmente a recursos futuros de custo, sem estoque ou adiantamentos nesta fixture."
+      ],
+      "inputs": {
+        "cutoff": "2026-10-21",
+        "incurred_cost_cents": 2000000,
+        "R_cents": 2000000,
+        "R_legal_due": "2026-10-25",
+        "C_cents": 6000000,
+        "P_cents": 4000000,
+        "original_cash_outflow_by_month_cents": {
+          "2026-10": 3000000,
+          "2026-11": 5000000,
+          "2026-12": 4000000
+        },
+        "reprogrammed_cash_outflow_by_month_cents": {
+          "2026-10": 2000000,
+          "2026-11": 9000000,
+          "2026-12": 1000000
+        },
+        "opening_available_cash_cents": 10000000,
+        "minimum_cash_cents": 2000000,
+        "receivable_cents": 6000000,
+        "receivable_legal_due": "2026-10-25",
+        "old_expected_receipt": "2026-10-25",
+        "new_expected_receipt": "2026-12-10"
+      },
+      "steps": [
+        "Salvar versão original.",
+        "Salvar cenário reprogramado com saídas 20.000,00/90.000,00/10.000,00 e recebimento de 60.000,00 em dezembro. A previsão concentra compras futuras em novembro e posterga o recebimento.",
+        "Consultar outubro a dezembro e atraso real em 31/10, se nenhum pagamento ou recebimento ocorreu."
+      ],
+      "expected": {
+        "Q_before_and_after_cents": 12000000,
+        "ETC_before_and_after_cents": 10000000,
+        "EAC_before_and_after_cents": 12000000,
+        "incurred_cost_unchanged_cents": 2000000,
+        "original_projected_closing_cash_cents": {
+          "2026-10": 13000000,
+          "2026-11": 8000000,
+          "2026-12": 4000000
+        },
+        "reprogrammed_projected_closing_cash_cents": {
+          "2026-10": 8000000,
+          "2026-11": -1000000,
+          "2026-12": 4000000
+        },
+        "original_peak_additional_funding_cents": 0,
+        "reprogrammed_peak_additional_funding_cents": 3000000,
+        "AP_overdue_at_2026_10_31_cents": 2000000,
+        "AR_overdue_at_2026_10_31_cents": 6000000,
+        "original_version_retained": true,
+        "separate_valid_renegotiation_variant": {
+          "effective_event_date": "2026-10-28",
+          "original_due": "2026-10-25",
+          "new_due": "2026-11-15",
+          "R_unchanged_cents": 2000000,
+          "overdue_before_event_at_2026_10_27_cents": 2000000,
+          "overdue_after_event_at_2026_10_31_cents": 0,
+          "Q_unchanged_cents": 12000000
+        }
+      },
+      "calculations": [
+        "Q=20.000,00+60.000,00+40.000,00=120.000,00. ETC=60.000,00+40.000,00=100.000,00. EAC=20.000,00+100.000,00=120.000,00.",
+        "Caixa original: outubro 100.000,00+60.000,00−30.000,00=130.000,00; novembro 130.000,00−50.000,00=80.000,00; dezembro 80.000,00−40.000,00=40.000,00. Novo caixa: outubro 100.000,00−20.000,00=80.000,00; novembro 80.000,00−90.000,00=−10.000,00; dezembro −10.000,00+60.000,00−10.000,00=40.000,00. Com mínimo 20.000,00, necessidade passa de zero para 20.000,00−(−10.000,00)=30.000,00."
+      ],
+      "assertions": [
+        "Preservar baseline e corte histórico. Restante do mês corrente participa da previsão.",
+        "Recebimento previsto em dezembro não elimina atraso contratual de outubro. Não deslocar vencimento de R por arrastar uma barra de cronograma. Renegociação válida precisa de evento separado e histórico original preservado. Na variante independente com acordo efetivo em 28/10 prorrogando R para 15/11, o vencido de 31/10 cai a zero, mantendo R=20.000,00, Q=120.000,00 e a posição anterior de 27/10 vencida em 20.000,00."
+      ],
+      "task_ids": [
+        "T03",
+        "T29",
+        "T34",
+        "T39",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT18",
+      "title": "Cobertura da previsão ao contrato ao título e encargo futuro",
+      "rule_refs": [
+        "§7.1",
+        "§7.2",
+        "I05",
+        "I10",
+        "I11",
+        "I12"
+      ],
+      "policy_assumptions": [
+        "Mesmo escopo, preço e moeda; cada conversão tem cobertura explícita. AF de 2.000,00 não está embutido em R/C/P nem altera o principal V."
+      ],
+      "inputs": {
+        "initial_uncovered_forecast_cents": 10000000,
+        "firm_contract_cents": 6000000,
+        "recognized_title_principal_cents": 2000000,
+        "principal_payment_cents": 500000,
+        "future_interest_adjustment_cents": 200000,
+        "future_interest_expected_date": "2026-11-20",
+        "stage_F_cutoff": "2026-11-20"
+      },
+      "steps": [
+        "A: registrar somente previsão 100.000,00.",
+        "B: contratar 60.000,00 do mesmo escopo.",
+        "C: constituir título de 20.000,00 desse contrato.",
+        "D: pagar 5.000,00 de principal.",
+        "E: projetar AF de 2.000,00.",
+        "F: no corte de 20/11, constituir os mesmos 2.000,00 como encargo e retirar de AF, sem outros eventos entre os cortes."
+      ],
+      "expected": {
+        "states": [
+          {
+            "stage": "A",
+            "R_cents": 0,
+            "C_cents": 0,
+            "P_cents": 10000000,
+            "Q_cents": 10000000,
+            "AF_cents": 0
+          },
+          {
+            "stage": "B",
+            "R_cents": 0,
+            "C_cents": 6000000,
+            "P_cents": 4000000,
+            "Q_cents": 10000000,
+            "AF_cents": 0
+          },
+          {
+            "stage": "C",
+            "R_cents": 2000000,
+            "C_cents": 4000000,
+            "P_cents": 4000000,
+            "Q_cents": 10000000,
+            "AF_cents": 0
+          },
+          {
+            "stage": "D",
+            "R_cents": 1500000,
+            "C_cents": 4000000,
+            "P_cents": 4000000,
+            "Q_cents": 9500000,
+            "AF_cents": 0
+          },
+          {
+            "stage": "E",
+            "R_cents": 1500000,
+            "C_cents": 4000000,
+            "P_cents": 4000000,
+            "Q_cents": 9500000,
+            "AF_cents": 200000,
+            "Q_scenario_cents": 9700000
+          },
+          {
+            "stage": "F",
+            "R_cents": 1700000,
+            "C_cents": 4000000,
+            "P_cents": 4000000,
+            "Q_cents": 9700000,
+            "AF_cents": 0,
+            "Q_scenario_cents": 9700000
+          }
+        ]
+      },
+      "calculations": [
+        "D: C=60.000,00−H5.000,00−Rv15.000,00=40.000,00; Q=15.000,00+40.000,00+40.000,00=95.000,00.",
+        "E/F: cenário=95.000,00+2.000,00=97.000,00 antes da constituição e 17.000,00+40.000,00+40.000,00=97.000,00 depois."
+      ],
+      "assertions": [
+        "Contrato e pedido da mesma compra não acrescentam cobertura duplicada.",
+        "Os juros fora do preço não entram em Rv como principal nem em H. AF sai quando o mesmo encargo entra em R."
+      ],
+      "task_ids": [
+        "T03",
+        "T25",
+        "T26",
+        "T28",
+        "T30",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT19",
+      "title": "Aditivo aprovado e previsão de estouro sem residual artificial",
+      "rule_refs": [
+        "§8.4",
+        "§12.6",
+        "I01",
+        "I13",
+        "I14",
+        "I15"
+      ],
+      "policy_assumptions": [
+        "D10: orçamento original e vigente desta fixture são 1.000.000,00; aditivo firme de 50.000,00 altera contrato, sem revisão do orçamento aprovada. Bases econômicas compatíveis."
+      ],
+      "inputs": {
+        "original_budget_cents": 100000000,
+        "current_approved_budget_cents": 100000000,
+        "foundation_original_contract_cents": 50000000,
+        "approved_foundation_addendum_cents": 5000000,
+        "foundation_incurred_cents": 30000000,
+        "finishes_contract_cents": 30000000,
+        "finishes_incurred_cents": 10000000,
+        "other_incurred_cents": 5000000,
+        "uncovered_future_estimate_cents": 35000000,
+        "unapproved_addendum_risk_cents": 4000000
+      },
+      "steps": [
+        "Registrar aditivo aprovado de 50.000,00 à fundação.",
+        "Reestimar o escopo sem cobertura em 350.000,00.",
+        "Manter proposta ainda não aprovada de 40.000,00 apenas como risco/cenário."
+      ],
+      "expected": {
+        "firm_foundation_contract_cents": 55000000,
+        "incurred_cost_cents": 45000000,
+        "ETC_cents": 80000000,
+        "EAC_cents": 125000000,
+        "variance_to_current_budget_cents": 25000000,
+        "variance_percent": "25.00",
+        "firm_commitment_increment_from_unapproved_proposal_cents": 0,
+        "scenario_EAC_if_risk_fully_added_cents": 129000000
+      },
+      "calculations": [
+        "Incorrido=300.000,00+100.000,00+50.000,00=450.000,00. ETC=(550.000,00−300.000,00)+(300.000,00−100.000,00)+350.000,00=800.000,00.",
+        "EAC=450.000,00+800.000,00=1.250.000,00; desvio=250.000,00/1.000.000,00=25%. Residual artificial de 100.000,00 ocultaria 250.000,00."
+      ],
+      "assertions": [
+        "Assinatura de aditivo não cria custo executado nem caixa. Não substituir B0/Bv por EAC para apagar desvio.",
+        "Sem histórico de pagamentos, este teste não afirma Q; testa o mapa econômico."
+      ],
+      "task_ids": [
+        "T03",
+        "T25",
+        "T27",
+        "T28",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT20",
+      "title": "Correção de período fechado com duas posições reproduzíveis",
+      "rule_refs": [
+        "§3",
+        "§10",
+        "I01",
+        "I02",
+        "D11"
+      ],
+      "policy_assumptions": [
+        "D11: retificação gerencial aprovada em 16/10. A política de escrituração contábil não é presumida por este teste."
+      ],
+      "inputs": {
+        "closed_period": "2026-09",
+        "original_cost_cents": 50000000,
+        "omitted_september_service_cents": 3000000,
+        "discovered": "2026-10-15",
+        "approved": "2026-10-16",
+        "payment_bank_date": "2026-10-20",
+        "payment_cents": 3000000
+      },
+      "steps": [
+        "Conservar versão fechada de setembro.",
+        "Registrar correção aprovada com competência setembro.",
+        "Consultar T=30/09 no K original e no K reapresentado.",
+        "Consultar caixa do pagamento de outubro."
+      ],
+      "expected": {
+        "original_september_cost_cents": 50000000,
+        "restated_september_cost_cents": 53000000,
+        "bridge_cents": 3000000,
+        "new_october_economic_cost_from_prior_error_cents": 0,
+        "october_bank_outflow_cents": 3000000,
+        "original_snapshot_mutations": 0
+      },
+      "calculations": [
+        "Setembro reapresentado=500.000,00+30.000,00=530.000,00. Diferença explicada=30.000,00.",
+        "O pagamento permanece em 20/10; o fato econômico corrigido pertence a setembro."
+      ],
+      "assertions": [
+        "Reimportação não contorna o bloqueio de período fechado. Responsável, motivo, data e vínculo ao original são obrigatórios."
+      ],
+      "task_ids": [
+        "T02",
+        "T03",
+        "T07",
+        "T08",
+        "T37",
+        "T43",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT21",
+      "title": "Dados incompletos não se tornam zero ou total validado",
+      "rule_refs": [
+        "§7.2",
+        "§11",
+        "I12",
+        "I14",
+        "I15",
+        "I22"
+      ],
+      "policy_assumptions": [
+        "D12: vínculo financeiro ausente e previsão incompleta impedem certificação de Q/EAC. Nenhuma política de exceção altera desconhecido em zero."
+      ],
+      "inputs": {
+        "known_R_cents": 14000000,
+        "reported_contract_future_cents": 84000000,
+        "contract_title_coverage_available": false,
+        "uncovered_forecast_cents": null,
+        "current_budget_valid": false,
+        "loaded_external_id_count": 2,
+        "expected_external_id_count": null
+      },
+      "steps": [
+        "Solicitar Q, EAC, desvio percentual e cobertura externa.",
+        "Emitir dashboard, exportação e resposta da IA com mesmos filtros/T/K."
+      ],
+      "expected": {
+        "known_obligations_subtotal_cents": 14000000,
+        "contract_amount_shown_separately_cents": 84000000,
+        "Q_cents": null,
+        "EAC_cents": null,
+        "budget_variance_percent": null,
+        "external_coverage_percent": null,
+        "status": "incompleto"
+      },
+      "calculations": [
+        "140.000,00 de obrigações é subtotal conhecido. Não é possível afirmar Q=140.000,00+840.000,00 porque há possível sobreposição e P é desconhecido.",
+        "2 IDs carregados/universo desconhecido não produz 100%."
+      ],
+      "assertions": [
+        "A apresentação informa lacuna, valor conhecido, período e fonte. Exceção aprovada para uso condicionado não remove a lacuna."
+      ],
+      "negative_assertions": [
+        {
+          "path": "Q_cents",
+          "operator": "not_equal",
+          "forbidden_value": 98000000
+        }
+      ],
+      "task_ids": [
+        "T01",
+        "T03",
+        "T09",
+        "T11",
+        "T12",
+        "T15",
+        "T27",
+        "T30",
+        "T33",
+        "T38",
+        "T40",
+        "T41",
+        "T44",
+        "T45"
+      ]
+    },
+    {
+      "id": "CT22",
+      "title": "Adiantamento de cliente e entradas futuras sem abatimento global repetido",
+      "rule_refs": [
+        "§8.2",
+        "§8.5",
+        "I09",
+        "I16",
+        "I17",
+        "I18"
+      ],
+      "policy_assumptions": [
+        "D09: contrato financeiro firme de 100.000,00; nenhum desempenho que autorize receita ocorreu nesta fixture. Adiantamento deve ser aplicado à parcela identificada."
+      ],
+      "inputs": {
+        "sales_contract_cents": 10000000,
+        "received_advance_cents": 2000000,
+        "later_issued_installment_cents": 4000000,
+        "advance_applied_cents": 2000000,
+        "contract_future_not_issued_cents": 6000000
+      },
+      "steps": [
+        "Receber e conciliar antecipação de 20.000,00.",
+        "Emitir parcela de 40.000,00 e aplicar integralmente o adiantamento.",
+        "Calcular recebíveis abertos e fluxo contratual futuro."
+      ],
+      "expected": {
+        "cash_received_cents": 2000000,
+        "advance_available_before_application_cents": 2000000,
+        "advance_available_after_application_cents": 0,
+        "open_receivable_cents": 2000000,
+        "contract_future_not_issued_cents": 6000000,
+        "I18_future_inflow_cents": 8000000,
+        "cash_created_by_application_cents": 0,
+        "automatic_revenue_cents": 0
+      },
+      "calculations": [
+        "Recebível aberto=40.000,00−20.000,00=20.000,00. Entradas futuras=20.000,00+60.000,00=80.000,00.",
+        "Não subtrair o adiantamento novamente para chegar a 60.000,00."
+      ],
+      "assertions": [
+        "Origem do recebimento, crédito e aplicação permanecem vinculados; receita e direito financeiro são dimensões distintas."
+      ],
+      "task_ids": [
+        "T03",
+        "T20",
+        "T33",
+        "T34",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT23",
+      "title": "Pagamento agrupado em vários títulos e múltiplas liquidações",
+      "rule_refs": [
+        "§4",
+        "§8.1",
+        "I02",
+        "I03"
+      ],
+      "policy_assumptions": [
+        "D06: todas as alocações são de principal, sem encargos nem tarifas. Cada banco tem ID único."
+      ],
+      "inputs": {
+        "title_A_cents": 800000,
+        "title_B_cents": 1200000,
+        "payment_1": {
+          "bank_cents": 1000000,
+          "allocation_A_cents": 400000,
+          "allocation_B_cents": 600000
+        },
+        "payment_2": {
+          "bank_cents": 600000,
+          "allocation_A_cents": 400000,
+          "allocation_B_cents": 200000
+        }
+      },
+      "steps": [
+        "Liquidar P1 nos dois títulos e conciliar com um único débito bancário.",
+        "Liquidar P2 e conciliar outro débito.",
+        "Reimportar os dois movimentos."
+      ],
+      "expected": {
+        "after_P1_A_open_cents": 400000,
+        "after_P1_B_open_cents": 600000,
+        "final_A_open_cents": 0,
+        "final_B_open_cents": 400000,
+        "final_I03_cents": 400000,
+        "I02_cash_cents": 1600000,
+        "unique_bank_debits": 2,
+        "new_cash_from_reimport_cents": 0
+      },
+      "calculations": [
+        "P1: 4.000,00+6.000,00=10.000,00. P2: 4.000,00+2.000,00=6.000,00.",
+        "Saldo final=(8.000,00+12.000,00)−(10.000,00+6.000,00)=4.000,00."
+      ],
+      "assertions": [
+        "Número de alocações não determina número de pagamentos nem soma de caixa. Sobre-alocação é rejeitada com zero alteração persistida."
+      ],
+      "task_ids": [
+        "T03",
+        "T10",
+        "T16",
+        "T18",
+        "T19",
+        "T32",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT24",
+      "title": "Isolamento entre organizações e autorização entre empresas",
+      "rule_refs": [
+        "§4",
+        "§11",
+        "§14 item 13",
+        "D02",
+        "D13"
+      ],
+      "policy_assumptions": [
+        "Contrato de teste de acesso: usuário UA pode ler/escrever apenas ORG_A e entidade A1, sem acesso à A2; UB apenas ORG_B/B1; usuário UR em ORG_A/A1 somente leitura. Usuário UG tem acesso explícito às duas organizações e às três entidades. Autorizações decorrem do servidor, nunca só do filtro da tela."
+      ],
+      "inputs": {
+        "ORG_A": {
+          "titles": [
+            {
+              "source": "KOPER_TEST",
+              "external_title_id": "77",
+              "title_cents": 100000,
+              "entity": "A1",
+              "obra": "OA1"
+            },
+            {
+              "source": "KOPER_TEST",
+              "external_title_id": "79",
+              "title_cents": 300000,
+              "entity": "A2",
+              "obra": "OA2"
+            }
+          ]
+        },
+        "ORG_B": {
+          "source": "KOPER_TEST",
+          "external_title_id": "77",
+          "title_cents": 900000,
+          "entity": "B1",
+          "obra": "OB"
+        },
+        "user_permissions": {
+          "UA": [
+            "ORG_A:A1:read",
+            "ORG_A:A1:write"
+          ],
+          "UB": [
+            "ORG_B:B1:read",
+            "ORG_B:B1:write"
+          ],
+          "UR": [
+            "ORG_A:A1:read"
+          ],
+          "UG": [
+            "ORG_A:A1:read",
+            "ORG_A:A2:read",
+            "ORG_B:B1:read"
+          ]
+        }
+      },
+      "steps": [
+        "Importar os IDs 77 e 79 em ORG_A e o outro ID 77 em ORG_B, em seus contextos autorizados.",
+        "Como UA, testar lista, detalhe por ID, total, exportação, IA e acesso direto aos anexos da ORG_B e da entidade A2 dentro da própria ORG_A.",
+        "Como UA, forjar organization_id, entity_id, obra_id e vínculo de título da ORG_B ou A2 em mutações/importações, inclusive vínculo de título A1 a contrato A2.",
+        "Como UR, tentar alteração.",
+        "Como UG, alternar contexto organização e entidade A1/A2/B1 e repetir consultas/cache/jobs/exportações. Para consolidar A1+A2, escolher explicitamente esse perímetro autorizado."
+      ],
+      "expected": {
+        "canonical_title_count_all_organizations": 3,
+        "UA_visible_total_cents": 100000,
+        "UB_visible_total_cents": 900000,
+        "UG_A1_context_total_cents": 100000,
+        "UG_A2_context_total_cents": 300000,
+        "UG_A_authorized_consolidated_total_cents": 400000,
+        "UG_B_context_total_cents": 900000,
+        "foreign_rows_returned_to_UA": 0,
+        "restricted_same_organization_rows_returned_to_UA": 0,
+        "unauthorized_mutations_committed": 0,
+        "UR_mutations_committed": 0,
+        "foreign_data_occurrences_in_UA_exports_or_AI": 0
+      },
+      "calculations": [
+        "A soma autorizada de UA é 1.000,00. Os 3.000,00 da entidade A2 e os 9.000,00 da ORG_B nunca aparecem em seu total, detalhes, contagens, exportações, cache ou texto da IA. UG pode consolidar A1+A2 em 1.000,00+3.000,00=4.000,00 apenas no perímetro autorizado."
+      ],
+      "assertions": [
+        "Detalhe não autorizado retorna negação consistente (403 ou 404 conforme contrato adotado), sem conteúdo financeiro.",
+        "IDs externos iguais em organizações distintas não colidem. Importação não pode criar ligação entre objetos de organizações diferentes.",
+        "Capturar logs/respostas sem conteúdo privado da outra organização e confirmar zero alterações após tentativas.",
+        "A contagem global de três títulos é verificada apenas pelo harness administrativo; nunca retorna ao usuário UA."
+      ],
+      "negative_assertions": [
+        {
+          "path": "UA_visible_total_cents",
+          "operator": "not_equal",
+          "forbidden_value": 400000
+        },
+        {
+          "path": "UA_visible_total_cents",
+          "operator": "not_equal",
+          "forbidden_value": 1300000
+        }
+      ],
+      "task_ids": [
+        "T01",
+        "T03",
+        "T04",
+        "T05",
+        "T10",
+        "T14",
+        "T16",
+        "T31",
+        "T36",
+        "T40",
+        "T41",
+        "T42",
+        "T43",
+        "T44",
+        "T45"
+      ]
+    },
+    {
+      "id": "CT25",
+      "title": "Recorrência mensal substituída pelo título da mesma ocorrência",
+      "rule_refs": [
+        "§8.4",
+        "§7.2",
+        "I03",
+        "I11",
+        "I12"
+      ],
+      "policy_assumptions": [
+        "Agenda fictícia sem contrato firme de todo o período, representada em P; cada ocorrência mensal possui chave estável. Outubro ainda era previsão no primeiro estado, até serviço aceito e título constituído."
+      ],
+      "inputs": {
+        "occurrences": [
+          {
+            "id": "REC-2026-10",
+            "amount_cents": 100000
+          },
+          {
+            "id": "REC-2026-11",
+            "amount_cents": 100000
+          },
+          {
+            "id": "REC-2026-12",
+            "amount_cents": 100000
+          }
+        ],
+        "october_title_cents": 100000,
+        "october_payment_cents": 100000
+      },
+      "steps": [
+        "Registrar previsão de três ocorrências de 1.000,00.",
+        "Reconhecer serviço de outubro e emitir título associado à ocorrência de outubro.",
+        "Pagar outubro e repetir a importação do mesmo título."
+      ],
+      "expected": {
+        "initial_P_cents": 300000,
+        "after_title_R_cents": 100000,
+        "after_title_P_cents": 200000,
+        "after_title_Q_cents": 300000,
+        "after_payment_R_cents": 0,
+        "after_payment_P_cents": 200000,
+        "after_payment_Q_cents": 200000,
+        "october_incurred_cost_cents": 100000,
+        "october_cash_cents": 100000,
+        "active_occurrence_count": 3,
+        "duplicate_october_obligations": 0
+      },
+      "calculations": [
+        "Antes: Q=3×1.000,00=3.000,00. Com título de outubro: Q=R1.000,00+P2.000,00=3.000,00.",
+        "Após pagar: Q=0,00+2.000,00=2.000,00. Não manter outubro simultaneamente em R e P."
+      ],
+      "assertions": [
+        "Mudança de previsão para obrigação preserva a ocorrência e libera só a cobertura equivalente. Reimportação não recria o mês."
+      ],
+      "task_ids": [
+        "T03",
+        "T28",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT26",
+      "title": "Paginação completa e falha no meio da extração",
+      "rule_refs": [
+        "§2",
+        "§4",
+        "§11",
+        "I22",
+        "S2 §5"
+      ],
+      "policy_assumptions": [
+        "Origem fictícia com cinco IDs esperados, todos títulos abertos válidos. As variantes são executadas separadamente."
+      ],
+      "inputs": {
+        "pages": [
+          [
+            {
+              "id": "P1",
+              "amount_cents": 100000
+            },
+            {
+              "id": "P2",
+              "amount_cents": 200000
+            }
+          ],
+          [
+            {
+              "id": "P3",
+              "amount_cents": 300000
+            },
+            {
+              "id": "P4",
+              "amount_cents": 400000
+            }
+          ],
+          [
+            {
+              "id": "P5",
+              "amount_cents": 500000
+            }
+          ]
+        ],
+        "expected_id_count": 5,
+        "page_size": 2,
+        "complete_cursor_responses": [
+          {
+            "request_cursor": null,
+            "page_number": 1,
+            "next_cursor": "CURSOR-2"
+          },
+          {
+            "request_cursor": "CURSOR-2",
+            "page_number": 2,
+            "next_cursor": "CURSOR-3"
+          },
+          {
+            "request_cursor": "CURSOR-3",
+            "page_number": 3,
+            "next_cursor": null
+          }
+        ],
+        "failed_page_variant": {
+          "request_cursor": "CURSOR-2",
+          "http_status": 503,
+          "failed_attempts": 1,
+          "retry_succeeds": true
+        },
+        "repeated_cursor_variant": [
+          {
+            "request_cursor": null,
+            "page_number": 1,
+            "next_cursor": "CURSOR-2"
+          },
+          {
+            "request_cursor": "CURSOR-2",
+            "page_number": 2,
+            "next_cursor": "CURSOR-2"
+          }
+        ]
+      },
+      "steps": [
+        "A: importar três páginas completas.",
+        "B: em cópia limpa, a página 2 falha; não publicar uma carga completa.",
+        "C: em cópia limpa, seguir repeated_cursor_variant; a segunda resposta devolve o mesmo cursor CURSOR-2 da requisição. Detectar a anomalia e interromper a carga antes de certificá-la.",
+        "D: repetir B com sucesso usando a mesma identidade, sem duplicar os dois registros já preparados."
+      ],
+      "expected": {
+        "complete": {
+          "unique_count": 5,
+          "total_cents": 1500000,
+          "external_coverage_percent": "100.00"
+        },
+        "failed_page_2": {
+          "known_unique_count": 2,
+          "known_subtotal_cents": 300000,
+          "known_loaded_coverage_percent": "40.00",
+          "certified_total_cents": null,
+          "complete": false
+        },
+        "after_retry": {
+          "unique_count": 5,
+          "total_cents": 1500000,
+          "duplicate_obligations": 0
+        },
+        "repeated_cursor_detected": true
+      },
+      "calculations": [
+        "Carga completa = 1.000 + 2.000 + 3.000 + 4.000 + 5.000 = R$ 15.000. Duas de cinco identidades = 40% carregadas; isso não certifica o saldo final.",
+        "Falha após página 1 preserva subtotal conhecido de R$ 3.000 e universo ainda incompleto. Retry termina com cinco títulos e R$ 15.000."
+      ],
+      "assertions": [
+        "Comparar IDs distintos e manifesto, não apenas quantidade de linhas. Falha não atualiza o instante da última carga completa."
+      ],
+      "task_ids": [
+        "T01",
+        "T03",
+        "T09",
+        "T10",
+        "T11",
+        "T14",
+        "T38",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT27",
+      "title": "Estoque pago e consumo econômico sem nova previsão de caixa",
+      "rule_refs": [
+        "§5",
+        "§7.1",
+        "I01",
+        "I10",
+        "I12",
+        "I13",
+        "I14"
+      ],
+      "policy_assumptions": [
+        "D03 reconhece materiais por consumo. Todo o material necessário ao escopo já foi comprado, recebido e pago; não há desperdício, novo suprimento nem encargos."
+      ],
+      "inputs": {
+        "contract_value_cents": 2000000,
+        "materials_received_and_paid_cents": 2000000,
+        "consumption_later_cents": 800000
+      },
+      "steps": [
+        "Receber materiais e liquidar o preço com banco confirmado.",
+        "Consultar custo, estoque, ETC e Q antes do consumo.",
+        "Registrar consumo de R$ 8.000 no mesmo escopo."
+      ],
+      "expected": {
+        "before_consumption": {
+          "H_cents": 2000000,
+          "R_cents": 0,
+          "C_cents": 0,
+          "P_cents": 0,
+          "Q_cents": 0,
+          "cost_cents": 0,
+          "inventory_cents": 2000000,
+          "ETC_cents": 2000000,
+          "EAC_cents": 2000000
+        },
+        "after_consumption": {
+          "cost_cents": 800000,
+          "inventory_cents": 1200000,
+          "ETC_cents": 1200000,
+          "EAC_cents": 2000000,
+          "Q_cents": 0,
+          "new_cash_cents": 0
+        }
+      },
+      "calculations": [
+        "Após consumo: estoque = 20.000 − 8.000 = R$ 12.000; EAC = 8.000 incorridos + 12.000 a consumir = R$ 20.000.",
+        "C = 20.000 − H 20.000 = zero; R/C/P/Q permanecem zero. O estoque de R$ 12.000 não é outra compra futura."
+      ],
+      "assertions": [
+        "Não somar compra, nota e consumo como três custos. O caixa histórico de R$ 20.000 permanece."
+      ],
+      "task_ids": [
+        "T03",
+        "T22",
+        "T28",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT28",
+      "title": "Cobertura integrada com adiantamento retenção e escopo descoberto",
+      "rule_refs": [
+        "§7.1",
+        "§12.2",
+        "I05",
+        "I08",
+        "I09",
+        "I10",
+        "I11",
+        "I12",
+        "I13",
+        "I14"
+      ],
+      "policy_assumptions": [
+        "Mesmo escopo e base monetária do exemplo 12.2; AF zero. Retenção e tributo de terceiro integram o preço. Escopo descoberto é adicional e não sobreposto."
+      ],
+      "inputs": {
+        "V_cents": 120000000,
+        "accepted_cost_cents": 30000000,
+        "supplier_component_cents": 24000000,
+        "withheld_tax_cents": 3000000,
+        "retention_cents": 3000000,
+        "advance_paid_cents": 12000000,
+        "advance_applied_cents": 6000000,
+        "other_principal_paid_cents": 10000000,
+        "P_cents": 20000000
+      },
+      "steps": [
+        "Pagar adiantamento, aceitar medição e seus componentes, aplicar parte do crédito e registrar outro pagamento.",
+        "Consultar os dois mapas de cobertura e todos os componentes até conclusão."
+      ],
+      "expected": {
+        "supplier_open_cents": 8000000,
+        "tax_open_cents": 3000000,
+        "retention_open_cents": 3000000,
+        "R_cents": 14000000,
+        "H_cents": 22000000,
+        "advance_available_cents": 6000000,
+        "C_cents": 84000000,
+        "P_cents": 20000000,
+        "Q_cents": 118000000,
+        "ETC_cents": 110000000,
+        "EAC_cents": 140000000
+      },
+      "calculations": [
+        "Fornecedor = 240.000 − 60.000 − 100.000 = R$ 80.000. R = 80.000 + 30.000 + 30.000 = R$ 140.000. H = 120.000 + 100.000 = R$ 220.000.",
+        "C = 1.200.000 − 220.000 − 140.000 = R$ 840.000. Q = 140.000 + 840.000 + 200.000 = R$ 1.180.000.",
+        "ETC = 900.000 + 200.000 = R$ 1.100.000. EAC = 300.000 + 1.100.000 = R$ 1.400.000. Adiantamento disponível R$ 60.000 já está refletido; não deduzir de Q outra vez."
+      ],
+      "assertions": [
+        "Retenção e tributo são partes de R. O cabeçalho não cria uma quarta obrigação."
+      ],
+      "task_ids": [
+        "T03",
+        "T20",
+        "T21",
+        "T26",
+        "T28",
+        "T30",
+        "T40",
+        "T41",
+        "T44",
+        "T45"
+      ]
+    },
+    {
+      "id": "CT29",
+      "title": "Disponibilidade restrições e financiamento contado uma vez",
+      "rule_refs": [
+        "§12.7",
+        "I20",
+        "I21",
+        "D04"
+      ],
+      "policy_assumptions": [
+        "D04: as saídas de R$ 150.000 do mês 2 já incluem R$ 20.000 de amortização de principal. Perímetro e agenda completos."
+      ],
+      "inputs": {
+        "bank_opening_cents": 12000000,
+        "restricted_cents": 2000000,
+        "unused_credit_limit_cents": 7000000,
+        "minimum_cash_cents": 2000000,
+        "monthly_inflows_cents": [
+          6000000,
+          8000000
+        ],
+        "monthly_outflows_cents": [
+          12000000,
+          15000000
+        ],
+        "principal_amortization_already_in_month2_cents": 2000000
+      },
+      "steps": [
+        "Calcular disponibilidade elegível inicial.",
+        "Projetar dois meses sem acrescentar novamente a amortização.",
+        "Apurar maior insuficiência contra o caixa mínimo."
+      ],
+      "expected": {
+        "available_opening_cents": 10000000,
+        "closing_month1_cents": 4000000,
+        "closing_month2_cents": -3000000,
+        "peak_additional_funding_cents": 5000000,
+        "additional_amortization_duplicate_cents": 0,
+        "unused_limit_in_available_cash_cents": 0
+      },
+      "calculations": [
+        "Disponibilidade = 120.000 − 20.000 = R$ 100.000. M1 = 100.000 + 60.000 − 120.000 = R$ 40.000.",
+        "M2 = 40.000 + 80.000 − 150.000 = menos R$ 30.000. Necessidade = máximo de zero, 20.000 − 40.000 e 20.000 − (−30.000) = R$ 50.000."
+      ],
+      "assertions": [
+        "Não deduzir outra vez os R$ 20.000 de principal. O limite de R$ 70.000 não utilizado não compõe caixa."
+      ],
+      "task_ids": [
+        "T03",
+        "T39",
+        "T44"
+      ]
+    },
+    {
+      "id": "CT30",
+      "title": "Liquidação excedente identificada como crédito",
+      "rule_refs": [
+        "§5",
+        "§8.1",
+        "I02",
+        "I03",
+        "I09"
+      ],
+      "policy_assumptions": [
+        "Título único válido de R$ 1.000 e saída comprovada de R$ 1.200. Financeiro identifica o excesso como crédito a restituir, sem outro escopo contratual."
+      ],
+      "inputs": {
+        "title_principal_cents": 100000,
+        "bank_payment_cents": 120000,
+        "approved_excess_classification": "refund_receivable"
+      },
+      "steps": [
+        "Receber evento financeiro maior que a dívida.",
+        "Alocar R$ 1.000 ao título e R$ 200 ao crédito documentado.",
+        "Tentar alocar todo o pagamento novamente no título."
+      ],
+      "expected": {
+        "open_payable_cents": 0,
+        "principal_settled_cents": 100000,
+        "refund_receivable_cents": 20000,
+        "confirmed_cash_outflow_cents": 120000,
+        "unexplained_negative_balance_cents": 0,
+        "second_allocation_mutations": 0
+      },
+      "calculations": [
+        "Excesso = 1.200 − 1.000 = R$ 200. R$ 1.000 liquida dívida e R$ 200 preserva direito; caixa histórico permanece R$ 1.200."
+      ],
+      "assertions": [
+        "Saldo negativo não é apagado por limite artificial em zero. Sem documento de classificação, conservar pendência em vez de aprovar o crédito automaticamente."
+      ],
+      "task_ids": [
+        "T03",
+        "T06",
+        "T18",
+        "T44"
+      ]
+    }
+  ]
+}

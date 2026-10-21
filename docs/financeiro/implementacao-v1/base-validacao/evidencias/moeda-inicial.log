@@ -1,0 +1,127 @@
+✖ T06: 1.005 preserva arredondamento decimal para 101 centavos (1.379743ms)
+✖ T06: dinheiro desconhecido não vira zero (3.660447ms)
+✖ T06: centavos fora do intervalo seguro são rejeitados (0.541495ms)
+✖ T07: 31/02 não é vencimento válido (0.347217ms)
+✖ T06/CT11 componente: maior resto desempata por ID, independente da ordem (1.057053ms)
+✔ T06/CT11 componente: rateio 60/40 e parcial conservam centavos (0.199347ms)
+✔ T06: divisão de parcelas preserva soma (0.197654ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 2
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 449.887546
+
+✖ failing tests:
+
+test at tests/financeiro/money.test.mjs:8:1
+✖ T06: 1.005 preserva arredondamento decimal para 101 centavos (1.379743ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  100 !== 101
+  
+      at TestContext.<anonymous> (file:///workspace/elos-os/tests/financeiro/money.test.mjs:8:80)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at Test.start (node:internal/test_runner/test:944:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 100,
+    expected: 101,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/financeiro/money.test.mjs:9:1
+✖ T06: dinheiro desconhecido não vira zero (3.660447ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(Number.isNaN(installments.moneyToCents(Number.NaN)))
+  
+      at TestContext.<anonymous> (file:///workspace/elos-os/tests/financeiro/money.test.mjs:9:60)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+      at Test.postRun (node:internal/test_runner/test:1173:19)
+      at Test.run (node:internal/test_runner/test:1101:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/financeiro/money.test.mjs:10:1
+✖ T06: centavos fora do intervalo seguro são rejeitados (0.541495ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(Number.isNaN(installments.moneyToCents(1e16)))
+  
+      at TestContext.<anonymous> (file:///workspace/elos-os/tests/financeiro/money.test.mjs:10:73)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+      at Test.postRun (node:internal/test_runner/test:1173:19)
+      at Test.run (node:internal/test_runner/test:1101:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/financeiro/money.test.mjs:11:1
+✖ T07: 31/02 não é vencimento válido (0.347217ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/elos-os/tests/financeiro/money.test.mjs:11:54)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+      at Test.postRun (node:internal/test_runner/test:1173:19)
+      at Test.run (node:internal/test_runner/test:1101:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/financeiro/money.test.mjs:12:1
+✖ T06/CT11 componente: maior resto desempata por ID, independente da ordem (1.057053ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   A: 33.33,
+  -   A: 33.34,
+      B: 33.34,
+  +   C: 33.34
+  -   C: 33.33
+    }
+  
+      at TestContext.<anonymous> (file:///workspace/elos-os/tests/financeiro/money.test.mjs:14:52)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+      at Test.postRun (node:internal/test_runner/test:1173:19)
+      at Test.run (node:internal/test_runner/test:1101:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { C: 33.34, B: 33.34, A: 33.33 },
+    expected: { C: 33.33, B: 33.34, A: 33.34 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

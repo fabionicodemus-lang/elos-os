@@ -1,0 +1,28 @@
+{
+  "source_sha256": "7bd571fb811743467e1e484e333087d779796595ba2089527b205744cf75f1f3",
+  "derived_sha256": "c5226baffaae17ff844e37e2db9a9e5895aa97f886aa3c442c61df8eaaf221ee",
+  "modified_cells": [
+    "Acompanhamento!F13",
+    "Acompanhamento!I13",
+    "Acompanhamento!S13",
+    "Acompanhamento!F14",
+    "Acompanhamento!I14",
+    "Acompanhamento!S14",
+    "Acompanhamento!F15",
+    "Acompanhamento!I15",
+    "Acompanhamento!S15",
+    "Acompanhamento!F16",
+    "Acompanhamento!I16",
+    "Acompanhamento!S16",
+    "Acompanhamento!F17",
+    "Acompanhamento!I17",
+    "Acompanhamento!S17",
+    "Acompanhamento!F18",
+    "Acompanhamento!I18",
+    "Acompanhamento!S18"
+  ],
+  "unchanged_cells_checked": 7903,
+  "expected_and_formulas_unchanged": true,
+  "acceptances_unchanged": true,
+  "formula_values_recomputed": false
+}

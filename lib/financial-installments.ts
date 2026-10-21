@@ -1,3 +1,5 @@
+import { decimalToCents } from "./money.mjs";
+
 export type FinancialInstallmentDraft = {
   id: string;
   label: string;
@@ -19,7 +21,9 @@ export type FinancialInstallmentInput = {
 function isoParts(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return null;
-  return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  if (year < 100 || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) return null;
+  return { year, month, day };
 }
 
 function isoDate(year: number, month: number, day: number) {
@@ -57,7 +61,11 @@ export function suggestedFirstDueDate(baseDate = localTodayIso()) {
 }
 
 export function moneyToCents(value: number) {
-  return Math.round((Number.isFinite(Number(value)) ? Number(value) : 0) * 100);
+  try {
+    return decimalToCents(value, { rounding: "half-away-from-zero" }) ?? Number.NaN;
+  } catch {
+    return Number.NaN;
+  }
 }
 
 export function centsToMoney(value: number) {

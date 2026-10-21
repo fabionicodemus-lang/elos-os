@@ -1,0 +1,67 @@
+
+> elos-os@0.71.2 test:finance
+> node --test tests/financeiro/money.test.mjs && python3 tests/financeiro/comparator_test.py && node tests/financeiro/run.mjs --backup
+
+TAP version 13
+# Subtest: T06: 1.005 preserva arredondamento decimal para 101 centavos
+ok 1 - T06: 1.005 preserva arredondamento decimal para 101 centavos
+  ---
+  duration_ms: 1.224532
+  type: 'test'
+  ...
+# Subtest: T06: dinheiro desconhecido não vira zero
+ok 2 - T06: dinheiro desconhecido não vira zero
+  ---
+  duration_ms: 0.307468
+  type: 'test'
+  ...
+# Subtest: T06: centavos fora do intervalo seguro são rejeitados
+ok 3 - T06: centavos fora do intervalo seguro são rejeitados
+  ---
+  duration_ms: 0.226577
+  type: 'test'
+  ...
+# Subtest: T07: 31/02 não é vencimento válido
+ok 4 - T07: 31/02 não é vencimento válido
+  ---
+  duration_ms: 0.367377
+  type: 'test'
+  ...
+# Subtest: T06/CT11 componente: maior resto desempata por ID, independente da ordem
+ok 5 - T06/CT11 componente: maior resto desempata por ID, independente da ordem
+  ---
+  duration_ms: 1.179314
+  type: 'test'
+  ...
+# Subtest: T06/CT11 componente: rateio 60/40 e parcial conservam centavos
+ok 6 - T06/CT11 componente: rateio 60/40 e parcial conservam centavos
+  ---
+  duration_ms: 0.223172
+  type: 'test'
+  ...
+# Subtest: T06: divisão de parcelas preserva soma
+ok 7 - T06: divisão de parcelas preserva soma
+  ---
+  duration_ms: 0.307798
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 520.636888
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.002s
+
+OK
+{"baseline":false,"passed":25,"failed":0,"failures":[]}
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

@@ -1,0 +1,121 @@
+{
+  "policy": {
+    "version": "Regras financeiras v0.1",
+    "file": "Elos_OS_Regras_Financeiras_v0_1.docx",
+    "sha256": "30f19b5ef98157d72c32a9c471c8893bac3b17a60167d6a417a346c6efb36c28",
+    "status": "Referência normativa desta etapa, conforme a solicitação de usar as regras aprovadas. Os valores específicos de D01 a D14 devem ser registrados antes de aplicar a configuração correspondente a dados reais."
+  },
+  "decisions": [
+    {
+      "id": "D01",
+      "name": "Obra e legado",
+      "parameter": "Evidências para identificar obra e alcance da revisão das atribuições históricas por padrão.",
+      "test_assumption": "Sem evidência, obra nula e valor em não classificado; sem transferência automática para Flow.",
+      "owner": "Financeiro e engenharia"
+    },
+    {
+      "id": "D02",
+      "name": "Corte e perímetro",
+      "parameter": "Entidades, contas, obras, moeda, fuso, calendário e corte real do piloto.",
+      "test_assumption": "BRL; America/Sao_Paulo; datas expressas em cada caso; nenhum ajuste de feriado presumido.",
+      "owner": "Financeiro"
+    },
+    {
+      "id": "D03",
+      "name": "Reconhecimento econômico",
+      "parameter": "Critério por serviço, material, estoque, folha, equipamento e obrigação sem nota.",
+      "test_assumption": "Serviço aceito por execução; material só consumido quando o caso declarar; adiantamento não gera custo.",
+      "owner": "Financeiro, engenharia e contador"
+    },
+    {
+      "id": "D04",
+      "name": "Escopo de Q",
+      "parameter": "Custos da obra, administração, tributos, financiamento, restituições e retenções após entrega.",
+      "test_assumption": "Somente o escopo explicitado no caso. AF igual a zero salvo indicação. Itens de financiamento separados.",
+      "owner": "Diretoria e financeiro"
+    },
+    {
+      "id": "D05",
+      "name": "Rateios",
+      "parameter": "Direcionadores, rateio do pagamento parcial e método de resíduos.",
+      "test_assumption": "60/40 no caso específico; parciais proporcionais nesse caso; maior resto com desempate por ID estável para centavos.",
+      "owner": "Financeiro e engenharia"
+    },
+    {
+      "id": "D06",
+      "name": "Liquidação e caixa",
+      "parameter": "Imputação entre componentes, prova mínima, trânsito e convenção de data do caixa.",
+      "test_assumption": "Componentes expressos; caixa na data bancária; sem extrato, baixa declarada e não caixa confirmado.",
+      "owner": "Financeiro"
+    },
+    {
+      "id": "D07",
+      "name": "Encargos e descontos",
+      "parameter": "Cláusula, índice, periodicidade, arredondamento e validade do desconto após devolução.",
+      "test_assumption": "Somente encargos explicitamente informados. Cenários distintos para desconto mantido ou perdido.",
+      "owner": "Financeiro e contador"
+    },
+    {
+      "id": "D08",
+      "name": "Retenções e tributos",
+      "parameter": "Fato gerador, credor, liberação, recuperação e reflexo no custo.",
+      "test_assumption": "Valores fictícios fixos, sem sugerir alíquota legal; retenção e tributo de terceiro integram o preço quando declarado.",
+      "owner": "Contador e financeiro"
+    },
+    {
+      "id": "D09",
+      "name": "Recebíveis",
+      "parameter": "Coorte, carência, renegociação, permuta, cessão, distrato e política de receita.",
+      "test_assumption": "Atraso sem carência no caso; denominador da própria coorte; receita não inferida de caixa.",
+      "owner": "Financeiro e contador"
+    },
+    {
+      "id": "D10",
+      "name": "Orçamento e previsão",
+      "parameter": "Revisão efetivamente aprovada, fórmulas, EAP, base de preços e alcance até conclusão.",
+      "test_assumption": "Orçamentos e estimativas fictícios declarados. Rev03 real não promovida sem validação.",
+      "owner": "Engenharia e financeiro"
+    },
+    {
+      "id": "D11",
+      "name": "Períodos fechados",
+      "parameter": "Alçadas, materialidade, reabertura, reapresentação e tratamento contábil.",
+      "test_assumption": "Versão original preservada; retificação somente em nova versão autorizada; caixa na data real.",
+      "owner": "Financeiro e contador"
+    },
+    {
+      "id": "D12",
+      "name": "Completude",
+      "parameter": "Lacunas bloqueantes, tolerâncias e atualização esperada por indicador.",
+      "test_assumption": "Igualdade monetária exata em centavos. Falta de vínculo/valor/universo não gera selo completo.",
+      "owner": "Financeiro"
+    },
+    {
+      "id": "D13",
+      "name": "Operações entre entidades",
+      "parameter": "Natureza e perímetro permitido de consolidação e eliminação.",
+      "test_assumption": "Transferência própria somente com mesmo titular; entre entidades conserva registros individuais e elimina apenas no perímetro autorizado.",
+      "owner": "Financeiro e contador"
+    },
+    {
+      "id": "D14",
+      "name": "Homologação e migração",
+      "parameter": "Amostra, responsável pelo aceite, condições de ativação e reversão.",
+      "test_assumption": "Empresas e dados fictícios isolados; nenhum caso deste pacote equivale a execução ou aceite do aplicativo.",
+      "owner": "Financeiro e tecnologia"
+    }
+  ],
+  "test_ambiguities": [
+    "CT02 só atualiza a versão validada após suporte da alteração; não transformar toda diferença importada em verdade financeira.",
+    "CT04 possui duas populações independentes. A competência de material/estoque e o fuso real dependem D02/D03; a convenção dos fixtures é explícita.",
+    "CT05 exige política para obrigação do adiantamento ainda não pago e custo por execução.",
+    "CT06 usa percentuais hipotéticos e custo bruto integral apenas para testar conservação. Não representa regra tributária válida para a Bossa.",
+    "CT08 distingue estorno da associação, devolução bancária e validade do desconto. Na variante sem devolução, falta destino para parte do caixa e Q não é certificado.",
+    "CT11 proporcionalidade de pagamentos e maior resto com desempate são opções explicitadas para testar D05. Se a escolha operacional diferir, aprovar nova versão do oráculo.",
+    "CT15 não soma trânsito à disponibilidade bancária; preservar saldo por conta e evidência do trânsito.",
+    "CT17 muda datas estimadas sem alterar exigibilidade legal. Respeitar fronteira entre cenário e aditivo/renegociação válidos.",
+    "CT19 não calcula Q a partir de EAC sem liquidações e cobertura financeira.",
+    "CT20 representa retificação gerencial, não escolhe automaticamente escrituração contábil de erro anterior.",
+    "CT24 é requisito de segurança para homologação, não afirma que há vazamento no sistema atual; confirmar contrato de resposta 403/404 e testar todas as superfícies."
+  ]
+}

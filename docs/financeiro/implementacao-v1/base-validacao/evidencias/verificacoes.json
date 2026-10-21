@@ -1,0 +1,57 @@
+{
+  "base_commit": "16188348c18e06d816acb576f3f63494c14599fd",
+  "branch": "test/financeiro-base-validacao",
+  "recorded_at": "2026-10-21T18:55:58.307433+00:00",
+  "tests": {
+    "money_initial": {
+      "passed": 2,
+      "failed": 5,
+      "exit": 1
+    },
+    "money_final": {
+      "passed": 7,
+      "failed": 0,
+      "exit": 0
+    },
+    "database_initial": {
+      "passed": 7,
+      "failed": 13,
+      "exit": 1
+    },
+    "database_final": {
+      "passed": 25,
+      "failed": 0,
+      "exit": 0
+    },
+    "independent_comparator_unit": {
+      "passed": 3,
+      "failed": 0,
+      "exit": 0
+    },
+    "regression": {
+      "passed": 81,
+      "failed": 0,
+      "exit": 0
+    },
+    "typescript": {
+      "exit": 0,
+      "command": "./node_modules/.bin/tsc --noEmit"
+    },
+    "eslint_changed_files": {
+      "exit": 0
+    },
+    "package_case_comparison": {
+      "selected": 30,
+      "fully_certified": 0,
+      "partial": 3,
+      "unrun": 27,
+      "exit": 1
+    }
+  },
+  "live_database_access": false,
+  "live_koper_access": false,
+  "production_migrations_applied": false,
+  "remote_workflow_execution_verified": false,
+  "known_business_failure": "CT07 parcial encerra título; esperado saldo 6000000 cents, obtido 0",
+  "bootstrap_initial_issue": "Migration0048 antiga: ON CONFLICT sem WHERE do índice parcial falhava na montagem nova; duas cláusulas corrigidas e montagem passou."
+}
