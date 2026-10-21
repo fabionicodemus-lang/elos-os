@@ -96,6 +96,14 @@ begin
     if latest.measurement_date is not null and measurement_day<=latest.measurement_date then
       raise exception 'Já existe uma medição nesta data ou posterior para %. Utilize novo período ou retifique o histórico.',a.code;
     end if;
+    -- Também bloqueia medições anuladas na mesma data. A RPC manual faz upsert:
+    -- sem esta guarda, uma revisão por IA poderia ressuscitar um lançamento anulado.
+    if exists(select 1 from public.engineering_schedule_progress_measurements m
+      where m.company_id=p.company_id and m.project_id=p.project_id and m.baseline_id=b.id
+        and m.activity_id=a.id and m.measurement_date=measurement_day) then
+      raise exception 'Já existe lançamento ativo ou anulado em % para %. Revise pelo histórico, sem sobrescrever.',measurement_day,a.code;
+    end if;
+
     progress:=(item->>'progressPercent')::numeric;
     previous_progress:=coalesce(latest.progress_percent,0);
     start_day:=(item->>'currentStart')::date;
