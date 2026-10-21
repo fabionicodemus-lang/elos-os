@@ -167,8 +167,8 @@ export async function importFlowStandaloneHistory(formData: FormData) {
   // O cronograma de 14/07 pode ter um nome diferente no cadastro do Elos:
   // CRONO-FLOW-LB01 no sistema e "Baseline 01 — Cronograma 14.07.2026" no HTML.
   // O nome é um rótulo editável, não uma identidade. A identificação segura usa
-  // companyId, projectId, baselineId, obra/revisão do HTML e TODOS os códigos Txxx
-  // validados abaixo. Não bloqueie a importação por diferença textual de nome.
+  // companyId, projectId, baselineId, obra/revisão do HTML e as 395 posições
+  // originais comparadas à data de início da baseline.
   if (!String(snapshot.project.sourceFile ?? "").includes("14.07")
     || !String(snapshot.project.baselineName ?? "").includes("14.07.2026")) {
     redirect(resultUrl("O arquivo não identifica o cronograma Flow de 14/07/2026.", "error", baselineId));
@@ -177,14 +177,14 @@ export async function importFlowStandaloneHistory(formData: FormData) {
   const [activities, measurements] = await Promise.all([
     fetchAllRows<ElosFlowActivity>(async (from, to) => {
       const { data, error } = await supabase.from("engineering_schedule_activities")
-        .select("id, code, planned_start, planned_finish, duration_days")
+        .select("id, code, name, sort_order, planned_start, planned_finish, duration_days, quantity_snapshot")
         .eq("company_id", companyId).eq("project_id", projectId)
         .eq("baseline_id", baselineId).eq("record_status", "active").range(from, to);
       return { data: (data ?? []) as ElosFlowActivity[], error };
     }),
     fetchAllRows<ElosExistingMeasurement>(async (from, to) => {
       const { data, error } = await supabase.from("engineering_schedule_progress_measurements")
-        .select("activity_id, measurement_date, voided_at")
+        .select("activity_id, measurement_date, progress_percent, actual_quantity, actual_cost, team_count, actual_start, actual_finish, voided_at")
         .eq("company_id", companyId).eq("project_id", projectId)
         .eq("baseline_id", baselineId).range(from, to);
       return { data: (data ?? []) as ElosExistingMeasurement[], error };
@@ -206,7 +206,8 @@ export async function importFlowStandaloneHistory(formData: FormData) {
       ...row, company_id: companyId, project_id: projectId, baseline_id: baselineId,
     }));
     // A inserção em lote é atômica: caso falhe, nem uma única medição é gravada.
-    // As datas no arquivo são <= 06/10 e nunca substituem medições existentes.
+    // Apenas 09/2026 e 10/2026: agosto já possui histórico no Elos.
+    // Registros existentes (inclusive anulados) nunca são substituídos.
     const { error } = await supabase.from("engineering_schedule_progress_measurements").insert(rows);
     if (error) {
       redirect(resultUrl("A importação não foi aplicada: " + error.message, "error", baselineId));
@@ -217,6 +218,6 @@ export async function importFlowStandaloneHistory(formData: FormData) {
   const s = result.summary;
   redirect(resultUrl(
     `Flow conciliado: ${s.matchedActivities} atividades, ${s.importedMeasurements} medições históricas, ${s.newReplans} reprogramações; ${s.existingPreserved} registros existentes preservados. Baseline e orçamento intocados.`,
-    "success", baselineId, "2026-10-20",
+    "success", baselineId, "2026-10-06",
   ));
 }
