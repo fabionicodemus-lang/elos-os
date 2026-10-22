@@ -19,7 +19,8 @@
     "test:cashflow": "node tests/cashflow/validate.mjs",
     "test:supplier-refunds": "node tests/supplier-refunds/validate.mjs",
     "test:finance-partials": "node tests/finance-partials/validate.mjs",
-    "test:finance-second": "node tests/finance-second/validate.mjs"
+    "test:finance-second": "node tests/finance-second/validate.mjs",
+    "test:finance-isolation": "node tests/finance-isolation/validate.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",

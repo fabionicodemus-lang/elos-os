@@ -7,6 +7,7 @@ export type CashTransfer={id:string;from_account_id:string;to_account_id:string;
 export type PeriodAccount={account_id:string;legal_entity_id:string|null;opening_cents:number|null;closing_cents:number|null;confirmed_opening_cents:number|null;confirmed_closing_cents:number|null;incoming_cents:number;outgoing_cents:number;unconfirmed_movement_cents:number;opening_validated:boolean};
 export function toCents(value:unknown):number;
 export function exactCents(value:number):number;
+export function isCashflowScopeError(error:unknown):boolean;
 export function isoDay(value:string):string;
 export function addCashDays(value:string,n:number):string;
 export function realizedCashflow(input:{accounts:BankAccount[];movements:BankMovement[];links?:ReconciliationLink[];entries?:StatementEntry[];transfers?:CashTransfer[];from:string;to:string;knownAt?:string|null;eliminateInterentity?:boolean}):{from:string;to:string;unconfirmed_through_cutoff_cents:number;unlinked_statement_cents:number;accounts:PeriodAccount[];opening_cents:number|null;closing_cents:number|null;confirmed_opening_cents:number|null;confirmed_closing_cents:number|null;transfer_in_transit_cents:number;external_incoming_cents:number;external_outgoing_cents:number;confirmed_external_incoming_cents:number;confirmed_external_outgoing_cents:number;unconfirmed_movement_cents:number;project_bank_balance_available:boolean};

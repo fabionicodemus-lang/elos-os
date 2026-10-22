@@ -2,7 +2,7 @@ import Link from 'next/link';
 import {AppShell} from '@/components/app-shell';
 import {requireCompanyPermission} from '@/lib/workspace';
 import {loadCashflow} from '@/lib/finance-core/cashflow-server';
-import {isoDay,toCents,type CashRow} from '@/lib/finance-core/cashflow.mjs';
+import {isoDay,toCents,isCashflowScopeError,type CashRow} from '@/lib/finance-core/cashflow.mjs';
 import {saveCashScenario,appendCashAdjustment,realizeCashAdjustment,validateCashOpening,linkCashCoverage,reprogramCashSchedule,convertCashScopeToContract,recordCashTransfer,completeCashTransfer,reverseCashTransfer,cancelSupplierAdvanceContract,receiveSupplierRefund} from './actions';
 const labels:Record<string,string>={R:'Obrigações abertas',C:'Contratos sem títulos',P:'Gastos não contratados',AR:'Recebíveis',AR_FUTURE:'Entradas contratuais sem títulos',REFUND:'Restituições de fornecedores',REVENUE:'Receita comercial estimada',AF:'Ajustes futuros',FINANCING_IN:'Financiamento previsto',FINANCING_OUT:'Amortização/encargos não incluídos'};
 const money=(n:number|null|undefined)=>n==null?'Não validado':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n/100);
@@ -12,7 +12,9 @@ export default async function CashFlowPage({searchParams}:{searchParams:Promise<
  const params=await searchParams;const {supabase,company,companyId,projectId}=await requireCompanyPermission('cashflow.view');
  const cutoff=isoDay(params.cutoff??today()),from=isoDay(params.from??cutoff.slice(0,7)+'-01');
  if(cutoff>today())throw Error('Use data efetiva até hoje para realizado; datas futuras pertencem à projeção.');
- const view=await loadCashflow({supabase,companyId,projectId,entityId:params.entity||null,scenarioId:params.version||null,cutoff,from,consolidate:params.consolidated==='1'});
+ let view;
+ try{view=await loadCashflow({supabase,companyId,projectId,entityId:params.entity||null,scenarioId:params.version||null,cutoff,from,consolidate:params.consolidated==='1'});}
+ catch(error){if(isCashflowScopeError(error))return <AppShell activeGroup="finance" activeItem="cashflow" eyebrow="Financeiro" title="Perímetro indisponível" description="A empresa, obra ou versão solicitada não está disponível para esta sessão."><p role="alert">Não foi possível acessar o perímetro solicitado.</p><Link href="/financeiro/fluxo-de-caixa">Voltar ao fluxo de caixa</Link></AppShell>;throw error;}
  const [manage,reconcile,transfer,payManage,contractCancel]=await Promise.all(['cashflow.manage','finance.bank_accounts.reconcile','finance.bank_accounts.transfer','payables.manage','execution.contracts.cancel'].map(permission=>supabase.rpc('has_company_permission',{target_company_id:companyId,target_permission:permission})));
  const page=Math.max(1,Number.parseInt(params.page??'1')||1),movements=[...view.movements].sort((a,b)=>a.transaction_date.localeCompare(b.transaction_date)||a.id.localeCompare(b.id)),shown=movements.slice((page-1)*50,page*50);
  const query=(p:number)=>'?'+new URLSearchParams({...Object.fromEntries(Object.entries(params).filter(([,v])=>v!==undefined) as [string,string][]),page:String(p)});
