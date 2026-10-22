@@ -1,0 +1,639 @@
+[
+  {
+    "id": "CT24",
+    "title": "Isolamento entre organizações e autorização entre empresas",
+    "priority": 1,
+    "classes": [
+      "B",
+      "C",
+      "D"
+    ],
+    "problem": "Falta caso integral de três títulos nos contextos UA/UB/UR/UG, incluindo Auth real, detalhe, anexos/storage, exportações/IA, cache, jobs e trocas de contexto. Não extrapolar RLS SQL a todos os canais.",
+    "demonstrated_cause": "Controles SQL existem, mas não há execução integral dos três títulos UA/UB/UR/UG em Auth, storage, cache, jobs, IA e exportação.",
+    "rule_refs": [
+      "§4",
+      "§11",
+      "§14 item 13",
+      "D02",
+      "D13"
+    ],
+    "dependencies": "T05/T42; Auth isolado e pipeline de todos os canais. Matriz nominal vigente só é necessária à implantação real.",
+    "effort": "3–5 dias",
+    "objective_completion_criterion": "1.000/9.000 porUA/UB; UG1.000/3.000/4.000/9.000 nos perímetros; zero linhas estrangeiras, mutações indevidas e vazamentos, inclusive Auth/storage.",
+    "selection_reason": "Não selecionado: lacuna técnica transversal e infraestrutura Auth/storage indisponível; o guard do carregador testado emCT29 não homologa CT24.",
+    "code": "tests/financeiro/run.mjs; tests/koper-finance/run.mjs; lib/workspace.ts; lib/finance-core/cashflow-server.ts",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT18",
+    "title": "Cobertura da previsão ao contrato ao título e encargo futuro",
+    "priority": 2,
+    "classes": [
+      "A",
+      "B"
+    ],
+    "problem": "Falta cadeia única persistida de100.000 P→60.000 C+40.000 P→título20.000→pagamento5.000 e AF2.000 constituído em20/11, retirando o mesmo AF sem repetir encargo.",
+    "demonstrated_cause": "Sem vínculo persistido AF→encargo, futureCashRows mantém ambos; R17.000+C40.000+P40.000+AF2.000=99.000 contra97.000 esperado. RPC de versão anterior não admitia acréscimo documentado de AF.",
+    "rule_refs": [
+      "§7.1",
+      "§7.2",
+      "I05",
+      "I10",
+      "I11",
+      "I12"
+    ],
+    "dependencies": "T26/T30; reutiliza ledger, cenários imutáveis e cobertura já existentes; nenhuma decisão financeira adicional para a fixture.",
+    "effort": "1–2 dias",
+    "objective_completion_criterion": "Mesma cadeia A–F persistida; Q100.000→95.000→97.000; AF2.000→0; uma constituição sob replay/concorrência, versões preservadas e isolamento.",
+    "selection_reason": "Selecionado: dupla contagem demonstrada e regra explícita (§7.1/§7.2).",
+    "code": "lib/finance-core/cashflow.mjs; cashflow-server.ts; supabase/migrations/20261022110000_cashflow_versions.sql; nova20261024100000",
+    "selected": true,
+    "status": "Cadeia fictícia persistida e comparação independente conforme; aceite pendente",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas.",
+    "expected": {
+      "states": [
+        {
+          "stage": "A",
+          "R_cents": 0,
+          "C_cents": 0,
+          "P_cents": 10000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "B",
+          "R_cents": 0,
+          "C_cents": 6000000,
+          "P_cents": 4000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "C",
+          "R_cents": 2000000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "D",
+          "R_cents": 1500000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9500000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "E",
+          "R_cents": 1500000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9500000,
+          "AF_cents": 200000,
+          "Q_scenario_cents": 9700000
+        },
+        {
+          "stage": "F",
+          "R_cents": 1700000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9700000,
+          "AF_cents": 0,
+          "Q_scenario_cents": 9700000
+        }
+      ]
+    },
+    "actual": {
+      "states": [
+        {
+          "stage": "A",
+          "R_cents": 0,
+          "C_cents": 0,
+          "P_cents": 10000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "B",
+          "R_cents": 0,
+          "C_cents": 6000000,
+          "P_cents": 4000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "C",
+          "R_cents": 2000000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "D",
+          "R_cents": 1500000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9500000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "E",
+          "R_cents": 1500000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9500000,
+          "AF_cents": 200000,
+          "Q_scenario_cents": 9700000
+        },
+        {
+          "stage": "F",
+          "R_cents": 1700000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9700000,
+          "AF_cents": 0,
+          "Q_scenario_cents": 9700000
+        }
+      ]
+    },
+    "evidence": [
+      "banco.json",
+      "registros.json",
+      "comparacao-4.json",
+      "servidor-tela-acoes.log"
+    ],
+    "remaining_evidence": "Aceite financeiro nominal e validação documental real; equivalência do esquema remoto/Auth/PostgREST/browser não demonstrada. Os avisos de incompletude da aplicação permanecem. Não é homologação integral."
+  },
+  {
+    "id": "CT21",
+    "title": "Dados incompletos não se tornam zero ou total validado",
+    "priority": 3,
+    "classes": [
+      "B",
+      "D",
+      "E"
+    ],
+    "problem": "Falta obter composição idêntica de dashboard/exportação/IA no mesmo T/K e teste de exceção condicionada sem apagar lacunas; universo externo continua desconhecido.",
+    "demonstrated_cause": "Função pura conserva null, mas a composição completa dashboard/exportação/IA e eventual exceção condicionada não foi demonstrada. Universo desconhecido é limitação explícita, não erro a zerar.",
+    "rule_refs": [
+      "§7.2",
+      "§11",
+      "I12",
+      "I14",
+      "I15",
+      "I22"
+    ],
+    "dependencies": "T38/T40/T41 e mapa R/C/P. D12 precisa definir exceções reais; a fixture já exige null, sem decisão nova para este comportamento.",
+    "effort": "2–3 dias",
+    "objective_completion_criterion": "MesmoT/K: R140.000, contrato840.000 separado; Q/EAC/desvio/cobertura null e status incompleto nos três canais; exceções só com decisão expressa.",
+    "selection_reason": "Não selecionado: depende da integração dos canais e de política de exceção ainda não documentada. Nada é liberado por presumir tolerância.",
+    "code": "lib/finance-core/coverage.mjs; app/financeiro/relatorios/page.tsx; lib/elos-ia/tools.ts",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT29",
+    "title": "Disponibilidade restrições e financiamento contado uma vez",
+    "priority": 4,
+    "classes": [
+      "A",
+      "B"
+    ],
+    "problem": "Falta agenda persistida completa de financiamento com amortização20.000 já nos150.000, restrição documentada20.000 e limite70.000 não sacado, conferida no carregador/tela/IA no mesmo corte.",
+    "demonstrated_cause": "Agenda persistida/tela/IA ausentes da prova anterior. Nesta execução, RLS oculta registros, mas carregador aceitava entidade negada e respondia visão vazia; IA não aceitava o mesmo filtro de entidade da tela.",
+    "rule_refs": [
+      "§12.7",
+      "I20",
+      "I21",
+      "D04"
+    ],
+    "dependencies": "T39; abertura/restrição/agenda fictícias explícitas da fixture. Contrato/limite reais só para homologação real.",
+    "effort": "0,5–1 dia",
+    "objective_completion_criterion": "Disponível100.000; finais40.000/−30.000; necessidade50.000; amortização20.000 uma vez e limite70.000 fora do disponível; mesmo perímetro no carregador/tela/IA.",
+    "selection_reason": "Selecionado: risco direto de insuficiência de caixa e prova independente viável com componentes existentes.",
+    "code": "lib/finance-core/cashflow-server.ts; lib/elos-ia/tools.ts; tests/cashflow/engine.test.mjs",
+    "selected": true,
+    "status": "Corrente conforme; original anterior ao vínculo permanece parcial",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas.",
+    "expected": {
+      "available_opening_cents": 10000000,
+      "closing_month1_cents": 4000000,
+      "closing_month2_cents": -3000000,
+      "peak_additional_funding_cents": 5000000,
+      "additional_amortization_duplicate_cents": 0,
+      "unused_limit_in_available_cash_cents": 0
+    },
+    "actual": {
+      "available_opening_cents": 10000000,
+      "closing_month1_cents": 4000000,
+      "closing_month2_cents": -3000000,
+      "peak_additional_funding_cents": 5000000,
+      "additional_amortization_duplicate_cents": 0,
+      "unused_limit_in_available_cash_cents": 0
+    },
+    "evidence": [
+      "banco.json",
+      "registros.json",
+      "comparacao-4.json",
+      "servidor-tela-acoes.log"
+    ],
+    "remaining_evidence": "Aceite financeiro nominal e validação documental real; equivalência do esquema remoto/Auth/PostgREST/browser não demonstrada. Os avisos de incompletude da aplicação permanecem. Não é homologação integral. Referência original capturada antes do vínculo da amortização conserva sobreposição não validada; permanece parcial e não é retroaprovada."
+  },
+  {
+    "id": "CT02",
+    "title": "Nova versão do mesmo título e preservação do corte histórico",
+    "priority": 5,
+    "classes": [
+      "A",
+      "B"
+    ],
+    "problem": "Falta unir a reimportação real, autorização do acréscimo e consultas persistidas dos três cortes T/K da fixture numa cadeia documental reproduzível.",
+    "demonstrated_cause": "Evidências anteriores separavam reimportação e corte puro. Baseline adicional demonstra fallback para versão atual antes da primeira versão conhecida e comparação lexical incorreta de timestamps equivalentes.",
+    "rule_refs": [
+      "§3",
+      "§4",
+      "§10",
+      "I03"
+    ],
+    "dependencies": "T07/T08/T10; coletor/importador/revisões existentes e relógio de teste controlado; suporte documental do acréscimo já é premissa da fixture.",
+    "effort": "0,5–1 dia",
+    "objective_completion_criterion": "Um título10.000→12.000; ponte2.000; T21/K20 continua10.000; replay não cria versão; SQL e aplicação concordam nos três cortes e antes da criação.",
+    "selection_reason": "Selecionado: risco de reapresentação histórica incorreta, sem depender de dados reais.",
+    "code": "lib/finance-core/ledger-position.mjs; finance_payable_at; elos_import.apply_financial_batch",
+    "selected": true,
+    "status": "Cadeia fictícia persistida e comparação independente conforme; aceite pendente",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas.",
+    "expected": {
+      "canonical_title_count": 1,
+      "original_snapshot_open_cents": 1000000,
+      "revised_snapshot_open_cents": 1200000,
+      "documented_bridge_cents": 200000,
+      "at_T_2026_10_21_K_2026_10_20_open_cents": 1000000
+    },
+    "actual": {
+      "canonical_title_count": 1,
+      "original_snapshot_open_cents": 1000000,
+      "revised_snapshot_open_cents": 1200000,
+      "documented_bridge_cents": 200000,
+      "at_T_2026_10_21_K_2026_10_20_open_cents": 1000000
+    },
+    "evidence": [
+      "banco.json",
+      "registros.json",
+      "comparacao-4.json",
+      "servidor-tela-acoes.log"
+    ],
+    "remaining_evidence": "Aceite financeiro nominal e validação documental real; equivalência do esquema remoto/Auth/PostgREST/browser não demonstrada. Os avisos de incompletude da aplicação permanecem. Não é homologação integral."
+  },
+  {
+    "id": "CT03",
+    "title": "Pagamento parcial e conciliação posterior sem novo caixa",
+    "priority": 6,
+    "classes": [
+      "B"
+    ],
+    "problem": "Falta evento econômico persistido anterior e leitura de I01 antes/depois. O campo de custo adicional é null; não presumir zero por ausência de evento na fixture.",
+    "demonstrated_cause": "Banco/ledger já comprovavam parcial; faltava fato econômico persistido e leitura de I01 antes/depois. Nenhum defeito operacional de custo foi presumido.",
+    "rule_refs": [
+      "§5",
+      "§8.1",
+      "I02",
+      "I03"
+    ],
+    "dependencies": "T18/T19; medição/itens aprovados nativos, carregador de custo e banco já existentes.",
+    "effort": "0,5–1 dia",
+    "objective_completion_criterion": "Aberto7.000→5.000; duas saídas total5.000; conciliar/reimportar cria0 caixa e0 custo adicional, medição/competência anteriores preservadas.",
+    "selection_reason": "Selecionado: separação custo/caixa e parciais podem ser comprovadas sem reconstruir módulo.",
+    "code": "lib/cost-vs-budget/server.ts; native-measurement-titles.ts; tests/financial-acceptance/database.mjs",
+    "selected": true,
+    "status": "Cadeia fictícia persistida e comparação independente conforme; aceite pendente",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas.",
+    "expected": {
+      "after_P1_open_cents": 700000,
+      "after_P2_open_cents": 500000,
+      "I02_gross_disbursed_cents": 500000,
+      "bank_debit_count": 2,
+      "payment_count": 2,
+      "cash_created_by_reconciliation_cents": 0,
+      "I01_extra_cost_created_by_payments_cents": 0
+    },
+    "actual": {
+      "after_P1_open_cents": 700000,
+      "after_P2_open_cents": 500000,
+      "I02_gross_disbursed_cents": 500000,
+      "bank_debit_count": 2,
+      "payment_count": 2,
+      "cash_created_by_reconciliation_cents": 0,
+      "I01_extra_cost_created_by_payments_cents": 0
+    },
+    "evidence": [
+      "banco.json",
+      "registros.json",
+      "comparacao-4.json",
+      "servidor-tela-acoes.log"
+    ],
+    "remaining_evidence": "Aceite financeiro nominal e validação documental real; equivalência do esquema remoto/Auth/PostgREST/browser não demonstrada. Os avisos de incompletude da aplicação permanecem. Não é homologação integral."
+  },
+  {
+    "id": "CT06",
+    "title": "Retenção contratual e tributo retido sem soma do documento pai",
+    "priority": 7,
+    "classes": [
+      "B",
+      "C",
+      "D"
+    ],
+    "problem": "Faltam pai econômico/documental único, geração nativa dos filhos/credores, cobertura C/Q, custo econômico e liberação condicionada da retenção. Campos C/Q/custo desconhecidos permanecem null.",
+    "demonstrated_cause": "Três filhos manuais conservam100.000, mas pai econômico, geração nativa, credores e condição de liberação não foram encadeados. Não há reprodução de erro nativo que justifique reescrevê-lo.",
+    "rule_refs": [
+      "§8.2",
+      "I03",
+      "I05",
+      "I08",
+      "I10",
+      "I12"
+    ],
+    "dependencies": "T16/T21/T26; testar approve_execution_contract_measurement/notas nativas. D08 real (cláusulas, credores, alíquotas) permanece pendente; percentuais da fixture são apenas didáticos.",
+    "effort": "2–4 dias",
+    "objective_completion_criterion": "R100.000→15.000→10.000→0; H90.000→100.000; custo100.000; C0/Q100.000 inicialmente; sem somar pai e filhos nem liberar retenção sem condição.",
+    "selection_reason": "Lote posterior: dependência estrutural para CT28; exige prova nativa de pai/filhos antes de corrigir.",
+    "code": "supabase/migrations/20260803_0075_execution_contract_finance.sql; app/financeiro/notas-manuais",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT28",
+    "title": "Cobertura integrada com adiantamento retenção e escopo descoberto",
+    "priority": 8,
+    "classes": [
+      "B",
+      "C"
+    ],
+    "problem": "Falta cenário conjunto persistido: crédito120.000/aplicação60.000, pagamento100.000, filhos fornecedor/tributo/retenção, escopo P200.000 e custo300.000. Conferir Q1.180.000 e EAC1.400.000; nenhum total conjunto foi presumido.",
+    "demonstrated_cause": "Adiantamento, retenções e cobertura existem isoladamente; o conjunto do mesmo contrato/escopo não foi executado.",
+    "rule_refs": [
+      "§7.1",
+      "§12.2",
+      "I05",
+      "I08",
+      "I09",
+      "I10",
+      "I11",
+      "I12",
+      "I13",
+      "I14"
+    ],
+    "dependencies": "CT05/CT06; T20/T21/T26/T28/T30. Documentos reais apenas para adoção operacional, não para a fixture.",
+    "effort": "2–3 dias apósCT05/06",
+    "objective_completion_criterion": "R140.000; H220.000; crédito60.000; C840.000; P200.000; Q1.180.000; ETC1.100.000; EAC1.400.000 em cadeia única.",
+    "selection_reason": "Não selecionar antes das dependências de pai/filhos/adiantamento.",
+    "code": "tests/finance-core/settlements.mjs; lib/finance-core/coverage.mjs; tests/financial-acceptance/database.mjs",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT09",
+    "title": "Cancelamento documental e substituição de medição por nota",
+    "priority": 9,
+    "classes": [
+      "B",
+      "C"
+    ],
+    "problem": "Falta executar MED-01→NF-01→NF-02 com cancelamento exclusivamente documental, I04→I03, um único custo e representação ativa, mantendo todas as versões.",
+    "demonstrated_cause": "Vínculo de cobertura puro passa; não há execução persistida MED01→NF01→NF02 que conserve a obrigação e um único custo.",
+    "rule_refs": [
+      "§7.2",
+      "§8.3",
+      "I01",
+      "I03",
+      "I04",
+      "I05"
+    ],
+    "dependencies": "T16/T22/T24; obrigação provisória e substituição documental nativas, sem extinguir escopo por cancelar NF.",
+    "effort": "2–4 dias",
+    "objective_completion_criterion": "Antes: I03=0/I04=8.000; depois I03=8.000/I04=0; R8.000; custo8.000; caixa0; uma representação financeira ativa e histórico completo.",
+    "selection_reason": "Lote posterior: depende do encadeamento econômico/provisório, não de alterar regra.",
+    "code": "lib/finance-core/coverage.mjs: nativeFinancialBindings; app/financeiro/notas-manuais/actions.ts",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT22",
+    "title": "Adiantamento de cliente e entradas futuras sem abatimento global repetido",
+    "priority": 10,
+    "classes": [
+      "B",
+      "C",
+      "D"
+    ],
+    "problem": "Falta mapa automático exclusivo de contrato100.000/parcela40.000/antecipação20.000 para futuro60.000 e I18=80.000, e prova de ausência de receita econômica automática. Esses três resultados continuam null.",
+    "demonstrated_cause": "Crédito recebido20.000/aplicação passam. Falta cobertura persistida automática contrato/parcela/antecipação para I18 e prova de que recebimento não reconhece receita.",
+    "rule_refs": [
+      "§8.2",
+      "§8.5",
+      "I09",
+      "I16",
+      "I17",
+      "I18"
+    ],
+    "dependencies": "T20/T33/T34; mapa contratualAR. D09 real (desempenho/distratos/permutas) não altera o exemplo aprovado sem desempenho.",
+    "effort": "2–3 dias",
+    "objective_completion_criterion": "Caixa20.000; crédito20.000→0; AR20.000; futuro não titulado60.000; I18=80.000; caixa novo0; receita automática0.",
+    "selection_reason": "Lote posterior com modelo contratual de recebíveis e evidência econômica explícita.",
+    "code": "lib/finance-core/cashflow.mjs; tests/financial-acceptance/database.mjs: CT22",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT11",
+    "title": "Rateio monetário parcial e arredondamento conservativo",
+    "priority": 11,
+    "classes": [
+      "B",
+      "C",
+      "D",
+      "E"
+    ],
+    "problem": "Falta ledger persistido multiobra na mesma entidade, versão/aprovador, pagamento parcial e devolução por obra; não promover quarentena a rateio concluído. Consumidor puro não transporta project_id e exige conferir contexto completo.",
+    "demonstrated_cause": "Maior resto e60/40 passam em funções; não há ledger multiobra/versão/aprovador e devolução por obra. Texto de centros concatenados não é rateio monetário.",
+    "rule_refs": [
+      "§9",
+      "§12.5",
+      "I01",
+      "I02",
+      "I22"
+    ],
+    "dependencies": "T17 e persistência multiobra na mesma entidade; D05 operacional. A regra60/40/maior resto da fixture já é explícita e não precisa nova decisão.",
+    "effort": "3–5 dias",
+    "objective_completion_criterion": "Custo6.000/4.000; caixa1.800/1.200; aberto4.200/2.800;100,01→33,34/33,34/33,33; conservar soma, versão, autoria e devolução por obra.",
+    "selection_reason": "Lote posterior: não promover quarentena nem fabricar valores por centro a partir da fonte limitada.",
+    "code": "lib/forecast/cost-allocation.mjs; supabase/migrations/20261021140000_koper_financial_snapshots.sql",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT05",
+    "title": "Adiantamento antes da execução e aplicação sem segundo abatimento",
+    "priority": 12,
+    "classes": [
+      "B",
+      "C"
+    ],
+    "problem": "Faltam estados A–E com contrato/medição econômica aceita e ETC comprovado, vinculados ao mesmo escopo e extrato independente. Não obter custo da assinatura ou adiantamento.",
+    "demonstrated_cause": "Pagamento/aplicação/reversão do crédito passam separados; custo/ETC e estadosA–E do mesmo contrato/medição não foram persistidos.",
+    "rule_refs": [
+      "§7.1",
+      "§8.2",
+      "§12.1",
+      "I05",
+      "I09",
+      "I10",
+      "I12",
+      "I13"
+    ],
+    "dependencies": "T20/T26 e evento econômico aceito; regra fictícia já distingue adiantamento de execução.",
+    "effort": "2–3 dias",
+    "objective_completion_criterion": "Q100.000/100.000/80.000/80.000/60.000; custo0/0/0/40.000/40.000; aplicação cria0 caixa; conservarH/R/C/crédito em cada estado.",
+    "selection_reason": "Lote posterior, antes deCT28; reaproveitar crédito do ledger e medição nativa.",
+    "code": "tests/finance-core/settlements.mjs: adiantamento_AP; lib/finance-core/coverage.mjs; lib/cost-vs-budget/server.ts",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT27",
+    "title": "Estoque pago e consumo econômico sem nova previsão de caixa",
+    "priority": 13,
+    "classes": [
+      "B",
+      "C",
+      "D"
+    ],
+    "problem": "Faltam recebimento/estoque pago20.000 e consumo8.000 persistidos, conferindo estoque12.000, ETC12.000, EAC20.000, Q0 e zero novo caixa sem somar NF/recebimento/consumo.",
+    "demonstrated_cause": "Ainda não há execução integral recebimento20.000/pagamento/consumo8.000 conferindo estoque, custo, ETC eQ.",
+    "rule_refs": [
+      "§5",
+      "§7.1",
+      "I01",
+      "I10",
+      "I12",
+      "I13",
+      "I14"
+    ],
+    "dependencies": "T22/T28; almoxarifado/consumo e ligação com preço pago. D03 real por natureza, sem mudar consumo já aprovado para a fixture.",
+    "effort": "2–4 dias",
+    "objective_completion_criterion": "Antes: estoque/ETC/EAC20.000 e custo/Q0; depois custo8.000, estoque/ETC12.000, EAC20.000, Q0, novo caixa0.",
+    "selection_reason": "Lote posterior: dependência do percurso de estoque, sem inferir custo de pagamento/NF.",
+    "code": "lib/cost-vs-budget/server.ts; lib/finance-core/coverage.mjs; app/execucao",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT04",
+    "title": "Competência emissão vencimento caixa conciliação e limites de horizonte",
+    "priority": 14,
+    "classes": [
+      "B",
+      "C"
+    ],
+    "problem": "Falta encadear serviço aceito de setembro, emissão5/10, título/pagamento22 e confirmação24 em persistência/relatórios com relógio controlado; não confundir conciliação com novo caixa.",
+    "demonstrated_cause": "Resultados puros de datas/horizontes corretos; falta cadeia econômica/documental persistida e consultas históricas dos canais.",
+    "rule_refs": [
+      "§3",
+      "I01",
+      "I02",
+      "I06",
+      "I07"
+    ],
+    "dependencies": "T07/T30; reaproveitar aceite econômicoCT03 e correção temporalCT02, sem dizer que já cobrem CT04.",
+    "effort": "1–2 dias",
+    "objective_completion_criterion": "Custo setembro10.000; aberto/vencido em21/10=10.000; caixa21=0/22=10.000/novo24=0; faixasR28.000, vencido1.000, hoje2.000,30d3.000,90d12.000, além6.000, semdata7.000.",
+    "selection_reason": "Lote posterior: depende de amarrar competências, emissão e conferência com relógios próprios.",
+    "code": "lib/finance-core/due.mjs; ledger-position.mjs; tests/cashflow/engine.test.mjs",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT20",
+    "title": "Correção de período fechado com duas posições reproduzíveis",
+    "priority": 15,
+    "classes": [
+      "B",
+      "C",
+      "D"
+    ],
+    "problem": "Faltam fechamento econômico setembro500.000, retificação aprovada30.000 e consultas T30/09 em K original/reapresentado530.000, com ponte e banco outubro30.000. Versão de caixa não substitui fechamento econômico.",
+    "demonstrated_cause": "Bloqueio bancário/reimportação fechada não constitui fechamento econômico e retificação gerencial de setembro.",
+    "rule_refs": [
+      "§3",
+      "§10",
+      "I01",
+      "I02",
+      "D11"
+    ],
+    "dependencies": "T37 e versões econômicas. D11 operacional: responsável, materialidade, alçadas, vigência. A fixture já presume aprovação gerencial em16/10.",
+    "effort": "3–5 dias",
+    "objective_completion_criterion": "Original setembro500.000 preservado; reapresentado530.000; ponte30.000; custo novo outubro0; banco outubro30.000; mutações original0.",
+    "selection_reason": "Não criar política de escrituração nem aprovação fictícia para dados reais. Novo lote após desenho da retificação econômica.",
+    "code": "supabase/migrations/20261021120000_financial_foundation_guards.sql; lib/finance-core/ledger-position.mjs",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  },
+  {
+    "id": "CT19",
+    "title": "Aditivo aprovado e previsão de estouro sem residual artificial",
+    "priority": 16,
+    "classes": [
+      "B",
+      "C",
+      "D"
+    ],
+    "problem": "Falta rastrear aprovação/vigência do aditivo50.000 e reestimativa350.000 até orçamento original/vigente persistidos, conferindo cenário de risco40.000. Não afirmar Q sem histórico de pagamentos.",
+    "demonstrated_cause": "Aditivo e reestimativa passam no cálculo puro; falta trilha de aprovação/vigência/orçamento/risco na persistência.",
+    "rule_refs": [
+      "§8.4",
+      "§12.6",
+      "I01",
+      "I13",
+      "I14",
+      "I15"
+    ],
+    "dependencies": "T25/T27/T28; revisão orçamentária e aditivo aprovados. D10 real: validadeRev03/EAP/preços/responsável, sem usar orçamento como residual deETC.",
+    "effort": "2–3 dias",
+    "objective_completion_criterion": "Contrato550.000; incorrido450.000; ETC800.000; EAC1.250.000; desvio250.000/25%; proposta40.000 acrescenta0 ao firme e cenário1.290.000.",
+    "selection_reason": "Lote posterior de orçamento/contratos; não afirmarQ sem mapa financeiro.",
+    "code": "lib/finance-core/coverage.mjs: economicEstimate; lib/forecast/server.ts",
+    "selected": false,
+    "status": "Parcial — pendência técnica mantida",
+    "financial_acceptance": "Pendente — não registrado pelo executor",
+    "deployment_limits": "C/D/E referem-se também à adoção real, conforme a pendência descrita; não bloqueiam testes fictícios com premissas explícitas já aprovadas."
+  }
+]

@@ -1,0 +1,752 @@
+{
+  "obra": "CT18 · CT18",
+  "entidade_id": "36bf0efc-42a2-475e-ac5e-1b480878356a",
+  "corte": "2026-11-20",
+  "fonte": "Mesmo núcleo do fluxo de caixa",
+  "realizado": {
+    "from": "2026-10-01",
+    "to": "2026-11-20",
+    "accounts": [
+      {
+        "account_id": "540a5cf5-c188-42c3-94ee-22372f57b5eb",
+        "legal_entity_id": "36bf0efc-42a2-475e-ac5e-1b480878356a",
+        "opening_cents": 100000000,
+        "closing_cents": 99500000,
+        "confirmed_opening_cents": 100000000,
+        "confirmed_closing_cents": 99500000,
+        "incoming_cents": 0,
+        "outgoing_cents": 500000,
+        "unconfirmed_movement_cents": 0,
+        "opening_validated": true
+      }
+    ],
+    "unconfirmed_through_cutoff_cents": 0,
+    "unlinked_statement_cents": 0,
+    "opening_cents": 100000000,
+    "closing_cents": 99500000,
+    "confirmed_opening_cents": 100000000,
+    "confirmed_closing_cents": 99500000,
+    "transfer_in_transit_cents": 0,
+    "external_incoming_cents": 0,
+    "external_outgoing_cents": 500000,
+    "confirmed_external_incoming_cents": 0,
+    "confirmed_external_outgoing_cents": 500000,
+    "unconfirmed_movement_cents": 0,
+    "project_bank_balance_available": false
+  },
+  "projecao": {
+    "cutoff": "2026-11-20",
+    "through": "2026-12-31",
+    "available_opening_cents": null,
+    "months": [
+      {
+        "month": "2026-11",
+        "opening_cents": null,
+        "incoming_cents": 0,
+        "outgoing_cents": 1700000,
+        "estimated_revenue_cents": 0,
+        "closing_cents": null,
+        "commercial_closing_cents": null,
+        "components": {
+          "R": 1700000,
+          "C": 0,
+          "P": 0,
+          "AR": 0,
+          "AR_FUTURE": 0,
+          "REFUND": 0,
+          "REVENUE": 0,
+          "AF": 0,
+          "FINANCING_IN": 0,
+          "FINANCING_OUT": 0
+        }
+      },
+      {
+        "month": "2026-12",
+        "opening_cents": null,
+        "incoming_cents": 0,
+        "outgoing_cents": 8000000,
+        "estimated_revenue_cents": 0,
+        "closing_cents": null,
+        "commercial_closing_cents": null,
+        "components": {
+          "R": 0,
+          "C": 4000000,
+          "P": 4000000,
+          "AR": 0,
+          "AR_FUTURE": 0,
+          "REFUND": 0,
+          "REVENUE": 0,
+          "AF": 0,
+          "FINANCING_IN": 0,
+          "FINANCING_OUT": 0
+        }
+      }
+    ],
+    "events": [
+      {
+        "date": "2026-11-20",
+        "closing_cents": null,
+        "commercial_closing_cents": null
+      },
+      {
+        "date": "2026-12-20",
+        "closing_cents": null,
+        "commercial_closing_cents": null
+      }
+    ],
+    "closing_cents": null,
+    "commercial_closing_cents": null,
+    "peak_additional_funding_cents": null,
+    "horizon_30": {
+      "through": "2026-12-20",
+      "outgoing_cents": 8000000,
+      "receivables_cents": 0,
+      "refunds_cents": 0,
+      "estimated_revenue_cents": 0
+    },
+    "horizon_90": {
+      "through": "2027-02-18",
+      "outgoing_cents": 8000000,
+      "receivables_cents": 0,
+      "refunds_cents": 0,
+      "estimated_revenue_cents": 0
+    },
+    "undated_cents": 0,
+    "past_expected_cents": 0,
+    "complete": false,
+    "unused_credit_limit_in_cash_cents": 0
+  },
+  "projecoes_por_entidade": [
+    {
+      "entity_id": "36bf0efc-42a2-475e-ac5e-1b480878356a",
+      "version": {
+        "id": "8c92e57f-54ae-4699-9759-bf47dd223389",
+        "cutoff": "2026-10-21",
+        "reason": "Versão documentada CT18",
+        "request": {
+          "rows": [
+            {
+              "category": "C",
+              "scope_key": "covered",
+              "source_id": "6ff2be1e-87f4-4bc2-bfb5-b3913709137b",
+              "source_kind": "contract",
+              "amount_cents": 6000000,
+              "expected_date": "2026-12-20"
+            },
+            {
+              "category": "P",
+              "scope_key": "uncovered",
+              "source_kind": "documented_estimate",
+              "amount_cents": 4000000,
+              "expected_date": "2026-12-20"
+            },
+            {
+              "category": "AF",
+              "title_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+              "scope_key": "interest",
+              "source_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+              "title_type": "AP",
+              "source_kind": "title",
+              "amount_cents": 200000,
+              "expected_date": "2026-11-20"
+            }
+          ],
+          "cutoff": "2026-10-21",
+          "entity": "36bf0efc-42a2-475e-ac5e-1b480878356a",
+          "parent": "39416dc1-1d03-49a0-b602-ab8b5ac69b80",
+          "reason": "Versão documentada CT18",
+          "minimum": 0,
+          "project": "381b7e11-5302-445a-a030-0a5b90e58230",
+          "baseline": null,
+          "evidence": "Premissas fictícias aprovadas CT18",
+          "completion": "2026-12-31",
+          "change_kind": "adjustment"
+        },
+        "evidence": "Premissas fictícias aprovadas CT18",
+        "parent_id": "39416dc1-1d03-49a0-b602-ab8b5ac69b80",
+        "command_id": "3973b319-081d-456a-8eff-6a9989552a59",
+        "company_id": "00000000-0000-4000-8000-000000000005",
+        "created_at": "2026-10-22T18:21:36.153016+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000004",
+        "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+        "updated_at": "2026-10-22T18:21:36.153016+00:00",
+        "baseline_id": null,
+        "minimum_cash": 0,
+        "completion_date": "2026-12-31",
+        "legal_entity_id": "36bf0efc-42a2-475e-ac5e-1b480878356a",
+        "source_snapshot": {
+          "cash": [
+            {
+              "event_id": "e81ed8e9-eea6-4f6e-8eca-6b529f3887ac",
+              "title_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+              "cash_kind": "settlement",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T18:21:34.313467+00:00",
+              "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+              "title_type": "AP",
+              "cash_signed": 5000,
+              "effective_date": "2026-10-21"
+            }
+          ],
+          "lines": [
+            {
+              "id": "ad7b9c29-940e-4b9d-92c6-0bee3d16f005",
+              "fee": 0,
+              "noncash": 0,
+              "discount": 0,
+              "event_id": "e81ed8e9-eea6-4f6e-8eca-6b529f3887ac",
+              "interest": 0,
+              "title_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+              "principal": 5000,
+              "scope_ref": null,
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T18:21:34.314761+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000004",
+              "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+              "title_type": "AP",
+              "updated_at": "2026-10-22T18:21:34.314761+00:00",
+              "credit_class": null,
+              "noncash_kind": null,
+              "excess_credit": 0,
+              "advance_source": null,
+              "credit_evidence": null
+            }
+          ],
+          "links": [
+            {
+              "id": "c740ecd9-958f-4558-aabb-e2246b1427c5",
+              "amount": 5000,
+              "entry_id": "d52a426d-addf-4412-b9ee-85167c39d7f7",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T18:21:34.647854+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000004",
+              "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+              "updated_at": "2026-10-22T18:21:34.647854+00:00",
+              "reversed_at": null,
+              "reversed_by": null,
+              "transaction_id": "335a5bd3-13c7-4111-aea1-5b0a9634498e",
+              "reversal_reason": null
+            }
+          ],
+          "audits": [
+            {
+              "id": 6,
+              "reason": "Obrigação documentada fictícia CT18",
+              "version": 1,
+              "actor_id": "00000000-0000-4000-8000-000000000004",
+              "title_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+              "new_value": {
+                "id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+                "notes": null,
+                "amount": 20000,
+                "origin": "manual",
+                "status": "open",
+                "paid_at": null,
+                "document": "CT18",
+                "due_date": "2026-11-20",
+                "source_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+                "company_id": "00000000-0000-4000-8000-000000000005",
+                "created_at": "2026-10-22T18:21:32.917674+00:00",
+                "created_by": "00000000-0000-4000-8000-000000000004",
+                "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+                "updated_at": "2026-10-22T18:21:32.917674+00:00",
+                "paid_amount": null,
+                "supplier_id": "00000000-0000-4000-8000-000000000013",
+                "fiscal_class": null,
+                "source_system": "elos_os",
+                "payment_method": null,
+                "bank_account_id": null,
+                "finance_managed": false,
+                "finance_noncash": 0,
+                "finance_version": 1,
+                "legal_entity_id": null,
+                "finance_discount": 0,
+                "installment_label": null,
+                "paid_account_name": null,
+                "finance_cash_gross": 0,
+                "bank_transaction_id": null,
+                "finance_open_amount": 20000,
+                "finance_cash_pending": 0,
+                "finance_interest_due": 0,
+                "finance_cash_refunded": 0,
+                "finance_interest_paid": 0,
+                "finance_principal_paid": 0,
+                "finance_advance_applied": 0
+              },
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "title_type": "payables",
+              "recorded_at": "2026-10-22T18:21:32.925213+00:00",
+              "effective_date": "2026-10-01",
+              "previous_value": null,
+              "legal_entity_id": "36bf0efc-42a2-475e-ac5e-1b480878356a"
+            },
+            {
+              "id": 7,
+              "reason": "Pagamento documentado CT18",
+              "version": 2,
+              "actor_id": "00000000-0000-4000-8000-000000000004",
+              "title_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+              "new_value": {
+                "id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+                "notes": null,
+                "amount": 20000,
+                "origin": "manual",
+                "status": "open",
+                "paid_at": "2026-10-21",
+                "document": "CT18",
+                "due_date": "2026-11-20",
+                "source_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+                "company_id": "00000000-0000-4000-8000-000000000005",
+                "created_at": "2026-10-22T18:21:32.917674+00:00",
+                "created_by": "00000000-0000-4000-8000-000000000004",
+                "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+                "updated_at": "2026-10-22T18:21:34.318306+00:00",
+                "paid_amount": 5000,
+                "supplier_id": "00000000-0000-4000-8000-000000000013",
+                "fiscal_class": null,
+                "source_system": "elos_os",
+                "payment_method": null,
+                "bank_account_id": "540a5cf5-c188-42c3-94ee-22372f57b5eb",
+                "finance_managed": true,
+                "finance_noncash": 0,
+                "finance_version": 2,
+                "legal_entity_id": null,
+                "finance_discount": 0,
+                "installment_label": null,
+                "paid_account_name": "CT18",
+                "finance_cash_gross": 5000,
+                "bank_transaction_id": "335a5bd3-13c7-4111-aea1-5b0a9634498e",
+                "finance_open_amount": 15000,
+                "finance_cash_pending": 0,
+                "finance_interest_due": 0,
+                "finance_cash_refunded": 0,
+                "finance_interest_paid": 0,
+                "finance_principal_paid": 5000,
+                "finance_advance_applied": 0
+              },
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "title_type": "payables",
+              "recorded_at": "2026-10-22T18:21:34.321315+00:00",
+              "effective_date": "2026-10-21",
+              "previous_value": {
+                "id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+                "notes": null,
+                "amount": 20000,
+                "origin": "manual",
+                "status": "open",
+                "paid_at": null,
+                "document": "CT18",
+                "due_date": "2026-11-20",
+                "source_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+                "company_id": "00000000-0000-4000-8000-000000000005",
+                "created_at": "2026-10-22T18:21:32.917674+00:00",
+                "created_by": "00000000-0000-4000-8000-000000000004",
+                "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+                "updated_at": "2026-10-22T18:21:32.917674+00:00",
+                "paid_amount": null,
+                "supplier_id": "00000000-0000-4000-8000-000000000013",
+                "fiscal_class": null,
+                "source_system": "elos_os",
+                "payment_method": null,
+                "bank_account_id": null,
+                "finance_managed": false,
+                "finance_noncash": 0,
+                "finance_version": 1,
+                "legal_entity_id": null,
+                "finance_discount": 0,
+                "installment_label": null,
+                "paid_account_name": null,
+                "finance_cash_gross": 0,
+                "bank_transaction_id": null,
+                "finance_open_amount": 20000,
+                "finance_cash_pending": 0,
+                "finance_interest_due": 0,
+                "finance_cash_refunded": 0,
+                "finance_interest_paid": 0,
+                "finance_principal_paid": 0,
+                "finance_advance_applied": 0
+              },
+              "legal_entity_id": "36bf0efc-42a2-475e-ac5e-1b480878356a"
+            }
+          ],
+          "events": [
+            {
+              "id": "e81ed8e9-eea6-4f6e-8eca-6b529f3887ac",
+              "kind": "payment",
+              "reason": "Pagamento documentado CT18",
+              "request": {
+                "date": "2026-10-21",
+                "lines": [
+                  {
+                    "type": "AP",
+                    "title_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+                    "principal": 5000
+                  }
+                ],
+                "reason": "Pagamento documentado CT18",
+                "account": "540a5cf5-c188-42c3-94ee-22372f57b5eb"
+              },
+              "command_id": "c4e1dbdf-0545-408b-95b3-5573fc801791",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T18:21:34.313467+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000004",
+              "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+              "title_type": "AP",
+              "updated_at": "2026-10-22T18:21:34.313467+00:00",
+              "cash_amount": 5000,
+              "reversal_of": null,
+              "refund_amount": 0,
+              "effective_date": "2026-10-21",
+              "bank_account_id": "540a5cf5-c188-42c3-94ee-22372f57b5eb",
+              "legal_entity_id": "36bf0efc-42a2-475e-ac5e-1b480878356a",
+              "bank_transaction_id": "335a5bd3-13c7-4111-aea1-5b0a9634498e"
+            }
+          ],
+          "charges": [],
+          "entries": [
+            {
+              "id": "d52a426d-addf-4412-b9ee-85167c39d7f7",
+              "amount": -5000,
+              "fit_id": "CT18-P1",
+              "import_id": "662d1a84-a8b1-430c-ba06-162857c470be",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T18:21:34.480902+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000004",
+              "project_id": null,
+              "updated_at": "2026-10-22T18:21:34.480902+00:00",
+              "description": "Pagamento CT18 referência fixa",
+              "bank_account_id": "540a5cf5-c188-42c3-94ee-22372f57b5eb",
+              "transaction_date": "2026-10-21"
+            }
+          ],
+          "accounts": [
+            {
+              "id": "540a5cf5-c188-42c3-94ee-22372f57b5eb",
+              "label": "CT18",
+              "notes": null,
+              "agency": null,
+              "status": "active",
+              "pix_key": null,
+              "bank_code": null,
+              "bank_name": "Fictício",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T18:21:30.142284+00:00",
+              "created_by": null,
+              "is_default": false,
+              "updated_at": "2026-10-22T18:21:30.142284+00:00",
+              "updated_by": null,
+              "account_type": "checking",
+              "account_digit": null,
+              "bank_group_id": null,
+              "currency_code": "BRL",
+              "account_number": "CT18",
+              "allow_negative": false,
+              "closed_through": null,
+              "legal_entity_id": "36bf0efc-42a2-475e-ac5e-1b480878356a",
+              "opening_balance": 1000000,
+              "opening_balance_date": "2026-10-01"
+            }
+          ],
+          "coverage": [
+            {
+              "id": "a5ea3d99-3df1-4d89-80ec-857c404494db",
+              "reason": "Cobertura monetária CT18 documentada",
+              "evidence": "Título cobre exatamente o contrato CT18",
+              "title_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+              "scope_key": "covered",
+              "command_id": "90366bdf-e45d-44fe-bd2d-40b38d2f5047",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T18:21:33.043816+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000004",
+              "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+              "title_type": "AP",
+              "updated_at": "2026-10-22T18:21:33.043816+00:00",
+              "scenario_id": "39416dc1-1d03-49a0-b602-ab8b5ac69b80",
+              "amount_cents": 2000000,
+              "legal_entity_id": "36bf0efc-42a2-475e-ac5e-1b480878356a",
+              "scope_project_id": "381b7e11-5302-445a-a030-0a5b90e58230"
+            }
+          ],
+          "openings": [
+            {
+              "id": "c9d12a28-541a-4357-ba9f-ff5445b1fc1b",
+              "reason": "Abertura documentada da fixture",
+              "evidence": "Extrato inicial fictício independente",
+              "command_id": "2fbc182c-1169-446e-aea3-394097375939",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T18:21:30.151293+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000004",
+              "project_id": null,
+              "updated_at": "2026-10-22T18:21:30.151293+00:00",
+              "opening_date": "2026-10-01",
+              "opening_amount": 1000000,
+              "bank_account_id": "540a5cf5-c188-42c3-94ee-22372f57b5eb",
+              "legal_entity_id": "36bf0efc-42a2-475e-ac5e-1b480878356a",
+              "restricted_amount": 0
+            }
+          ],
+          "payables": [
+            {
+              "id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+              "notes": null,
+              "amount": 20000,
+              "origin": "manual",
+              "status": "open",
+              "paid_at": "2026-10-21",
+              "document": "CT18",
+              "due_date": "2026-11-20",
+              "source_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T18:21:32.917674+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000004",
+              "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+              "updated_at": "2026-10-22T18:21:34.318306+00:00",
+              "paid_amount": 5000,
+              "supplier_id": "00000000-0000-4000-8000-000000000013",
+              "fiscal_class": null,
+              "source_system": "elos_os",
+              "payment_method": null,
+              "bank_account_id": "540a5cf5-c188-42c3-94ee-22372f57b5eb",
+              "finance_managed": true,
+              "finance_noncash": 0,
+              "finance_version": 2,
+              "legal_entity_id": null,
+              "finance_discount": 0,
+              "installment_label": null,
+              "paid_account_name": "CT18",
+              "finance_cash_gross": 5000,
+              "bank_transaction_id": "335a5bd3-13c7-4111-aea1-5b0a9634498e",
+              "finance_open_amount": 15000,
+              "finance_cash_pending": 0,
+              "finance_interest_due": 0,
+              "finance_cash_refunded": 0,
+              "finance_interest_paid": 0,
+              "finance_principal_paid": 5000,
+              "finance_advance_applied": 0
+            }
+          ],
+          "contracts": [
+            {
+              "id": "6ff2be1e-87f4-4bc2-bfb5-b3913709137b",
+              "status": "active",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+              "current_value": 60000
+            }
+          ],
+          "movements": [
+            {
+              "id": "335a5bd3-13c7-4111-aea1-5b0a9634498e",
+              "notes": null,
+              "amount": 5000,
+              "status": "reconciled",
+              "document": null,
+              "direction": "debit",
+              "source_id": "c4e1dbdf-0545-408b-95b3-5573fc801791",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T18:21:34.299558+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000004",
+              "payable_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+              "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+              "updated_at": "2026-10-22T18:21:34.647854+00:00",
+              "description": "Pagamento documentado CT18",
+              "transfer_id": null,
+              "cancelled_at": null,
+              "cancelled_by": null,
+              "counterparty": null,
+              "receivable_id": null,
+              "reconciled_by": "00000000-0000-4000-8000-000000000004",
+              "source_system": "elos_settlement",
+              "bank_account_id": "540a5cf5-c188-42c3-94ee-22372f57b5eb",
+              "competence_date": null,
+              "legal_entity_id": "36bf0efc-42a2-475e-ac5e-1b480878356a",
+              "transaction_date": "2026-10-21",
+              "transaction_type": "payment",
+              "cancellation_reason": null,
+              "reconciliation_date": "2026-10-21",
+              "reconciliation_reference": "Extrato OFX · CT18-P1"
+            }
+          ],
+          "transfers": [],
+          "receivables": [],
+          "native_invoices": [],
+          "native_installments": [],
+          "native_measurements": [],
+          "physical_activities": [],
+          "supplier_refund_rights": [],
+          "adjustment_realizations": [],
+          "supplier_refund_receipts": []
+        }
+      },
+      "future": {
+        "rows": [
+          {
+            "id": "AP:4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+            "scope_key": "AP:4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+            "category": "R",
+            "amount_cents": 1700000,
+            "legal_due": "2026-11-20",
+            "expected_date": "2026-11-20",
+            "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+            "source_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+            "title_id": "4a56b872-622f-4a9b-95ee-0cfe5e582dbe",
+            "title_type": "AP",
+            "source_kind": "title"
+          },
+          {
+            "id": "470ff7a6-0936-42d7-a53b-e2e7e0515e7e",
+            "category": "C",
+            "title_id": null,
+            "scope_key": "covered",
+            "source_id": "6ff2be1e-87f4-4bc2-bfb5-b3913709137b",
+            "company_id": "00000000-0000-4000-8000-000000000005",
+            "created_at": "2026-10-22T18:21:36.156191+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000004",
+            "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+            "title_type": null,
+            "updated_at": "2026-10-22T18:21:36.156191+00:00",
+            "activity_id": null,
+            "scenario_id": "8c92e57f-54ae-4699-9759-bf47dd223389",
+            "source_kind": "contract",
+            "amount_cents": 4000000,
+            "expected_date": "2026-12-20",
+            "payment_lag_days": null,
+            "reference_amount_cents": 6000000
+          },
+          {
+            "id": "49de4666-2eba-4be7-9c6e-acb1d88faed9",
+            "category": "P",
+            "title_id": null,
+            "scope_key": "uncovered",
+            "source_id": null,
+            "company_id": "00000000-0000-4000-8000-000000000005",
+            "created_at": "2026-10-22T18:21:36.156522+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000004",
+            "project_id": "381b7e11-5302-445a-a030-0a5b90e58230",
+            "title_type": null,
+            "updated_at": "2026-10-22T18:21:36.156522+00:00",
+            "activity_id": null,
+            "scenario_id": "8c92e57f-54ae-4699-9759-bf47dd223389",
+            "source_kind": "documented_estimate",
+            "amount_cents": 4000000,
+            "expected_date": "2026-12-20",
+            "payment_lag_days": null,
+            "reference_amount_cents": 4000000
+          }
+        ],
+        "warnings": [],
+        "complete": true
+      },
+      "projection": {
+        "cutoff": "2026-11-20",
+        "through": "2026-12-31",
+        "available_opening_cents": null,
+        "months": [
+          {
+            "month": "2026-11",
+            "opening_cents": null,
+            "incoming_cents": 0,
+            "outgoing_cents": 1700000,
+            "estimated_revenue_cents": 0,
+            "closing_cents": null,
+            "commercial_closing_cents": null,
+            "components": {
+              "R": 1700000,
+              "C": 0,
+              "P": 0,
+              "AR": 0,
+              "AR_FUTURE": 0,
+              "REFUND": 0,
+              "REVENUE": 0,
+              "AF": 0,
+              "FINANCING_IN": 0,
+              "FINANCING_OUT": 0
+            }
+          },
+          {
+            "month": "2026-12",
+            "opening_cents": null,
+            "incoming_cents": 0,
+            "outgoing_cents": 8000000,
+            "estimated_revenue_cents": 0,
+            "closing_cents": null,
+            "commercial_closing_cents": null,
+            "components": {
+              "R": 0,
+              "C": 4000000,
+              "P": 4000000,
+              "AR": 0,
+              "AR_FUTURE": 0,
+              "REFUND": 0,
+              "REVENUE": 0,
+              "AF": 0,
+              "FINANCING_IN": 0,
+              "FINANCING_OUT": 0
+            }
+          }
+        ],
+        "events": [
+          {
+            "date": "2026-11-20",
+            "closing_cents": null,
+            "commercial_closing_cents": null
+          },
+          {
+            "date": "2026-12-20",
+            "closing_cents": null,
+            "commercial_closing_cents": null
+          }
+        ],
+        "closing_cents": null,
+        "commercial_closing_cents": null,
+        "peak_additional_funding_cents": null,
+        "horizon_30": {
+          "through": "2026-12-20",
+          "outgoing_cents": 8000000,
+          "receivables_cents": 0,
+          "refunds_cents": 0,
+          "estimated_revenue_cents": 0
+        },
+        "horizon_90": {
+          "through": "2027-02-18",
+          "outgoing_cents": 8000000,
+          "receivables_cents": 0,
+          "refunds_cents": 0,
+          "estimated_revenue_cents": 0
+        },
+        "undated_cents": 0,
+        "past_expected_cents": 0,
+        "complete": false,
+        "unused_credit_limit_in_cash_cents": 0
+      }
+    }
+  ],
+  "restituicoes_de_fornecedores": [],
+  "natureza_restituicao": "Recuperação de adiantamento; não é receita operacional",
+  "obrigacoes_vencidas": {
+    "R_cents": 1700000,
+    "overdue_cents": 0,
+    "due_today_cents": 1700000,
+    "next_30_days_cents": 0,
+    "next_90_days_cents": 0,
+    "beyond_90_days_cents": 0,
+    "unknown_due_cents": 0,
+    "immediate_need_through_30_days_cents": 1700000
+  },
+  "recebiveis_vencidos": {
+    "R_cents": 0,
+    "overdue_cents": 0,
+    "due_today_cents": 0,
+    "next_30_days_cents": 0,
+    "next_90_days_cents": 0,
+    "beyond_90_days_cents": 0,
+    "unknown_due_cents": 0,
+    "immediate_need_through_30_days_cents": 0
+  },
+  "pendencias": [
+    "Conta compartilhada: não há saldo bancário automático por obra; exibir apenas movimentos apropriados"
+  ],
+  "sem_obra_aberto_cents": 0,
+  "fonte_sem_obra_a_validar_cents": 0,
+  "versao": "8c92e57f-54ae-4699-9759-bf47dd223389"
+}

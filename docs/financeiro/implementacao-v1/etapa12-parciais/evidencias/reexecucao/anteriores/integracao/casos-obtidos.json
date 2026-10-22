@@ -1,0 +1,653 @@
+{
+  "schema_version": "1.0",
+  "instructions": "Todos os casos começam não_executado. Preencha actual com saídas da execução, status com executado e evidence com referências. Null do modelo é ausência de resultado, não validação de null esperado.",
+  "execution_context": {
+    "implementation_version": "494c55c+etapa6-candidate",
+    "executed_at": "2026-10-22T18:22:35.036Z",
+    "environment": "PostgreSQL 17 isolado network=none; banco/importação, sem API/produção",
+    "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb"
+  },
+  "cases": [
+    {
+      "id": "CT01",
+      "status": "executado",
+      "actual": {
+        "canonical_title_count": 2,
+        "I03_open_payables_cents": 3000000,
+        "deletions_due_to_absence": 0,
+        "title_78_remains_open_cents": 2000000,
+        "extra_obligations_from_retries": 0
+      },
+      "evidence": [
+        "integracao.json: CT01: três importações e recorte parcial sem cancelar ausente"
+      ]
+    },
+    {
+      "id": "CT02",
+      "status": "não_executado",
+      "actual": {
+        "canonical_title_count": null,
+        "original_snapshot_open_cents": null,
+        "revised_snapshot_open_cents": null,
+        "documented_bridge_cents": null,
+        "at_T_2026_10_21_K_2026_10_20_open_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT03",
+      "status": "não_executado",
+      "actual": {
+        "after_P1_open_cents": null,
+        "after_P2_open_cents": null,
+        "I02_gross_disbursed_cents": null,
+        "bank_debit_count": null,
+        "payment_count": null,
+        "cash_created_by_reconciliation_cents": null,
+        "I01_extra_cost_created_by_payments_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT04",
+      "status": "não_executado",
+      "actual": {
+        "date_fixture": {
+          "september_cost_cents": null,
+          "open_at_2026_10_21_cents": null,
+          "overdue_at_2026_10_21_cents": null,
+          "cash_at_2026_10_21_cents": null,
+          "bank_cash_on_2026_10_22_cents": null,
+          "new_cash_on_2026_10_24_cents": null
+        },
+        "bucket_fixture": {
+          "R_cents": null,
+          "overdue_cents": null,
+          "due_today_cents": null,
+          "next_30_days_cents": null,
+          "next_90_days_cents": null,
+          "beyond_90_days_cents": null,
+          "unknown_due_cents": null,
+          "immediate_need_through_30_days_cents": null
+        }
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT05",
+      "status": "não_executado",
+      "actual": {
+        "states": [
+          {
+            "stage": "A",
+            "H_cents": null,
+            "R_cents": null,
+            "C_cents": null,
+            "Q_cents": null,
+            "cost_cents": null,
+            "ETC_cents": null,
+            "advance_available_cents": null
+          },
+          {
+            "stage": "B",
+            "H_cents": null,
+            "R_cents": null,
+            "C_cents": null,
+            "Q_cents": null,
+            "cost_cents": null,
+            "ETC_cents": null,
+            "advance_available_cents": null
+          },
+          {
+            "stage": "C",
+            "H_cents": null,
+            "R_cents": null,
+            "C_cents": null,
+            "Q_cents": null,
+            "cost_cents": null,
+            "ETC_cents": null,
+            "advance_available_cents": null
+          },
+          {
+            "stage": "D",
+            "H_cents": null,
+            "R_cents": null,
+            "C_cents": null,
+            "Q_cents": null,
+            "cost_cents": null,
+            "ETC_cents": null,
+            "advance_available_cents": null
+          },
+          {
+            "stage": "E",
+            "H_cents": null,
+            "R_cents": null,
+            "C_cents": null,
+            "Q_cents": null,
+            "cost_cents": null,
+            "ETC_cents": null,
+            "advance_available_cents": null
+          }
+        ],
+        "new_cash_on_application_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT06",
+      "status": "não_executado",
+      "actual": {
+        "initial_R_cents": null,
+        "initial_C_cents": null,
+        "initial_Q_cents": null,
+        "after_supplier_R_cents": null,
+        "after_supplier_retention_cents": null,
+        "after_tax_R_cents": null,
+        "after_tax_H_cents": null,
+        "final_R_cents": null,
+        "final_H_cents": null,
+        "total_cash_cents": null,
+        "cost_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT07",
+      "status": "não_executado",
+      "actual": {
+        "after_first_open_principal_cents": null,
+        "second_principal_cents": null,
+        "final_open_cents": null,
+        "H_principal_cents": null,
+        "N_discount_cents": null,
+        "interest_paid_cents": null,
+        "I02_cash_cents": null,
+        "C_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT08",
+      "status": "não_executado",
+      "actual": {
+        "A": {
+          "open_principal_cents": null,
+          "open_interest_cents": null,
+          "R_cents": null,
+          "gross_historical_outflow_cents": null,
+          "confirmed_refund_cents": null,
+          "net_outflow_cents": null
+        },
+        "B": {
+          "open_principal_cents": null,
+          "open_interest_cents": null,
+          "R_cents": null,
+          "net_outflow_cents": null
+        },
+        "C": {
+          "confirmed_refund_cents": null,
+          "gross_historical_outflow_cents": null,
+          "cash_awaiting_reallocation_cents": null,
+          "Q_complete": null
+        }
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT09",
+      "status": "não_executado",
+      "actual": {
+        "before_invoice_I03_cents": null,
+        "before_invoice_I04_cents": null,
+        "final_I03_cents": null,
+        "final_I04_cents": null,
+        "final_R_cents": null,
+        "cost_cents": null,
+        "cash_cents": null,
+        "active_financial_representations": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT10",
+      "status": "não_executado",
+      "actual": {
+        "after_cancellation_V_cents": null,
+        "after_cancellation_H_imputable_to_current_price_cents": null,
+        "after_cancellation_C_cents": null,
+        "after_cancellation_R_cents": null,
+        "after_cancellation_Q_cents": null,
+        "refund_right_before_receipt_cents": null,
+        "refund_right_after_receipt_cents": null,
+        "historical_gross_outflow_cents": null,
+        "confirmed_refund_cents": null,
+        "net_outflow_cents": null,
+        "cost_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT11",
+      "status": "não_executado",
+      "actual": {
+        "proportional_fixture": {
+          "cost_A_cents": null,
+          "cost_B_cents": null,
+          "cash_A_cents": null,
+          "cash_B_cents": null,
+          "remaining_A_cents": null,
+          "remaining_B_cents": null
+        },
+        "rounding_fixture": {
+          "A_cents": null,
+          "B_cents": null,
+          "C_cents": null,
+          "sum_cents": null,
+          "unallocated_cents": null
+        }
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT12",
+      "status": "não_executado",
+      "actual": {
+        "entity_cost_cents": null,
+        "obra_A_cost_cents": null,
+        "unclassified_cost_cents": null,
+        "entity_open_payables_cents": null,
+        "obra_A_open_payables_cents": null,
+        "unclassified_open_payables_cents": null,
+        "entity_disbursed_cents": null,
+        "unclassified_disbursed_cents": null,
+        "automatic_Flow_allocation_cents": null,
+        "appropriation_on_original_amounts_numerator_cents": null,
+        "appropriation_on_original_amounts_denominator_cents": null,
+        "appropriation_on_original_amounts_percent": null,
+        "obra_cost_complete": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT13",
+      "status": "não_executado",
+      "actual": {
+        "cohort_due_principal_cents": null,
+        "cohort_overdue_principal_cents": null,
+        "overdue_total_with_interest_cents": null,
+        "I16_total_open_cents": null,
+        "I17_received_cents": null,
+        "I19_cohort_principal_delinquency_percent": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT14",
+      "status": "não_executado",
+      "actual": {
+        "fee_fixture": {
+          "receivable_settled_cents": null,
+          "open_cents": null,
+          "I17_bank_receipt_cents": null,
+          "identified_fee_cents": null,
+          "artificial_overdue_cents": null
+        },
+        "barter_fixture": {
+          "receivable_settled_cents": null,
+          "open_cents": null,
+          "I17_cash_received_cents": null,
+          "noncash_settlement_cents": null
+        }
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT15",
+      "status": "não_executado",
+      "actual": {
+        "end_2026_10_20": {
+          "A_bank_cents": null,
+          "B_bank_cents": null,
+          "sum_bank_balances_cents": null,
+          "transfer_in_transit_cents": null,
+          "available_bank_cash_cents": null,
+          "external_outflow_cents": null
+        },
+        "end_2026_10_21": {
+          "A_bank_cents": null,
+          "B_bank_cents": null,
+          "sum_bank_balances_cents": null,
+          "transfer_in_transit_cents": null,
+          "external_outflow_cents": null,
+          "external_receipt_cents": null
+        }
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT16",
+      "status": "não_executado",
+      "actual": {
+        "A": {
+          "cash_cents": null,
+          "loan_receivable_cents": null,
+          "loan_disbursement_cents": null
+        },
+        "B": {
+          "cash_cents": null,
+          "loan_liability_cents": null,
+          "financing_inflow_cents": null
+        },
+        "consolidated": {
+          "cash_cents": null,
+          "external_flow_from_loan_cents": null,
+          "eliminated_asset_cents": null,
+          "eliminated_liability_cents": null
+        },
+        "construction_cost_created_cents": null,
+        "sales_revenue_created_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT17",
+      "status": "não_executado",
+      "actual": {
+        "Q_before_and_after_cents": null,
+        "ETC_before_and_after_cents": null,
+        "EAC_before_and_after_cents": null,
+        "incurred_cost_unchanged_cents": null,
+        "original_projected_closing_cash_cents": {
+          "2026-10": null,
+          "2026-11": null,
+          "2026-12": null
+        },
+        "reprogrammed_projected_closing_cash_cents": {
+          "2026-10": null,
+          "2026-11": null,
+          "2026-12": null
+        },
+        "original_peak_additional_funding_cents": null,
+        "reprogrammed_peak_additional_funding_cents": null,
+        "AP_overdue_at_2026_10_31_cents": null,
+        "AR_overdue_at_2026_10_31_cents": null,
+        "original_version_retained": null,
+        "separate_valid_renegotiation_variant": {
+          "effective_event_date": null,
+          "original_due": null,
+          "new_due": null,
+          "R_unchanged_cents": null,
+          "overdue_before_event_at_2026_10_27_cents": null,
+          "overdue_after_event_at_2026_10_31_cents": null,
+          "Q_unchanged_cents": null
+        }
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT18",
+      "status": "não_executado",
+      "actual": {
+        "states": [
+          {
+            "stage": "A",
+            "R_cents": null,
+            "C_cents": null,
+            "P_cents": null,
+            "Q_cents": null,
+            "AF_cents": null
+          },
+          {
+            "stage": "B",
+            "R_cents": null,
+            "C_cents": null,
+            "P_cents": null,
+            "Q_cents": null,
+            "AF_cents": null
+          },
+          {
+            "stage": "C",
+            "R_cents": null,
+            "C_cents": null,
+            "P_cents": null,
+            "Q_cents": null,
+            "AF_cents": null
+          },
+          {
+            "stage": "D",
+            "R_cents": null,
+            "C_cents": null,
+            "P_cents": null,
+            "Q_cents": null,
+            "AF_cents": null
+          },
+          {
+            "stage": "E",
+            "R_cents": null,
+            "C_cents": null,
+            "P_cents": null,
+            "Q_cents": null,
+            "AF_cents": null,
+            "Q_scenario_cents": null
+          },
+          {
+            "stage": "F",
+            "R_cents": null,
+            "C_cents": null,
+            "P_cents": null,
+            "Q_cents": null,
+            "AF_cents": null,
+            "Q_scenario_cents": null
+          }
+        ]
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT19",
+      "status": "não_executado",
+      "actual": {
+        "firm_foundation_contract_cents": null,
+        "incurred_cost_cents": null,
+        "ETC_cents": null,
+        "EAC_cents": null,
+        "variance_to_current_budget_cents": null,
+        "variance_percent": null,
+        "firm_commitment_increment_from_unapproved_proposal_cents": null,
+        "scenario_EAC_if_risk_fully_added_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT20",
+      "status": "não_executado",
+      "actual": {
+        "original_september_cost_cents": null,
+        "restated_september_cost_cents": null,
+        "bridge_cents": null,
+        "new_october_economic_cost_from_prior_error_cents": null,
+        "october_bank_outflow_cents": null,
+        "original_snapshot_mutations": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT21",
+      "status": "não_executado",
+      "actual": {
+        "known_obligations_subtotal_cents": null,
+        "contract_amount_shown_separately_cents": null,
+        "Q_cents": null,
+        "EAC_cents": null,
+        "budget_variance_percent": null,
+        "external_coverage_percent": null,
+        "status": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT22",
+      "status": "não_executado",
+      "actual": {
+        "cash_received_cents": null,
+        "advance_available_before_application_cents": null,
+        "advance_available_after_application_cents": null,
+        "open_receivable_cents": null,
+        "contract_future_not_issued_cents": null,
+        "I18_future_inflow_cents": null,
+        "cash_created_by_application_cents": null,
+        "automatic_revenue_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT23",
+      "status": "não_executado",
+      "actual": {
+        "after_P1_A_open_cents": null,
+        "after_P1_B_open_cents": null,
+        "final_A_open_cents": null,
+        "final_B_open_cents": null,
+        "final_I03_cents": null,
+        "I02_cash_cents": null,
+        "unique_bank_debits": null,
+        "new_cash_from_reimport_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT24",
+      "status": "não_executado",
+      "actual": {
+        "canonical_title_count_all_organizations": null,
+        "UA_visible_total_cents": null,
+        "UB_visible_total_cents": null,
+        "UG_A1_context_total_cents": null,
+        "UG_A2_context_total_cents": null,
+        "UG_A_authorized_consolidated_total_cents": null,
+        "UG_B_context_total_cents": null,
+        "foreign_rows_returned_to_UA": null,
+        "restricted_same_organization_rows_returned_to_UA": null,
+        "unauthorized_mutations_committed": null,
+        "UR_mutations_committed": null,
+        "foreign_data_occurrences_in_UA_exports_or_AI": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT25",
+      "status": "não_executado",
+      "actual": {
+        "initial_P_cents": null,
+        "after_title_R_cents": null,
+        "after_title_P_cents": null,
+        "after_title_Q_cents": null,
+        "after_payment_R_cents": null,
+        "after_payment_P_cents": null,
+        "after_payment_Q_cents": null,
+        "october_incurred_cost_cents": null,
+        "october_cash_cents": null,
+        "active_occurrence_count": null,
+        "duplicate_october_obligations": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT26",
+      "status": "executado",
+      "actual": {
+        "complete": {
+          "unique_count": 5,
+          "total_cents": 1500000,
+          "external_coverage_percent": "100.00"
+        },
+        "failed_page_2": {
+          "known_unique_count": 2,
+          "known_subtotal_cents": 300000,
+          "known_loaded_coverage_percent": "40.00",
+          "certified_total_cents": null,
+          "complete": false
+        },
+        "after_retry": {
+          "unique_count": 5,
+          "total_cents": 1500000,
+          "duplicate_obligations": 0
+        },
+        "repeated_cursor_detected": true
+      },
+      "evidence": [
+        "integracao.json: CT26: paginação, falha, cursor repetido e retry reconciliados no banco"
+      ]
+    },
+    {
+      "id": "CT27",
+      "status": "não_executado",
+      "actual": {
+        "before_consumption": {
+          "H_cents": null,
+          "R_cents": null,
+          "C_cents": null,
+          "P_cents": null,
+          "Q_cents": null,
+          "cost_cents": null,
+          "inventory_cents": null,
+          "ETC_cents": null,
+          "EAC_cents": null
+        },
+        "after_consumption": {
+          "cost_cents": null,
+          "inventory_cents": null,
+          "ETC_cents": null,
+          "EAC_cents": null,
+          "Q_cents": null,
+          "new_cash_cents": null
+        }
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT28",
+      "status": "não_executado",
+      "actual": {
+        "supplier_open_cents": null,
+        "tax_open_cents": null,
+        "retention_open_cents": null,
+        "R_cents": null,
+        "H_cents": null,
+        "advance_available_cents": null,
+        "C_cents": null,
+        "P_cents": null,
+        "Q_cents": null,
+        "ETC_cents": null,
+        "EAC_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT29",
+      "status": "não_executado",
+      "actual": {
+        "available_opening_cents": null,
+        "closing_month1_cents": null,
+        "closing_month2_cents": null,
+        "peak_additional_funding_cents": null,
+        "additional_amortization_duplicate_cents": null,
+        "unused_limit_in_available_cash_cents": null
+      },
+      "evidence": []
+    },
+    {
+      "id": "CT30",
+      "status": "não_executado",
+      "actual": {
+        "open_payable_cents": null,
+        "principal_settled_cents": null,
+        "refund_receivable_cents": null,
+        "confirmed_cash_outflow_cents": null,
+        "unexplained_negative_balance_cents": null,
+        "second_allocation_mutations": null
+      },
+      "evidence": []
+    }
+  ]
+}

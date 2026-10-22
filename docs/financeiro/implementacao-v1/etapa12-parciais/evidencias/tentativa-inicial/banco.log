@@ -1,0 +1,21 @@
+{
+  "passed": 0,
+  "failed": [
+    {
+      "name": "CT02_reimportacao_aprovacao_e_tres_cortes_persistidos",
+      "error": "ERROR:  permission denied for schema elos_import\nLINE 1: select elos_import.apply_financial_batch('00000000-0000-4000...\n               ^"
+    },
+    {
+      "name": "CT03_pagamento_e_conciliacao_nao_criam_custo_economico",
+      "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   'Unexpected end of JSON input'\n+ ]\n- []\n"
+    },
+    {
+      "name": "CT18_cadeia_P_C_R_pagamento_AF_e_constituicao_persistida",
+      "error": "projects: Unexpected end of JSON input"
+    },
+    {
+      "name": "CT29_agenda_persistida_restricao_e_amortizacao_uma_vez",
+      "error": "finance_bank_accounts: Unexpected end of JSON input"
+    }
+  ]
+}
