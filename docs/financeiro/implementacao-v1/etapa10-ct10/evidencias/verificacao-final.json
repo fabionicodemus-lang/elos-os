@@ -1,0 +1,180 @@
+{
+  "verified_at": "2026-10-22T14:50:18.316278+00:00",
+  "branch": "fix/financeiro-etapa10-ct10",
+  "implementation_commit": "282436d35cbef2b522fb39d2bca704adb41f6e6b",
+  "operational_base_commit": "6354e590342ce6015d63a8acf43e00ca9a963fe5",
+  "ancestors_verified": [
+    "494c55c",
+    "95d659e",
+    "3daa96e",
+    "5e18d7f",
+    "6ec4f47",
+    "c72ec54",
+    "a7a2b13",
+    "6354e59"
+  ],
+  "original_rules_fixtures_tests_migrations_historical_evidence_preserved": true,
+  "rule_sha256": "30f19b5ef98157d72c32a9c471c8893bac3b17a60167d6a417a346c6efb36c28",
+  "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+  "CT10_expected": {
+    "after_cancellation_V_cents": 0,
+    "after_cancellation_H_imputable_to_current_price_cents": 0,
+    "after_cancellation_C_cents": 0,
+    "after_cancellation_R_cents": 0,
+    "after_cancellation_Q_cents": 0,
+    "refund_right_before_receipt_cents": 1000000,
+    "refund_right_after_receipt_cents": 400000,
+    "historical_gross_outflow_cents": 1000000,
+    "confirmed_refund_cents": 600000,
+    "net_outflow_cents": 400000,
+    "cost_cents": 0
+  },
+  "CT10_actual": {
+    "after_cancellation_V_cents": 0,
+    "after_cancellation_H_imputable_to_current_price_cents": 0,
+    "after_cancellation_C_cents": 0,
+    "after_cancellation_R_cents": 0,
+    "after_cancellation_Q_cents": 0,
+    "refund_right_before_receipt_cents": 1000000,
+    "refund_right_after_receipt_cents": 400000,
+    "historical_gross_outflow_cents": 1000000,
+    "confirmed_refund_cents": 600000,
+    "net_outflow_cents": 400000,
+    "cost_cents": 0
+  },
+  "CT10_integral_in_isolated_perimeter": true,
+  "CT10_original_title_and_payment_preserved": true,
+  "other_29_case_states_unchanged": true,
+  "financial_acceptance_recorded": false,
+  "complete_financial_homologation": false,
+  "test_results": {
+    "banco.json": {
+      "passed": 9,
+      "failed": 0
+    },
+    "etapa8/anteriores/fundacao/banco-final.json": {
+      "passed": 25,
+      "failed": 0
+    },
+    "etapa8/anteriores/integracao/integracao.json": {
+      "passed": 24,
+      "failed": 0
+    },
+    "etapa8/anteriores/liquidacoes.json": {
+      "passed": 16,
+      "failed": 0
+    },
+    "etapa8/banco.json": {
+      "passed": 8,
+      "failed": 0
+    },
+    "etapa9/banco.json": {
+      "passed": 7,
+      "failed": 0
+    },
+    "servidor-tela.log": {
+      "passed": 4,
+      "failed": 0
+    },
+    "etapa8/componentes.log": {
+      "passed": 8,
+      "failed": 0
+    },
+    "etapa8/servidor-tela.log": {
+      "passed": 4,
+      "failed": 0
+    },
+    "etapa8/anteriores/componentes.log": {
+      "passed": 12,
+      "failed": 0
+    },
+    "etapa8/anteriores/render.log": {
+      "passed": 1,
+      "failed": 0
+    },
+    "regressao-81.log": {
+      "passed": 81,
+      "failed": 0
+    }
+  },
+  "production_writes_performed": false,
+  "remote_koper_calls_performed": false,
+  "no_test_containers_left": true,
+  "source_files_sha256": {
+    ".github/workflows/finance-foundation.yml": "4d11028e8bd391ad3f7a7e938e158efa983df63ab43156c4cf6441e9f732bb83",
+    "app/financeiro/fluxo-de-caixa/actions.ts": "4781af106913a44502f0d12af22425c449d008eb50814df0420e977e4604436c",
+    "app/financeiro/fluxo-de-caixa/page.tsx": "8eccb3af5a5cde9dd948b712db840690852649f9b2b7f9259103c45ba0bc623d",
+    "lib/elos-ia/tools.ts": "1c0152f62ed5d7718bd000cdc4969e2c573f181d6b171e38e9aef241c38bd5cc",
+    "lib/finance-core/cashflow-server.ts": "5f6aae70414fcee2be5e14a7b6e191cd84ee2ec1fb0c9fb1857cd5cd9227f8b8",
+    "lib/finance-core/cashflow.d.mts": "45233bc9afa0f250a34897c28eac617237f33b0a72bef83b264773c306a6c204",
+    "lib/finance-core/cashflow.mjs": "5155105d0571fc64972b5b2e7ce42a15325df5ff2a5f7bbfe46275034b62b9de",
+    "package.json": "800e683337aa2c98a69e204fa94c686dac08a0795859eba621b339d4b795a5f8",
+    "supabase/migrations/20261023100000_supplier_advance_refunds.sql": "7687e1f6a7fce2b682e0ff1d05f5c894cfbf40d8c668afa19b555d0869d36765",
+    "tests/supplier-refunds/database.mjs": "55ce2f338b9524617806651b18319273e541c4b052fb42be371b4c8efe032a0f",
+    "tests/supplier-refunds/prior-stages.mjs": "9a75a0b8531cbe60442b1339ddb3ba2e944ec0be9bdacac6cf98a9fabd030899",
+    "tests/supplier-refunds/replay-previous.mjs": "a732d5923ebb7124f30eb511a1c7cef2765fa759439c0a24f423f5f4725e545e",
+    "tests/supplier-refunds/server.test.mjs": "c95a9bff9fdf0df628cdf74b89955a6daffe5fa7e5d16995e7011b35ec7a89fc",
+    "tests/supplier-refunds/setup.mjs": "06d68075bb148f2dc845784c5ddc01f52c140ddc95a6c2924fba1bab6b0f41ca",
+    "tests/supplier-refunds/validate.mjs": "c5ab9d3e338fc3bad58f6c5596c78be4a274743db8d65e98de2d8cc4ba479e46"
+  },
+  "evidence_files_sha256": {
+    "adaptador-etapa8.json": "1a3cde635341422bfbb54138bf9f4b30be044229cde60790e3fbce7736b63f0c",
+    "adaptador-etapa9.json": "47d3718b412569691872dc1134daaaa7f699fcd3d9f5ced2a1e8b88a802243cf",
+    "adaptador-etapas5-7.json": "6b57e6252c82316b04c9433f8f1b65e455f9d342d60e15c542494f498a59d614",
+    "banco.json": "94b35c8528b34b8f0428879e786c32f92d39ffe50e7cd0e04907a7c99f1a8ef7",
+    "banco.log": "a00fae7683f73086a8f525e059e4e31b8e99164816b4a5ed294ec9e952df761d",
+    "baseline/banco.json": "70adcd0434e77391cbb984cb75ce3cf176f62b92a2c67cd171318bd2beef9cff",
+    "baseline/casos-obtidos-novos.json": "4db18ce98c7d7fa1d2bdc7918536fdcdf83f839c42fb5a40f42a03dd52a1a5a4",
+    "baseline/comparacao-ct10.json": "e76ca54c7743233cf0d3e0c8766363db22ae0f823032df59cf43c01167d4176b",
+    "baseline/extratos-referencia.json": "05f9d8a6daf905783c89d715bac5848b80c37524ec003d2cf8820fc4d2923fab",
+    "baseline/ponte.json": "652ecf1eb20f675f3f11716deabbd345e10edc2ca6d4aff5906549e22b5c1fef",
+    "baseline/registros.json": "abcc731f0de29bbe343e61aeb1fb40da5be93a82d8ecb74fed4458d204dd17d2",
+    "casos-obtidos.json": "d3e6bedd642efd5d51b9ab5abbb6e2a904bb9529a293e8b7199e416cae6018c8",
+    "comparacao-ct10.json": "2e107c3f17af5139be0f72d753b20de0ab9e1755c3664fac768c01617b60869b",
+    "comparacao-ct10.log": "2e107c3f17af5139be0f72d753b20de0ab9e1755c3664fac768c01617b60869b",
+    "eslint.log": "45342ca54fc3787657ce6eb4dbe6d4510cbf68d24318d44416c0176ab31ebf4b",
+    "etapa8/adaptadores-anteriores.json": "cc825869967b36a3562652c4642258f3e276db617324f373ced606cb899d6add",
+    "etapa8/anteriores/adaptadores-anteriores.json": "45a3220b898476d200c478338c7d2530077773e7e4d733d7f998c351ebd027c5",
+    "etapa8/anteriores/componentes-casos.json": "3afb24a220b731e0731cb3ac6519cdd52d992f9798a721b395e5334e65de7e16",
+    "etapa8/anteriores/componentes.log": "c1ba0f192d930852362be5bf69764bb2a0f9abe2dedcc7b847755c2446c5da1b",
+    "etapa8/anteriores/fundacao/banco-final.json": "78d1e307aea2f799ddf1bd45057be964bc544eb8f49ac7a032eaa87a7bd61ba3",
+    "etapa8/anteriores/fundacao/casos-iniciais.json": "186c990664662be067f4165a1f63cda52b5aa3715b677dedd7cbee047f0b5e90",
+    "etapa8/anteriores/fundacao/comparacao-casos.json": "b47fed03f79594219cbeb1c653a664d5d28170b1cc1acc2f35f63116e05256f8",
+    "etapa8/anteriores/fundacao/comparacao-casos.log": "b47fed03f79594219cbeb1c653a664d5d28170b1cc1acc2f35f63116e05256f8",
+    "etapa8/anteriores/integracao/baseline.json": "848674a9e6de9851b031cb7398a9bca044e45178ed3d918f4aa0049d5a6e3d15",
+    "etapa8/anteriores/integracao/casos-obtidos.json": "b5241aa13339c7c763c73e2e11519f3e5afce51cbcafd62ab473a880d61d1cd0",
+    "etapa8/anteriores/integracao/integracao.json": "8ffca63b9ba40bacd9d97a23b1be0e6908b6d8128b995f7840724746958099d6",
+    "etapa8/anteriores/liquidacoes.json": "75f1902f31864034046c384758397fdce483f3baabfa37f84e09bcd3e984c2ed",
+    "etapa8/anteriores/render.log": "fcbedeb531e801626f978c5d809c818bdc01a51ab6f74f8d56622227b227e587",
+    "etapa8/banco.json": "6d3e37cb7351068da42098a71652e913dbde515d0827d2198e77e02d205ce0f3",
+    "etapa8/banco.log": "6a80d50fa0e32a837fb96867f5d90e994ba426a2b7eb7e0b2d2707a24edf0a32",
+    "etapa8/componentes-casos.json": "21069fba640ac5e5527fdaf3afd0013b9c5c25e15882ffb41f85f85570d0c522",
+    "etapa8/componentes.log": "3c00fca5dfdad210a0344a471d664afe1cd9d3e7236dc4b4d59ce29844b65413",
+    "etapa8/servidor-tela.log": "b27ad59b6593fa0ffdc331f99d6f09ab0952c73f459761c359d2be3d99ade4ca",
+    "etapa8/tela-exemplo.html": "b8602e1b46f5523faae8f55ddfe7c1962e50ddcc475b9ff97bc9ad47d7942638",
+    "etapa9/banco.json": "556b61dad4e477339689ebec39ffaafe1d3e23a2cabd5dcd929e0c3e0b86d68e",
+    "etapa9/banco.log": "159ac93b6ea3a43870070f324daa956b38ce8b02f8e52ec88354f587adfd438f",
+    "etapa9/casos-componentes-adicionais.json": "bb5aed191164514bbdea539a79c00a2cae959a8f2996c2c038206d9ab076e07f",
+    "etapa9/casos-obtidos-novos.json": "dd18210768addbe987ea3734f2fa66a19f15b4e6499a3c909fd25d9e16cae8c4",
+    "etapa9/comparacao-componentes.json": "3087457b832c9e4017ef39c4e6afc79c0609a2624b71c17485efdaa2b892dcbd",
+    "etapa9/comparacao-componentes.log": "3087457b832c9e4017ef39c4e6afc79c0609a2624b71c17485efdaa2b892dcbd",
+    "etapa9/comparacao-integrais.json": "2837f01d8f74cf6a5f388b0d35c83635c993f4eda9beb6c0a23b0a41ab8e405d",
+    "etapa9/comparacao-integrais.log": "2837f01d8f74cf6a5f388b0d35c83635c993f4eda9beb6c0a23b0a41ab8e405d",
+    "etapa9/componentes-adicionais.json": "4b253e5f920a04e2f39573009add7ae5c85348c8b140ae9de6098a452eb9141f",
+    "etapa9/componentes.log": "b897dc4ef260bfdfe4219c546c0005c25fb85a5092c114b9541fc9a73429af6c",
+    "etapa9/extratos-referencia.json": "9dd79a56e477d6a7728040e44bbb0a418d5fb4a547a9f6afce7caae28795df54",
+    "etapa9/ponte.json": "d07cb641f2bb49a9bf3f63fcf31eb0758b2ead5b5d45bb0b0635e603a5b45d25",
+    "etapa9/registros.json": "63f3d37bf38cc8ab8bab121f9392e388a6157ed380f9596e0fb67fea395ce791",
+    "etapas5-7.log": "864d8c3641638367a29396aebd3551e5c17b122b48d98f86d84d6d7f52dd816b",
+    "execucoes.json": "4fe779fc0593df1a19ee2480a357e41117ac3039aec7c7287d60b953bcb48f37",
+    "matriz-30.json": "e1b430d80d41549b1cc887c3c71a8a51a82b8fe5e625924b164b6b466ce88abf",
+    "rechecagem.json": "1ed20dce0e0c307f2ebcce85c00342ae93c88fd3c9676dbcf201d43b4f00e950",
+    "registros-ct10.json": "00819b204c6be63e901ed1c1aef7047facc7df9de8b38b07c2558654f82ff428",
+    "regressao-81.log": "cc2be74b7a9bc39363885528c360525a4f37bbd1d66217c1618253ed71bebb55",
+    "servidor-tela.log": "92ff4cbc78600119582a0f456a7931837f9bd86051270a96c96618c2d34a439b",
+    "tela-ct10.html": "f25615786070e22f7d3e2c7df2a07e367ca80cc742811744ef42ca0ff065fc7d",
+    "typescript.log": "45342ca54fc3787657ce6eb4dbe6d4510cbf68d24318d44416c0176ab31ebf4b",
+    "verificacao-quadro.json": "7af961027776904ebffbce5eacea18f7e119eb8abd65561e2e74983fa3ca7d32"
+  },
+  "scope_limits": "PostgreSQL descartável sem rede, engenharia parcialmente scaffolded, SSR com transporte/Auth simulados. Não constitui conciliação documental real, auditoria de servidor remoto ou aceite humano."
+}

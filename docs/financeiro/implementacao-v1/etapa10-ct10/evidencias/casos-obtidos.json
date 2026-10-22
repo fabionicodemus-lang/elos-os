@@ -1,0 +1,31 @@
+{
+  "execution_context": {
+    "implementation_version": "6354e59 + Etapa10 CT10 candidate",
+    "executed_at": "2026-10-22T14:39:19.154Z",
+    "environment": "PostgreSQL17 Docker network=none, fontes fictícias e extratos fixos independentes; sem aceite financeiro",
+    "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb"
+  },
+  "cases": [
+    {
+      "id": "CT10",
+      "status": "executado",
+      "actual": {
+        "after_cancellation_V_cents": 0,
+        "after_cancellation_H_imputable_to_current_price_cents": 0,
+        "after_cancellation_C_cents": 0,
+        "after_cancellation_R_cents": 0,
+        "after_cancellation_Q_cents": 0,
+        "refund_right_before_receipt_cents": 1000000,
+        "refund_right_after_receipt_cents": 400000,
+        "historical_gross_outflow_cents": 1000000,
+        "confirmed_refund_cents": 600000,
+        "net_outflow_cents": 400000,
+        "cost_cents": 0
+      },
+      "evidence": [
+        "banco.json",
+        "registros-ct10.json"
+      ]
+    }
+  ]
+}

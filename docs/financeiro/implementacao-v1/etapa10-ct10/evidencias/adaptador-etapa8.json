@@ -1,0 +1,10 @@
+{
+  "original_file": "tests/cashflow/database.mjs",
+  "original_sha256": "fdb4f6cc25906b6a00c8eeb28cb376f00a4a2aed93700f25e3aa7502ea89b696",
+  "adapter_sha256": "6f49a79ca9408d557595c4d72f4b53516f36cca36284813159b3489cfacca890",
+  "changes": [
+    "Instala candidata após bootstrap anterior",
+    "Resolve imports para execução isolada"
+  ],
+  "other_assertions_inputs_expected_preserved": true
+}

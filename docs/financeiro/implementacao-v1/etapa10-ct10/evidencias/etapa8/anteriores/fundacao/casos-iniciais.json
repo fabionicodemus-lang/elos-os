@@ -1,0 +1,236 @@
+{
+  "execution_context": {
+    "implementation_version": "6354e590342ce6015d63a8acf43e00ca9a963fe5+candidate",
+    "executed_at": "2026-10-22T14:39:35.593Z",
+    "environment": "PostgreSQL 17 network=none; interfaces de banco/componentes, sem API Next",
+    "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb"
+  },
+  "cases": [
+    {
+      "id": "CT01",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT02",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT03",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT04",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT05",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT06",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT07",
+      "status": "parcial",
+      "actual": {
+        "after_first_open_principal_cents": 6000000
+      },
+      "evidence": [
+        "initial component_checks.CT07_primeira_parcial"
+      ]
+    },
+    {
+      "id": "CT08",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT09",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT10",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT11",
+      "status": "parcial",
+      "actual": {
+        "rounding_fixture": {
+          "C": 3333,
+          "B": 3334,
+          "A": 3334
+        }
+      },
+      "evidence": [
+        "initial component_checks.CT11_arredondamento"
+      ]
+    },
+    {
+      "id": "CT12",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT13",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT14",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT15",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT16",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT17",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT18",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT19",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT20",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT21",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT22",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT23",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT24",
+      "status": "parcial",
+      "actual": null,
+      "evidence": [
+        "banco-final.json: controles de empresa/entidade/perfil/RPC"
+      ],
+      "limit": "Banco real isolado; não certifica API, cache, exportações, IA ou Storage real."
+    },
+    {
+      "id": "CT25",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT26",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT27",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT28",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT29",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT30",
+      "status": "nao_executado",
+      "actual": null,
+      "evidence": []
+    }
+  ],
+  "component_checks": [
+    {
+      "id": "CT07_primeira_parcial",
+      "expected": 6000000,
+      "actual": 6000000,
+      "passed": true,
+      "evidence": {
+        "open_cents": 6000000,
+        "status": "open",
+        "paid_cents": 4000000
+      },
+      "limit": "Primeiro passo reproduzido; juros/desconto e demais liquidações requerem T18. Não é caso integral."
+    },
+    {
+      "id": "CT11_arredondamento",
+      "expected": {
+        "A_cents": 3334,
+        "B_cents": 3334,
+        "C_cents": 3333,
+        "sum_cents": 10001,
+        "unallocated_cents": 0
+      },
+      "actual": {
+        "C": 3333,
+        "B": 3334,
+        "A": 3334
+      },
+      "passed": true,
+      "limit": "Somente componente monetário; não liquidação e saldos por obra."
+    }
+  ]
+}

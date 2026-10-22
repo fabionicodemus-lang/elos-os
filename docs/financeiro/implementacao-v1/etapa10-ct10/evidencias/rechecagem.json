@@ -1,0 +1,33 @@
+[
+  {
+    "command": [
+      "node",
+      "--test",
+      "tests/supplier-refunds/server.test.mjs"
+    ],
+    "log": "servidor-tela.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npx",
+      "tsc",
+      "--noEmit"
+    ],
+    "log": "typescript.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npx",
+      "eslint",
+      "lib/finance-core/cashflow.mjs",
+      "lib/finance-core/cashflow-server.ts",
+      "app/financeiro/fluxo-de-caixa",
+      "lib/elos-ia/tools.ts",
+      "tests/supplier-refunds"
+    ],
+    "log": "eslint.log",
+    "exit_code": 0
+  }
+]

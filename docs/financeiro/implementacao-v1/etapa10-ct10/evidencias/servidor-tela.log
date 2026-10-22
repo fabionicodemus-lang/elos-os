@@ -1,0 +1,12 @@
+✔ carregador central preserva caixa10.000/6.000 e direito4.000 sem AP/AR comercial (11.942846ms)
+✔ cortes distinguem cancelamento, recebimento e versão de conhecimento (0.454516ms)
+✔ tela real distingue restituição e mantém valor sem data documentada (101.334326ms)
+✔ saldo AP reaberto ou recibo duplicado é erro explícito, não valor ocultado (0.754754ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 516.409593

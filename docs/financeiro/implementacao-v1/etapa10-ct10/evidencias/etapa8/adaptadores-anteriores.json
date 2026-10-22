@@ -1,0 +1,6 @@
+{
+  "assertions_expected_changed": false,
+  "stage7_prior_adapter_sha256": "d781b226b01c3530cf67ef0518f42aef6fddd103330092c6cbd41c8fd5a73276",
+  "stage7_ledger_adapter_sha256": "bfc920a66de5c09e60468e88b5d94b50e5721b1eb4dc67e6764877a93569ba79",
+  "observation_probe_unchanged_from_stage7": true
+}

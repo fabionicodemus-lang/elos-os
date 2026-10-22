@@ -1,0 +1,149 @@
+[
+  {
+    "tag": "CT03",
+    "raw": "[{\"fit_id\":\"P1\",\"transaction_date\":\"2026-10-15\",\"amount\":-3000,\"description\":\"Extrato de referência CT03\"},{\"fit_id\":\"P2\",\"transaction_date\":\"2026-10-20\",\"amount\":-2000,\"description\":\"Extrato de referência CT03\"}]",
+    "sha256": "84f55b7232a4b3ab977fe2969843b8c9f9eb6999ab27bef102d8ea4cd397bad2",
+    "entries": [
+      {
+        "fit_id": "P1",
+        "transaction_date": "2026-10-15",
+        "amount": -3000,
+        "description": "Extrato de referência CT03"
+      },
+      {
+        "fit_id": "P2",
+        "transaction_date": "2026-10-20",
+        "amount": -2000,
+        "description": "Extrato de referência CT03"
+      }
+    ]
+  },
+  {
+    "tag": "CT13",
+    "raw": "[{\"fit_id\":\"AR1\",\"transaction_date\":\"2026-10-18\",\"amount\":4000,\"description\":\"Recebimento referência CT13\"},{\"fit_id\":\"AR2\",\"transaction_date\":\"2026-10-15\",\"amount\":10000,\"description\":\"Recebimento referência CT13\"}]",
+    "sha256": "1086a099317c39627edb46266cdd059523459f3a39cd3f00aeccc429aca33afe",
+    "entries": [
+      {
+        "fit_id": "AR1",
+        "transaction_date": "2026-10-18",
+        "amount": 4000,
+        "description": "Recebimento referência CT13"
+      },
+      {
+        "fit_id": "AR2",
+        "transaction_date": "2026-10-15",
+        "amount": 10000,
+        "description": "Recebimento referência CT13"
+      }
+    ]
+  },
+  {
+    "tag": "CT14-fee",
+    "raw": "[{\"fit_id\":\"CT14-FEE\",\"transaction_date\":\"2026-10-21\",\"amount\":9800,\"description\":\"Crédito líquido CT14\"}]",
+    "sha256": "fed2d8598b32315ae1e4abac54da38f6f4e0e9220a94dd30164a170eb39dd0cc",
+    "entries": [
+      {
+        "fit_id": "CT14-FEE",
+        "transaction_date": "2026-10-21",
+        "amount": 9800,
+        "description": "Crédito líquido CT14"
+      }
+    ]
+  },
+  {
+    "tag": "CT14-barter",
+    "raw": "[{\"fit_id\":\"CT14-BARTER\",\"transaction_date\":\"2026-10-21\",\"amount\":30000,\"description\":\"Parcela dinheiro CT14\"}]",
+    "sha256": "7dd06169c52f5b0acdca3f7cbfaafd5e5cda9ab6c4ca42b6542274ba51fa1459",
+    "entries": [
+      {
+        "fit_id": "CT14-BARTER",
+        "transaction_date": "2026-10-21",
+        "amount": 30000,
+        "description": "Parcela dinheiro CT14"
+      }
+    ]
+  },
+  {
+    "tag": "CT23",
+    "raw": "[{\"fit_id\":\"CT23-P1\",\"transaction_date\":\"2026-10-21\",\"amount\":-10000,\"description\":\"P1 agrupado aprovado\"},{\"fit_id\":\"CT23-P2\",\"transaction_date\":\"2026-10-21\",\"amount\":-6000,\"description\":\"P2 agrupado aprovado\"}]",
+    "sha256": "7e6a851063cafe0b516efab2eb0d2709660377d5e85706f7e3fc4dac77f21da3",
+    "entries": [
+      {
+        "fit_id": "CT23-P1",
+        "transaction_date": "2026-10-21",
+        "amount": -10000,
+        "description": "P1 agrupado aprovado"
+      },
+      {
+        "fit_id": "CT23-P2",
+        "transaction_date": "2026-10-21",
+        "amount": -6000,
+        "description": "P2 agrupado aprovado"
+      }
+    ]
+  },
+  {
+    "tag": "CT22",
+    "raw": "[{\"fit_id\":\"CT22-ADV\",\"transaction_date\":\"2026-10-21\",\"amount\":20000,\"description\":\"Antecipação de referência\"}]",
+    "sha256": "76bbfb7b36c56cac2746036b1f4fabd47d1f75550d15dfc9f59e72e8c547eeaa",
+    "entries": [
+      {
+        "fit_id": "CT22-ADV",
+        "transaction_date": "2026-10-21",
+        "amount": 20000,
+        "description": "Antecipação de referência"
+      }
+    ]
+  },
+  {
+    "tag": "CT06",
+    "raw": "[{\"fit_id\":\"CT06-0\",\"transaction_date\":\"2026-10-21\",\"amount\":-85000,\"description\":\"Componente independente CT06\"},{\"fit_id\":\"CT06-1\",\"transaction_date\":\"2026-10-21\",\"amount\":-5000,\"description\":\"Componente independente CT06\"},{\"fit_id\":\"CT06-2\",\"transaction_date\":\"2026-10-21\",\"amount\":-10000,\"description\":\"Componente independente CT06\"}]",
+    "sha256": "f925836aee8666d82d91e88dd4940b92353dc800f42f6bf668eea26ec78adf34",
+    "entries": [
+      {
+        "fit_id": "CT06-0",
+        "transaction_date": "2026-10-21",
+        "amount": -85000,
+        "description": "Componente independente CT06"
+      },
+      {
+        "fit_id": "CT06-1",
+        "transaction_date": "2026-10-21",
+        "amount": -5000,
+        "description": "Componente independente CT06"
+      },
+      {
+        "fit_id": "CT06-2",
+        "transaction_date": "2026-10-21",
+        "amount": -10000,
+        "description": "Componente independente CT06"
+      }
+    ]
+  },
+  {
+    "tag": "CT10",
+    "raw": "[{\"fit_id\":\"CT10-ADV\",\"transaction_date\":\"2026-10-21\",\"amount\":-10000,\"description\":\"Adiantamento CT10 referência fixa\"}]",
+    "sha256": "8c01286761e5a3c4e24b0dcf7dc9848ba3ea1aa70b45110ecaa969acf3298706",
+    "entries": [
+      {
+        "fit_id": "CT10-ADV",
+        "transaction_date": "2026-10-21",
+        "amount": -10000,
+        "description": "Adiantamento CT10 referência fixa"
+      }
+    ]
+  },
+  {
+    "tag": "CT10",
+    "raw": "[{\"fit_id\":\"CT10-REF\",\"transaction_date\":\"2026-10-22\",\"amount\":6000,\"description\":\"Devolução parcial CT10 referência fixa\"}]",
+    "sha256": "e3aa3671b13ed8a8ade12e94fc093f22593481898f098bafb7b8450a909346d2",
+    "entries": [
+      {
+        "fit_id": "CT10-REF",
+        "transaction_date": "2026-10-22",
+        "amount": 6000,
+        "description": "Devolução parcial CT10 referência fixa"
+      }
+    ]
+  }
+]

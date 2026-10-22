@@ -1,0 +1,12 @@
+✔ carregador real produz os mesmos valores da fixture de banco; original usa fontes congeladas (8.306553ms)
+✔ tela real apresenta origem da previsão, comparação original e insuficiência (110.734136ms)
+✔ obra compartilha conta, preserva movimentos e não herda abertura de cem mil como saldo próprio (1.354032ms)
+✔ consolidado inclui planos de ambas as entidades e não compensa a insuficiência de um titular (2.271652ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 550.444729

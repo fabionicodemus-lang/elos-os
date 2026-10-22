@@ -1,0 +1,11 @@
+{
+  "original_file": "tests/financial-acceptance/database.mjs",
+  "original_sha256": "722af0400b9d099e381d9ce96c263113fad6ea0482b2d567b0d01d692039ba1c",
+  "adapter_sha256": "0e025e964a2bf061fb35a232d5047777b36e05b7f029b293d29653178339c839",
+  "changes": [
+    "Instala candidata após bootstrap anterior",
+    "Resolve imports para execução isolada",
+    "CT10 histórico agora verifica bloqueio da rota defeituosa; expected financeiro permanece intacto e é confrontado no novo teste"
+  ],
+  "other_assertions_inputs_expected_preserved": true
+}

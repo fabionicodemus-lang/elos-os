@@ -1,0 +1,16 @@
+✔ saldo contínuo entre períodos; confirmação usa data do extrato, não data da conferência (3.451514ms)
+✔ conta compartilhada não cria saldo por obra nem copia abertura; saída sem obra fica na entidade (0.302662ms)
+✔ devolução mantém débito histórico e fluxo inverso; conciliação não cria nova liquidação (0.23437ms)
+✔ CT29: restrição, caixa mínimo e amortização já incluída; limite não utilizado não vira caixa (2.826199ms)
+✔ receita comercial estimada é cenário separado e insuficiência diária não some no fechamento mensal (0.815668ms)
+✔ pendência de data, caixa mínimo ou abertura não vira zero nem selo de completude (0.554137ms)
+✔ CT04: cortes efetivos não usam o estado quitado atual em 21/10 nem movem caixa para 24/10 (1.313781ms)
+✔ vínculo nativo reutiliza cobertura do contrato: R 400 + C 600, sem somar 1.400 (1.639699ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 102.17063
