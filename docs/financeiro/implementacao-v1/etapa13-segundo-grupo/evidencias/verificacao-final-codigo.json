@@ -1,0 +1,55 @@
+[
+  {
+    "command": [
+      "node",
+      "--test",
+      "tests/finance-second/core.test.mjs",
+      "tests/finance-second/channels.test.mjs"
+    ],
+    "log": "testes-etapa13.log",
+    "exit_code": 0,
+    "reason": "Conferência final do guard de cobertura entre obras e do reforço do harness"
+  },
+  {
+    "command": [
+      "node",
+      "--test",
+      "tests/finance-core/components.test.mjs",
+      "tests/finance-core/forecast.test.mjs",
+      "tests/finance-core/render.test.mjs",
+      "tests/cashflow/engine.test.mjs",
+      "tests/cashflow/server.test.mjs",
+      "tests/supplier-refunds/server.test.mjs",
+      "tests/finance-partials/server.test.mjs",
+      "tests/finance-partials/actions.test.mjs"
+    ],
+    "log": "regressao-apos-guard-obra.log",
+    "exit_code": 0,
+    "reason": "Conferência final do guard de cobertura entre obras e do reforço do harness"
+  },
+  {
+    "command": [
+      "npx",
+      "eslint",
+      "lib/finance-core/cashflow.mjs",
+      "lib/finance-core/cashflow-server.ts",
+      "lib/elos-ia/tools.ts",
+      "app/financeiro/fluxo-de-caixa/page.tsx",
+      "app/api/financeiro/fluxo-de-caixa/route.ts",
+      "tests/finance-second"
+    ],
+    "log": "eslint.log",
+    "exit_code": 0,
+    "reason": "Conferência final do guard de cobertura entre obras e do reforço do harness"
+  },
+  {
+    "command": [
+      "npx",
+      "tsc",
+      "--noEmit"
+    ],
+    "log": "typescript.log",
+    "exit_code": 0,
+    "reason": "Conferência final do guard de cobertura entre obras e do reforço do harness"
+  }
+]

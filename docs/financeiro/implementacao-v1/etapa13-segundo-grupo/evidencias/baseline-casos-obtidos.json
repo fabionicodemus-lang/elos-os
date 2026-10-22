@@ -1,0 +1,31 @@
+{
+  "execution_context": {
+    "implementation_version": "bdf2f04 — antes da Etapa13",
+    "executed_at": "2026-10-22T19:05:49.355Z",
+    "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+    "environment": "PostgreSQL local Docker, network=none, dados fictícios; JWT SQL simulado, sem Auth/PostgREST real"
+  },
+  "cases": [
+    {
+      "id": "CT24",
+      "status": "executado",
+      "actual": {
+        "canonical_title_count_all_organizations": 3,
+        "UA_visible_total_cents": 100000,
+        "UB_visible_total_cents": 900000,
+        "UG_A1_context_total_cents": 100000,
+        "UG_A2_context_total_cents": 300000,
+        "UG_A_authorized_consolidated_total_cents": 400000,
+        "UG_B_context_total_cents": 900000,
+        "foreign_rows_returned_to_UA": 0,
+        "restricted_same_organization_rows_returned_to_UA": 0,
+        "unauthorized_mutations_committed": 0,
+        "UR_mutations_committed": 0
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "base": "bdf2f04",
+  "type": "Funções reais do commit base com entrada fictícia explícita; não consulta de dados reais",
+  "known_R_cents": 14000000,
+  "contract_separate_cents": 84000000,
+  "unproven_sum_cents": 98000000,
+  "expected_complete": false,
+  "actual_complete": true,
+  "cause": "Ausência de vínculo não gerava exceção se o título já possuía posição certificada",
+  "database_baseline_note": "No banco antes da correção o título sem eventos já tornava complete=false por saldo legado; não confundir as duas causas"
+}

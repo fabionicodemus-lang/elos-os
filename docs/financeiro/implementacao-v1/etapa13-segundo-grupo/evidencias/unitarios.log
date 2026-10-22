@@ -1,0 +1,12 @@
+✔ CT21: título certificado não torna exclusiva a soma com contrato sem vínculo (8.964066ms)
+✔ Vínculo nativo explícito substitui cobertura uma vez, sem adivinhar por valor (0.642645ms)
+✔ Vínculo em outra categoria não certifica cobertura de contrato (0.36373ms)
+✔ Sem contrato ambíguo não se altera a posição de um título (0.218805ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 83.894099

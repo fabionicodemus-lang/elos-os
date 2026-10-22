@@ -1,0 +1,37 @@
+✔ saldo contínuo entre períodos; confirmação usa data do extrato, não data da conferência (2.844792ms)
+✔ conta compartilhada não cria saldo por obra nem copia abertura; saída sem obra fica na entidade (0.291373ms)
+✔ devolução mantém débito histórico e fluxo inverso; conciliação não cria nova liquidação (0.532052ms)
+✔ CT29: restrição, caixa mínimo e amortização já incluída; limite não utilizado não vira caixa (2.801066ms)
+✔ receita comercial estimada é cenário separado e insuficiência diária não some no fechamento mensal (0.409259ms)
+✔ pendência de data, caixa mínimo ou abertura não vira zero nem selo de completude (0.46425ms)
+✔ CT04: cortes efetivos não usam o estado quitado atual em 21/10 nem movem caixa para 24/10 (1.238592ms)
+✔ vínculo nativo reutiliza cobertura do contrato: R 400 + C 600, sem somar 1.400 (1.562273ms)
+✔ carregador real produz os mesmos valores da fixture de banco; original usa fontes congeladas (12.066438ms)
+✔ tela real apresenta origem da previsão, comparação original e insuficiência (151.208904ms)
+✔ obra compartilha conta, preserva movimentos e não herda abertura de cem mil como saldo próprio (1.603645ms)
+✔ consolidado inclui planos de ambas as entidades e não compensa a insuficiência de um titular (2.160614ms)
+✔ CT18: R/C/P exclusivos e AF sai quando encargo é constituído (2.340952ms)
+✔ CT19: ETC independente do orçamento e aditivo proposto não vira compromisso (0.383991ms)
+✔ CT21: desconhecido não vira zero nem Q artificial de 980 mil (0.249101ms)
+✔ CT04: janelas 30/90 cumulativas, hoje e desconhecido separados (1.393252ms)
+✔ CT13: coorte de principal exigível exclui carteira futura e juros (0.608095ms)
+✔ mesma parcial em resumo IA, agenda de relatório e mês financeiro (11.517541ms)
+✔ rateio não elimina A Apropriar; sobrecobertura não vira C zero certificado (0.783275ms)
+✔ resultado comercial usa os mesmos saldos de recebimento e pagamento parciais (2.215185ms)
+✔ nota ligada a contrato sem medição cobre 400: futuro 600, nunca 1000+400 (6.477424ms)
+✔ medição e nota do mesmo escopo usam um vínculo financeiro (1.007137ms)
+✔ vínculo ausente torna cobertura incompleta, sem certificar Q/EAC (0.987328ms)
+✔ medição não reabre desconto já liquidado como saldo artificial (19.637859ms)
+✔ tela AP real apresenta parcialmente pago, saldo 70 mil e novo principal de 70 mil (188.361555ms)
+✔ carregador central preserva caixa10.000/6.000 e direito4.000 sem AP/AR comercial (11.913541ms)
+✔ cortes distinguem cancelamento, recebimento e versão de conhecimento (0.400325ms)
+✔ tela real distingue restituição e mantém valor sem data documentada (102.209363ms)
+✔ saldo AP reaberto ou recibo duplicado é erro explícito, não valor ocultado (0.91405ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1079.334202

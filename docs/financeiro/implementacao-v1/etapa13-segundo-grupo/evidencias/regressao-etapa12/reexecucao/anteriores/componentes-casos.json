@@ -1,0 +1,95 @@
+{
+  "perimeter": "Cálculos puros; não certifica persistência/fluxos completos destes casos",
+  "states": {
+    "CT18": {
+      "states": [
+        {
+          "stage": "A",
+          "R_cents": 0,
+          "C_cents": 0,
+          "P_cents": 10000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "B",
+          "R_cents": 0,
+          "C_cents": 6000000,
+          "P_cents": 4000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "C",
+          "R_cents": 2000000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "D",
+          "R_cents": 1500000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9500000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "E",
+          "R_cents": 1500000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9500000,
+          "AF_cents": 200000,
+          "Q_scenario_cents": 9700000
+        },
+        {
+          "stage": "F",
+          "R_cents": 1700000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9700000,
+          "AF_cents": 0,
+          "Q_scenario_cents": 9700000
+        }
+      ]
+    },
+    "CT19": {
+      "firm_foundation_contract_cents": 55000000,
+      "incurred_cost_cents": 45000000,
+      "ETC_cents": 80000000,
+      "EAC_cents": 125000000,
+      "variance_to_current_budget_cents": 25000000,
+      "variance_percent": "25.00",
+      "firm_commitment_increment_from_unapproved_proposal_cents": 0,
+      "scenario_EAC_if_risk_fully_added_cents": 129000000
+    },
+    "CT21": {
+      "known_obligations_subtotal_cents": 14000000,
+      "contract_amount_shown_separately_cents": 84000000,
+      "Q_cents": null,
+      "EAC_cents": null,
+      "budget_variance_percent": null,
+      "external_coverage_percent": null,
+      "status": "incompleto"
+    },
+    "CT04": {
+      "bucket_fixture": {
+        "R_cents": 2800000,
+        "overdue_cents": 100000,
+        "due_today_cents": 200000,
+        "next_30_days_cents": 300000,
+        "next_90_days_cents": 1200000,
+        "beyond_90_days_cents": 600000,
+        "unknown_due_cents": 700000,
+        "immediate_need_through_30_days_cents": 600000
+      }
+    },
+    "CT13": {
+      "cohort_due_principal_cents": 2000000,
+      "cohort_overdue_principal_cents": 600000,
+      "I19_cohort_principal_delinquency_percent": "30.00"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+[
+  {
+    "command": [
+      "node",
+      "tests/finance-second/database.mjs"
+    ],
+    "log": "banco.log",
+    "exit_code": 0,
+    "reason": "Reforço do harness: contagem canônica consultada, auditoria antes/depois das negações, leituraUR e ausência de IDs das outras entidades nos canais"
+  },
+  {
+    "command": [
+      "node",
+      "--test",
+      "tests/finance-second/core.test.mjs",
+      "tests/finance-second/channels.test.mjs"
+    ],
+    "log": "testes-etapa13.log",
+    "exit_code": 0,
+    "reason": "Reforço do harness: contagem canônica consultada, auditoria antes/depois das negações, leituraUR e ausência de IDs das outras entidades nos canais"
+  },
+  {
+    "command": [
+      "python3",
+      "tests/financeiro/fixtures/comparar_resultados.py",
+      "docs/financeiro/implementacao-v1/etapa13-segundo-grupo/evidencias/casos-obtidos.json",
+      "--only",
+      "CT21",
+      "CT24",
+      "--report",
+      "docs/financeiro/implementacao-v1/etapa13-segundo-grupo/evidencias/comparacao-2.json"
+    ],
+    "log": "comparacao-2.log",
+    "exit_code": 0,
+    "reason": "Reforço do harness: contagem canônica consultada, auditoria antes/depois das negações, leituraUR e ausência de IDs das outras entidades nos canais"
+  }
+]

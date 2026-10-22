@@ -1,0 +1,32 @@
+[
+  {
+    "name": "CT24_tres_identidades_perfis_e_perimetros",
+    "pass": true,
+    "result": {
+      "actual": {
+        "canonical_title_count_all_organizations": 3,
+        "UA_visible_total_cents": 100000,
+        "UB_visible_total_cents": 900000,
+        "UG_A1_context_total_cents": 100000,
+        "UG_A2_context_total_cents": 300000,
+        "UG_A_authorized_consolidated_total_cents": 400000,
+        "UG_B_context_total_cents": 900000,
+        "foreign_rows_returned_to_UA": 0,
+        "restricted_same_organization_rows_returned_to_UA": 0,
+        "unauthorized_mutations_committed": 0,
+        "UR_mutations_committed": 0
+      },
+      "loader_other_entity_contracts": 1,
+      "direct_contract_read_gap": 1
+    }
+  },
+  {
+    "name": "CT21_projecao_sem_cobertura_nao_e_total_certificado",
+    "pass": true,
+    "result": {
+      "projection_complete": false,
+      "outgoing_cents": 98000000,
+      "coverage": null
+    }
+  }
+]

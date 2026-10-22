@@ -1,0 +1,21 @@
+[
+  {
+    "command": [
+      "node",
+      "tests/finance-partials/database.mjs"
+    ],
+    "log": "pos-revisao-obra/etapa12-banco.log",
+    "exit_code": 0,
+    "reason": "Reexecutar caminhos persistidos de caixa/cobertura após o guard de obra, sem modificar expectativas"
+  },
+  {
+    "command": [
+      "node",
+      "tests/finance-partials/replay-prior.mjs",
+      "8"
+    ],
+    "log": "pos-revisao-obra/etapa8-banco.log",
+    "exit_code": 0,
+    "reason": "Reexecutar caminhos persistidos de caixa/cobertura após o guard de obra, sem modificar expectativas"
+  }
+]

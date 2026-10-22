@@ -1,0 +1,11 @@
+✔ CT21: dashboard, exportação e IA conservam140mil e840mil separados; Q/EAC/cobertura null (391.606334ms)
+✔ CT24: canais reais não incluem contrato/obra/empresa estrangeiros na posição de UA (148.469008ms)
+✔ Exportação rejeita K não suportado e período inválido; falha de autorização não vira zero (6.376399ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 908.039732
