@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {pathToFileURL} from 'node:url';
+const root=process.env.FINANCE13_EVIDENCE_DIR??'docs/financeiro/implementacao-v1/etapa13-segundo-grupo/evidencias';
+let source=execFileSync('git',['show','bdf2f04:lib/finance-core/cashflow.mjs'],{encoding:'utf8'});
+source=source.replace(/from\s*(['"])(\.[^'"]+)\1/g,(_m,_q,p)=>'from '+JSON.stringify(pathToFileURL(path.resolve('lib/finance-core',p)).href));
+const {futureCashRows,projectCashflow}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const title={id:'CT21',amount:140000,status:'open',due_date:'2026-11-10',finance_managed:true,finance_open_amount:140000,finance_principal_paid:0,finance_interest_due:0,finance_interest_paid:0,finance_discount:0,finance_noncash:0,finance_advance_applied:0,finance_cash_gross:0,finance_cash_refunded:0,finance_cash_pending:0};
+const future=futureCashRows({payables:[title],scenarioRows:[{id:'C1',scope_key:'C1',source_kind:'contract',source_id:'C1',category:'C',amount_cents:84000000,expected_date:'2026-11-10'}],cutoff:'2026-10-21'});
+const projection=projectCashflow({openingCents:100000000,rows:future.rows,minimumCashCents:0,cutoff:'2026-10-21',through:'2026-12-31',complete:future.complete});
+fs.writeFileSync(root+'/baseline-core.json',JSON.stringify({base:'bdf2f04',type:'Funções reais do commit base com entrada fictícia explícita; não consulta de dados reais',known_R_cents:14000000,contract_separate_cents:84000000,unproven_sum_cents:98000000,expected_complete:false,actual_complete:projection.complete,cause:'Ausência de vínculo não gerava exceção se o título já possuía posição certificada',database_baseline_note:'No banco antes da correção o título sem eventos já tornava complete=false por saldo legado; não confundir as duas causas'},null,2)+'\n');

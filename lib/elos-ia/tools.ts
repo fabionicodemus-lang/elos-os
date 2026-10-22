@@ -510,7 +510,7 @@ async function runContasAReceber(context: ElosIaToolContext, args: ToolArgs): Pr
 async function runFluxoDeCaixa(context: ElosIaToolContext, args: ToolArgs): Promise<ToolResult> {
  const scope=resolveProject(context,args.obra,true);
  const result=await loadCashflow({supabase:context.supabase,companyId:context.companyId,projectId:scope.project?.id??null,entityId:text(args.entidade_id),cutoff:context.today,from:context.today.slice(0,7)+'-01'});
- return {obra:scope.label,entidade_id:result.selectedEntity,corte:context.today,fonte:'Mesmo núcleo do fluxo de caixa',realizado:result.history,projecao:result.projection,projecoes_por_entidade:result.entityProjections,restituicoes_de_fornecedores:result.supplierRefunds,natureza_restituicao:'Recuperação de adiantamento; não é receita operacional',obrigacoes_vencidas:result.payableBuckets,recebiveis_vencidos:result.receivableBuckets,pendencias:result.warnings,sem_obra_aberto_cents:result.unassignedOpenCents,fonte_sem_obra_a_validar_cents:result.unvalidatedUnassignedCents,versao:result.scenario?.id??null};
+ return {obra:scope.label,entidade_id:result.selectedEntity,corte:context.today,fonte:'Mesmo núcleo do fluxo de caixa',indicadores_financeiros:result.financialCoverage,fontes_financeiras:result.financialSources,realizado:result.history,projecao:result.projection,projecoes_por_entidade:result.entityProjections,restituicoes_de_fornecedores:result.supplierRefunds,natureza_restituicao:'Recuperação de adiantamento; não é receita operacional',obrigacoes_vencidas:result.payableBuckets,recebiveis_vencidos:result.receivableBuckets,pendencias:result.warnings,sem_obra_aberto_cents:result.unassignedOpenCents,fonte_sem_obra_a_validar_cents:result.unvalidatedUnassignedCents,versao:result.scenario?.id??null};
 }
 
 function scheduleSummary(schedule: Awaited<ReturnType<typeof loadSchedule>>, context: ElosIaToolContext, args: ToolArgs) {
@@ -893,7 +893,7 @@ async function runResumoDaObra(context: ElosIaToolContext, args: ToolArgs): Prom
     block(context.can("receivables.view"), async () => summarizeReceivables(await loadReceivables(context, project.id), { cashRows:await loadSettlementCash(context.supabase,context.companyId,project.id),today: context.today, limit: 1 }).resumo_geral as ToolResult),
     block(["cashflow.view", "payables.view", "receivables.view"].every(context.can), async () => {
       const result=await loadCashflow({supabase:context.supabase,companyId:context.companyId,projectId:project.id,cutoff:context.today,from:context.today.slice(0,7)+'-01'});
-      return {fonte:'Mesmo núcleo do fluxo de caixa',realizado:result.history,projecao:result.projection,pendencias:result.warnings};
+      return {fonte:'Mesmo núcleo do fluxo de caixa',indicadores_financeiros:result.financialCoverage,fontes_financeiras:result.financialSources,realizado:result.history,projecao:result.projection,pendencias:result.warnings};
     }),
     block(["sales.view", "projects.view"].every(context.can), async () => {
       const { units, sales } = await loadUnitsAndSales(context, project.id);
