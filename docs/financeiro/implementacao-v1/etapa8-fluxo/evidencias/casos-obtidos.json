@@ -1,0 +1,374 @@
+{
+  "execution_context": {
+    "implementation_version": "5e18d7f+etapa8-candidate",
+    "executed_at": "2026-10-22T13:20:32.920Z",
+    "environment": "PostgreSQL 17 network=none, fontes fictícias, sem aceite nominal ou conciliação documental real",
+    "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb"
+  },
+  "cases": [
+    {
+      "id": "CT01",
+      "status": "executado",
+      "actual": {
+        "canonical_title_count": 2,
+        "I03_open_payables_cents": 3000000,
+        "deletions_due_to_absence": 0,
+        "title_78_remains_open_cents": 2000000,
+        "extra_obligations_from_retries": 0
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    },
+    {
+      "id": "CT02",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT03",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT04",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT05",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT06",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT07",
+      "status": "executado",
+      "actual": {
+        "after_first_open_principal_cents": 6000000,
+        "second_principal_cents": 5500000,
+        "final_open_cents": 0,
+        "H_principal_cents": 9500000,
+        "N_discount_cents": 500000,
+        "interest_paid_cents": 200000,
+        "I02_cash_cents": 9700000,
+        "C_cents": 0
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    },
+    {
+      "id": "CT08",
+      "status": "executado",
+      "actual": {
+        "A": {
+          "open_principal_cents": 5500000,
+          "open_interest_cents": 200000,
+          "R_cents": 5700000,
+          "gross_historical_outflow_cents": 9700000,
+          "confirmed_refund_cents": 5700000,
+          "net_outflow_cents": 4000000
+        },
+        "B": {
+          "open_principal_cents": 6000000,
+          "open_interest_cents": 200000,
+          "R_cents": 6200000,
+          "net_outflow_cents": 4000000
+        },
+        "C": {
+          "confirmed_refund_cents": 0,
+          "gross_historical_outflow_cents": 9700000,
+          "cash_awaiting_reallocation_cents": 5700000,
+          "Q_complete": false
+        }
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    },
+    {
+      "id": "CT09",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT10",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT11",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT12",
+      "status": "executado",
+      "actual": {
+        "entity_cost_cents": 1000000,
+        "obra_A_cost_cents": 600000,
+        "unclassified_cost_cents": 400000,
+        "entity_open_payables_cents": 800000,
+        "obra_A_open_payables_cents": 600000,
+        "unclassified_open_payables_cents": 200000,
+        "entity_disbursed_cents": 200000,
+        "unclassified_disbursed_cents": 200000,
+        "automatic_Flow_allocation_cents": 0,
+        "appropriation_on_original_amounts_numerator_cents": 600000,
+        "appropriation_on_original_amounts_denominator_cents": 1000000,
+        "appropriation_on_original_amounts_percent": "60.00",
+        "obra_cost_complete": false
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    },
+    {
+      "id": "CT13",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT14",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT15",
+      "status": "executado",
+      "actual": {
+        "end_2026_10_20": {
+          "A_bank_cents": 2998500,
+          "B_bank_cents": 1000000,
+          "sum_bank_balances_cents": 3998500,
+          "transfer_in_transit_cents": 2000000,
+          "available_bank_cash_cents": 3998500,
+          "external_outflow_cents": 1500
+        },
+        "end_2026_10_21": {
+          "A_bank_cents": 2998500,
+          "B_bank_cents": 3000000,
+          "sum_bank_balances_cents": 5998500,
+          "transfer_in_transit_cents": 0,
+          "external_outflow_cents": 1500,
+          "external_receipt_cents": 0
+        }
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    },
+    {
+      "id": "CT16",
+      "status": "executado",
+      "actual": {
+        "A": {
+          "cash_cents": 3000000,
+          "loan_receivable_cents": 2000000,
+          "loan_disbursement_cents": 2000000
+        },
+        "B": {
+          "cash_cents": 3000000,
+          "loan_liability_cents": 2000000,
+          "financing_inflow_cents": 2000000
+        },
+        "consolidated": {
+          "cash_cents": 6000000,
+          "external_flow_from_loan_cents": 0,
+          "eliminated_asset_cents": 2000000,
+          "eliminated_liability_cents": 2000000
+        },
+        "construction_cost_created_cents": 0,
+        "sales_revenue_created_cents": 0
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    },
+    {
+      "id": "CT17",
+      "status": "executado",
+      "actual": {
+        "Q_before_and_after_cents": 12000000,
+        "ETC_before_and_after_cents": 10000000,
+        "EAC_before_and_after_cents": 12000000,
+        "incurred_cost_unchanged_cents": 2000000,
+        "original_projected_closing_cash_cents": {
+          "2026-10": 13000000,
+          "2026-11": 8000000,
+          "2026-12": 4000000
+        },
+        "reprogrammed_projected_closing_cash_cents": {
+          "2026-10": 8000000,
+          "2026-11": -1000000,
+          "2026-12": 4000000
+        },
+        "original_peak_additional_funding_cents": 0,
+        "reprogrammed_peak_additional_funding_cents": 3000000,
+        "AP_overdue_at_2026_10_31_cents": 2000000,
+        "AR_overdue_at_2026_10_31_cents": 6000000,
+        "original_version_retained": true,
+        "separate_valid_renegotiation_variant": {
+          "effective_event_date": "2026-10-28",
+          "original_due": "2026-10-25",
+          "new_due": "2026-11-15",
+          "R_unchanged_cents": 2000000,
+          "overdue_before_event_at_2026_10_27_cents": 2000000,
+          "overdue_after_event_at_2026_10_31_cents": 0,
+          "Q_unchanged_cents": 12000000
+        }
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    },
+    {
+      "id": "CT18",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT19",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT20",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT21",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT22",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT23",
+      "status": "executado",
+      "actual": {
+        "after_P1_A_open_cents": 400000,
+        "after_P1_B_open_cents": 600000,
+        "final_A_open_cents": 0,
+        "final_B_open_cents": 400000,
+        "final_I03_cents": 400000,
+        "I02_cash_cents": 1600000,
+        "unique_bank_debits": 2,
+        "new_cash_from_reimport_cents": 0
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    },
+    {
+      "id": "CT24",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT25",
+      "status": "executado",
+      "actual": {
+        "initial_P_cents": 300000,
+        "after_title_R_cents": 100000,
+        "after_title_P_cents": 200000,
+        "after_title_Q_cents": 300000,
+        "after_payment_R_cents": 0,
+        "after_payment_P_cents": 200000,
+        "after_payment_Q_cents": 200000,
+        "october_incurred_cost_cents": 100000,
+        "october_cash_cents": 100000,
+        "active_occurrence_count": 3,
+        "duplicate_october_obligations": 0
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    },
+    {
+      "id": "CT26",
+      "status": "executado",
+      "actual": {
+        "complete": {
+          "unique_count": 5,
+          "total_cents": 1500000,
+          "external_coverage_percent": "100.00"
+        },
+        "failed_page_2": {
+          "known_unique_count": 2,
+          "known_subtotal_cents": 300000,
+          "known_loaded_coverage_percent": "40.00",
+          "certified_total_cents": null,
+          "complete": false
+        },
+        "after_retry": {
+          "unique_count": 5,
+          "total_cents": 1500000,
+          "duplicate_obligations": 0
+        },
+        "repeated_cursor_detected": true
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    },
+    {
+      "id": "CT27",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT28",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT29",
+      "status": "não_executado",
+      "actual": null,
+      "evidence": []
+    },
+    {
+      "id": "CT30",
+      "status": "executado",
+      "actual": {
+        "open_payable_cents": 0,
+        "principal_settled_cents": 100000,
+        "refund_receivable_cents": 20000,
+        "confirmed_cash_outflow_cents": 120000,
+        "unexplained_negative_balance_cents": 0,
+        "second_allocation_mutations": 0
+      },
+      "evidence": [
+        "banco.json; anteriores/liquidacoes.json; anteriores/integracao/integracao.json"
+      ]
+    }
+  ]
+}

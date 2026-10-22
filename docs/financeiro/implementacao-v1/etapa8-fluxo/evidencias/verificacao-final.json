@@ -1,0 +1,132 @@
+{
+  "verified_at_utc": "2026-10-22T13:31:00.090888+00:00",
+  "branch": "feat/financeiro-etapa8-fluxo",
+  "implementation_commit": "6ec4f479046a36a9922b5a778db1ecbe6c70ff32",
+  "verified_ancestors": [
+    "494c55c",
+    "95d659e",
+    "3daa96e",
+    "5e18d7f"
+  ],
+  "prior_stages_expected_and_historical_evidence_unchanged": true,
+  "normative_docx_sha256": "30f19b5ef98157d72c32a9c471c8893bac3b17a60167d6a417a346c6efb36c28",
+  "approved_cases_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+  "source_files_sha256": {
+    ".github/workflows/finance-foundation.yml": "3d1f887ced4fea3b4d74a9e3c37323ad4206b7e4d1d32456b7532ed2f272fd9d",
+    "app/financeiro/contas-a-pagar/actions.ts": "b73595c919b04e2234e9be58d0a9c11dd12633ef877f1afad9ea12283807a788",
+    "app/financeiro/contas-a-pagar/page.tsx": "2f2ed877892d18c0de143b938370ef348260222808e3b44bbee397f1711e9a74",
+    "app/financeiro/fluxo-de-caixa/actions.ts": "7f92124820f61390e13f4e2efbfdc90cd62cfbb148571374d3737405dd7f4ccf",
+    "app/financeiro/fluxo-de-caixa/page.tsx": "5e225da55dd0b88a7189c8745cddd1fce761ab35320b4abafdc08e879c039ff6",
+    "lib/elos-ia/tools.ts": "8a17e882f9f007714c641f3bce7f5e51f5493d08d5d5dcb6e05fd300a25830d9",
+    "lib/finance-core/cashflow-server.ts": "f25eefdadd64e2505c46fcbc7f015888890996ce0e207b65f2d491ffe80f2276",
+    "lib/finance-core/cashflow.d.mts": "0d8640e8db6a1cd6dfb488ea9e705b3f387893e94441336eafa74fcd6b42bf13",
+    "lib/finance-core/cashflow.mjs": "2302efb8f92f352c5c0d9e80911ed1b24929eaf0bd62a72168c324bf1153778f",
+    "lib/finance-core/coverage.d.mts": "137a2f4ec19d1c1a566b41dde4fb59fe86e30fe60166bc704026ae57a748e612",
+    "lib/finance-core/coverage.mjs": "7edef244eb3ffcb292ad6b132890e45f331889be321a340c0be0a569b4b12fde",
+    "lib/finance-core/ledger-position.d.mts": "9ac4284308571cc79f3a561dc56db3cc590d5ae5567034a59b1bddb9e48078a3",
+    "lib/finance-core/ledger-position.mjs": "2bf6472f87e7fe3d2afc0ae0c40265f6d8cd9f1e4d38e172f369e1b740eabf19",
+    "lib/forecast/server.ts": "7769fe5271fed25bc85ac02f46505f20579de708b48d6c244ce3857d7d3e2680",
+    "package.json": "6b64fa545953272c30e10259ff1818cb476eb19ba6cd592a3272da960b8abf0f",
+    "supabase/migrations/20261022100000_entity_obligations.sql": "bb6bdccd52a629e753278d3575b6d044580fcd3f86e70b61d6f0a65a0a828fc4",
+    "supabase/migrations/20261022110000_cashflow_versions.sql": "ccab9a56c51e0d25707533f7a69f0e21cc17436bc85359fb49a47664aaa12629",
+    "supabase/migrations/20261022120000_cash_transfers.sql": "90fb2c01d3f6ecc00401132a1b9fe0cd78aa05334e79f296c8ee8228bdf725e7",
+    "tests/cashflow/compare.mjs": "2480934e82ea66a9d0739f8d4ba5ad862debeb2cd78f5512b433c34d4e433f94",
+    "tests/cashflow/database.mjs": "fdb4f6cc25906b6a00c8eeb28cb376f00a4a2aed93700f25e3aa7502ea89b696",
+    "tests/cashflow/engine.test.mjs": "112262c977991bc9efc37533e9b6dc10c88abbed82926d8b9d4c528b7cc75433",
+    "tests/cashflow/prior-stages.mjs": "9626648e2f3b2ceffb77161740e760d47186b3184305663a6bc8a435576911fc",
+    "tests/cashflow/server.test.mjs": "9cc18e805047b2184db54202d0ac536b128adcc207d42dfc53331e93470eb1cb",
+    "tests/cashflow/setup.mjs": "e2a43b0069c326a06c1b8a017154372c3fdf3aafcf46cee386f626aa9d17b28a",
+    "tests/cashflow/validate.mjs": "ad42990d56ed8e1cdc55850d0481eae3961be9c22fe8f0ecf764d0e741781796"
+  },
+  "evidence_files_sha256": {
+    "adaptacao-casos.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "adaptadores-anteriores.json": "876361f2d923d3931a9f21c1d50ad70618970cfbc39c4c6ec6e51a4627bb7bc1",
+    "anteriores/adaptadores-anteriores.json": "45a3220b898476d200c478338c7d2530077773e7e4d733d7f998c351ebd027c5",
+    "anteriores/componentes-casos.json": "3afb24a220b731e0731cb3ac6519cdd52d992f9798a721b395e5334e65de7e16",
+    "anteriores/componentes.log": "cfbeea6ff331006c784abaa65a98cee3ba9223bb003d89c114d40bdb0dba57c6",
+    "anteriores/fundacao/banco-final.json": "7e69ebf9052e38fd5c9a6921793164ea78d1d7bad18851e354285b36c8fc042a",
+    "anteriores/fundacao/casos-iniciais.json": "d38db966c728ce25e97eef66d0aaf29ea84c619497437ad940d1079b3aac4520",
+    "anteriores/fundacao/comparacao-casos.json": "b47fed03f79594219cbeb1c653a664d5d28170b1cc1acc2f35f63116e05256f8",
+    "anteriores/fundacao/comparacao-casos.log": "b47fed03f79594219cbeb1c653a664d5d28170b1cc1acc2f35f63116e05256f8",
+    "anteriores/integracao/baseline.json": "848674a9e6de9851b031cb7398a9bca044e45178ed3d918f4aa0049d5a6e3d15",
+    "anteriores/integracao/casos-obtidos.json": "be0815dc30d88bd20dc4b643c55b5f0290cde4edcec200933d8435bd97dcd749",
+    "anteriores/integracao/integracao.json": "ff7ef49f6d2b7a8f8fce6e9909ad63b92cbc4359324d9f8b30c94c90f3b8a0fb",
+    "anteriores/liquidacoes.json": "f3e88349fd45dfef82aede857fbcb5500ddadee16229f3c4f9d01d4c74440efa",
+    "anteriores/render.log": "921751d69e0595735f069d02cd13ada9b3770e572471c5c978439621ce3ccbf3",
+    "banco.json": "62fd32761e41517c0f691570b6568818861b315de8854db3d2dfe8bae69f3d07",
+    "banco.log": "6a80d50fa0e32a837fb96867f5d90e994ba426a2b7eb7e0b2d2707a24edf0a32",
+    "casos-componentes.json": "b9a349ccec966a1d680750b66329be4a039913967b2e108bfc8e9ac520db1c1c",
+    "casos-obtidos.json": "6310b5e40726c338b56adeae2ff11c7f608b7a05776ef63d7f6c9c466340b692",
+    "comparacao-componentes.json": "28470ccf0fce70a829a0ffe9a35fd3825384e1b2c3adb1e4911c6f2c50682834",
+    "comparacao-componentes.log": "28470ccf0fce70a829a0ffe9a35fd3825384e1b2c3adb1e4911c6f2c50682834",
+    "comparacao-integrais.json": "e16573f6722c376a394f37c14c2dd66ecb19b4d41e7923b528ac60f80a70ba45",
+    "comparacao-integrais.log": "e16573f6722c376a394f37c14c2dd66ecb19b4d41e7923b528ac60f80a70ba45",
+    "componentes-casos.json": "21069fba640ac5e5527fdaf3afd0013b9c5c25e15882ffb41f85f85570d0c522",
+    "componentes.log": "d29019e3a0dd2e0badfd60d6f7c1cb9c6538b5a6e2b1e2e0efbe88012cc466c7",
+    "eslint.log": "45342ca54fc3787657ce6eb4dbe6d4510cbf68d24318d44416c0176ab31ebf4b",
+    "etapas-anteriores.log": "864d8c3641638367a29396aebd3551e5c17b122b48d98f86d84d6d7f52dd816b",
+    "execucoes.json": "22145770060a6302573614358fe21a56a587e4e33c9ab72c3fe062c4c059199d",
+    "matriz-30.json": "8634fcdaf0d48fb1d780274742eb0fe51614a9d8731359862b4f7c9524e9fdf0",
+    "rechecagem-final.json": "3ac3706ab05dd60edd51fa40a08cb732f2481716a40da7b437189a5bf0565b83",
+    "regressao-81.log": "dabda6dafff11fb1345c18d177d303a36654f90c703dc44c0b7ffa09bfd9bd80",
+    "servidor-tela.log": "429d8a35ae3905137cc9b2d31f06f5ef4a10be797df9bafa7ee7de1592a4ccf0",
+    "tela-exemplo.html": "ab2a7f74332879cc1327be0ba955c57dcaca2fd987af2a6d1ff056ad5de6fd57",
+    "typescript.log": "45342ca54fc3787657ce6eb4dbe6d4510cbf68d24318d44416c0176ab31ebf4b",
+    "verificacao-quadro.json": "f8ea39e2e82c12f59cf980162c92a01aa8f535e4b71a5c1ca838b5ff0da055cd"
+  },
+  "test_results": {
+    "anteriores/fundacao/banco-final.json": {
+      "passed": 25,
+      "failed": 0
+    },
+    "anteriores/integracao/integracao.json": {
+      "passed": 24,
+      "failed": 0
+    },
+    "anteriores/liquidacoes.json": {
+      "passed": 16,
+      "failed": 0
+    },
+    "banco.json": {
+      "passed": 8,
+      "failed": 0
+    },
+    "comparacao-integrais.json": {
+      "passed": 11
+    },
+    "comparacao-componentes.json": {
+      "passed": 5
+    },
+    "componentes.log": {
+      "passed": 8,
+      "failed": 0
+    },
+    "servidor-tela.log": {
+      "passed": 4,
+      "failed": 0
+    },
+    "anteriores/componentes.log": {
+      "passed": 12,
+      "failed": 0
+    },
+    "anteriores/render.log": {
+      "passed": 1,
+      "failed": 0
+    },
+    "regressao-81.log": {
+      "passed": 81,
+      "failed": 0
+    }
+  },
+  "case_coverage": {
+    "Integralmente aprovado no perímetro isolado": 11,
+    "Parcialmente coberto": 18,
+    "Não executado": 1
+  },
+  "financial_homologation": false,
+  "production_writes_performed": false,
+  "remote_koper_calls_performed": false,
+  "production_statement_basis": "Somente arquivos locais e PostgreSQL Docker descartável --network none; nenhuma migração, implantação ou escrita remota. Não constitui auditoria de servidor remoto.",
+  "no_fixture_containers_left_running": true,
+  "legacy_runner_metadata": "Rótulos históricos preservados; implementation_commit e hashes identificam a candidata efetivamente testada."
+}

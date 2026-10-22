@@ -1,0 +1,456 @@
+[
+  {
+    "id": "CT01",
+    "title": "Importação repetida e arquivos de cobertura parcial",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "Banco/importação: 3 repetições, recorte parcial, identidade, 30.000 abertos.",
+    "evidence": "anteriores/integracao/integracao.json; ../../etapa7-calculos/evidencias/comparacao-integrais.json",
+    "task_ids": [
+      "T01",
+      "T03",
+      "T04",
+      "T09",
+      "T10",
+      "T11",
+      "T12",
+      "T13",
+      "T14",
+      "T31",
+      "T43",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT02",
+    "title": "Nova versão do mesmo título e preservação do corte histórico",
+    "status": "Parcialmente coberto",
+    "observed": "Revisões/reimportação passam; posição histórica completa por corte ainda não executada.",
+    "evidence": "anteriores/integracao/integracao.json",
+    "task_ids": [
+      "T03",
+      "T04",
+      "T07",
+      "T08",
+      "T10",
+      "T13",
+      "T37",
+      "T43",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT03",
+    "title": "Pagamento parcial e conciliação posterior sem novo caixa",
+    "status": "Parcialmente coberto",
+    "observed": "Parcial/replay preservam saldo e caixa; conciliação posterior por extrato do caso não executada. Leitura de saldo/eventos e vínculos bancários exercitada; extrato/caso completo permanece pendente.",
+    "evidence": "anteriores/liquidacoes.json",
+    "task_ids": [
+      "T03",
+      "T12",
+      "T18",
+      "T19",
+      "T32",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT04",
+    "title": "Competência emissão vencimento caixa conciliação e limites de horizonte",
+    "status": "Parcialmente coberto",
+    "observed": "Oráculo de datas e faixas completo em componente: aberto/vencido em 21; caixa em 22, sem novo caixa em 24. Persistência econômica integral do caso ainda pendente.",
+    "evidence": "componentes-casos.json; comparacao-componentes.json",
+    "task_ids": [
+      "T02",
+      "T03",
+      "T07",
+      "T30",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT05",
+    "title": "Adiantamento antes da execução e aplicação sem segundo abatimento",
+    "status": "Parcialmente coberto",
+    "observed": "Adiantamento AP aplicado sem segundo caixa, disponibilidade e reversão testadas; execução econômica do caso completo pendente.",
+    "evidence": "anteriores/liquidacoes.json",
+    "task_ids": [
+      "T03",
+      "T20",
+      "T26",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT06",
+    "title": "Retenção contratual e tributo retido sem soma do documento pai",
+    "status": "Parcialmente coberto",
+    "observed": "Documento nativo cobre contrato sem somá-lo novamente; separação integral pai/retenção/tributos não testada.",
+    "evidence": "anteriores/componentes.log",
+    "task_ids": [
+      "T03",
+      "T16",
+      "T21",
+      "T26",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT07",
+    "title": "Parciais juros e desconto com componentes separados",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "Sequência aprovada: 40.000 + 55.000 principal + 2.000 juros − 5.000 desconto; caixa 97.000, saldo 0. Exemplo 30/70 e tela AP passam.",
+    "evidence": "anteriores/liquidacoes.json; anteriores/render.log; ../../etapa7-calculos/evidencias/comparacao-integrais.json",
+    "task_ids": [
+      "T03",
+      "T06",
+      "T18",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT08",
+    "title": "Estorno de liquidação e devolução bancária são eventos distintos",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "Variantes A/B/C: R 57.000/62.000; devolução 57.000 somente com prova fictícia; sem devolução, 57.000 pendentes sem reescrever caixa.",
+    "evidence": "anteriores/liquidacoes.json; ../../etapa7-calculos/evidencias/comparacao-integrais.json",
+    "task_ids": [
+      "T03",
+      "T08",
+      "T12",
+      "T23",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT09",
+    "title": "Cancelamento documental e substituição de medição por nota",
+    "status": "Parcialmente coberto",
+    "observed": "Nota e medição vinculadas não duplicam saldo; cancelamento/substituição integral não executado.",
+    "evidence": "anteriores/componentes.log",
+    "task_ids": [
+      "T03",
+      "T16",
+      "T22",
+      "T24",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT10",
+    "title": "Cancelamento econômico após pagamento e restituição parcial",
+    "status": "Não executado",
+    "observed": "Cancelamento econômico após pagamento e restituição parcial do caso completo pendentes.",
+    "evidence": "—",
+    "task_ids": [
+      "T03",
+      "T23",
+      "T24",
+      "T33",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT11",
+    "title": "Rateio monetário parcial e arredondamento conservativo",
+    "status": "Parcialmente coberto",
+    "observed": "Rateio parcial, resíduo e devolução agrupada conservam centavos; ledger financeiro multiobra integral pendente.",
+    "evidence": "../../etapa7-calculos/evidencias/regressao-81.log; anteriores/liquidacoes.json; anteriores/componentes.log",
+    "task_ids": [
+      "T02",
+      "T03",
+      "T06",
+      "T17",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT12",
+    "title": "Título sem obra preservado no total da entidade",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "Entidade/fonte/fornecedor/obrigação validados explicitamente; pagamento e conciliação de 2.000 sem obra. Entidade: custo dado/comprovado na fixture 10.000, aberto 8.000; obra A 6.000; sem obra: custo 4.000, aberto 2.000 e desembolso 2.000; apropriação original 60%. Sem padrão Flow.",
+    "evidence": "banco.json; comparacao-integrais.json",
+    "task_ids": [
+      "T03",
+      "T15",
+      "T17",
+      "T38",
+      "T43",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT13",
+    "title": "Recebimento atrasado parcial e inadimplência da coorte",
+    "status": "Parcialmente coberto",
+    "observed": "Coorte de principal 20.000, vencido 6.000, 30%; parcial AR passa. UI/coorte e caso integral ainda pendentes.",
+    "evidence": "anteriores/componentes-casos.json; anteriores/liquidacoes.json",
+    "task_ids": [
+      "T03",
+      "T31",
+      "T32",
+      "T34",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT14",
+    "title": "Recebimento líquido com tarifa e permuta sem caixa fictício",
+    "status": "Parcialmente coberto",
+    "observed": "Recebimento parcial e tarifa: direito 10.000, caixa 9.800. Baixa sem caixa disponível; permuta integral do caso não executada.",
+    "evidence": "anteriores/liquidacoes.json",
+    "task_ids": [
+      "T03",
+      "T19",
+      "T32",
+      "T33",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT15",
+    "title": "Transferência própria com tarifa e ponta em trânsito",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "Aberturas 50.000/10.000 comprovadas na fixture. Dia20: banco39.985 + trânsito20.000; dia21: banco59.985 e trânsito0. Tarifa15 é única saída externa. Pontas e tarifa vinculadas a extratos fictícios.",
+    "evidence": "banco.json; comparacao-integrais.json",
+    "task_ids": [
+      "T03",
+      "T19",
+      "T35",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT16",
+    "title": "Mútuo entre entidades e eliminação apenas no consolidado autorizado",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "Mútuo documentado20.000: A/B fecham30.000 cada. Consolidado autorizado60.000; zero fluxo externo do mútuo; registros individuais preservados. Natureza/direitos no evento, sem presumir DFC contábil ou criar receita/custo.",
+    "evidence": "banco.json; comparacao-integrais.json",
+    "task_ids": [
+      "T03",
+      "T36",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT17",
+    "title": "Reprogramação de previsão sem reescrever execução ou vencimento",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "Versões persistidas e fontes congeladas. Original130.000/80.000/40.000; reprogramado80.000/−10.000/40.000; necessidade0→30.000. Vencimentos permanecem até acordo separado; variante de renegociação e posição anterior passam. Incorrido20.000 é fato fixo da fixture.",
+    "evidence": "banco.json; comparacao-integrais.json; servidor-tela.log",
+    "task_ids": [
+      "T03",
+      "T29",
+      "T34",
+      "T39",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT18",
+    "title": "Cobertura da previsão ao contrato ao título e encargo futuro",
+    "status": "Parcialmente coberto",
+    "observed": "Todos os valores A–F passam em funções puras; loader nativo elimina nota+contrato; persistência da previsão descoberta/AF ainda incompleta. P→C e cronograma físico persistidos em controle adicional; não promove todos os estados integrais do caso.",
+    "evidence": "anteriores/componentes-casos.json; ../../etapa7-calculos/evidencias/comparacao-componentes.json; anteriores/componentes.log",
+    "task_ids": [
+      "T03",
+      "T25",
+      "T26",
+      "T28",
+      "T30",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT19",
+    "title": "Aditivo aprovado e previsão de estouro sem residual artificial",
+    "status": "Parcialmente coberto",
+    "observed": "Oráculo completo em função pura: ETC 800.000, EAC 1.250.000, desvio 25%; integração de reestimativa/aditivo persistidos pendente.",
+    "evidence": "anteriores/componentes-casos.json; ../../etapa7-calculos/evidencias/comparacao-componentes.json",
+    "task_ids": [
+      "T03",
+      "T25",
+      "T27",
+      "T28",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT20",
+    "title": "Correção de período fechado com duas posições reproduzíveis",
+    "status": "Parcialmente coberto",
+    "observed": "Período bancário fechado bloqueia liquidação/estorno; duas posições históricas reproduzíveis ainda não entregues.",
+    "evidence": "anteriores/fundacao/banco-final.json; anteriores/integracao/integracao.json",
+    "task_ids": [
+      "T02",
+      "T03",
+      "T07",
+      "T08",
+      "T37",
+      "T43",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT21",
+    "title": "Dados incompletos não se tornam zero ou total validado",
+    "status": "Parcialmente coberto",
+    "observed": "Oráculo completo do cálculo puro passa, Q/EAC null; loader marca vínculo ausente. Conciliação documental integral pendente. Abertura/restrição sem prova gera saldo não validado, data ausente fica explícita; projeção por entidade evita compensação indevida.",
+    "evidence": "anteriores/componentes-casos.json; ../../etapa7-calculos/evidencias/comparacao-componentes.json; anteriores/componentes.log",
+    "task_ids": [
+      "T01",
+      "T03",
+      "T09",
+      "T11",
+      "T12",
+      "T15",
+      "T27",
+      "T30",
+      "T33",
+      "T38",
+      "T40",
+      "T41",
+      "T44",
+      "T45"
+    ]
+  },
+  {
+    "id": "CT22",
+    "title": "Adiantamento de cliente e entradas futuras sem abatimento global repetido",
+    "status": "Parcialmente coberto",
+    "observed": "Crédito antecipado tipado por escopo/contraparte e aplicação controlada existem; adiantamento AR completo do caso não executado.",
+    "evidence": "anteriores/liquidacoes.json; migração candidata",
+    "task_ids": [
+      "T03",
+      "T20",
+      "T33",
+      "T34",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT23",
+    "title": "Pagamento agrupado em vários títulos e múltiplas liquidações",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "Dois débitos: 10.000 + 6.000; A quitado, B 4.000; repetição sem caixa adicional.",
+    "evidence": "anteriores/liquidacoes.json; ../../etapa7-calculos/evidencias/comparacao-integrais.json",
+    "task_ids": [
+      "T03",
+      "T10",
+      "T16",
+      "T18",
+      "T19",
+      "T32",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT24",
+    "title": "Isolamento entre organizações e autorização entre empresas",
+    "status": "Parcialmente coberto",
+    "observed": "RLS entre organizações/entidades/perfis, ledger e proposta IA executada estrangeira bloqueados; cenário completo do consolidado não executado. Etapa8 testa cenários/transferências/cobertura e titular sem obra; Auth/browser e todos os canais ainda pendentes.",
+    "evidence": "anteriores/fundacao/banco-final.json; anteriores/integracao/integracao.json; anteriores/liquidacoes.json",
+    "task_ids": [
+      "T01",
+      "T03",
+      "T04",
+      "T05",
+      "T10",
+      "T14",
+      "T16",
+      "T31",
+      "T36",
+      "T40",
+      "T41",
+      "T42",
+      "T43",
+      "T44",
+      "T45"
+    ]
+  },
+  {
+    "id": "CT25",
+    "title": "Recorrência mensal substituída pelo título da mesma ocorrência",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "P3.000→R1.000+P2.000→P2.000 após pagamento conciliado. Ocorrência e vínculo imutáveis; reimportações documentadas preservam título e não recriam previsão ou caixa.",
+    "evidence": "banco.json; comparacao-integrais.json",
+    "task_ids": [
+      "T03",
+      "T28",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT26",
+    "title": "Paginação completa e falha no meio da extração",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "Paginação completa, falha intermediária e retry passam.",
+    "evidence": "anteriores/integracao/integracao.json; ../../etapa7-calculos/evidencias/comparacao-integrais.json",
+    "task_ids": [
+      "T01",
+      "T03",
+      "T09",
+      "T10",
+      "T11",
+      "T14",
+      "T38",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT27",
+    "title": "Estoque pago e consumo econômico sem nova previsão de caixa",
+    "status": "Parcialmente coberto",
+    "observed": "Pagamento sem prova econômica separado do incorrido; execução integral estoque/consumo ainda não testada.",
+    "evidence": "../../etapa7-calculos/evidencias/regressao-81.log; lib/cost-vs-budget/server.ts",
+    "task_ids": [
+      "T03",
+      "T22",
+      "T28",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT28",
+    "title": "Cobertura integrada com adiantamento retenção e escopo descoberto",
+    "status": "Parcialmente coberto",
+    "observed": "Componentes isolados de cobertura/adiantamento passam; integração conjunta com retenções e escopo descoberto pendente.",
+    "evidence": "anteriores/componentes.log; anteriores/liquidacoes.json",
+    "task_ids": [
+      "T03",
+      "T20",
+      "T21",
+      "T26",
+      "T28",
+      "T30",
+      "T40",
+      "T41",
+      "T44",
+      "T45"
+    ]
+  },
+  {
+    "id": "CT29",
+    "title": "Disponibilidade restrições e financiamento contado uma vez",
+    "status": "Parcialmente coberto",
+    "observed": "Oráculo puro completo: banco120.000−restrição20.000=100.000 disponível; finais40.000/−30.000; necessidade50.000. Limite não sacado70.000 não entra; amortização20.000 já incluída não é repetida. Agenda integral de financiamento persistido/documentos reais ainda não homologada.",
+    "evidence": "componentes-casos.json; comparacao-componentes.json",
+    "task_ids": [
+      "T03",
+      "T39",
+      "T44"
+    ]
+  },
+  {
+    "id": "CT30",
+    "title": "Liquidação excedente identificada como crédito",
+    "status": "Integralmente aprovado no perímetro isolado",
+    "observed": "1.200 não liquida silenciosamente 1.000: excesso 200 exige classificação/evidência. Saldo 0, crédito 200, replay 0 mutações.",
+    "evidence": "anteriores/liquidacoes.json; ../../etapa7-calculos/evidencias/comparacao-integrais.json",
+    "task_ids": [
+      "T03",
+      "T06",
+      "T18",
+      "T44"
+    ]
+  }
+]

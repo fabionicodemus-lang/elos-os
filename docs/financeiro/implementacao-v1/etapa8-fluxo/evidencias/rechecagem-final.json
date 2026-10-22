@@ -1,0 +1,44 @@
+[
+  {
+    "command": [
+      "npx",
+      "tsc",
+      "--noEmit"
+    ],
+    "log": "typescript.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "node",
+      "--test",
+      "tests/finance-core/components.test.mjs",
+      "tests/finance-core/forecast.test.mjs"
+    ],
+    "log": "anteriores/componentes.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "node",
+      "--test",
+      "tests/cashflow/server.test.mjs"
+    ],
+    "log": "servidor-tela.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npx",
+      "eslint",
+      "lib/finance-core",
+      "lib/forecast/server.ts",
+      "app/financeiro/fluxo-de-caixa",
+      "app/financeiro/contas-a-pagar",
+      "lib/elos-ia/tools.ts",
+      "tests/cashflow"
+    ],
+    "log": "eslint.log",
+    "exit_code": 0
+  }
+]
