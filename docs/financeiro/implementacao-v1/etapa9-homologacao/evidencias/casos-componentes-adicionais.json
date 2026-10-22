@@ -1,0 +1,48 @@
+{
+  "execution_context": {
+    "implementation_version": "c72ec54 + sondas Etapa9",
+    "executed_at": "2026-10-22T13:57:49.700Z",
+    "environment": "Funções puras; persistência/integração não homologadas",
+    "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb"
+  },
+  "cases": [
+    {
+      "id": "CT02",
+      "status": "executado",
+      "actual": {
+        "canonical_title_count": 1,
+        "original_snapshot_open_cents": 1000000,
+        "revised_snapshot_open_cents": 1200000,
+        "documented_bridge_cents": 200000,
+        "at_T_2026_10_21_K_2026_10_20_open_cents": 1000000
+      },
+      "evidence": [
+        "componentes-adicionais.json"
+      ]
+    },
+    {
+      "id": "CT11",
+      "status": "executado",
+      "actual": {
+        "proportional_fixture": {
+          "cost_A_cents": 600000,
+          "cost_B_cents": 400000,
+          "cash_A_cents": 180000,
+          "cash_B_cents": 120000,
+          "remaining_A_cents": 420000,
+          "remaining_B_cents": 280000
+        },
+        "rounding_fixture": {
+          "A_cents": 3334,
+          "B_cents": 3334,
+          "C_cents": 3333,
+          "sum_cents": 10001,
+          "unallocated_cents": 0
+        }
+      },
+      "evidence": [
+        "componentes-adicionais.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "verified_at": "2026-10-22T14:03:00.687266+00:00",
+  "branch": "test/financeiro-etapa9-homologacao",
+  "test_implementation_commit": "a7a2b1367155248c06f507459c5cea914c9254a4",
+  "operational_base_commit": "c72ec54bd6de3b73a5268a846c9f2e5befd93423",
+  "verified_ancestors": [
+    "494c55c",
+    "95d659e",
+    "3daa96e",
+    "5e18d7f",
+    "6ec4f47",
+    "c72ec54"
+  ],
+  "operational_modules_migrations_previous_tests_evidence_unchanged": true,
+  "expected_and_inputs_unchanged": true,
+  "rule_sha256": "30f19b5ef98157d72c32a9c471c8893bac3b17a60167d6a417a346c6efb36c28",
+  "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+  "test_results": {
+    "reexecucao/anteriores/fundacao/banco-final.json": {
+      "observations_passed": 25
+    },
+    "reexecucao/anteriores/integracao/integracao.json": {
+      "observations_passed": 24
+    },
+    "reexecucao/anteriores/liquidacoes.json": {
+      "observations_passed": 16
+    },
+    "reexecucao/banco.json": {
+      "observations_passed": 8
+    },
+    "banco.json": {
+      "observations_passed": 7
+    },
+    "reexecucao/componentes.log": {
+      "passed": 8
+    },
+    "reexecucao/servidor-tela.log": {
+      "passed": 4
+    },
+    "reexecucao/anteriores/componentes.log": {
+      "passed": 12
+    },
+    "reexecucao/anteriores/render.log": {
+      "passed": 1
+    },
+    "reexecucao/regressao-81.log": {
+      "passed": 81
+    }
+  },
+  "strict_numeric_matches": 20,
+  "strict_full_output_missing": 6,
+  "strict_numeric_different_or_unknown": 4,
+  "case_classifications": {
+    "Conforme técnico herdado — conferência independente pendente": 10,
+    "Parcialmente coberto": 16,
+    "Reprovado — restituição não representada": 1,
+    "Conforme no cenário isolado — pendente aceite": 3
+  },
+  "new_independent_cases": [
+    "CT13",
+    "CT14",
+    "CT23"
+  ],
+  "CT10": "executado e reprovado — direito de restituição ausente",
+  "independent_bridge_positions": 9,
+  "historical_originals_verified": 27,
+  "financial_acceptance_recorded": false,
+  "financial_homologation_complete": false,
+  "production_writes": false,
+  "remote_koper_calls": false,
+  "no_test_containers_left": true,
+  "source_files_sha256": {
+    "tests/financial-acceptance/components.mjs": "0bdad9bca3d1d75699b9da4de808e8b0d01f9c40309a6b9587dd1a76b4c2c897",
+    "tests/financial-acceptance/database.mjs": "722af0400b9d099e381d9ce96c263113fad6ea0482b2d567b0d01d692039ba1c",
+    "tests/financial-acceptance/validate.mjs": "487daed4ac049a23c65c5f1832850ee9ee6e0aeb4aaee15ba2e2b15bf39c9cad"
+  },
+  "evidence_files_sha256": {
+    "banco.json": "714e76ec1cc540d61a5ebedf3d3b697c3d9cc814187b48cc0ffa5a9b01828745",
+    "banco.log": "5f11290a79c8d2e3ecf9770d2b5cb60fbb485f5b11e7eda8036951eb6a111fb7",
+    "casos-componentes-adicionais.json": "15615c1c969b3eac4f056b468ba8b789af441143634031ff2b9541e110dc18a9",
+    "casos-obtidos-novos.json": "97b4e2a9112bcae025c5f2a16867385d946466830eea7a6778936f84c7c74eda",
+    "comparacao-30.json": "ee16b73ce8517b3349a6599dbc98bd9694b59d438e73cd764bb6701933f99e26",
+    "comparacao-30.log": "ee16b73ce8517b3349a6599dbc98bd9694b59d438e73cd764bb6701933f99e26",
+    "comparacao-componentes-adicionais.json": "3087457b832c9e4017ef39c4e6afc79c0609a2624b71c17485efdaa2b892dcbd",
+    "comparacao-componentes-adicionais.log": "3087457b832c9e4017ef39c4e6afc79c0609a2624b71c17485efdaa2b892dcbd",
+    "comparacao-lacunas.json": "9fa61a9ff55cf5d783441811c0a280d525e29fe388b4a3394fb8dbe443260ec6",
+    "comparacao-lacunas.log": "9fa61a9ff55cf5d783441811c0a280d525e29fe388b4a3394fb8dbe443260ec6",
+    "comparacao-novos-integrais.json": "2837f01d8f74cf6a5f388b0d35c83635c993f4eda9beb6c0a23b0a41ab8e405d",
+    "comparacao-novos-integrais.log": "2837f01d8f74cf6a5f388b0d35c83635c993f4eda9beb6c0a23b0a41ab8e405d",
+    "componentes-adicionais.json": "4b253e5f920a04e2f39573009add7ae5c85348c8b140ae9de6098a452eb9141f",
+    "componentes.log": "b897dc4ef260bfdfe4219c546c0005c25fb85a5092c114b9541fc9a73429af6c",
+    "confronto-30.json": "7a15577686cd0c7a069cc81147189883ade7134a483d82253c42196cdd0f3407",
+    "eslint.log": "45342ca54fc3787657ce6eb4dbe6d4510cbf68d24318d44416c0176ab31ebf4b",
+    "execucoes.json": "b004b6ba7471a2877fe8be566ed34a834de01dda49831ef9f66c79c2b03b23c8",
+    "extratos-referencia.json": "05f9d8a6daf905783c89d715bac5848b80c37524ec003d2cf8820fc4d2923fab",
+    "fontes-historicas.json": "2dfad402223241627623a20cd9368541c35047f201cc5879c86b9f209ea29ce3",
+    "fontes-historicas.log": "1df0637bd1b87f89afcfda015cc859a7e6f24477d515102632115d436de66b71",
+    "linhas-historicas.json": "387248c581003ec981827ffc51d5212ecda34c3d12b4da225a54f0311d554896",
+    "matriz-30.json": "cfae1440a53acbfeaef021fbc3299789939f2df362a50a8a45f1f424a00b86b8",
+    "matriz.log": "66d27be9deec6575fa9b05d9147844da5f9f330f6ea6e96c2e92c23d5c83eec5",
+    "ponte.json": "bbb738a2b18bdc718e107be1081e673064bb0fd1cb06de2d3f49e11ab3e333a8",
+    "quadro.log": "9b4211e7918698c47c45f8bc9f4f95f66ecbb3742b89650927e7b699e1fc3120",
+    "reexecucao/adaptacao-casos.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "reexecucao/adaptadores-anteriores.json": "876361f2d923d3931a9f21c1d50ad70618970cfbc39c4c6ec6e51a4627bb7bc1",
+    "reexecucao/anteriores/adaptadores-anteriores.json": "45a3220b898476d200c478338c7d2530077773e7e4d733d7f998c351ebd027c5",
+    "reexecucao/anteriores/componentes-casos.json": "3afb24a220b731e0731cb3ac6519cdd52d992f9798a721b395e5334e65de7e16",
+    "reexecucao/anteriores/componentes.log": "bbc5e4d5faefec1567a9c8affe4845398a4b6011c8daf3b2fd7ff40a4d64d1ae",
+    "reexecucao/anteriores/fundacao/banco-final.json": "f1f8701211ffa7102efb5956ae989833d3548a093e5697eef8afe5f77a716a26",
+    "reexecucao/anteriores/fundacao/casos-iniciais.json": "61fc8338e9b1c213732a91a90f7dfaf944cbb2ed88e425045d39321e975276e5",
+    "reexecucao/anteriores/fundacao/comparacao-casos.json": "b47fed03f79594219cbeb1c653a664d5d28170b1cc1acc2f35f63116e05256f8",
+    "reexecucao/anteriores/fundacao/comparacao-casos.log": "b47fed03f79594219cbeb1c653a664d5d28170b1cc1acc2f35f63116e05256f8",
+    "reexecucao/anteriores/integracao/baseline.json": "848674a9e6de9851b031cb7398a9bca044e45178ed3d918f4aa0049d5a6e3d15",
+    "reexecucao/anteriores/integracao/casos-obtidos.json": "5b8a0ae054f44287c65e32a97f70c681d50acb3e5db4072e7b18afebf4089e4d",
+    "reexecucao/anteriores/integracao/integracao.json": "11430f8eab4eccc2416e8308dd895c7ace1843595da3620b0aae68a4d56a0d0d",
+    "reexecucao/anteriores/liquidacoes.json": "ac695f94708a616c8568408cb0547f0ba7579a1996f91775bf2b4e48db317eb3",
+    "reexecucao/anteriores/render.log": "c1241760fe1c7915f8e97b87a0d1ebf36e7b1efc53a8cb0d4460719ae44f3f2a",
+    "reexecucao/banco.json": "597046e808f3417033b1767094de66dc0cf54b0fe71764861b2740599188f0c4",
+    "reexecucao/banco.log": "6a80d50fa0e32a837fb96867f5d90e994ba426a2b7eb7e0b2d2707a24edf0a32",
+    "reexecucao/casos-componentes.json": "3ad4bec09bf67064b89ce48cf81256eb3142ecb7b711e3d97e00f8ae98c977db",
+    "reexecucao/casos-obtidos.json": "9c3ef6bf977d63bd18d50fd003027d3afe5befdd47e3a41aa0118a10ffb09531",
+    "reexecucao/comparacao-componentes.json": "28470ccf0fce70a829a0ffe9a35fd3825384e1b2c3adb1e4911c6f2c50682834",
+    "reexecucao/comparacao-componentes.log": "28470ccf0fce70a829a0ffe9a35fd3825384e1b2c3adb1e4911c6f2c50682834",
+    "reexecucao/comparacao-integrais.json": "e16573f6722c376a394f37c14c2dd66ecb19b4d41e7923b528ac60f80a70ba45",
+    "reexecucao/comparacao-integrais.log": "e16573f6722c376a394f37c14c2dd66ecb19b4d41e7923b528ac60f80a70ba45",
+    "reexecucao/componentes-casos.json": "21069fba640ac5e5527fdaf3afd0013b9c5c25e15882ffb41f85f85570d0c522",
+    "reexecucao/componentes.log": "1f5a18c567373eec95e2fb479f83a0ac75a047815c70dc0205ca94b7e06c41e2",
+    "reexecucao/eslint.log": "45342ca54fc3787657ce6eb4dbe6d4510cbf68d24318d44416c0176ab31ebf4b",
+    "reexecucao/etapas-anteriores.log": "864d8c3641638367a29396aebd3551e5c17b122b48d98f86d84d6d7f52dd816b",
+    "reexecucao/execucoes.json": "b55af8fbec871c354d76af87271900b0873b9faac79971b74dcd6dc31f2ec5a4",
+    "reexecucao/regressao-81.log": "8916d6cb68a1c37bb61d04ba8974fe6ac828ced3a02fe1cba5210ff0d5b3b499",
+    "reexecucao/servidor-tela.log": "9ede1bc42071d528e21788faf18fec38f2827b7414de0fffd70cdfff2309dbe5",
+    "reexecucao/tela-exemplo.html": "5f7129d84409e29cd99ab5b122846c5ab27f16d9361ca0f368965b2b454a9549",
+    "reexecucao/typescript.log": "45342ca54fc3787657ce6eb4dbe6d4510cbf68d24318d44416c0176ab31ebf4b",
+    "registros.json": "ac429462945fb93e09a3b8de077b6bc615cb1457c2052ecff02ea251f9a460a7",
+    "verificacao-quadro.json": "806a6b69340b10d33df8420308e67c7f2a77119999b8fb2b6535661121b6e1b7"
+  },
+  "limitation": "Ações desta execução são locais/descartáveis. Não é auditoria do servidor remoto nem aceite humano. Ponte de saldo real e equivalência integral do esquema ausentes."
+}

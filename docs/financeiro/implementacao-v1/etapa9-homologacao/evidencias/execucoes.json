@@ -1,0 +1,117 @@
+[
+  {
+    "command": [
+      "npm",
+      "run",
+      "test:cashflow"
+    ],
+    "log": "reexecucao/execucoes.json",
+    "exit_code": 0,
+    "note": "Reexecução integral feita nesta branch antes das sondas; --reuse-stage8 não afirma nova execução. Fontes operacionais não foram alteradas."
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/financial-acceptance/database.mjs"
+    ],
+    "log": "banco.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/financial-acceptance/components.mjs"
+    ],
+    "log": "componentes.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "python3",
+      "tests/financeiro/fixtures/comparar_resultados.py",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa9-homologacao/evidencias/casos-obtidos-novos.json",
+      "--only",
+      "CT13",
+      "CT14",
+      "CT23",
+      "--report",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa9-homologacao/evidencias/comparacao-novos-integrais.json"
+    ],
+    "log": "comparacao-novos-integrais.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "python3",
+      "tests/financeiro/fixtures/comparar_resultados.py",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa9-homologacao/evidencias/casos-componentes-adicionais.json",
+      "--only",
+      "CT02",
+      "CT11",
+      "--report",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa9-homologacao/evidencias/comparacao-componentes-adicionais.json"
+    ],
+    "log": "comparacao-componentes-adicionais.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "python3",
+      "tests/financeiro/fixtures/comparar_resultados.py",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa9-homologacao/evidencias/casos-obtidos-novos.json",
+      "--only",
+      "CT03",
+      "CT06",
+      "CT10",
+      "CT22",
+      "--report",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa9-homologacao/evidencias/comparacao-lacunas.json"
+    ],
+    "log": "comparacao-lacunas.log",
+    "exit_code": 1
+  },
+  {
+    "command": [
+      "python3",
+      "docs/financeiro/implementacao-v1/etapa9-homologacao/scripts/fontes_historicas.py"
+    ],
+    "log": "fontes-historicas.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "python3",
+      "docs/financeiro/implementacao-v1/etapa9-homologacao/scripts/matriz.py"
+    ],
+    "log": "matriz.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "python3",
+      "tests/financeiro/fixtures/comparar_resultados.py",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa9-homologacao/evidencias/confronto-30.json",
+      "--report",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa9-homologacao/evidencias/comparacao-30.json"
+    ],
+    "log": "comparacao-30.log",
+    "exit_code": 1
+  },
+  {
+    "command": [
+      "python3",
+      "docs/financeiro/implementacao-v1/etapa9-homologacao/scripts/quadro.py"
+    ],
+    "log": "quadro.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npx",
+      "eslint",
+      "tests/financial-acceptance"
+    ],
+    "log": "eslint.log",
+    "exit_code": 0
+  }
+]

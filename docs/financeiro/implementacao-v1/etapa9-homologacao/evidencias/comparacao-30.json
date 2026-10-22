@@ -1,0 +1,278 @@
+{
+  "scope": "Comparação das saídas fornecidas. Este script não executa o Elos e não verifica a autenticidade dos links de evidência.",
+  "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+  "context_errors": [],
+  "selected_count": 30,
+  "passed_count": 20,
+  "complete": false,
+  "cases": [
+    {
+      "id": "CT01",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT02",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT03",
+      "status": "comparado",
+      "passed": false,
+      "differences": [
+        {
+          "path": "$.CT03.I01_extra_cost_created_by_payments_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        }
+      ]
+    },
+    {
+      "id": "CT04",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT05",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT06",
+      "status": "comparado",
+      "passed": false,
+      "differences": [
+        {
+          "path": "$.CT06.initial_C_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        },
+        {
+          "path": "$.CT06.initial_Q_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 10000000,
+          "actual": null
+        },
+        {
+          "path": "$.CT06.cost_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 10000000,
+          "actual": null
+        }
+      ]
+    },
+    {
+      "id": "CT07",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT08",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT09",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT10",
+      "status": "comparado",
+      "passed": false,
+      "differences": [
+        {
+          "path": "$.CT10.after_cancellation_V_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        },
+        {
+          "path": "$.CT10.after_cancellation_H_imputable_to_current_price_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        },
+        {
+          "path": "$.CT10.after_cancellation_C_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        },
+        {
+          "path": "$.CT10.after_cancellation_Q_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        },
+        {
+          "path": "$.CT10.refund_right_before_receipt_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 1000000,
+          "actual": 0
+        },
+        {
+          "path": "$.CT10.refund_right_after_receipt_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 400000,
+          "actual": null
+        },
+        {
+          "path": "$.CT10.cost_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        }
+      ]
+    },
+    {
+      "id": "CT11",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT12",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT13",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT14",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT15",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT16",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT17",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT18",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT19",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT20",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT21",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT22",
+      "status": "comparado",
+      "passed": false,
+      "differences": [
+        {
+          "path": "$.CT22.contract_future_not_issued_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 6000000,
+          "actual": null
+        },
+        {
+          "path": "$.CT22.I18_future_inflow_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 8000000,
+          "actual": null
+        },
+        {
+          "path": "$.CT22.automatic_revenue_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        }
+      ]
+    },
+    {
+      "id": "CT23",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT24",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT25",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT26",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT27",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT28",
+      "status": "não_executado",
+      "passed": false,
+      "differences": []
+    },
+    {
+      "id": "CT29",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    },
+    {
+      "id": "CT30",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    }
+  ]
+}

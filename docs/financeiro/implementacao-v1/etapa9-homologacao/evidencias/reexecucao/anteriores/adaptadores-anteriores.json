@@ -1,0 +1,9 @@
+{
+  "foundation_original_sha256": "fa3ffcecbffd7fa3168b5e47a7a7aba0fd067cbe9d9f42dad8849689fddf7f07",
+  "foundation_executed_sha256": "a7ee7b2f690dab23706cf20176802df313ffa574226d7f86b001f9e5e4938c2f",
+  "integration_original_sha256": "171fc375732f7e3f7093793064fa49ac732a42b2a1d024a041a8589009fa301a",
+  "integration_executed_sha256": "f2e953ff8956378891c7e19a2179efe902cfd9fae4e4881b22cba3da46b95a69",
+  "e7_migration_sha256": "06e3549bc0a2b30c2c64994e6b7247fc4abc91cbd7111aa90e3916d668adb75c",
+  "expected_or_assertions_changed": false,
+  "observational_probe_change": "CT07 parcial lê finance_open_amount em vez de amount condicionado ao status antigo"
+}

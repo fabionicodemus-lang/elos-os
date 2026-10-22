@@ -1,0 +1,122 @@
+{
+  "scope": "Comparação das saídas fornecidas. Este script não executa o Elos e não verifica a autenticidade dos links de evidência.",
+  "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+  "context_errors": [],
+  "selected_count": 4,
+  "passed_count": 0,
+  "complete": false,
+  "cases": [
+    {
+      "id": "CT03",
+      "status": "comparado",
+      "passed": false,
+      "differences": [
+        {
+          "path": "$.CT03.I01_extra_cost_created_by_payments_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        }
+      ]
+    },
+    {
+      "id": "CT06",
+      "status": "comparado",
+      "passed": false,
+      "differences": [
+        {
+          "path": "$.CT06.initial_C_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        },
+        {
+          "path": "$.CT06.initial_Q_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 10000000,
+          "actual": null
+        },
+        {
+          "path": "$.CT06.cost_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 10000000,
+          "actual": null
+        }
+      ]
+    },
+    {
+      "id": "CT10",
+      "status": "comparado",
+      "passed": false,
+      "differences": [
+        {
+          "path": "$.CT10.after_cancellation_V_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        },
+        {
+          "path": "$.CT10.after_cancellation_H_imputable_to_current_price_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        },
+        {
+          "path": "$.CT10.after_cancellation_C_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        },
+        {
+          "path": "$.CT10.after_cancellation_Q_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        },
+        {
+          "path": "$.CT10.refund_right_before_receipt_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 1000000,
+          "actual": 0
+        },
+        {
+          "path": "$.CT10.refund_right_after_receipt_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 400000,
+          "actual": null
+        },
+        {
+          "path": "$.CT10.cost_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        }
+      ]
+    },
+    {
+      "id": "CT22",
+      "status": "comparado",
+      "passed": false,
+      "differences": [
+        {
+          "path": "$.CT22.contract_future_not_issued_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 6000000,
+          "actual": null
+        },
+        {
+          "path": "$.CT22.I18_future_inflow_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 8000000,
+          "actual": null
+        },
+        {
+          "path": "$.CT22.automatic_revenue_cents",
+          "reason": "Valor ou tipo divergente",
+          "expected": 0,
+          "actual": null
+        }
+      ]
+    }
+  ]
+}

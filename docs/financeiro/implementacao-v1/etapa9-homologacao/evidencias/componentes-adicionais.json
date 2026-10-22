@@ -1,0 +1,93 @@
+{
+  "states": {
+    "CT02": {
+      "canonical_title_count": 1,
+      "original_snapshot_open_cents": 1000000,
+      "revised_snapshot_open_cents": 1200000,
+      "documented_bridge_cents": 200000,
+      "at_T_2026_10_21_K_2026_10_20_open_cents": 1000000
+    },
+    "CT11": {
+      "proportional_fixture": {
+        "cost_A_cents": 600000,
+        "cost_B_cents": 400000,
+        "cash_A_cents": 180000,
+        "cash_B_cents": 120000,
+        "remaining_A_cents": 420000,
+        "remaining_B_cents": 280000
+      },
+      "rounding_fixture": {
+        "A_cents": 3334,
+        "B_cents": 3334,
+        "C_cents": 3333,
+        "sum_cents": 10001,
+        "unallocated_cents": 0
+      }
+    }
+  },
+  "observations": {
+    "CT02": {
+      "audits": [
+        {
+          "title_id": "77",
+          "title_type": "payables",
+          "version": 1,
+          "effective_date": "2026-10-19",
+          "recorded_at": "2026-10-19T21:00:00.000Z",
+          "new_value": {
+            "id": "77",
+            "amount": 10000,
+            "status": "open",
+            "due_date": "2026-10-30"
+          }
+        },
+        {
+          "title_id": "77",
+          "title_type": "payables",
+          "version": 2,
+          "effective_date": "2026-10-20",
+          "recorded_at": "2026-10-21T12:00:00.000Z",
+          "new_value": {
+            "id": "77",
+            "amount": 12000,
+            "status": "open",
+            "due_date": "2026-10-30"
+          }
+        }
+      ],
+      "perimeter": "Função pura com timestamps normativos; não comprova persistência/reimportação T/K completa"
+    },
+    "CT11": {
+      "rows": [
+        {
+          "id": "A",
+          "service_id": "same-service",
+          "project_id": "A",
+          "allocation_amount": 6000
+        },
+        {
+          "id": "B",
+          "service_id": "same-service",
+          "project_id": "B",
+          "allocation_amount": 4000
+        }
+      ],
+      "consumed": [
+        {
+          "id": "CT11:A",
+          "contractId": null,
+          "serviceId": "same-service",
+          "amount": 1800
+        },
+        {
+          "id": "CT11:B",
+          "contractId": null,
+          "serviceId": "same-service",
+          "amount": 1200
+        }
+      ],
+      "consumer_keeps_project_id": false,
+      "perimeter": "Oráculo numérico puro completo; consumidor observado conserva centavos mas não transporta dimensão project_id na saída. Verificar cadeia multiobra antes de aceitar."
+    }
+  }
+}

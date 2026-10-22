@@ -1,0 +1,5400 @@
+{
+  "base_commit": "494c55c",
+  "executed_at": "2026-10-22T13:40:31.290Z",
+  "container": "elos-finance-test-480595",
+  "container_removed": true,
+  "network": "none",
+  "candidate_sha256": "b6b4d236c0f360db3b11d43feaacada63a7a4303b546146d588a06ef07d2d68e",
+  "passed": 24,
+  "failed": 0,
+  "results": [
+    {
+      "name": "baseline: nova fotografia ignorada pela onda existente",
+      "pass": true,
+      "evidence": {
+        "source_cents": 1200000,
+        "destination_cents": 1000000,
+        "difference_cents": 200000
+      }
+    },
+    {
+      "name": "baseline: pendente redistribuído ao serviço no forecast",
+      "pass": true,
+      "evidence": {
+        "known_expected_cents": 60000,
+        "known_before_cents": 100000,
+        "unallocated_expected_cents": 40000,
+        "unallocated_before_cents": 0
+      }
+    },
+    {
+      "name": "CT01: três importações e recorte parcial sem cancelar ausente",
+      "pass": true,
+      "evidence": {
+        "canonical_title_count": 2,
+        "I03_open_payables_cents": 3000000,
+        "deletions_due_to_absence": 0,
+        "title_78_remains_open_cents": 2000000,
+        "extra_obligations_from_retries": 0
+      }
+    },
+    {
+      "name": "CT26: paginação, falha, cursor repetido e retry reconciliados no banco",
+      "pass": true,
+      "evidence": {
+        "complete": {
+          "unique_count": 5,
+          "total_cents": 1500000,
+          "external_coverage_percent": "100.00"
+        },
+        "failed_page_2": {
+          "known_unique_count": 2,
+          "known_subtotal_cents": 300000,
+          "known_loaded_coverage_percent": "40.00",
+          "certified_total_cents": null,
+          "complete": false
+        },
+        "after_retry": {
+          "unique_count": 5,
+          "total_cents": 1500000,
+          "duplicate_obligations": 0
+        },
+        "repeated_cursor_detected": true
+      }
+    },
+    {
+      "name": "mesmo comando concorrente e replay com conteúdo diferente",
+      "pass": true,
+      "evidence": {
+        "same_run": true
+      }
+    },
+    {
+      "name": "comandos diferentes concorrentes criam uma identidade e uma versão",
+      "pass": true,
+      "evidence": {
+        "objects": 1,
+        "versions": 1,
+        "principal_cents": 10001
+      }
+    },
+    {
+      "name": "falha por registro e retry não duplicam primeira linha",
+      "pass": true,
+      "evidence": {
+        "failed": {
+          "after": {
+            "objects": 1,
+            "pending_objects": 0,
+            "principal_cents": 1000000,
+            "operational_count": 1,
+            "unallocated_cents": 1000000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 1000000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 1000000
+          },
+          "before": {
+            "objects": 0,
+            "pending_objects": 0,
+            "principal_cents": 0,
+            "operational_count": 0,
+            "unallocated_cents": 0,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 0,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 0
+          },
+          "cutoff": "2026-10-21",
+          "errors": [
+            {
+              "reason": "injected_failure",
+              "sqlstate": "P0001",
+              "external_id": "78",
+              "installment": "1",
+              "principal_cents": 2000000
+            }
+          ],
+          "run_id": "3fa8f4cf-89f2-4da1-9997-f1361486b40b",
+          "accepted": 1,
+          "complete": false,
+          "rejected": 1,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 0,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [],
+                "object_id": "0a262008-8f61-4225-9e7b-08b0e67889e6",
+                "target_id": "918e5910-b3b7-4e8a-9810-ec1f640f4f9e",
+                "delta_cents": 0,
+                "external_id": "77",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 1000000,
+                "destination_principal_cents": 1000000
+              },
+              {
+                "pending": null,
+                "object_id": null,
+                "target_id": null,
+                "delta_cents": null,
+                "external_id": "78",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": null,
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 2000000,
+                "destination_principal_cents": null
+              }
+            ],
+            "source_count": 2,
+            "absent_in_snapshot": [],
+            "source_subtotal_cents": 3000000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 2,
+            "unique_count": 2,
+            "expected_count": 2,
+            "subtotal_cents": 3000000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 3000000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": null
+        },
+        "retry": {
+          "after": {
+            "objects": 2,
+            "pending_objects": 0,
+            "principal_cents": 3000000,
+            "operational_count": 2,
+            "unallocated_cents": 3000000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3000000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 3000000
+          },
+          "before": {
+            "objects": 1,
+            "pending_objects": 0,
+            "principal_cents": 1000000,
+            "operational_count": 1,
+            "unallocated_cents": 1000000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 1000000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 1000000
+          },
+          "cutoff": "2026-10-21",
+          "errors": [],
+          "run_id": "a9c3f56d-d770-49b0-99df-3338cd60ce2e",
+          "accepted": 1,
+          "complete": true,
+          "rejected": 0,
+          "unchanged": 1,
+          "period_end": "2026-10-21",
+          "pending_rows": 0,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [],
+                "object_id": "0a262008-8f61-4225-9e7b-08b0e67889e6",
+                "target_id": "918e5910-b3b7-4e8a-9810-ec1f640f4f9e",
+                "delta_cents": 0,
+                "external_id": "77",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 1000000,
+                "destination_principal_cents": 1000000
+              },
+              {
+                "pending": [],
+                "object_id": "22274855-ea8b-4999-a715-2e4961cb2a9a",
+                "target_id": "7f1c858c-d1a0-435c-9c0e-c55ae3cec51c",
+                "delta_cents": 0,
+                "external_id": "78",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 2000000,
+                "destination_principal_cents": 2000000
+              }
+            ],
+            "source_count": 2,
+            "absent_in_snapshot": [],
+            "source_subtotal_cents": 3000000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 2,
+            "unique_count": 2,
+            "expected_count": 2,
+            "subtotal_cents": 3000000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 3000000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": "a9c3f56d-d770-49b0-99df-3338cd60ce2e"
+        }
+      }
+    },
+    {
+      "name": "revisão somente do objeto correto conserva enriquecimento e histórico",
+      "pass": true,
+      "evidence": {
+        "report": {
+          "after": {
+            "objects": 2,
+            "pending_objects": 0,
+            "principal_cents": 3200000,
+            "operational_count": 2,
+            "unallocated_cents": 3200000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3200000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 3200000
+          },
+          "before": {
+            "objects": 2,
+            "pending_objects": 0,
+            "principal_cents": 3000000,
+            "operational_count": 2,
+            "unallocated_cents": 3000000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3000000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 3000000
+          },
+          "cutoff": "2026-10-21",
+          "errors": [],
+          "run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed",
+          "accepted": 1,
+          "complete": true,
+          "rejected": 0,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 0,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [],
+                "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+                "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+                "delta_cents": 0,
+                "external_id": "77",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 1200000,
+                "destination_principal_cents": 1200000
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [
+              {
+                "action": "preserved",
+                "external_id": "78",
+                "installment": "1"
+              }
+            ],
+            "source_subtotal_cents": 1200000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 1200000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 1200000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+        },
+        "history": {
+          "actor": "00000000-0000-4000-8000-000000000004",
+          "reason": "Teste fictício aprovado; sem efeito em produção",
+          "after_cents": 1200000,
+          "before_cents": 1000000
+        }
+      }
+    },
+    {
+      "name": "mudança sem suporte não sobrescreve dívida",
+      "pass": true,
+      "evidence": {
+        "after": {
+          "objects": 2,
+          "pending_objects": 1,
+          "principal_cents": 3300000,
+          "operational_count": 2,
+          "unallocated_cents": 3300000,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 3200000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 3300000
+        },
+        "before": {
+          "objects": 2,
+          "pending_objects": 0,
+          "principal_cents": 3200000,
+          "operational_count": 2,
+          "unallocated_cents": 3200000,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 3200000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 3200000
+        },
+        "cutoff": "2026-10-21",
+        "errors": [],
+        "run_id": "2c25e5a4-7b4e-4011-8bfa-a507403222eb",
+        "accepted": 0,
+        "complete": false,
+        "rejected": 0,
+        "unchanged": 0,
+        "period_end": "2026-10-21",
+        "pending_rows": 1,
+        "period_start": "2026-01-01",
+        "reconciliation": {
+          "rows": [
+            {
+              "pending": [
+                "change_requires_evidence"
+              ],
+              "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+              "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+              "delta_cents": 100000,
+              "external_id": "77",
+              "installment": "1",
+              "source_status": "Pendente",
+              "destination_status": "open",
+              "declared_paid_cents": 0,
+              "destination_paid_cents": null,
+              "source_principal_cents": 1300000,
+              "destination_principal_cents": 1200000
+            }
+          ],
+          "source_count": 1,
+          "absent_in_snapshot": [
+            {
+              "action": "preserved",
+              "external_id": "78",
+              "installment": "1"
+            }
+          ],
+          "source_subtotal_cents": 1300000
+        },
+        "source_manifest": {
+          "errors": [],
+          "complete": true,
+          "row_count": 1,
+          "unique_count": 1,
+          "expected_count": 1,
+          "subtotal_cents": 1300000,
+          "coverage_percent": "100.00",
+          "expected_total_cents": null,
+          "certified_total_cents": 1300000
+        },
+        "extraction_complete": true,
+        "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+      }
+    },
+    {
+      "name": "parcial Paga preservado como declaração, sem quitação ou caixa inventado",
+      "pass": true,
+      "evidence": {
+        "report": {
+          "after": {
+            "objects": 2,
+            "pending_objects": 1,
+            "principal_cents": 3200000,
+            "operational_count": 2,
+            "unallocated_cents": 3200000,
+            "reported_paid_cents": 400000,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3200000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 2800000
+          },
+          "before": {
+            "objects": 2,
+            "pending_objects": 1,
+            "principal_cents": 3300000,
+            "operational_count": 2,
+            "unallocated_cents": 3300000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3200000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 3300000
+          },
+          "cutoff": "2026-10-21",
+          "errors": [],
+          "run_id": "20c07c2a-6e20-4168-a0cf-36628c594f13",
+          "accepted": 0,
+          "complete": false,
+          "rejected": 0,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 1,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [
+                  "declared_settlement_requires_ledger"
+                ],
+                "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+                "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+                "delta_cents": 0,
+                "external_id": "77",
+                "installment": "1",
+                "source_status": "Paga",
+                "destination_status": "open",
+                "declared_paid_cents": 400000,
+                "destination_paid_cents": null,
+                "source_principal_cents": 1200000,
+                "destination_principal_cents": 1200000
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [
+              {
+                "action": "preserved",
+                "external_id": "78",
+                "installment": "1"
+              }
+            ],
+            "source_subtotal_cents": 1200000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 1200000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 1200000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+        },
+        "snapshot": {
+          "pending": [
+            "declared_settlement_requires_ledger"
+          ],
+          "principal_cents": 1200000,
+          "declared_paid_cents": 400000
+        }
+      }
+    },
+    {
+      "name": "cancelamento documental e estorno não apagam obrigação ou caixa",
+      "pass": true,
+      "evidence": {
+        "canceled": {
+          "after": {
+            "objects": 2,
+            "pending_objects": 2,
+            "principal_cents": 3200000,
+            "operational_count": 2,
+            "unallocated_cents": 3200000,
+            "reported_paid_cents": 400000,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3200000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 2800000
+          },
+          "before": {
+            "objects": 2,
+            "pending_objects": 1,
+            "principal_cents": 3200000,
+            "operational_count": 2,
+            "unallocated_cents": 3200000,
+            "reported_paid_cents": 400000,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3200000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 2800000
+          },
+          "cutoff": "2026-10-21",
+          "errors": [],
+          "run_id": "7696370e-98da-432e-a0de-58d9c8d5318b",
+          "accepted": 0,
+          "complete": false,
+          "rejected": 0,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 2,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [
+                  "cancellation_requires_obligation_evidence"
+                ],
+                "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+                "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+                "delta_cents": 0,
+                "external_id": "78",
+                "installment": "1",
+                "source_status": "Cancelada",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 2000000,
+                "destination_principal_cents": 2000000
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [
+              {
+                "action": "preserved",
+                "external_id": "77",
+                "installment": "1"
+              }
+            ],
+            "source_subtotal_cents": 2000000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 2000000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 2000000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+        },
+        "reversed": {
+          "after": {
+            "objects": 2,
+            "pending_objects": 2,
+            "principal_cents": 3200000,
+            "operational_count": 2,
+            "unallocated_cents": 3200000,
+            "reported_paid_cents": 400000,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3200000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 2800000
+          },
+          "before": {
+            "objects": 2,
+            "pending_objects": 2,
+            "principal_cents": 3200000,
+            "operational_count": 2,
+            "unallocated_cents": 3200000,
+            "reported_paid_cents": 400000,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3200000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 2800000
+          },
+          "cutoff": "2026-10-21",
+          "errors": [],
+          "run_id": "89a079d9-c96e-4134-badf-fca6e4994cb0",
+          "accepted": 0,
+          "complete": false,
+          "rejected": 0,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 2,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [
+                  "reversal_requires_original_and_ledger"
+                ],
+                "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+                "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+                "delta_cents": 0,
+                "external_id": "78",
+                "installment": "1",
+                "source_status": "Estornada",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 2000000,
+                "destination_principal_cents": 2000000
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [
+              {
+                "action": "preserved",
+                "external_id": "77",
+                "installment": "1"
+              }
+            ],
+            "source_subtotal_cents": 2000000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 2000000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 2000000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+        }
+      }
+    },
+    {
+      "name": "cancelamento com extinção comprovada conserva original e versão",
+      "pass": true,
+      "evidence": {
+        "after": {
+          "objects": 2,
+          "pending_objects": 1,
+          "principal_cents": 3200000,
+          "operational_count": 2,
+          "unallocated_cents": 3200000,
+          "reported_paid_cents": 400000,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 3200000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 800000
+        },
+        "before": {
+          "objects": 2,
+          "pending_objects": 2,
+          "principal_cents": 3200000,
+          "operational_count": 2,
+          "unallocated_cents": 3200000,
+          "reported_paid_cents": 400000,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 3200000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 2800000
+        },
+        "cutoff": "2026-10-21",
+        "errors": [],
+        "run_id": "a1a78049-f58a-4255-9769-8ad5cbd6fb56",
+        "accepted": 1,
+        "complete": false,
+        "rejected": 0,
+        "unchanged": 0,
+        "period_end": "2026-10-21",
+        "pending_rows": 1,
+        "period_start": "2026-01-01",
+        "reconciliation": {
+          "rows": [
+            {
+              "pending": [],
+              "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+              "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+              "delta_cents": 0,
+              "external_id": "78",
+              "installment": "1",
+              "source_status": "Cancelada",
+              "destination_status": "cancelled",
+              "declared_paid_cents": 0,
+              "destination_paid_cents": null,
+              "source_principal_cents": 2000000,
+              "destination_principal_cents": 2000000
+            }
+          ],
+          "source_count": 1,
+          "absent_in_snapshot": [
+            {
+              "action": "preserved",
+              "external_id": "77",
+              "installment": "1"
+            }
+          ],
+          "source_subtotal_cents": 2000000
+        },
+        "source_manifest": {
+          "errors": [],
+          "complete": true,
+          "row_count": 1,
+          "unique_count": 1,
+          "expected_count": 1,
+          "subtotal_cents": 2000000,
+          "coverage_percent": "100.00",
+          "expected_total_cents": null,
+          "certified_total_cents": 2000000
+        },
+        "extraction_complete": true,
+        "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+      }
+    },
+    {
+      "name": "sem obra: 6000 + 4000 preservados, sem padrão Flow",
+      "pass": true,
+      "evidence": {
+        "after": {
+          "objects": 2,
+          "pending_objects": 1,
+          "principal_cents": 1000000,
+          "operational_count": 1,
+          "unallocated_cents": 1000000,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 400000,
+          "operational_principal_cents": 600000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 1000000
+        },
+        "before": {
+          "objects": 0,
+          "pending_objects": 0,
+          "principal_cents": 0,
+          "operational_count": 0,
+          "unallocated_cents": 0,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 0,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 0
+        },
+        "cutoff": "2026-10-21",
+        "errors": [],
+        "run_id": "88523fe4-f899-499e-8140-3d05394dd9a9",
+        "accepted": 1,
+        "complete": false,
+        "rejected": 0,
+        "unchanged": 0,
+        "period_end": "2026-10-21",
+        "pending_rows": 1,
+        "period_start": "2026-01-01",
+        "reconciliation": {
+          "rows": [
+            {
+              "pending": [],
+              "object_id": "fdcc45da-6f76-47e8-80d2-f93f2966639a",
+              "target_id": "f28d8413-f535-4251-9890-e00c7fb6e626",
+              "delta_cents": 0,
+              "external_id": "known",
+              "installment": "1",
+              "source_status": "Pendente",
+              "destination_status": "open",
+              "declared_paid_cents": 0,
+              "destination_paid_cents": null,
+              "source_principal_cents": 600000,
+              "destination_principal_cents": 600000
+            },
+            {
+              "pending": [
+                "without_project"
+              ],
+              "object_id": "edc17521-ddde-4712-839a-4c5d56c31da5",
+              "target_id": null,
+              "delta_cents": null,
+              "external_id": "unknown",
+              "installment": "1",
+              "source_status": "Pendente",
+              "destination_status": null,
+              "declared_paid_cents": 0,
+              "destination_paid_cents": null,
+              "source_principal_cents": 400000,
+              "destination_principal_cents": null
+            }
+          ],
+          "source_count": 2,
+          "absent_in_snapshot": [],
+          "source_subtotal_cents": 1000000
+        },
+        "source_manifest": {
+          "errors": [],
+          "complete": true,
+          "row_count": 2,
+          "unique_count": 2,
+          "expected_count": 2,
+          "subtotal_cents": 1000000,
+          "coverage_percent": "100.00",
+          "expected_total_cents": null,
+          "certified_total_cents": 1000000
+        },
+        "extraction_complete": true,
+        "last_complete_run_id": null
+      }
+    },
+    {
+      "name": "rateio monetário parcial preserva A Apropriar e rejeita excesso",
+      "pass": true,
+      "evidence": {
+        "report": {
+          "after": {
+            "objects": 1,
+            "pending_objects": 1,
+            "principal_cents": 100000,
+            "operational_count": 1,
+            "unallocated_cents": 40000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 100000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 100000
+          },
+          "before": {
+            "objects": 0,
+            "pending_objects": 0,
+            "principal_cents": 0,
+            "operational_count": 0,
+            "unallocated_cents": 0,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 0,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 0
+          },
+          "cutoff": "2026-10-21",
+          "errors": [],
+          "run_id": "f8d3bb22-da94-44aa-a07e-4e470f006cfc",
+          "accepted": 0,
+          "complete": false,
+          "rejected": 0,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 1,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [
+                  "without_service"
+                ],
+                "object_id": "b0e08388-9e15-4a8b-bc3d-9304ed3f1268",
+                "target_id": "22a92e7b-01b8-4566-8338-5fda2857eea0",
+                "delta_cents": 0,
+                "external_id": "split",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 100000,
+                "destination_principal_cents": 100000
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [],
+            "source_subtotal_cents": 100000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 100000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 100000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": null
+        },
+        "rejected": {
+          "after": {
+            "objects": 1,
+            "pending_objects": 1,
+            "principal_cents": 100000,
+            "operational_count": 1,
+            "unallocated_cents": 40000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 100000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 100000
+          },
+          "before": {
+            "objects": 1,
+            "pending_objects": 1,
+            "principal_cents": 100000,
+            "operational_count": 1,
+            "unallocated_cents": 40000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 100000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 100000
+          },
+          "cutoff": "2026-10-21",
+          "errors": [
+            {
+              "reason": "overallocated",
+              "sqlstate": "P0001",
+              "external_id": "split",
+              "installment": "1",
+              "principal_cents": 100000
+            }
+          ],
+          "run_id": "e646cea2-d041-4d33-b450-4e22e2c99d2e",
+          "accepted": 0,
+          "complete": false,
+          "rejected": 1,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 1,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [
+                  "without_service"
+                ],
+                "object_id": "b0e08388-9e15-4a8b-bc3d-9304ed3f1268",
+                "target_id": "22a92e7b-01b8-4566-8338-5fda2857eea0",
+                "delta_cents": 0,
+                "external_id": "split",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 100000,
+                "destination_principal_cents": 100000
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [],
+            "source_subtotal_cents": 100000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 100000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 100000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": null
+        }
+      }
+    },
+    {
+      "name": "mesmo ID entre organizações e parcelas iguais continuam distintos",
+      "pass": true,
+      "evidence": {
+        "after": {
+          "objects": 2,
+          "pending_objects": 0,
+          "principal_cents": 200000,
+          "operational_count": 2,
+          "unallocated_cents": 200000,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 200000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 200000
+        },
+        "before": {
+          "objects": 0,
+          "pending_objects": 0,
+          "principal_cents": 0,
+          "operational_count": 0,
+          "unallocated_cents": 0,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 0,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 0
+        },
+        "cutoff": "2026-10-21",
+        "errors": [],
+        "run_id": "98365c20-b988-4a01-883d-d12ed9fa2aa7",
+        "accepted": 2,
+        "complete": true,
+        "rejected": 0,
+        "unchanged": 0,
+        "period_end": "2026-10-21",
+        "pending_rows": 0,
+        "period_start": "2026-01-01",
+        "reconciliation": {
+          "rows": [
+            {
+              "pending": [],
+              "object_id": "ccd4397a-2b40-46aa-8c10-099d46ba85df",
+              "target_id": "0073f7df-354b-431a-a71e-4f579ca7a8ca",
+              "delta_cents": 0,
+              "external_id": "77",
+              "installment": "1",
+              "source_status": "Pendente",
+              "destination_status": "open",
+              "declared_paid_cents": 0,
+              "destination_paid_cents": null,
+              "source_principal_cents": 100000,
+              "destination_principal_cents": 100000
+            },
+            {
+              "pending": [],
+              "object_id": "79749160-97ba-4b51-8194-9a53e5d95c96",
+              "target_id": "db9a0cea-3a0c-4952-b544-4c6350fff57e",
+              "delta_cents": 0,
+              "external_id": "77",
+              "installment": "2",
+              "source_status": "Pendente",
+              "destination_status": "open",
+              "declared_paid_cents": 0,
+              "destination_paid_cents": null,
+              "source_principal_cents": 100000,
+              "destination_principal_cents": 100000
+            }
+          ],
+          "source_count": 2,
+          "absent_in_snapshot": [],
+          "source_subtotal_cents": 200000
+        },
+        "source_manifest": {
+          "errors": [],
+          "complete": true,
+          "row_count": 2,
+          "unique_count": 2,
+          "expected_count": 2,
+          "subtotal_cents": 200000,
+          "coverage_percent": "100.00",
+          "expected_total_cents": null,
+          "certified_total_cents": 200000
+        },
+        "extraction_complete": true,
+        "last_complete_run_id": "98365c20-b988-4a01-883d-d12ed9fa2aa7"
+      }
+    },
+    {
+      "name": "organização, perfil e entidade recusam acesso indevido",
+      "pass": true,
+      "evidence": {
+        "denied": 4
+      }
+    },
+    {
+      "name": "vínculos cruzados, identidade ausente, snapshots antigos e hash adulterado",
+      "pass": true,
+      "evidence": {
+        "cross": {
+          "after": {
+            "objects": 0,
+            "pending_objects": 0,
+            "principal_cents": 0,
+            "operational_count": 0,
+            "unallocated_cents": 0,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 0,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 0
+          },
+          "before": {
+            "objects": 0,
+            "pending_objects": 0,
+            "principal_cents": 0,
+            "operational_count": 0,
+            "unallocated_cents": 0,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 0,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 0
+          },
+          "cutoff": "2026-10-21",
+          "errors": [
+            {
+              "reason": "supplier_cross_company",
+              "sqlstate": "P0001",
+              "external_id": "bad",
+              "installment": "1",
+              "principal_cents": 100000
+            }
+          ],
+          "run_id": "6eda4ab7-6b38-4984-ba8c-abe90efec351",
+          "accepted": 0,
+          "complete": false,
+          "rejected": 1,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 0,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": null,
+                "object_id": null,
+                "target_id": null,
+                "delta_cents": null,
+                "external_id": "bad",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": null,
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 100000,
+                "destination_principal_cents": null
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [],
+            "source_subtotal_cents": 100000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 100000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 100000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": null
+        },
+        "missing": {
+          "after": {
+            "objects": 0,
+            "pending_objects": 0,
+            "principal_cents": 0,
+            "operational_count": 0,
+            "unallocated_cents": 0,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 0,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 0
+          },
+          "before": {
+            "objects": 0,
+            "pending_objects": 0,
+            "principal_cents": 0,
+            "operational_count": 0,
+            "unallocated_cents": 0,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 0,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 0
+          },
+          "cutoff": "2026-10-21",
+          "errors": [
+            {
+              "reason": "missing_identity",
+              "sqlstate": "P0001",
+              "external_id": null,
+              "installment": "1",
+              "principal_cents": 400000
+            }
+          ],
+          "run_id": "5682a610-4acc-421f-b6f1-d1e35747cfb7",
+          "accepted": 0,
+          "complete": false,
+          "rejected": 1,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 0,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": null,
+                "object_id": null,
+                "target_id": null,
+                "delta_cents": null,
+                "external_id": null,
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": null,
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 400000,
+                "destination_principal_cents": null
+              }
+            ],
+            "source_count": 0,
+            "absent_in_snapshot": [],
+            "source_subtotal_cents": 400000
+          },
+          "source_manifest": {
+            "errors": [
+              "missing_identity",
+              "count_mismatch"
+            ],
+            "complete": false,
+            "row_count": 1,
+            "unique_count": 0,
+            "expected_count": 1,
+            "subtotal_cents": 400000,
+            "coverage_percent": "0.00",
+            "expected_total_cents": null,
+            "certified_total_cents": null
+          },
+          "extraction_complete": false,
+          "last_complete_run_id": null
+        },
+        "stale": {
+          "after": {
+            "objects": 2,
+            "pending_objects": 1,
+            "principal_cents": 3200000,
+            "operational_count": 2,
+            "unallocated_cents": 3200000,
+            "reported_paid_cents": 400000,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3200000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 800000
+          },
+          "before": {
+            "objects": 2,
+            "pending_objects": 1,
+            "principal_cents": 3200000,
+            "operational_count": 2,
+            "unallocated_cents": 3200000,
+            "reported_paid_cents": 400000,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 3200000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 800000
+          },
+          "cutoff": "2026-10-21",
+          "errors": [
+            {
+              "reason": "stale_snapshot",
+              "sqlstate": "P0001",
+              "external_id": "77",
+              "installment": "1",
+              "principal_cents": 1000000
+            },
+            {
+              "reason": "stale_snapshot",
+              "sqlstate": "P0001",
+              "external_id": "78",
+              "installment": "1",
+              "principal_cents": 2000000
+            }
+          ],
+          "run_id": "2adac1ff-6e55-4caa-9c7c-2421cd989731",
+          "accepted": 0,
+          "complete": false,
+          "rejected": 2,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 1,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [
+                  "declared_settlement_requires_ledger"
+                ],
+                "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+                "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+                "delta_cents": -200000,
+                "external_id": "77",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 1000000,
+                "destination_principal_cents": 1200000
+              },
+              {
+                "pending": [],
+                "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+                "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+                "delta_cents": 0,
+                "external_id": "78",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": "cancelled",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 2000000,
+                "destination_principal_cents": 2000000
+              }
+            ],
+            "source_count": 2,
+            "absent_in_snapshot": [],
+            "source_subtotal_cents": 3000000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 2,
+            "unique_count": 2,
+            "expected_count": 2,
+            "subtotal_cents": 3000000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 3000000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+        }
+      }
+    },
+    {
+      "name": "vínculo legado explícito reaproveita título sem reescrever identidade",
+      "pass": true,
+      "evidence": {
+        "after": {
+          "objects": 1,
+          "pending_objects": 0,
+          "principal_cents": 1200000,
+          "operational_count": 1,
+          "unallocated_cents": 1200000,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 1200000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 1200000
+        },
+        "before": {
+          "objects": 0,
+          "pending_objects": 0,
+          "principal_cents": 0,
+          "operational_count": 0,
+          "unallocated_cents": 0,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 0,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 0
+        },
+        "cutoff": "2026-10-21",
+        "errors": [],
+        "run_id": "f0c12222-5e36-46e8-802b-6d47ce4e4cda",
+        "accepted": 1,
+        "complete": true,
+        "rejected": 0,
+        "unchanged": 0,
+        "period_end": "2026-10-21",
+        "pending_rows": 0,
+        "period_start": "2026-01-01",
+        "reconciliation": {
+          "rows": [
+            {
+              "pending": [],
+              "object_id": "381f7729-a1f7-4a81-ae00-339d27c3380f",
+              "target_id": "20000000-0000-4000-8000-000000000001",
+              "delta_cents": 0,
+              "external_id": "77",
+              "installment": "1",
+              "source_status": "Pendente",
+              "destination_status": "open",
+              "declared_paid_cents": 0,
+              "destination_paid_cents": null,
+              "source_principal_cents": 1200000,
+              "destination_principal_cents": 1200000
+            }
+          ],
+          "source_count": 1,
+          "absent_in_snapshot": [],
+          "source_subtotal_cents": 1200000
+        },
+        "source_manifest": {
+          "errors": [],
+          "complete": true,
+          "row_count": 1,
+          "unique_count": 1,
+          "expected_count": 1,
+          "subtotal_cents": 1200000,
+          "coverage_percent": "100.00",
+          "expected_total_cents": null,
+          "certified_total_cents": 1200000
+        },
+        "extraction_complete": true,
+        "last_complete_run_id": "f0c12222-5e36-46e8-802b-6d47ce4e4cda"
+      }
+    },
+    {
+      "name": "alteração local não é sobrescrita por fotografia posterior",
+      "pass": true,
+      "evidence": {
+        "after": {
+          "objects": 1,
+          "pending_objects": 1,
+          "principal_cents": 120000,
+          "operational_count": 1,
+          "unallocated_cents": 120000,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 110000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 120000
+        },
+        "before": {
+          "objects": 1,
+          "pending_objects": 0,
+          "principal_cents": 100000,
+          "operational_count": 1,
+          "unallocated_cents": 100000,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 110000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 100000
+        },
+        "cutoff": "2026-10-21",
+        "errors": [],
+        "run_id": "ba5feb97-bdaa-471b-8d0a-a38b7eee23f9",
+        "accepted": 0,
+        "complete": false,
+        "rejected": 0,
+        "unchanged": 0,
+        "period_end": "2026-10-21",
+        "pending_rows": 1,
+        "period_start": "2026-01-01",
+        "reconciliation": {
+          "rows": [
+            {
+              "pending": [
+                "local_edit_conflict"
+              ],
+              "object_id": "7963dad4-fa12-4364-bf42-2f0cd70aff23",
+              "target_id": "40a7a990-d332-4dbe-b3b6-5c289eebce08",
+              "delta_cents": 10000,
+              "external_id": "L",
+              "installment": "1",
+              "source_status": "Pendente",
+              "destination_status": "open",
+              "declared_paid_cents": 0,
+              "destination_paid_cents": null,
+              "source_principal_cents": 120000,
+              "destination_principal_cents": 110000
+            }
+          ],
+          "source_count": 1,
+          "absent_in_snapshot": [],
+          "source_subtotal_cents": 120000
+        },
+        "source_manifest": {
+          "errors": [],
+          "complete": true,
+          "row_count": 1,
+          "unique_count": 1,
+          "expected_count": 1,
+          "subtotal_cents": 120000,
+          "coverage_percent": "100.00",
+          "expected_total_cents": null,
+          "certified_total_cents": 120000
+        },
+        "extraction_complete": true,
+        "last_complete_run_id": "3e3096dd-47f7-426e-85dc-475eb63a7da8"
+      }
+    },
+    {
+      "name": "baixa bancária local preservada; origem não recria nem altera caixa",
+      "pass": true,
+      "evidence": {
+        "after": {
+          "objects": 1,
+          "pending_objects": 1,
+          "principal_cents": 120000,
+          "operational_count": 1,
+          "unallocated_cents": 120000,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 100000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 120000
+        },
+        "before": {
+          "objects": 1,
+          "pending_objects": 0,
+          "principal_cents": 100000,
+          "operational_count": 1,
+          "unallocated_cents": 100000,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 100000,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 100000
+        },
+        "cutoff": "2026-10-21",
+        "errors": [],
+        "run_id": "6a4bf322-6a8e-4673-96b5-8206e08cbe97",
+        "accepted": 0,
+        "complete": false,
+        "rejected": 0,
+        "unchanged": 0,
+        "period_end": "2026-10-21",
+        "pending_rows": 1,
+        "period_start": "2026-01-01",
+        "reconciliation": {
+          "rows": [
+            {
+              "pending": [
+                "local_settlement_preserved",
+                "local_bank_events_preserved"
+              ],
+              "object_id": "53e05128-125f-40fd-8cb1-351bda16f5c1",
+              "target_id": "3bae2fe0-88c3-4aad-8f99-e55aeeb6ba7a",
+              "delta_cents": 20000,
+              "external_id": "LB",
+              "installment": "1",
+              "source_status": "Pendente",
+              "destination_status": "paid",
+              "declared_paid_cents": 0,
+              "destination_paid_cents": 100000,
+              "source_principal_cents": 120000,
+              "destination_principal_cents": 100000
+            }
+          ],
+          "source_count": 1,
+          "absent_in_snapshot": [],
+          "source_subtotal_cents": 120000
+        },
+        "source_manifest": {
+          "errors": [],
+          "complete": true,
+          "row_count": 1,
+          "unique_count": 1,
+          "expected_count": 1,
+          "subtotal_cents": 120000,
+          "coverage_percent": "100.00",
+          "expected_total_cents": null,
+          "certified_total_cents": 120000
+        },
+        "extraction_complete": true,
+        "last_complete_run_id": "cefc2ed7-62ad-489a-b8c2-62dd5c926cb3"
+      }
+    },
+    {
+      "name": "sem entidade permanece em quarentena, com valor e original",
+      "pass": true,
+      "evidence": {
+        "after": {
+          "objects": 1,
+          "pending_objects": 1,
+          "principal_cents": 400000,
+          "operational_count": 0,
+          "unallocated_cents": 400000,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 400000,
+          "without_project_cents": 0,
+          "operational_principal_cents": 0,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 400000
+        },
+        "before": {
+          "objects": 0,
+          "pending_objects": 0,
+          "principal_cents": 0,
+          "operational_count": 0,
+          "unallocated_cents": 0,
+          "reported_paid_cents": 0,
+          "confirmed_cash_cents": null,
+          "without_entity_cents": 0,
+          "without_project_cents": 0,
+          "operational_principal_cents": 0,
+          "financial_position_certified": false,
+          "principal_minus_declared_paid_cents": 0
+        },
+        "cutoff": "2026-10-21",
+        "errors": [],
+        "run_id": "92962838-7b40-44e2-b3eb-e0b98bd0cbbd",
+        "accepted": 0,
+        "complete": false,
+        "rejected": 0,
+        "unchanged": 0,
+        "period_end": "2026-10-21",
+        "pending_rows": 1,
+        "period_start": "2026-01-01",
+        "reconciliation": {
+          "rows": [
+            {
+              "pending": [
+                "without_entity",
+                "without_project"
+              ],
+              "object_id": "857b54ac-c049-4ce3-9093-786eafff9591",
+              "target_id": null,
+              "delta_cents": null,
+              "external_id": "QE",
+              "installment": "1",
+              "source_status": "Pendente",
+              "destination_status": null,
+              "declared_paid_cents": 0,
+              "destination_paid_cents": null,
+              "source_principal_cents": 400000,
+              "destination_principal_cents": null
+            }
+          ],
+          "source_count": 1,
+          "absent_in_snapshot": [],
+          "source_subtotal_cents": 400000
+        },
+        "source_manifest": {
+          "errors": [],
+          "complete": true,
+          "row_count": 1,
+          "unique_count": 1,
+          "expected_count": 1,
+          "subtotal_cents": 400000,
+          "coverage_percent": "100.00",
+          "expected_total_cents": null,
+          "certified_total_cents": 400000
+        },
+        "extraction_complete": true,
+        "last_complete_run_id": null
+      }
+    },
+    {
+      "name": "empresa de origem sem vínculo, manifesto falso e período fechado",
+      "pass": true,
+      "evidence": {
+        "bad": {
+          "after": {
+            "objects": 1,
+            "pending_objects": 0,
+            "principal_cents": 100000,
+            "operational_count": 1,
+            "unallocated_cents": 100000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 100000,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 100000
+          },
+          "before": {
+            "objects": 0,
+            "pending_objects": 0,
+            "principal_cents": 0,
+            "operational_count": 0,
+            "unallocated_cents": 0,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 0,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 0
+          },
+          "cutoff": "2026-10-21",
+          "errors": [],
+          "run_id": "109484c0-fda2-43cb-a538-93baf5878bf9",
+          "accepted": 1,
+          "complete": false,
+          "rejected": 0,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 0,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [],
+                "object_id": "40b56102-906a-42fe-b9dd-3ceea63b05f4",
+                "target_id": "2f4c846a-2d0f-45f2-b1fa-06bb090e9a0d",
+                "delta_cents": 0,
+                "external_id": "bad-total",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 100000,
+                "destination_principal_cents": 100000
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [],
+            "source_subtotal_cents": 1
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 1,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 100000
+          },
+          "extraction_complete": false,
+          "last_complete_run_id": null
+        },
+        "closed": {
+          "after": {
+            "objects": 1,
+            "pending_objects": 1,
+            "principal_cents": 100000,
+            "operational_count": 0,
+            "unallocated_cents": 100000,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 0,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 100000
+          },
+          "before": {
+            "objects": 0,
+            "pending_objects": 0,
+            "principal_cents": 0,
+            "operational_count": 0,
+            "unallocated_cents": 0,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 0,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 0
+          },
+          "cutoff": "2026-10-21",
+          "errors": [],
+          "run_id": "b9191adf-62a2-400a-9d5a-0848568f9189",
+          "accepted": 0,
+          "complete": false,
+          "rejected": 0,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 1,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [
+                  "closed_period"
+                ],
+                "object_id": "286e1aca-9dfb-448e-a158-6a8e58e62d68",
+                "target_id": null,
+                "delta_cents": null,
+                "external_id": "C",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": null,
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 100000,
+                "destination_principal_cents": null
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [],
+            "source_subtotal_cents": 100000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 100000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 100000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": null
+        }
+      }
+    },
+    {
+      "name": "entrada privada service_role exige autoria delegada e não permite colisão normalizada",
+      "pass": true,
+      "evidence": {
+        "service_role": {
+          "after": {
+            "objects": 2,
+            "pending_objects": 0,
+            "principal_cents": 11001,
+            "operational_count": 2,
+            "unallocated_cents": 11001,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 11001,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 11001
+          },
+          "before": {
+            "objects": 1,
+            "pending_objects": 0,
+            "principal_cents": 10001,
+            "operational_count": 1,
+            "unallocated_cents": 10001,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 10001,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 10001
+          },
+          "cutoff": "2026-10-21",
+          "errors": [],
+          "run_id": "6eafa03a-b1e1-4de8-93f8-12f0ff076ec7",
+          "accepted": 1,
+          "complete": true,
+          "rejected": 0,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 0,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": [],
+                "object_id": "1fe3af97-c6f2-471b-9122-f9ce129cd62a",
+                "target_id": "10ad4030-ea2b-453f-9f41-9ccec86a6d8a",
+                "delta_cents": 0,
+                "external_id": "service-call",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": "open",
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 1000,
+                "destination_principal_cents": 1000
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [
+              {
+                "action": "preserved",
+                "external_id": "conc",
+                "installment": "1"
+              }
+            ],
+            "source_subtotal_cents": 1000
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 1000,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 1000
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": "6eafa03a-b1e1-4de8-93f8-12f0ff076ec7"
+        },
+        "collision": {
+          "after": {
+            "objects": 2,
+            "pending_objects": 0,
+            "principal_cents": 11001,
+            "operational_count": 2,
+            "unallocated_cents": 11001,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 11001,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 11001
+          },
+          "before": {
+            "objects": 2,
+            "pending_objects": 0,
+            "principal_cents": 11001,
+            "operational_count": 2,
+            "unallocated_cents": 11001,
+            "reported_paid_cents": 0,
+            "confirmed_cash_cents": null,
+            "without_entity_cents": 0,
+            "without_project_cents": 0,
+            "operational_principal_cents": 11001,
+            "financial_position_certified": false,
+            "principal_minus_declared_paid_cents": 11001
+          },
+          "cutoff": "2026-10-21",
+          "errors": [
+            {
+              "reason": "identity_normalization_collision",
+              "sqlstate": "P0001",
+              "external_id": "CONC",
+              "installment": "1",
+              "principal_cents": 10001
+            }
+          ],
+          "run_id": "23d20090-b4be-4ebd-8917-a8440037d644",
+          "accepted": 0,
+          "complete": false,
+          "rejected": 1,
+          "unchanged": 0,
+          "period_end": "2026-10-21",
+          "pending_rows": 0,
+          "period_start": "2026-01-01",
+          "reconciliation": {
+            "rows": [
+              {
+                "pending": null,
+                "object_id": null,
+                "target_id": null,
+                "delta_cents": null,
+                "external_id": "CONC",
+                "installment": "1",
+                "source_status": "Pendente",
+                "destination_status": null,
+                "declared_paid_cents": 0,
+                "destination_paid_cents": null,
+                "source_principal_cents": 10001,
+                "destination_principal_cents": null
+              }
+            ],
+            "source_count": 1,
+            "absent_in_snapshot": [
+              {
+                "action": "preserved",
+                "external_id": "service-call",
+                "installment": "1"
+              },
+              {
+                "action": "preserved",
+                "external_id": "conc",
+                "installment": "1"
+              }
+            ],
+            "source_subtotal_cents": 10001
+          },
+          "source_manifest": {
+            "errors": [],
+            "complete": true,
+            "row_count": 1,
+            "unique_count": 1,
+            "expected_count": 1,
+            "subtotal_cents": 10001,
+            "coverage_percent": "100.00",
+            "expected_total_cents": null,
+            "certified_total_cents": 10001
+          },
+          "extraction_complete": true,
+          "last_complete_run_id": "6eafa03a-b1e1-4de8-93f8-12f0ff076ec7"
+        }
+      }
+    },
+    {
+      "name": "original e trilha imutáveis; importação não cria caixa",
+      "pass": true,
+      "evidence": {
+        "bank_transactions": 1,
+        "created_by_existing_explicit_payment_RPC": 1,
+        "created_by_import": 0,
+        "history_immutable": true,
+        "raw_immutable": true
+      }
+    }
+  ],
+  "batches": [
+    {
+      "command": "2d1eff84-74f7-4c3b-9c5e-f8683f0c3f64",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "e266b991-57da-4fc6-b60a-b7c97940109a",
+      "accepted": 2,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+            "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1000000,
+            "destination_principal_cents": 1000000
+          },
+          {
+            "pending": [],
+            "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+            "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+            "delta_cents": 0,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": 2000000
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 3000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 2,
+        "subtotal_cents": 3000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 3000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "e266b991-57da-4fc6-b60a-b7c97940109a"
+    },
+    {
+      "command": "7c6c4269-a36b-4129-92d0-8ab50e9ccac1",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "605a103d-2e46-4ff4-8b3a-8c60b5ba36d1",
+      "accepted": 0,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 2,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+            "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1000000,
+            "destination_principal_cents": 1000000
+          },
+          {
+            "pending": [],
+            "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+            "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+            "delta_cents": 0,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": 2000000
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 3000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 2,
+        "subtotal_cents": 3000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 3000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "605a103d-2e46-4ff4-8b3a-8c60b5ba36d1"
+    },
+    {
+      "command": "834f3dab-c815-4387-a322-d77473b081d8",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "f6658a26-c0df-4c18-94bf-3d43e40b9c32",
+      "accepted": 0,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 2,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+            "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1000000,
+            "destination_principal_cents": 1000000
+          },
+          {
+            "pending": [],
+            "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+            "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+            "delta_cents": 0,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": 2000000
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 3000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 2,
+        "subtotal_cents": 3000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 3000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "f6658a26-c0df-4c18-94bf-3d43e40b9c32"
+    },
+    {
+      "command": "2e6b5002-6515-45af-b8d8-10f66858a9c8",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "827cfd4a-0d5d-4e6b-a511-cf7e9c6a9246",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 1,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+            "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1000000,
+            "destination_principal_cents": 1000000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [
+          {
+            "action": "preserved",
+            "external_id": "78",
+            "installment": "1"
+          }
+        ],
+        "source_subtotal_cents": 1000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": false,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 2,
+        "subtotal_cents": 1000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 1000000
+      },
+      "extraction_complete": false,
+      "last_complete_run_id": "f6658a26-c0df-4c18-94bf-3d43e40b9c32"
+    },
+    {
+      "command": "e44a7876-614b-492c-8447-66b81a261a8e",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 5,
+        "pending_objects": 0,
+        "principal_cents": 1500000,
+        "operational_count": 5,
+        "unallocated_cents": 1500000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 1500000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 1500000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "905b3c79-34d5-40a4-ae96-6d562a8449e5",
+      "accepted": 5,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "2a9b1694-54d2-414c-9773-90a55344f8fc",
+            "target_id": "59d3f5fa-26af-4731-ac4e-ffc63c8557e8",
+            "delta_cents": 0,
+            "external_id": "P1",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          },
+          {
+            "pending": [],
+            "object_id": "cc0668bd-6e5f-4382-8e08-75711f40e211",
+            "target_id": "8e03e4ef-5111-4848-aae4-4f1255abb0f4",
+            "delta_cents": 0,
+            "external_id": "P2",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 200000,
+            "destination_principal_cents": 200000
+          },
+          {
+            "pending": [],
+            "object_id": "51e15caf-a856-4a7d-8130-78fd7a8fa9bd",
+            "target_id": "9684f5b9-2498-468c-9089-4fe6a9a29cb0",
+            "delta_cents": 0,
+            "external_id": "P3",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 300000,
+            "destination_principal_cents": 300000
+          },
+          {
+            "pending": [],
+            "object_id": "a58d3e2a-4daf-40db-8031-8e04b57975a5",
+            "target_id": "e7a1300c-fd65-4819-9073-008ef985729b",
+            "delta_cents": 0,
+            "external_id": "P4",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 400000,
+            "destination_principal_cents": 400000
+          },
+          {
+            "pending": [],
+            "object_id": "63afd44b-1450-4235-8768-c1f9cf69e4aa",
+            "target_id": "e092e8dd-07dc-475a-8d71-86eec3f3c9bf",
+            "delta_cents": 0,
+            "external_id": "P5",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 500000,
+            "destination_principal_cents": 500000
+          }
+        ],
+        "source_count": 5,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 1500000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 5,
+        "unique_count": 5,
+        "expected_count": 5,
+        "subtotal_cents": 1500000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 1500000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "905b3c79-34d5-40a4-ae96-6d562a8449e5"
+    },
+    {
+      "command": "df0b1673-ef98-4cfe-922b-fb5f581a02ed",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 300000,
+        "operational_count": 2,
+        "unallocated_cents": 300000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 300000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 300000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "7823d5ca-1c5a-45b0-918c-d6e39eba07bf",
+      "accepted": 2,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "8efdb756-ef6e-4a14-812e-7fa25492e454",
+            "target_id": "e4941bf2-2ac8-446c-a9a6-770e9487da21",
+            "delta_cents": 0,
+            "external_id": "P1",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          },
+          {
+            "pending": [],
+            "object_id": "97724efc-dc0e-4e22-80d3-4f960d2c8415",
+            "target_id": "93d156ba-032f-4fb2-804f-c50a85eefa51",
+            "delta_cents": 0,
+            "external_id": "P2",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 200000,
+            "destination_principal_cents": 200000
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 300000
+      },
+      "source_manifest": {
+        "errors": [
+          "page_failed:2",
+          "count_mismatch"
+        ],
+        "complete": false,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 5,
+        "subtotal_cents": 300000,
+        "coverage_percent": "40.00",
+        "expected_total_cents": null,
+        "certified_total_cents": null
+      },
+      "extraction_complete": false,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "48e6a7fc-8b8c-4a0a-a8a4-352ea66f2276",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 5,
+        "pending_objects": 0,
+        "principal_cents": 1500000,
+        "operational_count": 5,
+        "unallocated_cents": 1500000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 1500000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 1500000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 300000,
+        "operational_count": 2,
+        "unallocated_cents": 300000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 300000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 300000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "3efe56d4-bf2c-486d-8c20-63a90ebaf88c",
+      "accepted": 3,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 2,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "8efdb756-ef6e-4a14-812e-7fa25492e454",
+            "target_id": "e4941bf2-2ac8-446c-a9a6-770e9487da21",
+            "delta_cents": 0,
+            "external_id": "P1",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          },
+          {
+            "pending": [],
+            "object_id": "97724efc-dc0e-4e22-80d3-4f960d2c8415",
+            "target_id": "93d156ba-032f-4fb2-804f-c50a85eefa51",
+            "delta_cents": 0,
+            "external_id": "P2",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 200000,
+            "destination_principal_cents": 200000
+          },
+          {
+            "pending": [],
+            "object_id": "f0b52ac7-e121-42d1-9d4f-1120f155a372",
+            "target_id": "8d1c6cd2-7899-40ee-8deb-6cf0ae25ede4",
+            "delta_cents": 0,
+            "external_id": "P3",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 300000,
+            "destination_principal_cents": 300000
+          },
+          {
+            "pending": [],
+            "object_id": "f9369703-9e84-4420-8578-309fe56ae6e0",
+            "target_id": "90482c27-ef0f-4d69-bbb8-29cca497c52f",
+            "delta_cents": 0,
+            "external_id": "P4",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 400000,
+            "destination_principal_cents": 400000
+          },
+          {
+            "pending": [],
+            "object_id": "71644961-beb2-46ac-9a61-2e109e19ba90",
+            "target_id": "292f7bc5-9c0a-4d84-952a-657b81b7d61e",
+            "delta_cents": 0,
+            "external_id": "P5",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 500000,
+            "destination_principal_cents": 500000
+          }
+        ],
+        "source_count": 5,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 1500000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 5,
+        "unique_count": 5,
+        "expected_count": 5,
+        "subtotal_cents": 1500000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 1500000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "3efe56d4-bf2c-486d-8c20-63a90ebaf88c"
+    },
+    {
+      "command": "aa2daa52-85da-47c9-893f-77158993de67",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 4,
+        "pending_objects": 0,
+        "principal_cents": 1000000,
+        "operational_count": 4,
+        "unallocated_cents": 1000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 1000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 1000000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "194ace69-afc5-492f-b758-f205ecf18f1a",
+      "accepted": 4,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "620a21f5-bc48-48f4-933c-5bb53a20108b",
+            "target_id": "0b75ea10-5ca6-4f94-bc51-e7f899bc5eac",
+            "delta_cents": 0,
+            "external_id": "P1",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          },
+          {
+            "pending": [],
+            "object_id": "a3ee62fd-cd0d-4d4c-9cfd-dfaa7ccbced2",
+            "target_id": "4ef47049-6eef-4ad5-b3e9-fb89a74fe1b3",
+            "delta_cents": 0,
+            "external_id": "P2",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 200000,
+            "destination_principal_cents": 200000
+          },
+          {
+            "pending": [],
+            "object_id": "6a385bdd-14e7-416b-8afb-5c31e9b8fa00",
+            "target_id": "a681cb6e-e347-4a03-a630-049dfddcee71",
+            "delta_cents": 0,
+            "external_id": "P3",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 300000,
+            "destination_principal_cents": 300000
+          },
+          {
+            "pending": [],
+            "object_id": "28c8d4bc-dcb8-4b1d-98be-8f85daaa8b28",
+            "target_id": "5d3338f8-85a8-4e1d-ae76-ccb5387a5915",
+            "delta_cents": 0,
+            "external_id": "P4",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 400000,
+            "destination_principal_cents": 400000
+          }
+        ],
+        "source_count": 4,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 1000000
+      },
+      "source_manifest": {
+        "errors": [
+          "repeated_cursor",
+          "count_mismatch"
+        ],
+        "complete": false,
+        "row_count": 4,
+        "unique_count": 4,
+        "expected_count": 5,
+        "subtotal_cents": 1000000,
+        "coverage_percent": "80.00",
+        "expected_total_cents": null,
+        "certified_total_cents": null
+      },
+      "extraction_complete": false,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "0c1c4deb-43a2-4552-8e2e-6521ddc2e217",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 5,
+        "pending_objects": 0,
+        "principal_cents": 1500000,
+        "operational_count": 5,
+        "unallocated_cents": 1500000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 1500000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 1500000
+      },
+      "before": {
+        "objects": 5,
+        "pending_objects": 0,
+        "principal_cents": 1500000,
+        "operational_count": 5,
+        "unallocated_cents": 1500000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 1500000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 1500000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "c0d5b2b5-7fae-4e98-9271-2efeb7d12a22",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 2,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "2a9b1694-54d2-414c-9773-90a55344f8fc",
+            "target_id": "59d3f5fa-26af-4731-ac4e-ffc63c8557e8",
+            "delta_cents": 0,
+            "external_id": "P1",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          },
+          {
+            "pending": [],
+            "object_id": "cc0668bd-6e5f-4382-8e08-75711f40e211",
+            "target_id": "8e03e4ef-5111-4848-aae4-4f1255abb0f4",
+            "delta_cents": 0,
+            "external_id": "P2",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 200000,
+            "destination_principal_cents": 200000
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [
+          {
+            "action": "preserved",
+            "external_id": "P5",
+            "installment": "1"
+          },
+          {
+            "action": "preserved",
+            "external_id": "P3",
+            "installment": "1"
+          },
+          {
+            "action": "preserved",
+            "external_id": "P4",
+            "installment": "1"
+          }
+        ],
+        "source_subtotal_cents": 300000
+      },
+      "source_manifest": {
+        "errors": [
+          "page_failed:2",
+          "count_mismatch"
+        ],
+        "complete": false,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 5,
+        "subtotal_cents": 300000,
+        "coverage_percent": "40.00",
+        "expected_total_cents": null,
+        "certified_total_cents": null
+      },
+      "extraction_complete": false,
+      "last_complete_run_id": "905b3c79-34d5-40a4-ae96-6d562a8449e5"
+    },
+    {
+      "command": "3a582b98-abe2-4db7-b7f0-996a5b9c0971",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "5f393907-9702-4590-b452-500557ee9d37",
+      "accepted": 0,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 2,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+            "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1000000,
+            "destination_principal_cents": 1000000
+          },
+          {
+            "pending": [],
+            "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+            "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+            "delta_cents": 0,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": 2000000
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 3000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 2,
+        "subtotal_cents": 3000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 3000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "5f393907-9702-4590-b452-500557ee9d37"
+    },
+    {
+      "command": "3a582b98-abe2-4db7-b7f0-996a5b9c0971",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "5f393907-9702-4590-b452-500557ee9d37",
+      "accepted": 0,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 2,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+            "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1000000,
+            "destination_principal_cents": 1000000
+          },
+          {
+            "pending": [],
+            "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+            "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+            "delta_cents": 0,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": 2000000
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 3000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 2,
+        "subtotal_cents": 3000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 3000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "5f393907-9702-4590-b452-500557ee9d37"
+    },
+    {
+      "command": "9d93887d-b9f2-4c69-9f9b-97514a5ea480",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 10001,
+        "operational_count": 1,
+        "unallocated_cents": 10001,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 10001,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 10001
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "1bf7e685-568e-43cf-9637-b769f156cb25",
+      "accepted": 1,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "e2d00b85-aae6-4a15-86cf-1fe815fff26d",
+            "target_id": "f20a1ed4-640b-4be3-b488-257ab2c61067",
+            "delta_cents": 0,
+            "external_id": "conc",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 10001,
+            "destination_principal_cents": 10001
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 10001
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 10001,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 10001
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "1bf7e685-568e-43cf-9637-b769f156cb25"
+    },
+    {
+      "command": "9ef61844-c386-4be3-90d4-e0dffabecd04",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 10001,
+        "operational_count": 1,
+        "unallocated_cents": 10001,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 10001,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 10001
+      },
+      "before": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 10001,
+        "operational_count": 1,
+        "unallocated_cents": 10001,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 10001,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 10001
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "b53acbf1-b99a-4c93-a663-97d9187ca6f4",
+      "accepted": 0,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 1,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "e2d00b85-aae6-4a15-86cf-1fe815fff26d",
+            "target_id": "f20a1ed4-640b-4be3-b488-257ab2c61067",
+            "delta_cents": 0,
+            "external_id": "conc",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 10001,
+            "destination_principal_cents": 10001
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 10001
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 10001,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 10001
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "b53acbf1-b99a-4c93-a663-97d9187ca6f4"
+    },
+    {
+      "command": "73007b3b-0b84-4d4f-a4d6-6e4aea12dd0a",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 1000000,
+        "operational_count": 1,
+        "unallocated_cents": 1000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 1000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 1000000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [
+        {
+          "reason": "injected_failure",
+          "sqlstate": "P0001",
+          "external_id": "78",
+          "installment": "1",
+          "principal_cents": 2000000
+        }
+      ],
+      "run_id": "3fa8f4cf-89f2-4da1-9997-f1361486b40b",
+      "accepted": 1,
+      "complete": false,
+      "rejected": 1,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "0a262008-8f61-4225-9e7b-08b0e67889e6",
+            "target_id": "918e5910-b3b7-4e8a-9810-ec1f640f4f9e",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1000000,
+            "destination_principal_cents": 1000000
+          },
+          {
+            "pending": null,
+            "object_id": null,
+            "target_id": null,
+            "delta_cents": null,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": null,
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": null
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 3000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 2,
+        "subtotal_cents": 3000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 3000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "b72411eb-a526-4c97-a3d2-b276bf806b99",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "before": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 1000000,
+        "operational_count": 1,
+        "unallocated_cents": 1000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 1000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 1000000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "a9c3f56d-d770-49b0-99df-3338cd60ce2e",
+      "accepted": 1,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 1,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "0a262008-8f61-4225-9e7b-08b0e67889e6",
+            "target_id": "918e5910-b3b7-4e8a-9810-ec1f640f4f9e",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1000000,
+            "destination_principal_cents": 1000000
+          },
+          {
+            "pending": [],
+            "object_id": "22274855-ea8b-4999-a715-2e4961cb2a9a",
+            "target_id": "7f1c858c-d1a0-435c-9c0e-c55ae3cec51c",
+            "delta_cents": 0,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": 2000000
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 3000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 2,
+        "subtotal_cents": 3000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 3000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "a9c3f56d-d770-49b0-99df-3338cd60ce2e"
+    },
+    {
+      "command": "8d8341cd-11c7-46a1-8ea9-40b602dc36fa",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3200000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3000000,
+        "operational_count": 2,
+        "unallocated_cents": 3000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3000000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3000000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed",
+      "accepted": 1,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+            "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1200000,
+            "destination_principal_cents": 1200000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [
+          {
+            "action": "preserved",
+            "external_id": "78",
+            "installment": "1"
+          }
+        ],
+        "source_subtotal_cents": 1200000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 1200000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 1200000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+    },
+    {
+      "command": "e7992492-cb98-4466-9f36-6b3aca12c147",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 1,
+        "principal_cents": 3300000,
+        "operational_count": 2,
+        "unallocated_cents": 3300000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3300000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3200000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "2c25e5a4-7b4e-4011-8bfa-a507403222eb",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "change_requires_evidence"
+            ],
+            "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+            "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+            "delta_cents": 100000,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1300000,
+            "destination_principal_cents": 1200000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [
+          {
+            "action": "preserved",
+            "external_id": "78",
+            "installment": "1"
+          }
+        ],
+        "source_subtotal_cents": 1300000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 1300000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 1300000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+    },
+    {
+      "command": "10c38dca-5dcc-4cd7-8118-6bf2f193a13f",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 1,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 400000,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 2800000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 1,
+        "principal_cents": 3300000,
+        "operational_count": 2,
+        "unallocated_cents": 3300000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 3300000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "20c07c2a-6e20-4168-a0cf-36628c594f13",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "declared_settlement_requires_ledger"
+            ],
+            "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+            "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Paga",
+            "destination_status": "open",
+            "declared_paid_cents": 400000,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1200000,
+            "destination_principal_cents": 1200000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [
+          {
+            "action": "preserved",
+            "external_id": "78",
+            "installment": "1"
+          }
+        ],
+        "source_subtotal_cents": 1200000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 1200000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 1200000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+    },
+    {
+      "command": "b0400c6b-5ca8-411a-9a11-58e083212aa6",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 2,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 400000,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 2800000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 1,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 400000,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 2800000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "7696370e-98da-432e-a0de-58d9c8d5318b",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 2,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "cancellation_requires_obligation_evidence"
+            ],
+            "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+            "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+            "delta_cents": 0,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Cancelada",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": 2000000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [
+          {
+            "action": "preserved",
+            "external_id": "77",
+            "installment": "1"
+          }
+        ],
+        "source_subtotal_cents": 2000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 2000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 2000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+    },
+    {
+      "command": "d8422f58-1d68-48c9-9239-c376d695c224",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 2,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 400000,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 2800000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 2,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 400000,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 2800000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "89a079d9-c96e-4134-badf-fca6e4994cb0",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 2,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "reversal_requires_original_and_ledger"
+            ],
+            "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+            "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+            "delta_cents": 0,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Estornada",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": 2000000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [
+          {
+            "action": "preserved",
+            "external_id": "77",
+            "installment": "1"
+          }
+        ],
+        "source_subtotal_cents": 2000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 2000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 2000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+    },
+    {
+      "command": "4194765b-85b2-4d53-8e41-3def6197792a",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 1,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 400000,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 800000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 2,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 400000,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 2800000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "a1a78049-f58a-4255-9769-8ad5cbd6fb56",
+      "accepted": 1,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+            "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+            "delta_cents": 0,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Cancelada",
+            "destination_status": "cancelled",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": 2000000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [
+          {
+            "action": "preserved",
+            "external_id": "77",
+            "installment": "1"
+          }
+        ],
+        "source_subtotal_cents": 2000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 2000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 2000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+    },
+    {
+      "command": "236ef75a-2107-44dd-9c6f-114345fe2964",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 1,
+        "principal_cents": 1000000,
+        "operational_count": 1,
+        "unallocated_cents": 1000000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 400000,
+        "operational_principal_cents": 600000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 1000000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "88523fe4-f899-499e-8140-3d05394dd9a9",
+      "accepted": 1,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "fdcc45da-6f76-47e8-80d2-f93f2966639a",
+            "target_id": "f28d8413-f535-4251-9890-e00c7fb6e626",
+            "delta_cents": 0,
+            "external_id": "known",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 600000,
+            "destination_principal_cents": 600000
+          },
+          {
+            "pending": [
+              "without_project"
+            ],
+            "object_id": "edc17521-ddde-4712-839a-4c5d56c31da5",
+            "target_id": null,
+            "delta_cents": null,
+            "external_id": "unknown",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": null,
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 400000,
+            "destination_principal_cents": null
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 1000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 2,
+        "subtotal_cents": 1000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 1000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "cd252081-6506-4e80-a778-fe6721ffbb21",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 1,
+        "principal_cents": 100000,
+        "operational_count": 1,
+        "unallocated_cents": 40000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 100000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 100000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "f8d3bb22-da94-44aa-a07e-4e470f006cfc",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "without_service"
+            ],
+            "object_id": "b0e08388-9e15-4a8b-bc3d-9304ed3f1268",
+            "target_id": "22a92e7b-01b8-4566-8338-5fda2857eea0",
+            "delta_cents": 0,
+            "external_id": "split",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 100000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 100000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 100000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "0d328b4f-2466-4146-b641-b73324daaffb",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 1,
+        "principal_cents": 100000,
+        "operational_count": 1,
+        "unallocated_cents": 40000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 100000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 100000
+      },
+      "before": {
+        "objects": 1,
+        "pending_objects": 1,
+        "principal_cents": 100000,
+        "operational_count": 1,
+        "unallocated_cents": 40000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 100000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 100000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [
+        {
+          "reason": "overallocated",
+          "sqlstate": "P0001",
+          "external_id": "split",
+          "installment": "1",
+          "principal_cents": 100000
+        }
+      ],
+      "run_id": "e646cea2-d041-4d33-b450-4e22e2c99d2e",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 1,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "without_service"
+            ],
+            "object_id": "b0e08388-9e15-4a8b-bc3d-9304ed3f1268",
+            "target_id": "22a92e7b-01b8-4566-8338-5fda2857eea0",
+            "delta_cents": 0,
+            "external_id": "split",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 100000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 100000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 100000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "0eca1f21-865f-45e4-a836-8819d1270760",
+      "company": "00000000-0000-4000-8000-000000000006",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 200000,
+        "operational_count": 2,
+        "unallocated_cents": 200000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 200000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "98365c20-b988-4a01-883d-d12ed9fa2aa7",
+      "accepted": 2,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "ccd4397a-2b40-46aa-8c10-099d46ba85df",
+            "target_id": "0073f7df-354b-431a-a71e-4f579ca7a8ca",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          },
+          {
+            "pending": [],
+            "object_id": "79749160-97ba-4b51-8194-9a53e5d95c96",
+            "target_id": "db9a0cea-3a0c-4952-b544-4c6350fff57e",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "2",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 200000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 2,
+        "subtotal_cents": 200000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 200000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "98365c20-b988-4a01-883d-d12ed9fa2aa7"
+    },
+    {
+      "command": "7baa21cb-d6bc-4756-aac8-d295e6904900",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [
+        {
+          "reason": "supplier_cross_company",
+          "sqlstate": "P0001",
+          "external_id": "bad",
+          "installment": "1",
+          "principal_cents": 100000
+        }
+      ],
+      "run_id": "6eda4ab7-6b38-4984-ba8c-abe90efec351",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 1,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": null,
+            "object_id": null,
+            "target_id": null,
+            "delta_cents": null,
+            "external_id": "bad",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": null,
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": null
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 100000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 100000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 100000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "5db5c62f-03e5-4ca4-8f81-6e2960756ff7",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [
+        {
+          "reason": "missing_identity",
+          "sqlstate": "P0001",
+          "external_id": null,
+          "installment": "1",
+          "principal_cents": 400000
+        }
+      ],
+      "run_id": "5682a610-4acc-421f-b6f1-d1e35747cfb7",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 1,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": null,
+            "object_id": null,
+            "target_id": null,
+            "delta_cents": null,
+            "external_id": null,
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": null,
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 400000,
+            "destination_principal_cents": null
+          }
+        ],
+        "source_count": 0,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 400000
+      },
+      "source_manifest": {
+        "errors": [
+          "missing_identity",
+          "count_mismatch"
+        ],
+        "complete": false,
+        "row_count": 1,
+        "unique_count": 0,
+        "expected_count": 1,
+        "subtotal_cents": 400000,
+        "coverage_percent": "0.00",
+        "expected_total_cents": null,
+        "certified_total_cents": null
+      },
+      "extraction_complete": false,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "4498e77f-7d20-4588-851f-4d97d117cd8d",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 1,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 400000,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 800000
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 1,
+        "principal_cents": 3200000,
+        "operational_count": 2,
+        "unallocated_cents": 3200000,
+        "reported_paid_cents": 400000,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 3200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 800000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [
+        {
+          "reason": "stale_snapshot",
+          "sqlstate": "P0001",
+          "external_id": "77",
+          "installment": "1",
+          "principal_cents": 1000000
+        },
+        {
+          "reason": "stale_snapshot",
+          "sqlstate": "P0001",
+          "external_id": "78",
+          "installment": "1",
+          "principal_cents": 2000000
+        }
+      ],
+      "run_id": "2adac1ff-6e55-4caa-9c7c-2421cd989731",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 2,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "declared_settlement_requires_ledger"
+            ],
+            "object_id": "2d4a351f-1ba8-42a3-90ba-7966df7e2047",
+            "target_id": "8951c342-399e-4696-9754-f64364b876a4",
+            "delta_cents": -200000,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1000000,
+            "destination_principal_cents": 1200000
+          },
+          {
+            "pending": [],
+            "object_id": "e000cc73-3ed7-4dd7-8586-d5fd67f9bfef",
+            "target_id": "33a5752a-ac5e-48bb-8155-0cc8c4bc26dc",
+            "delta_cents": 0,
+            "external_id": "78",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "cancelled",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 2000000,
+            "destination_principal_cents": 2000000
+          }
+        ],
+        "source_count": 2,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 3000000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 2,
+        "unique_count": 2,
+        "expected_count": 2,
+        "subtotal_cents": 3000000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 3000000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "ba3a67bc-9b8a-42d4-84db-7f12f22780ed"
+    },
+    {
+      "command": "2c6e24ce-8ee5-4023-89b5-e2be4ab18b54",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 1200000,
+        "operational_count": 1,
+        "unallocated_cents": 1200000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 1200000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 1200000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "f0c12222-5e36-46e8-802b-6d47ce4e4cda",
+      "accepted": 1,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "381f7729-a1f7-4a81-ae00-339d27c3380f",
+            "target_id": "20000000-0000-4000-8000-000000000001",
+            "delta_cents": 0,
+            "external_id": "77",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 1200000,
+            "destination_principal_cents": 1200000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 1200000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 1200000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 1200000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "f0c12222-5e36-46e8-802b-6d47ce4e4cda"
+    },
+    {
+      "command": "ce38e234-68cc-44ea-948a-e2bee5812802",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 100000,
+        "operational_count": 1,
+        "unallocated_cents": 100000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 100000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 100000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "3e3096dd-47f7-426e-85dc-475eb63a7da8",
+      "accepted": 1,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "7963dad4-fa12-4364-bf42-2f0cd70aff23",
+            "target_id": "40a7a990-d332-4dbe-b3b6-5c289eebce08",
+            "delta_cents": 0,
+            "external_id": "L",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 100000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 100000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 100000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "3e3096dd-47f7-426e-85dc-475eb63a7da8"
+    },
+    {
+      "command": "fd362666-42b3-4729-a0a4-bb19358e2dac",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 1,
+        "principal_cents": 120000,
+        "operational_count": 1,
+        "unallocated_cents": 120000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 110000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 120000
+      },
+      "before": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 100000,
+        "operational_count": 1,
+        "unallocated_cents": 100000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 110000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 100000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "ba5feb97-bdaa-471b-8d0a-a38b7eee23f9",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "local_edit_conflict"
+            ],
+            "object_id": "7963dad4-fa12-4364-bf42-2f0cd70aff23",
+            "target_id": "40a7a990-d332-4dbe-b3b6-5c289eebce08",
+            "delta_cents": 10000,
+            "external_id": "L",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 120000,
+            "destination_principal_cents": 110000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 120000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 120000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 120000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "3e3096dd-47f7-426e-85dc-475eb63a7da8"
+    },
+    {
+      "command": "59f8bae5-fa3b-4106-a006-1491e6346baa",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 100000,
+        "operational_count": 1,
+        "unallocated_cents": 100000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 100000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 100000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "cefc2ed7-62ad-489a-b8c2-62dd5c926cb3",
+      "accepted": 1,
+      "complete": true,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "53e05128-125f-40fd-8cb1-351bda16f5c1",
+            "target_id": "3bae2fe0-88c3-4aad-8f99-e55aeeb6ba7a",
+            "delta_cents": 0,
+            "external_id": "LB",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 100000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 100000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 100000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "cefc2ed7-62ad-489a-b8c2-62dd5c926cb3"
+    },
+    {
+      "command": "8052287d-1f16-43c7-94bb-4f630e41d0dd",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 1,
+        "principal_cents": 120000,
+        "operational_count": 1,
+        "unallocated_cents": 120000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 100000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 120000
+      },
+      "before": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 100000,
+        "operational_count": 1,
+        "unallocated_cents": 100000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 100000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 100000
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "6a4bf322-6a8e-4673-96b5-8206e08cbe97",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "local_settlement_preserved",
+              "local_bank_events_preserved"
+            ],
+            "object_id": "53e05128-125f-40fd-8cb1-351bda16f5c1",
+            "target_id": "3bae2fe0-88c3-4aad-8f99-e55aeeb6ba7a",
+            "delta_cents": 20000,
+            "external_id": "LB",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "paid",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": 100000,
+            "source_principal_cents": 120000,
+            "destination_principal_cents": 100000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 120000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 120000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 120000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "cefc2ed7-62ad-489a-b8c2-62dd5c926cb3"
+    },
+    {
+      "command": "c6e08374-285c-4540-84c6-4ff44af7a166",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 1,
+        "principal_cents": 400000,
+        "operational_count": 0,
+        "unallocated_cents": 400000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 400000,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 400000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "92962838-7b40-44e2-b3eb-e0b98bd0cbbd",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "without_entity",
+              "without_project"
+            ],
+            "object_id": "857b54ac-c049-4ce3-9093-786eafff9591",
+            "target_id": null,
+            "delta_cents": null,
+            "external_id": "QE",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": null,
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 400000,
+            "destination_principal_cents": null
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 400000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 400000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 400000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "58cf9470-ce43-4257-a8a0-8310b6e12318",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 0,
+        "principal_cents": 100000,
+        "operational_count": 1,
+        "unallocated_cents": 100000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 100000,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 100000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "109484c0-fda2-43cb-a538-93baf5878bf9",
+      "accepted": 1,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [],
+            "object_id": "40b56102-906a-42fe-b9dd-3ceea63b05f4",
+            "target_id": "2f4c846a-2d0f-45f2-b1fa-06bb090e9a0d",
+            "delta_cents": 0,
+            "external_id": "bad-total",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": "open",
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": 100000
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 1
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 1,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 100000
+      },
+      "extraction_complete": false,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "acf6c278-44e3-4746-ad37-63d0e1d2dae5",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 1,
+        "pending_objects": 1,
+        "principal_cents": 100000,
+        "operational_count": 0,
+        "unallocated_cents": 100000,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 100000
+      },
+      "before": {
+        "objects": 0,
+        "pending_objects": 0,
+        "principal_cents": 0,
+        "operational_count": 0,
+        "unallocated_cents": 0,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 0,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 0
+      },
+      "cutoff": "2026-10-21",
+      "errors": [],
+      "run_id": "b9191adf-62a2-400a-9d5a-0848568f9189",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 0,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 1,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": [
+              "closed_period"
+            ],
+            "object_id": "286e1aca-9dfb-448e-a158-6a8e58e62d68",
+            "target_id": null,
+            "delta_cents": null,
+            "external_id": "C",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": null,
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 100000,
+            "destination_principal_cents": null
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [],
+        "source_subtotal_cents": 100000
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 100000,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 100000
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": null
+    },
+    {
+      "command": "628b196a-6dd5-4367-bc4b-2329b17015e0",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "after": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 11001,
+        "operational_count": 2,
+        "unallocated_cents": 11001,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 11001,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 11001
+      },
+      "before": {
+        "objects": 2,
+        "pending_objects": 0,
+        "principal_cents": 11001,
+        "operational_count": 2,
+        "unallocated_cents": 11001,
+        "reported_paid_cents": 0,
+        "confirmed_cash_cents": null,
+        "without_entity_cents": 0,
+        "without_project_cents": 0,
+        "operational_principal_cents": 11001,
+        "financial_position_certified": false,
+        "principal_minus_declared_paid_cents": 11001
+      },
+      "cutoff": "2026-10-21",
+      "errors": [
+        {
+          "reason": "identity_normalization_collision",
+          "sqlstate": "P0001",
+          "external_id": "CONC",
+          "installment": "1",
+          "principal_cents": 10001
+        }
+      ],
+      "run_id": "23d20090-b4be-4ebd-8917-a8440037d644",
+      "accepted": 0,
+      "complete": false,
+      "rejected": 1,
+      "unchanged": 0,
+      "period_end": "2026-10-21",
+      "pending_rows": 0,
+      "period_start": "2026-01-01",
+      "reconciliation": {
+        "rows": [
+          {
+            "pending": null,
+            "object_id": null,
+            "target_id": null,
+            "delta_cents": null,
+            "external_id": "CONC",
+            "installment": "1",
+            "source_status": "Pendente",
+            "destination_status": null,
+            "declared_paid_cents": 0,
+            "destination_paid_cents": null,
+            "source_principal_cents": 10001,
+            "destination_principal_cents": null
+          }
+        ],
+        "source_count": 1,
+        "absent_in_snapshot": [
+          {
+            "action": "preserved",
+            "external_id": "service-call",
+            "installment": "1"
+          },
+          {
+            "action": "preserved",
+            "external_id": "conc",
+            "installment": "1"
+          }
+        ],
+        "source_subtotal_cents": 10001
+      },
+      "source_manifest": {
+        "errors": [],
+        "complete": true,
+        "row_count": 1,
+        "unique_count": 1,
+        "expected_count": 1,
+        "subtotal_cents": 10001,
+        "coverage_percent": "100.00",
+        "expected_total_cents": null,
+        "certified_total_cents": 10001
+      },
+      "extraction_complete": true,
+      "last_complete_run_id": "6eafa03a-b1e1-4de8-93f8-12f0ff076ec7"
+    }
+  ]
+}

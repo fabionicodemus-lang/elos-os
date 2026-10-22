@@ -1,0 +1,633 @@
+[
+  {
+    "case": "CT03",
+    "cutoff": "2026-10-21",
+    "source": "fixture aprovada + extrato fixo independente; não dados reais",
+    "account_id": "8e3ac10a-cc5a-4152-bc59-c5998951a588",
+    "company_id": "00000000-0000-4000-8000-000000000005",
+    "project_id": "11620f8e-7ce3-4f60-94b7-f31260432ee7",
+    "opening_cents": 100000000,
+    "legal_entity_id": "00000000-0000-4000-8000-000000000007",
+    "linked_abs_cents": 500000,
+    "AP_principal_cents": 1000000,
+    "registered_in_cents": 0,
+    "statement_net_cents": -500000,
+    "registered_out_cents": 500000,
+    "AP_open_generated_cents": 500000,
+    "AR_open_generated_cents": 0,
+    "registered_closing_cents": 99500000,
+    "statement_closing_cents": 99500000,
+    "bank_delta_cents": 0,
+    "statement_complete_within_fixture": true,
+    "opening_document_verified": false,
+    "opening_origin": "Saldo auxiliar de sustentação do teste, R$1.000.000; não é saldo aprovado pelos casos nem extrato real",
+    "confirmed_closing_cents": null,
+    "economic_cost_cents": null,
+    "obligation_source": "títulos operacionais criados com inputs; importação remota não exercitada",
+    "contracts": [],
+    "documents": [
+      {
+        "title_id": "4f84b68c-6261-4718-a011-ada790d2365c",
+        "title_type": "AP",
+        "source_document": "CT03",
+        "source_principal_cents": 1000000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 500000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 500000,
+        "elos_open_cents": 500000,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "665f1c57-2043-40e9-a084-e4b58a4217f4",
+          "d27d33f8-8276-4c28-9375-e4cf68d43c09"
+        ],
+        "bank_transaction_ids": [
+          "6e497bdb-ca7c-40f1-bfb6-517ac1ebe1a9",
+          "79dd5ba2-648e-4dff-bf27-7e13178c6db4"
+        ],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      }
+    ]
+  },
+  {
+    "case": "CT13",
+    "cutoff": "2026-10-21",
+    "source": "fixture aprovada + extrato fixo independente; não dados reais",
+    "account_id": "fb5e0113-b7b0-4249-91b7-51e6185177bc",
+    "company_id": "00000000-0000-4000-8000-000000000005",
+    "project_id": "2ddee86c-fc9c-4ab8-bff1-84fc7907e185",
+    "opening_cents": 100000000,
+    "legal_entity_id": "00000000-0000-4000-8000-000000000007",
+    "linked_abs_cents": 1400000,
+    "AP_principal_cents": 0,
+    "registered_in_cents": 1400000,
+    "statement_net_cents": 1400000,
+    "registered_out_cents": 0,
+    "AP_open_generated_cents": 0,
+    "AR_open_generated_cents": 8612000,
+    "registered_closing_cents": 101400000,
+    "statement_closing_cents": 101400000,
+    "bank_delta_cents": 0,
+    "statement_complete_within_fixture": true,
+    "opening_document_verified": false,
+    "opening_origin": "Saldo auxiliar de sustentação do teste, R$1.000.000; não é saldo aprovado pelos casos nem extrato real",
+    "confirmed_closing_cents": null,
+    "economic_cost_cents": null,
+    "obligation_source": "títulos operacionais criados com inputs; importação remota não exercitada",
+    "contracts": [],
+    "documents": [
+      {
+        "title_id": "8ea2774c-51f8-4924-b84d-a04aa2a6df4b",
+        "title_type": "AR",
+        "source_document": "CT13",
+        "source_principal_cents": 1000000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 1000000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 0,
+        "elos_open_cents": 0,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "132e9b0b-7a20-4b96-8451-3dd6e7dff996"
+        ],
+        "bank_transaction_ids": [
+          "966ade03-a812-4437-b22b-debbe1d2a798"
+        ],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      },
+      {
+        "title_id": "47959a5c-f402-4cce-bce4-c859d7849dbd",
+        "title_type": "AR",
+        "source_document": "CT13",
+        "source_principal_cents": 8000000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 0,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 8000000,
+        "elos_open_cents": 8000000,
+        "open_delta_cents": 0,
+        "event_ids": [],
+        "bank_transaction_ids": [],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      },
+      {
+        "title_id": "1cb3d611-7912-429b-866c-3eced436b571",
+        "title_type": "AR",
+        "source_document": "CT13",
+        "source_principal_cents": 1000000,
+        "constituted_interest_cents": 12000,
+        "net_paid_principal_cents": 400000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 612000,
+        "elos_open_cents": 612000,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "713b9377-54ce-4687-8c47-fa0a8230011c"
+        ],
+        "bank_transaction_ids": [
+          "79872be4-c58b-4f4f-9c32-86bd817229cf"
+        ],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      }
+    ]
+  },
+  {
+    "case": "CT14-fee",
+    "cutoff": "2026-10-21",
+    "source": "fixture aprovada + extrato fixo independente; não dados reais",
+    "account_id": "2f723d44-c27e-4643-ac6f-227f9822a8e5",
+    "company_id": "00000000-0000-4000-8000-000000000005",
+    "project_id": "f57f9324-899d-4584-9f3e-5e78cb7241d3",
+    "opening_cents": 100000000,
+    "legal_entity_id": "00000000-0000-4000-8000-000000000007",
+    "linked_abs_cents": 980000,
+    "AP_principal_cents": 0,
+    "registered_in_cents": 980000,
+    "statement_net_cents": 980000,
+    "registered_out_cents": 0,
+    "AP_open_generated_cents": 0,
+    "AR_open_generated_cents": 0,
+    "registered_closing_cents": 100980000,
+    "statement_closing_cents": 100980000,
+    "bank_delta_cents": 0,
+    "statement_complete_within_fixture": true,
+    "opening_document_verified": false,
+    "opening_origin": "Saldo auxiliar de sustentação do teste, R$1.000.000; não é saldo aprovado pelos casos nem extrato real",
+    "confirmed_closing_cents": null,
+    "economic_cost_cents": null,
+    "obligation_source": "títulos operacionais criados com inputs; importação remota não exercitada",
+    "contracts": [],
+    "documents": [
+      {
+        "title_id": "80ef1c79-a45d-4654-8b61-689263ac081e",
+        "title_type": "AR",
+        "source_document": "CT14-fee",
+        "source_principal_cents": 1000000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 1000000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 0,
+        "elos_open_cents": 0,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "0a92c8bb-7a4c-4c44-9f07-317436b5bfe3"
+        ],
+        "bank_transaction_ids": [
+          "0931e8ce-ab2c-4818-bcc5-b114dd71a0c7"
+        ],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      }
+    ]
+  },
+  {
+    "case": "CT14-barter",
+    "cutoff": "2026-10-21",
+    "source": "fixture aprovada + extrato fixo independente; não dados reais",
+    "account_id": "7f60c403-3889-4b6d-ac3d-386a48812949",
+    "company_id": "00000000-0000-4000-8000-000000000005",
+    "project_id": "94591e27-873f-48fd-b62e-868747a10a3d",
+    "opening_cents": 100000000,
+    "legal_entity_id": "00000000-0000-4000-8000-000000000007",
+    "linked_abs_cents": 3000000,
+    "AP_principal_cents": 0,
+    "registered_in_cents": 3000000,
+    "statement_net_cents": 3000000,
+    "registered_out_cents": 0,
+    "AP_open_generated_cents": 0,
+    "AR_open_generated_cents": 0,
+    "registered_closing_cents": 103000000,
+    "statement_closing_cents": 103000000,
+    "bank_delta_cents": 0,
+    "statement_complete_within_fixture": true,
+    "opening_document_verified": false,
+    "opening_origin": "Saldo auxiliar de sustentação do teste, R$1.000.000; não é saldo aprovado pelos casos nem extrato real",
+    "confirmed_closing_cents": null,
+    "economic_cost_cents": null,
+    "obligation_source": "títulos operacionais criados com inputs; importação remota não exercitada",
+    "contracts": [],
+    "documents": [
+      {
+        "title_id": "1e87fb4d-6b57-4660-a9f4-730c98cb6e66",
+        "title_type": "AR",
+        "source_document": "CT14-barter",
+        "source_principal_cents": 10000000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 3000000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 7000000,
+        "independent_open_cents": 0,
+        "elos_open_cents": 0,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "5ed7b6a2-6b52-47aa-9330-33da6226534f"
+        ],
+        "bank_transaction_ids": [
+          "88f873f8-97d7-4c55-b928-49a6c03fce49"
+        ],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      }
+    ]
+  },
+  {
+    "case": "CT23",
+    "cutoff": "2026-10-21",
+    "source": "fixture aprovada + extrato fixo independente; não dados reais",
+    "account_id": "c4c575ba-230d-4f5b-a149-93772633aa78",
+    "company_id": "00000000-0000-4000-8000-000000000005",
+    "project_id": "1a8a2c21-fd67-4eca-9149-7731c4b23945",
+    "opening_cents": 100000000,
+    "legal_entity_id": "00000000-0000-4000-8000-000000000007",
+    "linked_abs_cents": 1600000,
+    "AP_principal_cents": 2000000,
+    "registered_in_cents": 0,
+    "statement_net_cents": -1600000,
+    "registered_out_cents": 1600000,
+    "AP_open_generated_cents": 400000,
+    "AR_open_generated_cents": 0,
+    "registered_closing_cents": 98400000,
+    "statement_closing_cents": 98400000,
+    "bank_delta_cents": 0,
+    "statement_complete_within_fixture": true,
+    "opening_document_verified": false,
+    "opening_origin": "Saldo auxiliar de sustentação do teste, R$1.000.000; não é saldo aprovado pelos casos nem extrato real",
+    "confirmed_closing_cents": null,
+    "economic_cost_cents": null,
+    "obligation_source": "títulos operacionais criados com inputs; importação remota não exercitada",
+    "contracts": [],
+    "documents": [
+      {
+        "title_id": "1b02f547-6757-447c-97fe-9d6343e7b0c0",
+        "title_type": "AP",
+        "source_document": "CT23",
+        "source_principal_cents": 800000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 800000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 0,
+        "elos_open_cents": 0,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "9d6d6d30-805b-4e63-a9e0-ec9b9a8391ad",
+          "3d4a9fc1-18ea-4634-a44a-b660ad07d8b1"
+        ],
+        "bank_transaction_ids": [
+          "5b8fe1dc-ae26-4b82-88e6-05603f23c261",
+          "8055b53f-32b2-402d-ac2e-70d1052fa944"
+        ],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      },
+      {
+        "title_id": "6883f7cd-06e4-4a4f-8d1b-39584481784e",
+        "title_type": "AP",
+        "source_document": "CT23",
+        "source_principal_cents": 1200000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 800000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 400000,
+        "elos_open_cents": 400000,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "9d6d6d30-805b-4e63-a9e0-ec9b9a8391ad",
+          "3d4a9fc1-18ea-4634-a44a-b660ad07d8b1"
+        ],
+        "bank_transaction_ids": [
+          "5b8fe1dc-ae26-4b82-88e6-05603f23c261",
+          "8055b53f-32b2-402d-ac2e-70d1052fa944"
+        ],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      }
+    ]
+  },
+  {
+    "case": "CT22",
+    "cutoff": "2026-10-21",
+    "source": "fixture aprovada + extrato fixo independente; não dados reais",
+    "account_id": "9f72c37b-71f9-4af6-b8db-2782871c876b",
+    "company_id": "00000000-0000-4000-8000-000000000005",
+    "project_id": "087ac5a4-544e-4fcc-91e7-f3febe62508b",
+    "opening_cents": 100000000,
+    "legal_entity_id": "00000000-0000-4000-8000-000000000007",
+    "linked_abs_cents": 2000000,
+    "AP_principal_cents": 0,
+    "registered_in_cents": 2000000,
+    "statement_net_cents": 2000000,
+    "registered_out_cents": 0,
+    "AP_open_generated_cents": 0,
+    "AR_open_generated_cents": 2000000,
+    "registered_closing_cents": 102000000,
+    "statement_closing_cents": 102000000,
+    "bank_delta_cents": 0,
+    "statement_complete_within_fixture": true,
+    "opening_document_verified": false,
+    "opening_origin": "Saldo auxiliar de sustentação do teste, R$1.000.000; não é saldo aprovado pelos casos nem extrato real",
+    "confirmed_closing_cents": null,
+    "economic_cost_cents": null,
+    "obligation_source": "títulos operacionais criados com inputs; importação remota não exercitada",
+    "contracts": [],
+    "documents": [
+      {
+        "title_id": "f7c51416-f766-42bd-8774-2b2f9e907364",
+        "title_type": "AR",
+        "source_document": "CT22",
+        "source_principal_cents": 2000000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 2000000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 0,
+        "elos_open_cents": 0,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "8748427e-d0a3-4d86-baf2-f8da95611578"
+        ],
+        "bank_transaction_ids": [
+          "6e9c1517-ee8e-4a28-a634-356999c50b95"
+        ],
+        "scope_refs": [
+          "d5616405-5ca2-4ffc-bc45-7421f3e7cac1"
+        ],
+        "economic_cost_cents": null
+      },
+      {
+        "title_id": "99199492-ed8b-4034-a083-8850707bea26",
+        "title_type": "AR",
+        "source_document": "CT22",
+        "source_principal_cents": 4000000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 0,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 2000000,
+        "independent_open_cents": 2000000,
+        "elos_open_cents": 2000000,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "c081efaa-57b8-451b-922b-f29d68e00252"
+        ],
+        "bank_transaction_ids": [],
+        "scope_refs": [
+          "d5616405-5ca2-4ffc-bc45-7421f3e7cac1"
+        ],
+        "economic_cost_cents": null
+      }
+    ]
+  },
+  {
+    "case": "CT06",
+    "cutoff": "2026-10-21",
+    "source": "fixture aprovada + extrato fixo independente; não dados reais",
+    "account_id": "e27a252e-139f-4c1d-8a63-c3d9a65410e9",
+    "company_id": "00000000-0000-4000-8000-000000000005",
+    "project_id": "98986cf1-7325-42a8-b47d-987fbcc13ae1",
+    "opening_cents": 100000000,
+    "legal_entity_id": "00000000-0000-4000-8000-000000000007",
+    "linked_abs_cents": 10000000,
+    "AP_principal_cents": 10000000,
+    "registered_in_cents": 0,
+    "statement_net_cents": -10000000,
+    "registered_out_cents": 10000000,
+    "AP_open_generated_cents": 0,
+    "AR_open_generated_cents": 0,
+    "registered_closing_cents": 90000000,
+    "statement_closing_cents": 90000000,
+    "bank_delta_cents": 0,
+    "statement_complete_within_fixture": true,
+    "opening_document_verified": false,
+    "opening_origin": "Saldo auxiliar de sustentação do teste, R$1.000.000; não é saldo aprovado pelos casos nem extrato real",
+    "confirmed_closing_cents": null,
+    "economic_cost_cents": null,
+    "obligation_source": "títulos operacionais criados com inputs; importação remota não exercitada",
+    "contracts": [],
+    "documents": [
+      {
+        "title_id": "fae0e0f1-1a69-4c45-b652-6cd7e5b79920",
+        "title_type": "AP",
+        "source_document": "CT06",
+        "source_principal_cents": 8500000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 8500000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 0,
+        "elos_open_cents": 0,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "0d803e12-5895-4372-85b6-6f2eec8b1f60"
+        ],
+        "bank_transaction_ids": [
+          "cb38503f-bd1e-4529-97ed-87e347b270b2"
+        ],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      },
+      {
+        "title_id": "29580fec-5d0c-45c7-8a21-6fd603fb39a5",
+        "title_type": "AP",
+        "source_document": "CT06",
+        "source_principal_cents": 500000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 500000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 0,
+        "elos_open_cents": 0,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "05701bf9-31de-4c3e-802b-2d0d72499578"
+        ],
+        "bank_transaction_ids": [
+          "21f87555-6a0f-422a-ad64-6af5a815da9a"
+        ],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      },
+      {
+        "title_id": "4e143ac6-80c1-4b8b-a3de-12c5e987da39",
+        "title_type": "AP",
+        "source_document": "CT06",
+        "source_principal_cents": 1000000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 1000000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 0,
+        "elos_open_cents": 0,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "4474e7b4-48b5-489b-94a0-e9d8126be243"
+        ],
+        "bank_transaction_ids": [
+          "6e568d86-fa32-4262-8cb5-f08f622fef0f"
+        ],
+        "scope_refs": [],
+        "economic_cost_cents": null
+      }
+    ]
+  },
+  {
+    "case": "CT10",
+    "cutoff": "2026-10-21",
+    "source": "fixture aprovada + extrato fixo independente; não dados reais",
+    "account_id": "6fcc7796-3ebe-442b-b9c7-d369e9154123",
+    "company_id": "00000000-0000-4000-8000-000000000005",
+    "project_id": "dbb43a1b-3901-4993-a250-629445bd1976",
+    "opening_cents": 100000000,
+    "legal_entity_id": "00000000-0000-4000-8000-000000000007",
+    "linked_abs_cents": 1000000,
+    "AP_principal_cents": 1000000,
+    "registered_in_cents": 0,
+    "statement_net_cents": -1000000,
+    "registered_out_cents": 1000000,
+    "AP_open_generated_cents": 0,
+    "AR_open_generated_cents": 0,
+    "registered_closing_cents": 99000000,
+    "statement_closing_cents": 99000000,
+    "bank_delta_cents": 0,
+    "statement_complete_within_fixture": true,
+    "opening_document_verified": false,
+    "opening_origin": "Saldo auxiliar de sustentação do teste, R$1.000.000; não é saldo aprovado pelos casos nem extrato real",
+    "confirmed_closing_cents": null,
+    "economic_cost_cents": null,
+    "obligation_source": "títulos operacionais criados com inputs; importação remota não exercitada",
+    "contracts": [
+      {
+        "id": "66c31284-7fb2-413c-867d-bebe94f2d860",
+        "company_id": "00000000-0000-4000-8000-000000000005",
+        "project_id": "dbb43a1b-3901-4993-a250-629445bd1976",
+        "status": "cancelled",
+        "current_value": 10000,
+        "finished_by": null,
+        "finished_at": null,
+        "cancelled_by": "00000000-0000-4000-8000-000000000004",
+        "cancelled_at": "2026-10-22T13:57:46.586948+00:00",
+        "cancellation_reason": "Rescisão sem execução; direito integral à restituição documentado CT10",
+        "updated_by": "00000000-0000-4000-8000-000000000004",
+        "updated_at": "2026-10-22T13:57:46.586948+00:00"
+      }
+    ],
+    "documents": [
+      {
+        "title_id": "8c3b99de-91c9-4fbb-95fd-643a7cd88b86",
+        "title_type": "AP",
+        "source_document": "CT10",
+        "source_principal_cents": 1000000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 1000000,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 0,
+        "elos_open_cents": 0,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "0cbb26ab-c1f3-4b7a-b0bc-db5cdb150495"
+        ],
+        "bank_transaction_ids": [
+          "c75ce170-7471-4c14-9cff-07a2baee60ab"
+        ],
+        "scope_refs": [
+          "66c31284-7fb2-413c-867d-bebe94f2d860"
+        ],
+        "economic_cost_cents": null
+      }
+    ]
+  },
+  {
+    "case": "CT10",
+    "cutoff": "2026-10-22",
+    "source": "fixture aprovada + extrato fixo independente; não dados reais",
+    "account_id": "6fcc7796-3ebe-442b-b9c7-d369e9154123",
+    "company_id": "00000000-0000-4000-8000-000000000005",
+    "project_id": "dbb43a1b-3901-4993-a250-629445bd1976",
+    "opening_cents": 100000000,
+    "legal_entity_id": "00000000-0000-4000-8000-000000000007",
+    "linked_abs_cents": 1600000,
+    "AP_principal_cents": 1000000,
+    "registered_in_cents": 600000,
+    "statement_net_cents": -400000,
+    "registered_out_cents": 1000000,
+    "AP_open_generated_cents": 1000000,
+    "AR_open_generated_cents": 0,
+    "registered_closing_cents": 99600000,
+    "statement_closing_cents": 99600000,
+    "bank_delta_cents": 0,
+    "statement_complete_within_fixture": true,
+    "opening_document_verified": false,
+    "opening_origin": "Saldo auxiliar de sustentação do teste, R$1.000.000; não é saldo aprovado pelos casos nem extrato real",
+    "confirmed_closing_cents": null,
+    "economic_cost_cents": null,
+    "obligation_source": "títulos operacionais criados com inputs; importação remota não exercitada",
+    "contracts": [
+      {
+        "id": "66c31284-7fb2-413c-867d-bebe94f2d860",
+        "company_id": "00000000-0000-4000-8000-000000000005",
+        "project_id": "dbb43a1b-3901-4993-a250-629445bd1976",
+        "status": "cancelled",
+        "current_value": 10000,
+        "finished_by": null,
+        "finished_at": null,
+        "cancelled_by": "00000000-0000-4000-8000-000000000004",
+        "cancelled_at": "2026-10-22T13:57:46.586948+00:00",
+        "cancellation_reason": "Rescisão sem execução; direito integral à restituição documentado CT10",
+        "updated_by": "00000000-0000-4000-8000-000000000004",
+        "updated_at": "2026-10-22T13:57:46.586948+00:00"
+      }
+    ],
+    "documents": [
+      {
+        "title_id": "8c3b99de-91c9-4fbb-95fd-643a7cd88b86",
+        "title_type": "AP",
+        "source_document": "CT10",
+        "source_principal_cents": 1000000,
+        "constituted_interest_cents": 0,
+        "net_paid_principal_cents": 0,
+        "net_paid_interest_cents": 0,
+        "net_discount_cents": 0,
+        "net_noncash_cents": 0,
+        "independent_open_cents": 1000000,
+        "elos_open_cents": 1000000,
+        "open_delta_cents": 0,
+        "event_ids": [
+          "0cbb26ab-c1f3-4b7a-b0bc-db5cdb150495",
+          "6c849e90-94ac-48bd-9d89-c40096bb480f"
+        ],
+        "bank_transaction_ids": [
+          "c75ce170-7471-4c14-9cff-07a2baee60ab",
+          "31793b7b-b55e-4490-9fab-790bfd6eced4"
+        ],
+        "scope_refs": [
+          "66c31284-7fb2-413c-867d-bebe94f2d860"
+        ],
+        "economic_cost_cents": null
+      }
+    ]
+  }
+]

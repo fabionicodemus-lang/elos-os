@@ -1,0 +1,151 @@
+{
+  "execution_context": {
+    "implementation_version": "c72ec54 + testes independentes Etapa9 (sem alteração operacional)",
+    "executed_at": "2026-10-22T13:57:49.642Z",
+    "environment": "PostgreSQL17 Docker network=none, papéis SQL, massa fictícia e extratos independentes fixados pelos inputs; sem aceite nominal",
+    "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb"
+  },
+  "cases": [
+    {
+      "id": "CT03",
+      "status": "executado",
+      "actual": {
+        "after_P1_open_cents": 700000,
+        "after_P2_open_cents": 500000,
+        "I02_gross_disbursed_cents": 500000,
+        "bank_debit_count": 2,
+        "payment_count": 2,
+        "cash_created_by_reconciliation_cents": 0,
+        "I01_extra_cost_created_by_payments_cents": null
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "ponte.json"
+      ]
+    },
+    {
+      "id": "CT13",
+      "status": "executado",
+      "actual": {
+        "cohort_due_principal_cents": 2000000,
+        "cohort_overdue_principal_cents": 600000,
+        "overdue_total_with_interest_cents": 612000,
+        "I16_total_open_cents": 8612000,
+        "I17_received_cents": 1400000,
+        "I19_cohort_principal_delinquency_percent": "30.00"
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "ponte.json"
+      ]
+    },
+    {
+      "id": "CT14",
+      "status": "executado",
+      "actual": {
+        "fee_fixture": {
+          "receivable_settled_cents": 1000000,
+          "open_cents": 0,
+          "I17_bank_receipt_cents": 980000,
+          "identified_fee_cents": 20000,
+          "artificial_overdue_cents": 0
+        },
+        "barter_fixture": {
+          "receivable_settled_cents": 10000000,
+          "open_cents": 0,
+          "I17_cash_received_cents": 3000000,
+          "noncash_settlement_cents": 7000000
+        }
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "ponte.json"
+      ]
+    },
+    {
+      "id": "CT23",
+      "status": "executado",
+      "actual": {
+        "after_P1_A_open_cents": 400000,
+        "after_P1_B_open_cents": 600000,
+        "final_A_open_cents": 0,
+        "final_B_open_cents": 400000,
+        "final_I03_cents": 400000,
+        "I02_cash_cents": 1600000,
+        "unique_bank_debits": 2,
+        "new_cash_from_reimport_cents": 0
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "ponte.json"
+      ]
+    },
+    {
+      "id": "CT22",
+      "status": "executado",
+      "actual": {
+        "cash_received_cents": 2000000,
+        "advance_available_before_application_cents": 2000000,
+        "advance_available_after_application_cents": 0,
+        "open_receivable_cents": 2000000,
+        "contract_future_not_issued_cents": null,
+        "I18_future_inflow_cents": null,
+        "cash_created_by_application_cents": 0,
+        "automatic_revenue_cents": null
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "ponte.json"
+      ]
+    },
+    {
+      "id": "CT06",
+      "status": "executado",
+      "actual": {
+        "initial_R_cents": 10000000,
+        "initial_C_cents": null,
+        "initial_Q_cents": null,
+        "after_supplier_R_cents": 1500000,
+        "after_supplier_retention_cents": 1000000,
+        "after_tax_R_cents": 1000000,
+        "after_tax_H_cents": 9000000,
+        "final_R_cents": 0,
+        "final_H_cents": 10000000,
+        "total_cash_cents": 10000000,
+        "cost_cents": null
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "ponte.json"
+      ]
+    },
+    {
+      "id": "CT10",
+      "status": "executado",
+      "actual": {
+        "after_cancellation_V_cents": null,
+        "after_cancellation_H_imputable_to_current_price_cents": null,
+        "after_cancellation_C_cents": null,
+        "after_cancellation_R_cents": 0,
+        "after_cancellation_Q_cents": null,
+        "refund_right_before_receipt_cents": 0,
+        "refund_right_after_receipt_cents": null,
+        "historical_gross_outflow_cents": 1000000,
+        "confirmed_refund_cents": 600000,
+        "net_outflow_cents": 400000,
+        "cost_cents": null
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "ponte.json"
+      ]
+    }
+  ]
+}
