@@ -1,0 +1,1474 @@
+[
+  {
+    "identity": {
+      "id": "92b3aae6-10e3-4c3c-8303-91a3b7e164fd",
+      "email": "aadmin@example.invalid",
+      "company": "A",
+      "profile": "admin"
+    },
+    "permission": "payables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "92b3aae6-10e3-4c3c-8303-91a3b7e164fd",
+      "email": "aadmin@example.invalid",
+      "company": "A",
+      "profile": "admin"
+    },
+    "permission": "payables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "92b3aae6-10e3-4c3c-8303-91a3b7e164fd",
+      "email": "aadmin@example.invalid",
+      "company": "A",
+      "profile": "admin"
+    },
+    "permission": "receivables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "92b3aae6-10e3-4c3c-8303-91a3b7e164fd",
+      "email": "aadmin@example.invalid",
+      "company": "A",
+      "profile": "admin"
+    },
+    "permission": "receivables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "92b3aae6-10e3-4c3c-8303-91a3b7e164fd",
+      "email": "aadmin@example.invalid",
+      "company": "A",
+      "profile": "admin"
+    },
+    "permission": "finance.bank_accounts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "92b3aae6-10e3-4c3c-8303-91a3b7e164fd",
+      "email": "aadmin@example.invalid",
+      "company": "A",
+      "profile": "admin"
+    },
+    "permission": "cashflow.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "92b3aae6-10e3-4c3c-8303-91a3b7e164fd",
+      "email": "aadmin@example.invalid",
+      "company": "A",
+      "profile": "admin"
+    },
+    "permission": "execution.contracts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "92b3aae6-10e3-4c3c-8303-91a3b7e164fd",
+      "email": "aadmin@example.invalid",
+      "company": "A",
+      "profile": "admin"
+    },
+    "permission": "execution.contracts.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "c868d286-7212-4751-a3dc-9618699e72d0",
+      "email": "afinance@example.invalid",
+      "company": "A",
+      "profile": "finance"
+    },
+    "permission": "payables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "c868d286-7212-4751-a3dc-9618699e72d0",
+      "email": "afinance@example.invalid",
+      "company": "A",
+      "profile": "finance"
+    },
+    "permission": "payables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "c868d286-7212-4751-a3dc-9618699e72d0",
+      "email": "afinance@example.invalid",
+      "company": "A",
+      "profile": "finance"
+    },
+    "permission": "receivables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "c868d286-7212-4751-a3dc-9618699e72d0",
+      "email": "afinance@example.invalid",
+      "company": "A",
+      "profile": "finance"
+    },
+    "permission": "receivables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "c868d286-7212-4751-a3dc-9618699e72d0",
+      "email": "afinance@example.invalid",
+      "company": "A",
+      "profile": "finance"
+    },
+    "permission": "finance.bank_accounts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "c868d286-7212-4751-a3dc-9618699e72d0",
+      "email": "afinance@example.invalid",
+      "company": "A",
+      "profile": "finance"
+    },
+    "permission": "cashflow.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "c868d286-7212-4751-a3dc-9618699e72d0",
+      "email": "afinance@example.invalid",
+      "company": "A",
+      "profile": "finance"
+    },
+    "permission": "execution.contracts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "c868d286-7212-4751-a3dc-9618699e72d0",
+      "email": "afinance@example.invalid",
+      "company": "A",
+      "profile": "finance"
+    },
+    "permission": "execution.contracts.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "9ed8eb2b-c3c8-4f4b-905a-9b5a93d60cf8",
+      "email": "aviewer@example.invalid",
+      "company": "A",
+      "profile": "viewer"
+    },
+    "permission": "payables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "9ed8eb2b-c3c8-4f4b-905a-9b5a93d60cf8",
+      "email": "aviewer@example.invalid",
+      "company": "A",
+      "profile": "viewer"
+    },
+    "permission": "payables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "9ed8eb2b-c3c8-4f4b-905a-9b5a93d60cf8",
+      "email": "aviewer@example.invalid",
+      "company": "A",
+      "profile": "viewer"
+    },
+    "permission": "receivables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "9ed8eb2b-c3c8-4f4b-905a-9b5a93d60cf8",
+      "email": "aviewer@example.invalid",
+      "company": "A",
+      "profile": "viewer"
+    },
+    "permission": "receivables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "9ed8eb2b-c3c8-4f4b-905a-9b5a93d60cf8",
+      "email": "aviewer@example.invalid",
+      "company": "A",
+      "profile": "viewer"
+    },
+    "permission": "finance.bank_accounts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "9ed8eb2b-c3c8-4f4b-905a-9b5a93d60cf8",
+      "email": "aviewer@example.invalid",
+      "company": "A",
+      "profile": "viewer"
+    },
+    "permission": "cashflow.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "9ed8eb2b-c3c8-4f4b-905a-9b5a93d60cf8",
+      "email": "aviewer@example.invalid",
+      "company": "A",
+      "profile": "viewer"
+    },
+    "permission": "execution.contracts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "9ed8eb2b-c3c8-4f4b-905a-9b5a93d60cf8",
+      "email": "aviewer@example.invalid",
+      "company": "A",
+      "profile": "viewer"
+    },
+    "permission": "execution.contracts.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "dceb56f4-6dde-409d-a8cc-9aac9ffb38c8",
+      "email": "aengineering@example.invalid",
+      "company": "A",
+      "profile": "engineering"
+    },
+    "permission": "payables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "dceb56f4-6dde-409d-a8cc-9aac9ffb38c8",
+      "email": "aengineering@example.invalid",
+      "company": "A",
+      "profile": "engineering"
+    },
+    "permission": "payables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "dceb56f4-6dde-409d-a8cc-9aac9ffb38c8",
+      "email": "aengineering@example.invalid",
+      "company": "A",
+      "profile": "engineering"
+    },
+    "permission": "receivables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "dceb56f4-6dde-409d-a8cc-9aac9ffb38c8",
+      "email": "aengineering@example.invalid",
+      "company": "A",
+      "profile": "engineering"
+    },
+    "permission": "receivables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "dceb56f4-6dde-409d-a8cc-9aac9ffb38c8",
+      "email": "aengineering@example.invalid",
+      "company": "A",
+      "profile": "engineering"
+    },
+    "permission": "finance.bank_accounts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "dceb56f4-6dde-409d-a8cc-9aac9ffb38c8",
+      "email": "aengineering@example.invalid",
+      "company": "A",
+      "profile": "engineering"
+    },
+    "permission": "cashflow.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "dceb56f4-6dde-409d-a8cc-9aac9ffb38c8",
+      "email": "aengineering@example.invalid",
+      "company": "A",
+      "profile": "engineering"
+    },
+    "permission": "execution.contracts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "dceb56f4-6dde-409d-a8cc-9aac9ffb38c8",
+      "email": "aengineering@example.invalid",
+      "company": "A",
+      "profile": "engineering"
+    },
+    "permission": "execution.contracts.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "970225c7-7687-4008-9e11-68d7a160af54",
+      "email": "badmin@example.invalid",
+      "company": "B",
+      "profile": "admin"
+    },
+    "permission": "payables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "970225c7-7687-4008-9e11-68d7a160af54",
+      "email": "badmin@example.invalid",
+      "company": "B",
+      "profile": "admin"
+    },
+    "permission": "payables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "970225c7-7687-4008-9e11-68d7a160af54",
+      "email": "badmin@example.invalid",
+      "company": "B",
+      "profile": "admin"
+    },
+    "permission": "receivables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "970225c7-7687-4008-9e11-68d7a160af54",
+      "email": "badmin@example.invalid",
+      "company": "B",
+      "profile": "admin"
+    },
+    "permission": "receivables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "970225c7-7687-4008-9e11-68d7a160af54",
+      "email": "badmin@example.invalid",
+      "company": "B",
+      "profile": "admin"
+    },
+    "permission": "finance.bank_accounts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "970225c7-7687-4008-9e11-68d7a160af54",
+      "email": "badmin@example.invalid",
+      "company": "B",
+      "profile": "admin"
+    },
+    "permission": "cashflow.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "970225c7-7687-4008-9e11-68d7a160af54",
+      "email": "badmin@example.invalid",
+      "company": "B",
+      "profile": "admin"
+    },
+    "permission": "execution.contracts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "970225c7-7687-4008-9e11-68d7a160af54",
+      "email": "badmin@example.invalid",
+      "company": "B",
+      "profile": "admin"
+    },
+    "permission": "execution.contracts.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "3d2022ed-5a8a-40dd-852b-09a9849dfaac",
+      "email": "bfinance@example.invalid",
+      "company": "B",
+      "profile": "finance"
+    },
+    "permission": "payables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "3d2022ed-5a8a-40dd-852b-09a9849dfaac",
+      "email": "bfinance@example.invalid",
+      "company": "B",
+      "profile": "finance"
+    },
+    "permission": "payables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "3d2022ed-5a8a-40dd-852b-09a9849dfaac",
+      "email": "bfinance@example.invalid",
+      "company": "B",
+      "profile": "finance"
+    },
+    "permission": "receivables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "3d2022ed-5a8a-40dd-852b-09a9849dfaac",
+      "email": "bfinance@example.invalid",
+      "company": "B",
+      "profile": "finance"
+    },
+    "permission": "receivables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "3d2022ed-5a8a-40dd-852b-09a9849dfaac",
+      "email": "bfinance@example.invalid",
+      "company": "B",
+      "profile": "finance"
+    },
+    "permission": "finance.bank_accounts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "3d2022ed-5a8a-40dd-852b-09a9849dfaac",
+      "email": "bfinance@example.invalid",
+      "company": "B",
+      "profile": "finance"
+    },
+    "permission": "cashflow.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "3d2022ed-5a8a-40dd-852b-09a9849dfaac",
+      "email": "bfinance@example.invalid",
+      "company": "B",
+      "profile": "finance"
+    },
+    "permission": "execution.contracts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "3d2022ed-5a8a-40dd-852b-09a9849dfaac",
+      "email": "bfinance@example.invalid",
+      "company": "B",
+      "profile": "finance"
+    },
+    "permission": "execution.contracts.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "074f8b50-7cee-4615-b15e-b79d0a92faa1",
+      "email": "bviewer@example.invalid",
+      "company": "B",
+      "profile": "viewer"
+    },
+    "permission": "payables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "074f8b50-7cee-4615-b15e-b79d0a92faa1",
+      "email": "bviewer@example.invalid",
+      "company": "B",
+      "profile": "viewer"
+    },
+    "permission": "payables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "074f8b50-7cee-4615-b15e-b79d0a92faa1",
+      "email": "bviewer@example.invalid",
+      "company": "B",
+      "profile": "viewer"
+    },
+    "permission": "receivables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "074f8b50-7cee-4615-b15e-b79d0a92faa1",
+      "email": "bviewer@example.invalid",
+      "company": "B",
+      "profile": "viewer"
+    },
+    "permission": "receivables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "074f8b50-7cee-4615-b15e-b79d0a92faa1",
+      "email": "bviewer@example.invalid",
+      "company": "B",
+      "profile": "viewer"
+    },
+    "permission": "finance.bank_accounts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "074f8b50-7cee-4615-b15e-b79d0a92faa1",
+      "email": "bviewer@example.invalid",
+      "company": "B",
+      "profile": "viewer"
+    },
+    "permission": "cashflow.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "074f8b50-7cee-4615-b15e-b79d0a92faa1",
+      "email": "bviewer@example.invalid",
+      "company": "B",
+      "profile": "viewer"
+    },
+    "permission": "execution.contracts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "074f8b50-7cee-4615-b15e-b79d0a92faa1",
+      "email": "bviewer@example.invalid",
+      "company": "B",
+      "profile": "viewer"
+    },
+    "permission": "execution.contracts.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "2139be99-5009-48e7-bb55-9603b038b7e1",
+      "email": "bengineering@example.invalid",
+      "company": "B",
+      "profile": "engineering"
+    },
+    "permission": "payables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "2139be99-5009-48e7-bb55-9603b038b7e1",
+      "email": "bengineering@example.invalid",
+      "company": "B",
+      "profile": "engineering"
+    },
+    "permission": "payables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "2139be99-5009-48e7-bb55-9603b038b7e1",
+      "email": "bengineering@example.invalid",
+      "company": "B",
+      "profile": "engineering"
+    },
+    "permission": "receivables.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "2139be99-5009-48e7-bb55-9603b038b7e1",
+      "email": "bengineering@example.invalid",
+      "company": "B",
+      "profile": "engineering"
+    },
+    "permission": "receivables.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "2139be99-5009-48e7-bb55-9603b038b7e1",
+      "email": "bengineering@example.invalid",
+      "company": "B",
+      "profile": "engineering"
+    },
+    "permission": "finance.bank_accounts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "2139be99-5009-48e7-bb55-9603b038b7e1",
+      "email": "bengineering@example.invalid",
+      "company": "B",
+      "profile": "engineering"
+    },
+    "permission": "cashflow.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": false,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": false,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "2139be99-5009-48e7-bb55-9603b038b7e1",
+      "email": "bengineering@example.invalid",
+      "company": "B",
+      "profile": "engineering"
+    },
+    "permission": "execution.contracts.view",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  },
+  {
+    "identity": {
+      "id": "2139be99-5009-48e7-bb55-9603b038b7e1",
+      "email": "bengineering@example.invalid",
+      "company": "B",
+      "profile": "engineering"
+    },
+    "permission": "execution.contracts.manage",
+    "expected_foreign": false,
+    "observed_foreign": false,
+    "observed_own": true,
+    "source": "has_company_permission:0081 + configuração declarada da fixture; não matriz nominal real",
+    "expected_own": true,
+    "passed": true,
+    "source_refs": [
+      "tests/financeiro/runtime.mjs:bootstrap existing finance/viewer grants",
+      "20260722_0001_multitenancy.sql:bootstrap_company defaults",
+      "20260728_0038_execution_service_contracts.sql:profile contract grants",
+      "20260810_0081_owner_admin_full_access.sql:has_company_permission",
+      "tests/cashflow/setup.mjs:existing fixture cashflow grants"
+    ],
+    "business_acceptance": "Não é matriz nominal aprovada para empresas reais. Engenharia não recebe permissões bancárias/AP/AR por inferência."
+  }
+]

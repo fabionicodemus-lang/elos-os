@@ -1,0 +1,47 @@
+{
+  "executed_at": "2026-10-22T20:15:22.008Z",
+  "completed": true,
+  "fatal_error": null,
+  "passed": 333,
+  "failed": 9,
+  "failures": [
+    {
+      "id": "Aviewer-revisao-propria",
+      "error": "Expected values to be strictly equal:\n\n400 !== 403\n"
+    },
+    {
+      "id": "Aengineering-revisao-propria",
+      "error": "Expected values to be strictly equal:\n\n400 !== 403\n"
+    },
+    {
+      "id": "Bviewer-revisao-propria",
+      "error": "Expected values to be strictly equal:\n\n400 !== 403\n"
+    },
+    {
+      "id": "Bengineering-revisao-propria",
+      "error": "Expected values to be strictly equal:\n\n400 !== 403\n"
+    },
+    {
+      "id": "Aadmin-exportacao-ID-estrangeiro",
+      "error": "Código de negação controlado, obtido500"
+    },
+    {
+      "id": "Aengineering-exportacao-propria",
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok([303,307].includes(r.status()))\n"
+    },
+    {
+      "id": "Bfinance-UI-propria",
+      "error": "Expected values to be strictly equal:\n\n500 !== 200\n"
+    },
+    {
+      "id": "Bfinance-exportacao-propria",
+      "error": "Expected values to be strictly equal:\n\n500 !== 200\n"
+    },
+    {
+      "id": "Bengineering-UI-propria",
+      "error": "The expression evaluated to a falsy value:\n\n  assert.ok([303,307].includes(r.status()))\n"
+    }
+  ],
+  "resources_removed": true,
+  "production_or_koper_access": false
+}

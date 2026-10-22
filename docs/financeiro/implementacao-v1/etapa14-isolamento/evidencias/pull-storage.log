@@ -1,0 +1,50 @@
+v1.33.0: Pulling from supabase/storage-api
+f637881d1138: Pulling fs layer
+de18c5931176: Pulling fs layer
+0c8fa532fea1: Pulling fs layer
+fb003c71d3fb: Pulling fs layer
+1bfb2582e534: Pulling fs layer
+0cb6ddb74007: Pulling fs layer
+6e73ed910fd5: Pulling fs layer
+4e5b8fe96403: Pulling fs layer
+2bb253c74297: Pulling fs layer
+4947c36a451f: Pulling fs layer
+1bfb2582e534: Waiting
+0cb6ddb74007: Waiting
+6e73ed910fd5: Waiting
+4e5b8fe96403: Waiting
+2bb253c74297: Waiting
+4947c36a451f: Waiting
+fb003c71d3fb: Waiting
+0c8fa532fea1: Verifying Checksum
+0c8fa532fea1: Download complete
+f637881d1138: Verifying Checksum
+f637881d1138: Download complete
+f637881d1138: Pull complete
+fb003c71d3fb: Verifying Checksum
+fb003c71d3fb: Download complete
+0cb6ddb74007: Download complete
+6e73ed910fd5: Verifying Checksum
+6e73ed910fd5: Download complete
+4e5b8fe96403: Verifying Checksum
+4e5b8fe96403: Download complete
+de18c5931176: Verifying Checksum
+de18c5931176: Download complete
+4947c36a451f: Verifying Checksum
+4947c36a451f: Download complete
+de18c5931176: Pull complete
+0c8fa532fea1: Pull complete
+2bb253c74297: Verifying Checksum
+2bb253c74297: Download complete
+fb003c71d3fb: Pull complete
+1bfb2582e534: Verifying Checksum
+1bfb2582e534: Download complete
+1bfb2582e534: Pull complete
+0cb6ddb74007: Pull complete
+6e73ed910fd5: Pull complete
+4e5b8fe96403: Pull complete
+2bb253c74297: Pull complete
+4947c36a451f: Pull complete
+Digest: sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177
+Status: Downloaded newer image for supabase/storage-api:v1.33.0
+docker.io/supabase/storage-api:v1.33.0

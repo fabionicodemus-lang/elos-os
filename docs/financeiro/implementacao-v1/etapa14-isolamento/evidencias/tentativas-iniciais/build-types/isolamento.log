@@ -1,0 +1,45 @@
+Auth real, oito identidades fictícias
+PostgREST e Storage reais
+[elos-ia] Falha na ferramenta fluxo_de_caixa: Error: Entidade indisponível
+    at loadCashflow (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:28:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async loadCashflow (file:///workspace/elos-os/tests/finance-isolation/run.mjs:92:180)
+    at async Object.runFluxoDeCaixa [as run] (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:400:20)
+    at async Object.runElosIaTool (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:926:16)
+    at async file:///workspace/elos-os/tests/finance-isolation/run.mjs:95:18
+    at async check (file:///workspace/elos-os/tests/finance-isolation/run.mjs:19:68)
+    at async file:///workspace/elos-os/tests/finance-isolation/run.mjs:94:4
+[elos-ia] Falha na ferramenta fluxo_de_caixa: Error: Entidade indisponível
+    at loadCashflow (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:28:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async loadCashflow (file:///workspace/elos-os/tests/finance-isolation/run.mjs:92:180)
+    at async Object.runFluxoDeCaixa [as run] (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:400:20)
+    at async Object.runElosIaTool (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:926:16)
+    at async file:///workspace/elos-os/tests/finance-isolation/run.mjs:95:18
+    at async check (file:///workspace/elos-os/tests/finance-isolation/run.mjs:19:68)
+    at async file:///workspace/elos-os/tests/finance-isolation/run.mjs:94:4
+[elos-ia] Falha na ferramenta fluxo_de_caixa: Error: Entidade indisponível
+    at loadCashflow (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:28:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async loadCashflow (file:///workspace/elos-os/tests/finance-isolation/run.mjs:92:180)
+    at async Object.runFluxoDeCaixa [as run] (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:400:20)
+    at async Object.runElosIaTool (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:926:16)
+    at async file:///workspace/elos-os/tests/finance-isolation/run.mjs:95:18
+    at async check (file:///workspace/elos-os/tests/finance-isolation/run.mjs:19:68)
+    at async file:///workspace/elos-os/tests/finance-isolation/run.mjs:94:4
+[elos-ia] Falha na ferramenta fluxo_de_caixa: Error: Entidade indisponível
+    at loadCashflow (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:28:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async loadCashflow (file:///workspace/elos-os/tests/finance-isolation/run.mjs:92:180)
+    at async Object.runFluxoDeCaixa [as run] (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:400:20)
+    at async Object.runElosIaTool (eval at compile (file:///workspace/elos-os/tests/financeiro/runtime.mjs:16:3), <anonymous>:926:16)
+    at async file:///workspace/elos-os/tests/finance-isolation/run.mjs:95:18
+    at async check (file:///workspace/elos-os/tests/finance-isolation/run.mjs:19:68)
+    at async file:///workspace/elos-os/tests/finance-isolation/run.mjs:94:4
+Next e navegador reais
+Error: Build isolado recusado: 1; ver next-build.log
+    at ChildProcess.<anonymous> (file:///workspace/elos-os/tests/finance-isolation/stack.mjs:100:249)
+    at ChildProcess.emit (node:events:509:28)
+    at maybeClose (node:internal/child_process:1141:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:306:5)
+{"passed":302,"failed":[]}

@@ -1,0 +1,8 @@
+v13.0.7: Pulling from postgrest/postgrest
+15e17bebd108: Pulling fs layer
+15e17bebd108: Verifying Checksum
+15e17bebd108: Download complete
+15e17bebd108: Pull complete
+Digest: sha256:0a46780309a604cdc8b56c776c6e5e15788ce58174d709e40459ab5a2d44d228
+Status: Downloaded newer image for postgrest/postgrest:v13.0.7
+docker.io/postgrest/postgrest:v13.0.7

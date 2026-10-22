@@ -1,0 +1,21 @@
+{
+  "source_sha256": "e5b8bace701b2c5624d84c6f31c06a643a3da520152d31ec41d94e3514cea729",
+  "derived_sha256": "991637878db2d36515a9804641641b0b264780277f3af28f527da36850dbe134",
+  "modified_cells": [
+    "Acompanhamento!I15",
+    "Acompanhamento!S15",
+    "Acompanhamento!I48",
+    "Acompanhamento!S48",
+    "Acompanhamento!I51",
+    "Acompanhamento!S51",
+    "Acompanhamento!I52",
+    "Acompanhamento!S52",
+    "Acompanhamento!I54",
+    "Acompanhamento!S54",
+    "Acompanhamento!I55",
+    "Acompanhamento!S55"
+  ],
+  "all_30_case_expected_and_actual_cells_unchanged": true,
+  "financial_acceptance_formulas_and_task_statuses_unchanged": true,
+  "formula_caches_recomputed": false
+}

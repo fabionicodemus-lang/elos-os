@@ -1,0 +1,10 @@
+{
+  "refresh_execution_service_contract_value": {
+    "original_sha256": "b9308b74b59777ccec415f77d6e64660059f9f1c1c7a3d883bed384ed7e6fba2",
+    "financial_body_after_removing_guard_sha256": "b9308b74b59777ccec415f77d6e64660059f9f1c1c7a3d883bed384ed7e6fba2"
+  },
+  "refresh_execution_service_contract_measurements": {
+    "original_sha256": "7afadaf2098ce851353fd772b6e3e9375336edfbd1ecdad9011acfdcbc6a2eb5",
+    "financial_body_after_removing_guard_sha256": "7afadaf2098ce851353fd772b6e3e9375336edfbd1ecdad9011acfdcbc6a2eb5"
+  }
+}

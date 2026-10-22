@@ -1,0 +1,159 @@
+[
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-partials/baseline.mjs"
+    ],
+    "log": "baseline.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-partials/database.mjs"
+    ],
+    "log": "banco.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "tests/finance-partials/server.test.mjs",
+      "tests/finance-partials/actions.test.mjs"
+    ],
+    "log": "servidor-tela-acoes.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "python3",
+      "tests/financeiro/fixtures/comparar_resultados.py",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa14-isolamento/evidencias/regressao-etapa13/regressao-etapa12/casos-obtidos.json",
+      "--only",
+      "CT02",
+      "CT03",
+      "CT18",
+      "CT29",
+      "--report",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa14-isolamento/evidencias/regressao-etapa13/regressao-etapa12/comparacao-4.json"
+    ],
+    "log": "comparacao-4.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-partials/replay-prior.mjs",
+      "5-7",
+      "--backup"
+    ],
+    "log": "regressoes-etapa5-7.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-partials/replay-prior.mjs",
+      "8"
+    ],
+    "log": "regressoes-etapa8.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-partials/replay-prior.mjs",
+      "9"
+    ],
+    "log": "regressoes-etapa9.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-partials/replay-prior.mjs",
+      "10"
+    ],
+    "log": "regressoes-etapa10.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "tests/finance-core/components.test.mjs",
+      "tests/finance-core/forecast.test.mjs",
+      "tests/finance-core/render.test.mjs",
+      "tests/cashflow/engine.test.mjs",
+      "tests/cashflow/server.test.mjs",
+      "tests/supplier-refunds/server.test.mjs"
+    ],
+    "log": "componentes-anteriores.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "python3",
+      "tests/financeiro/fixtures/comparar_resultados.py",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa14-isolamento/evidencias/regressao-etapa13/regressao-etapa12/reexecucao/etapa10/casos-obtidos.json",
+      "--only",
+      "CT10",
+      "--report",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa14-isolamento/evidencias/regressao-etapa13/regressao-etapa12/reexecucao/etapa10/comparacao-ct10.json"
+    ],
+    "log": "comparacao-ct10.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "--test-reporter=spec",
+      "lib/forecast/engine.test.mjs",
+      "lib/forecast/snapshot-comparison.test.mjs",
+      "lib/elos-ia/summaries.test.mjs",
+      "app/engenharia/contratos/contract-calculations.test.mjs",
+      "lib/banking/ofx.test.mjs",
+      "tests/banking/bank-operations.test.mjs",
+      "lib/elos-ia/finance-safe-write-db.test.mjs",
+      "tests/homologation/aurora-regressions.test.mjs",
+      "tests/commercial/development-costs.test.mjs",
+      "tests/commercial/development-result.test.mjs",
+      "tests/financeiro/money.test.mjs"
+    ],
+    "log": "regressao-81.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npm",
+      "test"
+    ],
+    "log": "npm-test.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npx",
+      "tsc",
+      "--noEmit"
+    ],
+    "log": "typescript.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npx",
+      "eslint",
+      "lib/finance-core/cashflow.mjs",
+      "lib/finance-core/cashflow-server.ts",
+      "lib/finance-core/ledger-position.mjs",
+      "lib/elos-ia/tools.ts",
+      "app/financeiro/fluxo-de-caixa",
+      "tests/finance-partials"
+    ],
+    "log": "eslint.log",
+    "exit_code": 0
+  }
+]

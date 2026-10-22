@@ -1,0 +1,10 @@
+{
+  "original_file": "tests/supplier-refunds/replay-previous.mjs",
+  "original_sha256": "a732d5923ebb7124f30eb511a1c7cef2765fa759439c0a24f423f5f4725e545e",
+  "adapter_sha256": "bc487f2f9b0709db3ac8b68c0c744c851434971ecc8d755af60bb2834be5b324",
+  "changes": [
+    "Instalação candidata após pré-requisitos, imports absolutos, diretório novo de evidência"
+  ],
+  "assertions_inputs_expected_changed": false,
+  "legacy_CT10_probe_uses_preserved_stage10_adapter": false
+}

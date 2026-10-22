@@ -1,0 +1,16 @@
+▲ Next.js 16.4.0 (webpack)
+✓ Running next.config.ts took 20ms
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 6.1s
+  Running TypeScript ...
+app/api/auth/login/route.ts(1,20): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+app/api/financeiro/contas-bancarias/opcoes/route.ts(1,19): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+app/api/financeiro/fluxo-de-caixa/route.ts(1,19): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+app/financeiro/fluxo-de-caixa/page.tsx(1,23): error TS5097: An import path can only end with a '.tsx' extension when 'allowImportingTsExtensions' is enabled.
+app/layout.tsx(1,41): error TS5097: An import path can only end with a '.tsx' extension when 'allowImportingTsExtensions' is enabled.
+app/login/page.tsx(1,23): error TS5097: An import path can only end with a '.tsx' extension when 'allowImportingTsExtensions' is enabled.
+Failed to type check.
+

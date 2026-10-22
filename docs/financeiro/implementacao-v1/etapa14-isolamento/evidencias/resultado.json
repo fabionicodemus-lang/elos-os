@@ -1,0 +1,10 @@
+{
+  "executed_at": "2026-10-22T20:24:19.805Z",
+  "completed": true,
+  "fatal_error": null,
+  "passed": 342,
+  "failed": 0,
+  "failures": [],
+  "resources_removed": true,
+  "production_or_koper_access": false
+}

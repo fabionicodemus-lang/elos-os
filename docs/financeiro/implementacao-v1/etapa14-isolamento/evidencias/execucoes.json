@@ -1,0 +1,72 @@
+[
+  {
+    "command": [
+      "node",
+      "tests/finance-isolation/run.mjs"
+    ],
+    "log": "isolamento.log",
+    "exit_code": 0,
+    "execution": "Comandos executados individualmente na sessão; validate.mjs reúne a mesma sequência para reprodução"
+  },
+  {
+    "command": [
+      "node",
+      "tests/finance-isolation/verify-permissions.mjs"
+    ],
+    "log": "permissoes.log",
+    "exit_code": 0,
+    "execution": "Comandos executados individualmente na sessão; validate.mjs reúne a mesma sequência para reprodução"
+  },
+  {
+    "command": [
+      "node",
+      "tests/finance-isolation/guards.mjs"
+    ],
+    "log": "guards.log",
+    "exit_code": 0,
+    "execution": "Comandos executados individualmente na sessão; validate.mjs reúne a mesma sequência para reprodução"
+  },
+  {
+    "command": [
+      "node",
+      "tests/finance-isolation/work-orders.mjs"
+    ],
+    "log": "ordens-servico.log",
+    "exit_code": 0,
+    "execution": "Comandos executados individualmente na sessão; validate.mjs reúne a mesma sequência para reprodução"
+  },
+  {
+    "command": [
+      "node",
+      "tests/finance-second/validate.mjs"
+    ],
+    "log": "regressoes.log",
+    "exit_code": 0,
+    "execution": "Comandos executados individualmente na sessão; validate.mjs reúne a mesma sequência para reprodução"
+  },
+  {
+    "command": [
+      "npx",
+      "eslint",
+      "--max-warnings",
+      "0",
+      "tests/finance-isolation",
+      "lib/finance-core/cashflow.mjs",
+      "app/api/financeiro/fluxo-de-caixa/route.ts",
+      "app/financeiro/fluxo-de-caixa/page.tsx"
+    ],
+    "log": "eslint.log",
+    "exit_code": 0,
+    "execution": "Comandos executados individualmente na sessão; validate.mjs reúne a mesma sequência para reprodução"
+  },
+  {
+    "command": [
+      "npx",
+      "tsc",
+      "--noEmit"
+    ],
+    "log": "typescript.log",
+    "exit_code": 0,
+    "execution": "Comandos executados individualmente na sessão; validate.mjs reúne a mesma sequência para reprodução"
+  }
+]

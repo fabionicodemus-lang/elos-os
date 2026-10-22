@@ -1,0 +1,656 @@
+{
+  "obra": "Todas as obras da empresa",
+  "entidade_id": "3889ee03-2de4-4716-8a45-377550d1b335",
+  "corte": "2026-10-21",
+  "fonte": "Mesmo núcleo do fluxo de caixa",
+  "indicadores_financeiros": {
+    "known_obligations_subtotal_cents": 2000000,
+    "contract_amount_shown_separately_cents": 0,
+    "C_cents": null,
+    "P_cents": 25000000,
+    "Q_cents": null,
+    "AF_cents": 0,
+    "Q_scenario_cents": null,
+    "incurred_cost_cents": null,
+    "ETC_cents": null,
+    "EAC_cents": null,
+    "budget_variance_cents": null,
+    "budget_variance_percent": null,
+    "external_coverage_percent": null,
+    "status": "incompleto"
+  },
+  "fontes_financeiras": {
+    "cutoff": "2026-10-21",
+    "known_at": null,
+    "historical_knowledge_supported": false,
+    "tables": [
+      "payables",
+      "execution_service_contracts",
+      "finance_cash_scenario_rows",
+      "finance_cash_coverage_links"
+    ],
+    "missing": [
+      "Universo externo não comprovado",
+      "ETC econômico e orçamento vigente não certificados neste relatório"
+    ]
+  },
+  "realizado": {
+    "from": "2026-10-01",
+    "to": "2026-10-21",
+    "accounts": [
+      {
+        "account_id": "03e172a1-b1bf-4247-82ef-62face63cfe9",
+        "legal_entity_id": "3889ee03-2de4-4716-8a45-377550d1b335",
+        "opening_cents": 12000000,
+        "closing_cents": 12000000,
+        "confirmed_opening_cents": 12000000,
+        "confirmed_closing_cents": 12000000,
+        "incoming_cents": 0,
+        "outgoing_cents": 0,
+        "unconfirmed_movement_cents": 0,
+        "opening_validated": true
+      }
+    ],
+    "unconfirmed_through_cutoff_cents": 0,
+    "unlinked_statement_cents": 0,
+    "opening_cents": 12000000,
+    "closing_cents": 12000000,
+    "confirmed_opening_cents": 12000000,
+    "confirmed_closing_cents": 12000000,
+    "transfer_in_transit_cents": 0,
+    "external_incoming_cents": 0,
+    "external_outgoing_cents": 0,
+    "confirmed_external_incoming_cents": 0,
+    "confirmed_external_outgoing_cents": 0,
+    "unconfirmed_movement_cents": 0,
+    "project_bank_balance_available": false
+  },
+  "projecao": {
+    "cutoff": "2026-10-21",
+    "through": "2026-12-31",
+    "available_opening_cents": 10000000,
+    "months": [
+      {
+        "month": "2026-10",
+        "opening_cents": 10000000,
+        "incoming_cents": 0,
+        "outgoing_cents": 0,
+        "estimated_revenue_cents": 0,
+        "closing_cents": 10000000,
+        "commercial_closing_cents": 10000000,
+        "components": {
+          "R": 0,
+          "C": 0,
+          "P": 0,
+          "AR": 0,
+          "AR_FUTURE": 0,
+          "REFUND": 0,
+          "REVENUE": 0,
+          "AF": 0,
+          "FINANCING_IN": 0,
+          "FINANCING_OUT": 0
+        }
+      },
+      {
+        "month": "2026-11",
+        "opening_cents": 10000000,
+        "incoming_cents": 6000000,
+        "outgoing_cents": 12000000,
+        "estimated_revenue_cents": 0,
+        "closing_cents": 4000000,
+        "commercial_closing_cents": 4000000,
+        "components": {
+          "R": 0,
+          "C": 0,
+          "P": 12000000,
+          "AR": 0,
+          "AR_FUTURE": 6000000,
+          "REFUND": 0,
+          "REVENUE": 0,
+          "AF": 0,
+          "FINANCING_IN": 0,
+          "FINANCING_OUT": 0
+        }
+      },
+      {
+        "month": "2026-12",
+        "opening_cents": 4000000,
+        "incoming_cents": 8000000,
+        "outgoing_cents": 15000000,
+        "estimated_revenue_cents": 0,
+        "closing_cents": -3000000,
+        "commercial_closing_cents": -3000000,
+        "components": {
+          "R": 2000000,
+          "C": 0,
+          "P": 13000000,
+          "AR": 0,
+          "AR_FUTURE": 8000000,
+          "REFUND": 0,
+          "REVENUE": 0,
+          "AF": 0,
+          "FINANCING_IN": 0,
+          "FINANCING_OUT": 0
+        }
+      }
+    ],
+    "events": [
+      {
+        "date": "2026-11-01",
+        "closing_cents": 16000000,
+        "commercial_closing_cents": 16000000
+      },
+      {
+        "date": "2026-11-20",
+        "closing_cents": 4000000,
+        "commercial_closing_cents": 4000000
+      },
+      {
+        "date": "2026-12-01",
+        "closing_cents": 12000000,
+        "commercial_closing_cents": 12000000
+      },
+      {
+        "date": "2026-12-20",
+        "closing_cents": -3000000,
+        "commercial_closing_cents": -3000000
+      }
+    ],
+    "closing_cents": -3000000,
+    "commercial_closing_cents": -3000000,
+    "peak_additional_funding_cents": 5000000,
+    "horizon_30": {
+      "through": "2026-11-20",
+      "outgoing_cents": 12000000,
+      "receivables_cents": 6000000,
+      "refunds_cents": 0,
+      "estimated_revenue_cents": 0
+    },
+    "horizon_90": {
+      "through": "2027-01-19",
+      "outgoing_cents": 27000000,
+      "receivables_cents": 14000000,
+      "refunds_cents": 0,
+      "estimated_revenue_cents": 0
+    },
+    "undated_cents": 0,
+    "past_expected_cents": 0,
+    "complete": false,
+    "unused_credit_limit_in_cash_cents": 0
+  },
+  "projecoes_por_entidade": [
+    {
+      "entity_id": "3889ee03-2de4-4716-8a45-377550d1b335",
+      "version": {
+        "id": "54075460-23c0-4707-bc17-879ec3d6fca7",
+        "cutoff": "2026-10-21",
+        "reason": "Versão documentada CT29",
+        "request": {
+          "rows": [
+            {
+              "category": "AR_FUTURE",
+              "scope_key": "in1",
+              "source_kind": "documented_estimate",
+              "amount_cents": 6000000,
+              "expected_date": "2026-11-01"
+            },
+            {
+              "category": "P",
+              "scope_key": "out1",
+              "source_kind": "documented_estimate",
+              "amount_cents": 12000000,
+              "expected_date": "2026-11-20"
+            },
+            {
+              "category": "AR_FUTURE",
+              "scope_key": "in2",
+              "source_kind": "documented_estimate",
+              "amount_cents": 8000000,
+              "expected_date": "2026-12-01"
+            },
+            {
+              "category": "P",
+              "scope_key": "out2",
+              "source_kind": "documented_estimate",
+              "amount_cents": 13000000,
+              "expected_date": "2026-12-20"
+            },
+            {
+              "category": "FINANCING_OUT",
+              "scope_key": "amortization",
+              "source_id": "4c957b13-fae5-4c14-834a-61978fd3eb7e",
+              "source_kind": "financing",
+              "amount_cents": 2000000,
+              "expected_date": "2026-12-20"
+            }
+          ],
+          "cutoff": "2026-10-21",
+          "entity": "3889ee03-2de4-4716-8a45-377550d1b335",
+          "parent": null,
+          "reason": "Versão documentada CT29",
+          "minimum": 20000,
+          "project": null,
+          "baseline": null,
+          "evidence": "Premissas fictícias aprovadas CT29",
+          "completion": "2026-12-31",
+          "change_kind": "reschedule"
+        },
+        "evidence": "Premissas fictícias aprovadas CT29",
+        "parent_id": null,
+        "command_id": "83a92f0e-0dd5-408f-8ec3-ccb67f9e81c7",
+        "company_id": "00000000-0000-4000-8000-000000000005",
+        "created_at": "2026-10-22T20:14:59.422927+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000004",
+        "project_id": null,
+        "updated_at": "2026-10-22T20:14:59.422927+00:00",
+        "baseline_id": null,
+        "minimum_cash": 20000,
+        "completion_date": "2026-12-31",
+        "legal_entity_id": "3889ee03-2de4-4716-8a45-377550d1b335",
+        "source_snapshot": {
+          "cash": [],
+          "lines": [],
+          "links": [],
+          "audits": [
+            {
+              "id": 11,
+              "reason": "Obrigação documentada fictícia CT29",
+              "version": 1,
+              "actor_id": "00000000-0000-4000-8000-000000000004",
+              "title_id": "411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+              "new_value": {
+                "id": "411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+                "notes": null,
+                "amount": 20000,
+                "origin": "manual",
+                "status": "open",
+                "paid_at": null,
+                "document": "CT29",
+                "due_date": "2026-12-20",
+                "source_id": "411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+                "company_id": "00000000-0000-4000-8000-000000000005",
+                "created_at": "2026-10-22T20:14:59.109532+00:00",
+                "created_by": "00000000-0000-4000-8000-000000000004",
+                "project_id": "1df65bcc-776b-4def-bca6-5696da24888e",
+                "updated_at": "2026-10-22T20:14:59.109532+00:00",
+                "paid_amount": null,
+                "supplier_id": "00000000-0000-4000-8000-000000000013",
+                "fiscal_class": null,
+                "source_system": "elos_os",
+                "payment_method": null,
+                "bank_account_id": null,
+                "finance_managed": false,
+                "finance_noncash": 0,
+                "finance_version": 1,
+                "legal_entity_id": null,
+                "finance_discount": 0,
+                "installment_label": null,
+                "paid_account_name": null,
+                "finance_cash_gross": 0,
+                "bank_transaction_id": null,
+                "finance_open_amount": 20000,
+                "finance_cash_pending": 0,
+                "finance_interest_due": 0,
+                "finance_cash_refunded": 0,
+                "finance_interest_paid": 0,
+                "finance_principal_paid": 0,
+                "finance_advance_applied": 0
+              },
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "title_type": "payables",
+              "recorded_at": "2026-10-22T20:14:59.117311+00:00",
+              "effective_date": "2026-10-01",
+              "previous_value": null,
+              "legal_entity_id": "3889ee03-2de4-4716-8a45-377550d1b335"
+            }
+          ],
+          "events": [],
+          "charges": [],
+          "entries": [],
+          "accounts": [
+            {
+              "id": "03e172a1-b1bf-4247-82ef-62face63cfe9",
+              "label": "CT29",
+              "notes": null,
+              "agency": null,
+              "status": "active",
+              "pix_key": null,
+              "bank_code": null,
+              "bank_name": "Fictício",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T20:14:59.016644+00:00",
+              "created_by": null,
+              "is_default": false,
+              "updated_at": "2026-10-22T20:14:59.016644+00:00",
+              "updated_by": null,
+              "account_type": "checking",
+              "account_digit": null,
+              "bank_group_id": null,
+              "currency_code": "BRL",
+              "account_number": "CT29",
+              "allow_negative": false,
+              "closed_through": null,
+              "legal_entity_id": "3889ee03-2de4-4716-8a45-377550d1b335",
+              "opening_balance": 120000,
+              "opening_balance_date": "2026-10-01"
+            }
+          ],
+          "coverage": [],
+          "openings": [
+            {
+              "id": "66af399e-dd5a-4e20-a63d-3a5f055b6076",
+              "reason": "Abertura documentada da fixture",
+              "evidence": "Extrato inicial fictício independente",
+              "command_id": "8633ed01-3579-45b1-828a-98c04ec63503",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T20:14:59.02308+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000004",
+              "project_id": null,
+              "updated_at": "2026-10-22T20:14:59.02308+00:00",
+              "opening_date": "2026-10-01",
+              "opening_amount": 120000,
+              "bank_account_id": "03e172a1-b1bf-4247-82ef-62face63cfe9",
+              "legal_entity_id": "3889ee03-2de4-4716-8a45-377550d1b335",
+              "restricted_amount": 20000
+            }
+          ],
+          "payables": [
+            {
+              "id": "411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+              "notes": null,
+              "amount": 20000,
+              "origin": "manual",
+              "status": "open",
+              "paid_at": null,
+              "document": "CT29",
+              "due_date": "2026-12-20",
+              "source_id": "411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+              "company_id": "00000000-0000-4000-8000-000000000005",
+              "created_at": "2026-10-22T20:14:59.109532+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000004",
+              "project_id": "1df65bcc-776b-4def-bca6-5696da24888e",
+              "updated_at": "2026-10-22T20:14:59.109532+00:00",
+              "paid_amount": null,
+              "supplier_id": "00000000-0000-4000-8000-000000000013",
+              "fiscal_class": null,
+              "source_system": "elos_os",
+              "payment_method": null,
+              "bank_account_id": null,
+              "finance_managed": false,
+              "finance_noncash": 0,
+              "finance_version": 1,
+              "legal_entity_id": null,
+              "finance_discount": 0,
+              "installment_label": null,
+              "paid_account_name": null,
+              "finance_cash_gross": 0,
+              "bank_transaction_id": null,
+              "finance_open_amount": 20000,
+              "finance_cash_pending": 0,
+              "finance_interest_due": 0,
+              "finance_cash_refunded": 0,
+              "finance_interest_paid": 0,
+              "finance_principal_paid": 0,
+              "finance_advance_applied": 0
+            }
+          ],
+          "contracts": [],
+          "movements": [],
+          "transfers": [],
+          "receivables": [],
+          "native_invoices": [],
+          "native_installments": [],
+          "native_measurements": [],
+          "physical_activities": [],
+          "supplier_refund_rights": [],
+          "adjustment_realizations": [],
+          "supplier_refund_receipts": []
+        }
+      },
+      "future": {
+        "rows": [
+          {
+            "id": "AP:411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+            "scope_key": "AP:411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+            "category": "R",
+            "amount_cents": 2000000,
+            "legal_due": "2026-12-20",
+            "expected_date": "2026-12-20",
+            "project_id": "1df65bcc-776b-4def-bca6-5696da24888e",
+            "source_id": "411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+            "title_id": "411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+            "title_type": "AP",
+            "source_kind": "title"
+          },
+          {
+            "id": "7ca9f29b-44ba-4458-aed3-7fadfe803d55",
+            "category": "AR_FUTURE",
+            "title_id": null,
+            "scope_key": "in1",
+            "source_id": null,
+            "company_id": "00000000-0000-4000-8000-000000000005",
+            "created_at": "2026-10-22T20:14:59.427032+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000004",
+            "project_id": null,
+            "title_type": null,
+            "updated_at": "2026-10-22T20:14:59.427032+00:00",
+            "activity_id": null,
+            "scenario_id": "54075460-23c0-4707-bc17-879ec3d6fca7",
+            "source_kind": "documented_estimate",
+            "amount_cents": 6000000,
+            "expected_date": "2026-11-01",
+            "payment_lag_days": null,
+            "reference_amount_cents": 6000000
+          },
+          {
+            "id": "c1e6a010-9b2a-49ad-880f-f2bfcbb2e28c",
+            "category": "AR_FUTURE",
+            "title_id": null,
+            "scope_key": "in2",
+            "source_id": null,
+            "company_id": "00000000-0000-4000-8000-000000000005",
+            "created_at": "2026-10-22T20:14:59.427783+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000004",
+            "project_id": null,
+            "title_type": null,
+            "updated_at": "2026-10-22T20:14:59.427783+00:00",
+            "activity_id": null,
+            "scenario_id": "54075460-23c0-4707-bc17-879ec3d6fca7",
+            "source_kind": "documented_estimate",
+            "amount_cents": 8000000,
+            "expected_date": "2026-12-01",
+            "payment_lag_days": null,
+            "reference_amount_cents": 8000000
+          },
+          {
+            "id": "eba85cfd-d794-41e9-a956-e3085736181a",
+            "category": "P",
+            "title_id": null,
+            "scope_key": "out2",
+            "source_id": null,
+            "company_id": "00000000-0000-4000-8000-000000000005",
+            "created_at": "2026-10-22T20:14:59.428004+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000004",
+            "project_id": null,
+            "title_type": null,
+            "updated_at": "2026-10-22T20:14:59.428004+00:00",
+            "activity_id": null,
+            "scenario_id": "54075460-23c0-4707-bc17-879ec3d6fca7",
+            "source_kind": "documented_estimate",
+            "amount_cents": 13000000,
+            "expected_date": "2026-12-20",
+            "payment_lag_days": null,
+            "reference_amount_cents": 13000000
+          },
+          {
+            "id": "ff8fea1c-378c-4cd8-b080-2e19a684f9db",
+            "category": "P",
+            "title_id": null,
+            "scope_key": "out1",
+            "source_id": null,
+            "company_id": "00000000-0000-4000-8000-000000000005",
+            "created_at": "2026-10-22T20:14:59.427423+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000004",
+            "project_id": null,
+            "title_type": null,
+            "updated_at": "2026-10-22T20:14:59.427423+00:00",
+            "activity_id": null,
+            "scenario_id": "54075460-23c0-4707-bc17-879ec3d6fca7",
+            "source_kind": "documented_estimate",
+            "amount_cents": 12000000,
+            "expected_date": "2026-11-20",
+            "payment_lag_days": null,
+            "reference_amount_cents": 12000000
+          }
+        ],
+        "warnings": [
+          "Saldo informado não certificado: 411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+          "Cobertura não validada: 411ef63a-3600-4bd1-9cdf-fe0d664a4fca"
+        ],
+        "complete": false
+      },
+      "projection": {
+        "cutoff": "2026-10-21",
+        "through": "2026-12-31",
+        "available_opening_cents": 10000000,
+        "months": [
+          {
+            "month": "2026-10",
+            "opening_cents": 10000000,
+            "incoming_cents": 0,
+            "outgoing_cents": 0,
+            "estimated_revenue_cents": 0,
+            "closing_cents": 10000000,
+            "commercial_closing_cents": 10000000,
+            "components": {
+              "R": 0,
+              "C": 0,
+              "P": 0,
+              "AR": 0,
+              "AR_FUTURE": 0,
+              "REFUND": 0,
+              "REVENUE": 0,
+              "AF": 0,
+              "FINANCING_IN": 0,
+              "FINANCING_OUT": 0
+            }
+          },
+          {
+            "month": "2026-11",
+            "opening_cents": 10000000,
+            "incoming_cents": 6000000,
+            "outgoing_cents": 12000000,
+            "estimated_revenue_cents": 0,
+            "closing_cents": 4000000,
+            "commercial_closing_cents": 4000000,
+            "components": {
+              "R": 0,
+              "C": 0,
+              "P": 12000000,
+              "AR": 0,
+              "AR_FUTURE": 6000000,
+              "REFUND": 0,
+              "REVENUE": 0,
+              "AF": 0,
+              "FINANCING_IN": 0,
+              "FINANCING_OUT": 0
+            }
+          },
+          {
+            "month": "2026-12",
+            "opening_cents": 4000000,
+            "incoming_cents": 8000000,
+            "outgoing_cents": 15000000,
+            "estimated_revenue_cents": 0,
+            "closing_cents": -3000000,
+            "commercial_closing_cents": -3000000,
+            "components": {
+              "R": 2000000,
+              "C": 0,
+              "P": 13000000,
+              "AR": 0,
+              "AR_FUTURE": 8000000,
+              "REFUND": 0,
+              "REVENUE": 0,
+              "AF": 0,
+              "FINANCING_IN": 0,
+              "FINANCING_OUT": 0
+            }
+          }
+        ],
+        "events": [
+          {
+            "date": "2026-11-01",
+            "closing_cents": 16000000,
+            "commercial_closing_cents": 16000000
+          },
+          {
+            "date": "2026-11-20",
+            "closing_cents": 4000000,
+            "commercial_closing_cents": 4000000
+          },
+          {
+            "date": "2026-12-01",
+            "closing_cents": 12000000,
+            "commercial_closing_cents": 12000000
+          },
+          {
+            "date": "2026-12-20",
+            "closing_cents": -3000000,
+            "commercial_closing_cents": -3000000
+          }
+        ],
+        "closing_cents": -3000000,
+        "commercial_closing_cents": -3000000,
+        "peak_additional_funding_cents": 5000000,
+        "horizon_30": {
+          "through": "2026-11-20",
+          "outgoing_cents": 12000000,
+          "receivables_cents": 6000000,
+          "refunds_cents": 0,
+          "estimated_revenue_cents": 0
+        },
+        "horizon_90": {
+          "through": "2027-01-19",
+          "outgoing_cents": 27000000,
+          "receivables_cents": 14000000,
+          "refunds_cents": 0,
+          "estimated_revenue_cents": 0
+        },
+        "undated_cents": 0,
+        "past_expected_cents": 0,
+        "complete": false,
+        "unused_credit_limit_in_cash_cents": 0
+      }
+    }
+  ],
+  "restituicoes_de_fornecedores": [],
+  "natureza_restituicao": "Recuperação de adiantamento; não é receita operacional",
+  "obrigacoes_vencidas": {
+    "R_cents": 2000000,
+    "overdue_cents": 0,
+    "due_today_cents": 0,
+    "next_30_days_cents": 0,
+    "next_90_days_cents": 2000000,
+    "beyond_90_days_cents": 0,
+    "unknown_due_cents": 0,
+    "immediate_need_through_30_days_cents": 0
+  },
+  "recebiveis_vencidos": {
+    "R_cents": 0,
+    "overdue_cents": 0,
+    "due_today_cents": 0,
+    "next_30_days_cents": 0,
+    "next_90_days_cents": 0,
+    "beyond_90_days_cents": 0,
+    "unknown_due_cents": 0,
+    "immediate_need_through_30_days_cents": 0
+  },
+  "pendencias": [
+    "Saldo informado não certificado: 411ef63a-3600-4bd1-9cdf-fe0d664a4fca",
+    "Cobertura não validada: 411ef63a-3600-4bd1-9cdf-fe0d664a4fca"
+  ],
+  "sem_obra_aberto_cents": 0,
+  "fonte_sem_obra_a_validar_cents": 0,
+  "versao": "54075460-23c0-4707-bc17-879ec3d6fca7"
+}

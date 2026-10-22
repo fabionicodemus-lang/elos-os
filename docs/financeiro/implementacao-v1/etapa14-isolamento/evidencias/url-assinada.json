@@ -1,0 +1,7 @@
+{
+  "url_sha256": "2ede7b47b2d931c4b1a09c4b303c3ca29fb3ff62935b3186ef05c148f97f5ca9",
+  "full_url_not_recorded": true,
+  "fresh_without_session_status": 200,
+  "expired_status": 400,
+  "meaning": "URL assinada é credencial portadora temporária; não é apenas o identificador. Dependência de decisão se documentos exigirem reautenticação por usuário em cada download."
+}

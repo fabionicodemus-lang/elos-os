@@ -1,0 +1,28 @@
+v2.184.0: Pulling from supabase/gotrue
+014e56e61396: Pulling fs layer
+64990864d225: Pulling fs layer
+d4da9541978a: Pulling fs layer
+ae71ee9bb1f0: Pulling fs layer
+6ecf0f66ca4a: Pulling fs layer
+68072c71d260: Pulling fs layer
+ae71ee9bb1f0: Waiting
+6ecf0f66ca4a: Waiting
+68072c71d260: Waiting
+64990864d225: Download complete
+d4da9541978a: Download complete
+014e56e61396: Verifying Checksum
+014e56e61396: Download complete
+014e56e61396: Pull complete
+64990864d225: Pull complete
+d4da9541978a: Pull complete
+6ecf0f66ca4a: Verifying Checksum
+6ecf0f66ca4a: Download complete
+68072c71d260: Verifying Checksum
+68072c71d260: Download complete
+ae71ee9bb1f0: Download complete
+ae71ee9bb1f0: Pull complete
+6ecf0f66ca4a: Pull complete
+68072c71d260: Pull complete
+Digest: sha256:c485010238ab429edf4ac8eb70b37b41aae0a0905277a935d4a0b64bb848e393
+Status: Downloaded newer image for supabase/gotrue:v2.184.0
+docker.io/supabase/gotrue:v2.184.0

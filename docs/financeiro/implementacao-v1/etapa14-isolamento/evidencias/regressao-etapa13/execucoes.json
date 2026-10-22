@@ -1,0 +1,73 @@
+[
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-second/baseline-core.mjs"
+    ],
+    "log": "baseline-core.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-second/database.mjs"
+    ],
+    "log": "banco.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "tests/finance-second/core.test.mjs",
+      "tests/finance-second/channels.test.mjs"
+    ],
+    "log": "testes-etapa13.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "python3",
+      "tests/financeiro/fixtures/comparar_resultados.py",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa14-isolamento/evidencias/regressao-etapa13/casos-obtidos.json",
+      "--only",
+      "CT21",
+      "CT24",
+      "--report",
+      "/workspace/elos-os/docs/financeiro/implementacao-v1/etapa14-isolamento/evidencias/regressao-etapa13/comparacao-2.json"
+    ],
+    "log": "comparacao-2.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/finance-partials/validate.mjs"
+    ],
+    "log": "regressoes-etapas5-12.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npx",
+      "eslint",
+      "lib/finance-core/cashflow.mjs",
+      "lib/finance-core/cashflow-server.ts",
+      "lib/elos-ia/tools.ts",
+      "app/financeiro/fluxo-de-caixa/page.tsx",
+      "app/api/financeiro/fluxo-de-caixa/route.ts",
+      "tests/finance-second"
+    ],
+    "log": "eslint.log",
+    "exit_code": 0
+  },
+  {
+    "command": [
+      "npx",
+      "tsc",
+      "--noEmit"
+    ],
+    "log": "typescript.log",
+    "exit_code": 0
+  }
+]

@@ -1,0 +1,47 @@
+▲ Next.js 16.4.0 (webpack)
+✓ Running next.config.ts took 21ms
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+Failed to compile.
+
+./proxy.ts
+Module not found: Can't resolve '@/lib/supabase/proxy'
+
+https://nextjs.org/docs/messages/module-not-found
+
+../../../workspace/elos-os/app/api/auth/login/route.ts
+Module not found: Can't resolve '@/lib/supabase/server'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/api/auth/login/route.ts
+
+../../../workspace/elos-os/app/api/financeiro/contas-bancarias/opcoes/route.ts
+Module not found: Can't resolve '@/lib/workspace'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/api/financeiro/contas-bancarias/opcoes/route.ts
+
+../../../workspace/elos-os/app/api/financeiro/fluxo-de-caixa/route.ts
+Module not found: Can't resolve '@/lib/workspace'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/api/financeiro/fluxo-de-caixa/route.ts
+
+../../../workspace/elos-os/app/api/financeiro/fluxo-de-caixa/route.ts
+Module not found: Can't resolve '@/lib/finance-core/cashflow-server'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./app/api/financeiro/fluxo-de-caixa/route.ts
+
+
+> Build failed because of webpack errors

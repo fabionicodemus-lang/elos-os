@@ -1,0 +1,237 @@
+{
+  "obra": "Todas as obras da empresa",
+  "entidade_id": "00000000-0000-4000-8000-000000000007",
+  "corte": "2026-10-21",
+  "fonte": "Mesmo núcleo do fluxo de caixa",
+  "indicadores_financeiros": {
+    "known_obligations_subtotal_cents": 100000,
+    "contract_amount_shown_separately_cents": 100000,
+    "C_cents": null,
+    "P_cents": null,
+    "Q_cents": null,
+    "AF_cents": 0,
+    "Q_scenario_cents": null,
+    "incurred_cost_cents": null,
+    "ETC_cents": null,
+    "EAC_cents": null,
+    "budget_variance_cents": null,
+    "budget_variance_percent": null,
+    "external_coverage_percent": null,
+    "status": "incompleto"
+  },
+  "fontes_financeiras": {
+    "cutoff": "2026-10-21",
+    "known_at": null,
+    "historical_knowledge_supported": false,
+    "tables": [
+      "payables",
+      "execution_service_contracts",
+      "finance_cash_scenario_rows",
+      "finance_cash_coverage_links"
+    ],
+    "missing": [
+      "Universo externo não comprovado",
+      "ETC econômico e orçamento vigente não certificados neste relatório"
+    ]
+  },
+  "realizado": {
+    "from": "2026-10-01",
+    "to": "2026-10-21",
+    "accounts": [
+      {
+        "account_id": "00000000-0000-4000-8000-000000000015",
+        "legal_entity_id": "00000000-0000-4000-8000-000000000007",
+        "opening_cents": 1000000,
+        "closing_cents": 1000000,
+        "confirmed_opening_cents": null,
+        "confirmed_closing_cents": null,
+        "incoming_cents": 0,
+        "outgoing_cents": 0,
+        "unconfirmed_movement_cents": 0,
+        "opening_validated": false
+      }
+    ],
+    "unconfirmed_through_cutoff_cents": 0,
+    "unlinked_statement_cents": 0,
+    "opening_cents": 1000000,
+    "closing_cents": 1000000,
+    "confirmed_opening_cents": null,
+    "confirmed_closing_cents": null,
+    "transfer_in_transit_cents": 0,
+    "external_incoming_cents": 0,
+    "external_outgoing_cents": 0,
+    "confirmed_external_incoming_cents": 0,
+    "confirmed_external_outgoing_cents": 0,
+    "unconfirmed_movement_cents": 0,
+    "project_bank_balance_available": false
+  },
+  "projecao": {
+    "cutoff": "2026-10-21",
+    "through": "2026-10-21",
+    "available_opening_cents": null,
+    "months": [
+      {
+        "month": "2026-10",
+        "opening_cents": null,
+        "incoming_cents": 0,
+        "outgoing_cents": 0,
+        "estimated_revenue_cents": 0,
+        "closing_cents": null,
+        "commercial_closing_cents": null,
+        "components": {
+          "R": 0,
+          "C": 0,
+          "P": 0,
+          "AR": 0,
+          "AR_FUTURE": 0,
+          "REFUND": 0,
+          "REVENUE": 0,
+          "AF": 0,
+          "FINANCING_IN": 0,
+          "FINANCING_OUT": 0
+        }
+      }
+    ],
+    "events": [],
+    "closing_cents": null,
+    "commercial_closing_cents": null,
+    "peak_additional_funding_cents": null,
+    "horizon_30": {
+      "through": "2026-11-20",
+      "outgoing_cents": 100000,
+      "receivables_cents": 0,
+      "refunds_cents": 0,
+      "estimated_revenue_cents": 0
+    },
+    "horizon_90": {
+      "through": "2027-01-19",
+      "outgoing_cents": 100000,
+      "receivables_cents": 0,
+      "refunds_cents": 0,
+      "estimated_revenue_cents": 0
+    },
+    "undated_cents": 100000,
+    "past_expected_cents": 0,
+    "complete": false,
+    "unused_credit_limit_in_cash_cents": 0
+  },
+  "projecoes_por_entidade": [
+    {
+      "entity_id": "00000000-0000-4000-8000-000000000007",
+      "future": {
+        "rows": [
+          {
+            "id": "AP:b2284777-3f60-42cf-b9c2-1082f54b582c",
+            "scope_key": "AP:b2284777-3f60-42cf-b9c2-1082f54b582c",
+            "category": "R",
+            "amount_cents": 100000,
+            "legal_due": "2026-11-10",
+            "expected_date": "2026-11-10",
+            "project_id": "00000000-0000-4000-8000-000000000010",
+            "source_id": "b2284777-3f60-42cf-b9c2-1082f54b582c",
+            "title_id": "b2284777-3f60-42cf-b9c2-1082f54b582c",
+            "title_type": "AP",
+            "source_kind": "title"
+          },
+          {
+            "id": "contract:6f82c76c-3f8c-4e7b-ab4d-ef2436a7929b",
+            "scope_key": "contract:6f82c76c-3f8c-4e7b-ab4d-ef2436a7929b",
+            "category": "C",
+            "amount_cents": 100000,
+            "expected_date": null,
+            "project_id": null,
+            "source_kind": "contract",
+            "source_id": "6f82c76c-3f8c-4e7b-ab4d-ef2436a7929b",
+            "reference_amount_cents": 100000
+          }
+        ],
+        "warnings": [
+          "Saldo informado não certificado: b2284777-3f60-42cf-b9c2-1082f54b582c",
+          "Vínculo contrato–título ausente: b2284777-3f60-42cf-b9c2-1082f54b582c; totais podem se sobrepor"
+        ],
+        "complete": false
+      },
+      "projection": {
+        "cutoff": "2026-10-21",
+        "through": "2026-10-21",
+        "available_opening_cents": null,
+        "months": [
+          {
+            "month": "2026-10",
+            "opening_cents": null,
+            "incoming_cents": 0,
+            "outgoing_cents": 0,
+            "estimated_revenue_cents": 0,
+            "closing_cents": null,
+            "commercial_closing_cents": null,
+            "components": {
+              "R": 0,
+              "C": 0,
+              "P": 0,
+              "AR": 0,
+              "AR_FUTURE": 0,
+              "REFUND": 0,
+              "REVENUE": 0,
+              "AF": 0,
+              "FINANCING_IN": 0,
+              "FINANCING_OUT": 0
+            }
+          }
+        ],
+        "events": [],
+        "closing_cents": null,
+        "commercial_closing_cents": null,
+        "peak_additional_funding_cents": null,
+        "horizon_30": {
+          "through": "2026-11-20",
+          "outgoing_cents": 100000,
+          "receivables_cents": 0,
+          "refunds_cents": 0,
+          "estimated_revenue_cents": 0
+        },
+        "horizon_90": {
+          "through": "2027-01-19",
+          "outgoing_cents": 100000,
+          "receivables_cents": 0,
+          "refunds_cents": 0,
+          "estimated_revenue_cents": 0
+        },
+        "undated_cents": 100000,
+        "past_expected_cents": 0,
+        "complete": false,
+        "unused_credit_limit_in_cash_cents": 0
+      }
+    }
+  ],
+  "restituicoes_de_fornecedores": [],
+  "natureza_restituicao": "Recuperação de adiantamento; não é receita operacional",
+  "obrigacoes_vencidas": {
+    "R_cents": 100000,
+    "overdue_cents": 0,
+    "due_today_cents": 0,
+    "next_30_days_cents": 100000,
+    "next_90_days_cents": 100000,
+    "beyond_90_days_cents": 0,
+    "unknown_due_cents": 0,
+    "immediate_need_through_30_days_cents": 100000
+  },
+  "recebiveis_vencidos": {
+    "R_cents": 0,
+    "overdue_cents": 0,
+    "due_today_cents": 0,
+    "next_30_days_cents": 0,
+    "next_90_days_cents": 0,
+    "beyond_90_days_cents": 0,
+    "unknown_due_cents": 0,
+    "immediate_need_through_30_days_cents": 0
+  },
+  "pendencias": [
+    "Saldo informado não certificado: b2284777-3f60-42cf-b9c2-1082f54b582c",
+    "Vínculo contrato–título ausente: b2284777-3f60-42cf-b9c2-1082f54b582c; totais podem se sobrepor",
+    "Previsão aprovada até conclusão ausente em parte do perímetro",
+    "Saldo inicial ou restrições sem comprovação"
+  ],
+  "sem_obra_aberto_cents": 0,
+  "fonte_sem_obra_a_validar_cents": 0,
+  "versao": null
+}

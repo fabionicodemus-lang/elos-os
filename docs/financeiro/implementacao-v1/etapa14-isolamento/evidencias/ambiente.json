@@ -1,0 +1,152 @@
+{
+  "images": {
+    "auth": "supabase/gotrue@sha256:c485010238ab429edf4ac8eb70b37b41aae0a0905277a935d4a0b64bb848e393",
+    "rest": "postgrest/postgrest@sha256:0a46780309a604cdc8b56c776c6e5e15788ce58174d709e40459ab5a2d44d228",
+    "storage": "supabase/storage-api@sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177"
+  },
+  "companies": {
+    "A": {
+      "company": "00000000-0000-4000-8000-000000000005",
+      "entity": "00000000-0000-4000-8000-000000000007",
+      "project": "00000000-0000-4000-8000-000000000010",
+      "account": "00000000-0000-4000-8000-000000000015",
+      "supplier": "00000000-0000-4000-8000-000000000013",
+      "sale": "00000000-0000-4000-8000-000000000026",
+      "client": "00000000-0000-4000-8000-000000000021",
+      "unit": "00000000-0000-4000-8000-000000000023",
+      "contract": "4a67ad3e-faff-4725-aa37-8a322fb16165",
+      "ap": "c02de7a7-38f0-466d-b388-eb1494977e1f",
+      "ar": "6798ede1-4967-45ad-99b9-226e2e5d5784",
+      "documentPath": "00000000-0000-4000-8000-000000000005/00000000-0000-4000-8000-000000000015/ficticio.pdf",
+      "documentRegistration": "d35afb8c-4f5e-4d5f-9d08-14712182593a"
+    },
+    "B": {
+      "company": "00000000-0000-4000-8000-000000000006",
+      "entity": "00000000-0000-4000-8000-000000000009",
+      "project": "00000000-0000-4000-8000-000000000012",
+      "account": "00000000-0000-4000-8000-000000000017",
+      "supplier": "00000000-0000-4000-8000-000000000014",
+      "sale": "00000000-0000-4000-8000-000000000028",
+      "client": "00000000-0000-4000-8000-000000000022",
+      "unit": "00000000-0000-4000-8000-000000000025",
+      "contract": "fbffb309-f43b-4dc3-a280-170321d66bd2",
+      "ap": "e869e9c1-d2e6-4de2-9fab-f684f359ac05",
+      "ar": "d282432a-363d-490a-b253-4d73b6e020ef",
+      "documentPath": "00000000-0000-4000-8000-000000000006/00000000-0000-4000-8000-000000000017/ficticio.pdf",
+      "documentRegistration": "f910d2dc-a6eb-444f-b592-c2806a271fe5"
+    }
+  },
+  "actors": {
+    "Aadmin": {
+      "id": "92b3aae6-10e3-4c3c-8303-91a3b7e164fd",
+      "email": "aadmin@example.invalid",
+      "company": "A",
+      "profile": "admin"
+    },
+    "Afinance": {
+      "id": "c868d286-7212-4751-a3dc-9618699e72d0",
+      "email": "afinance@example.invalid",
+      "company": "A",
+      "profile": "finance"
+    },
+    "Aviewer": {
+      "id": "9ed8eb2b-c3c8-4f4b-905a-9b5a93d60cf8",
+      "email": "aviewer@example.invalid",
+      "company": "A",
+      "profile": "viewer"
+    },
+    "Aengineering": {
+      "id": "dceb56f4-6dde-409d-a8cc-9aac9ffb38c8",
+      "email": "aengineering@example.invalid",
+      "company": "A",
+      "profile": "engineering"
+    },
+    "Badmin": {
+      "id": "970225c7-7687-4008-9e11-68d7a160af54",
+      "email": "badmin@example.invalid",
+      "company": "B",
+      "profile": "admin"
+    },
+    "Bfinance": {
+      "id": "3d2022ed-5a8a-40dd-852b-09a9849dfaac",
+      "email": "bfinance@example.invalid",
+      "company": "B",
+      "profile": "finance"
+    },
+    "Bviewer": {
+      "id": "074f8b50-7cee-4615-b15e-b79d0a92faa1",
+      "email": "bviewer@example.invalid",
+      "company": "B",
+      "profile": "viewer"
+    },
+    "Bengineering": {
+      "id": "2139be99-5009-48e7-bb55-9603b038b7e1",
+      "email": "bengineering@example.invalid",
+      "company": "B",
+      "profile": "engineering"
+    }
+  },
+  "auth": "GoTrue real/password; separate disposable Auth DB with matching app IDs",
+  "data_api": "PostgREST real JWT verification + RLS",
+  "storage": "Storage API real, file backend in tmpfs, original policies reinstalled",
+  "network": "private Docker internal network; localhost gateway and Next only",
+  "UI": "Production build of original financial routes reexported in a temporary Next project; not a full OS build",
+  "typography": "Official next/font test hook with local font bytes; layout and business components unchanged",
+  "service_key_occurrences_in_browser": 0,
+  "native_functions": [
+    {
+      "file": "20260728_0038_execution_service_contracts.sql",
+      "name": "refresh_execution_service_contract_value",
+      "sha256": "26a431396c43efd2594b91c9cf031e618bbeb2d85cb761a3d5b3fe4170860b5b"
+    },
+    {
+      "file": "20260801_0067_service_contract_procurement.sql",
+      "name": "refresh_execution_service_contract_measurements",
+      "sha256": "1ceb8b9113ca84f50a95934cc12852bd0c53ed1d99177751c32ead1492ed31da"
+    }
+  ],
+  "storage_policies": {
+    "source_sha256": [
+      "e1cf27fb8770db95ca27e262a98427f238932a3ca87cf8c47de7326b0f2968ad",
+      "4aab50fe4f34711108f243f55d013b08e0b945afe61e61ac6fbbbc80123ef531",
+      "9b63e42917f1d243bc8baeb69ef93de469ed48e7c4913ee09e8f5b13a4df0d4a"
+    ],
+    "statements_count": 6,
+    "buckets": [
+      {
+        "id": "bank-documents",
+        "name": "bank-documents",
+        "type": "STANDARD",
+        "owner": null,
+        "public": false,
+        "owner_id": null,
+        "created_at": "2026-10-22T20:23:33.510845+00:00",
+        "updated_at": "2026-10-22T20:23:33.510845+00:00",
+        "file_size_limit": 4000000,
+        "allowed_mime_types": [
+          "application/pdf"
+        ],
+        "avif_autodetection": false
+      },
+      {
+        "id": "service-contract-documents",
+        "name": "service-contract-documents",
+        "type": "STANDARD",
+        "owner": null,
+        "public": false,
+        "owner_id": null,
+        "created_at": "2026-10-22T20:23:33.515576+00:00",
+        "updated_at": "2026-10-22T20:23:33.515576+00:00",
+        "file_size_limit": 26214400,
+        "allowed_mime_types": [
+          "application/pdf",
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ],
+        "avif_autodetection": false
+      }
+    ]
+  }
+}

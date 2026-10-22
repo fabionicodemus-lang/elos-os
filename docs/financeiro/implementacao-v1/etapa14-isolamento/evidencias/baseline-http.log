@@ -1,0 +1,6 @@
+Auth real, oito identidades fictícias
+PostgREST e Storage reais
+AssertionError [ERR_ASSERTION]: A falha deve ser demonstrada antes da alteração
+    at file:///workspace/elos-os/tests/finance-isolation/run.mjs:41:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+{"passed":0,"failed":[]}

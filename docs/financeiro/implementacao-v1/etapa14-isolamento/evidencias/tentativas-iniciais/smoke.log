@@ -1,0 +1,7 @@
+Iniciando Auth real
+Serviço isolado não ficou pronto: http://172.18.0.3:9999/health
+column "description" of relation "receivables" violates not-null constraint
+    at ChildProcess.<anonymous> (file:///workspace/elos-os/tests/financeiro/runtime.mjs:24:60)
+    at ChildProcess.emit (node:events:509:28)
+    at maybeClose (node:internal/child_process:1141:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:306:5)

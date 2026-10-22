@@ -1,0 +1,49 @@
+{
+  "execution_context": {
+    "implementation_version": "Etapa13 candidata",
+    "executed_at": "2026-10-22T20:14:15.203Z",
+    "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+    "environment": "PostgreSQL local Docker, network=none, dados fictícios; JWT SQL simulado, sem Auth/PostgREST real"
+  },
+  "cases": [
+    {
+      "id": "CT24",
+      "status": "executado",
+      "actual": {
+        "canonical_title_count_all_organizations": 3,
+        "UA_visible_total_cents": 100000,
+        "UB_visible_total_cents": 900000,
+        "UG_A1_context_total_cents": 100000,
+        "UG_A2_context_total_cents": 300000,
+        "UG_A_authorized_consolidated_total_cents": 400000,
+        "UG_B_context_total_cents": 900000,
+        "foreign_rows_returned_to_UA": 0,
+        "restricted_same_organization_rows_returned_to_UA": 0,
+        "unauthorized_mutations_committed": 0,
+        "UR_mutations_committed": 0,
+        "foreign_data_occurrences_in_UA_exports_or_AI": 0
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json"
+      ]
+    },
+    {
+      "id": "CT21",
+      "status": "executado",
+      "actual": {
+        "known_obligations_subtotal_cents": 14000000,
+        "contract_amount_shown_separately_cents": 84000000,
+        "Q_cents": null,
+        "EAC_cents": null,
+        "budget_variance_percent": null,
+        "external_coverage_percent": null,
+        "status": "incompleto"
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json"
+      ]
+    }
+  ]
+}

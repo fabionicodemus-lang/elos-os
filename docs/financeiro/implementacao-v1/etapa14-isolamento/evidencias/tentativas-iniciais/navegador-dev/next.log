@@ -1,0 +1,1901 @@
+▲ Next.js 16.4.0 (webpack)
+- Local:         http://127.0.0.1:34947
+- Network:       http://127.0.0.1:34947
+✓ Ready in 326ms
+✓ Running next.config.ts took 35ms
+- Experiments (use with caution):
+  · serverActions
+
+○ Compiling /login/page ...
+ GET /login 200 in 558ms (next.js: 93ms, proxy.ts: 271ms, application-code: 194ms)
+ GET /login 200 in 47ms (next.js: 1.7ms, proxy.ts: 11ms, application-code: 34ms)
+ GET /login 200 in 88ms (next.js: 6ms, proxy.ts: 7ms, application-code: 75ms)
+ POST /api/auth/login 303 in 671ms (next.js: 438ms, proxy.ts: 7ms, application-code: 226ms)
+ GET /dashboard 307 in 2.2s (next.js: 1929ms, proxy.ts: 11ms, application-code: 216ms)
+ GET /login 200 in 180ms (next.js: 13ms, proxy.ts: 91ms, application-code: 76ms)
+ GET /login 200 in 141ms (next.js: 8ms, proxy.ts: 6ms, application-code: 128ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 200 in 2.5s (next.js: 771ms, proxy.ts: 55ms, application-code: 1661ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 200 in 499ms (next.js: 57ms, proxy.ts: 48ms, application-code: 394ms)
+ GET /login 200 in 116ms (next.js: 67ms, proxy.ts: 5ms, application-code: 44ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 200 in 1172ms (next.js: 534ms, proxy.ts: 84ms, application-code: 553ms)
+ GET /login 200 in 98ms (next.js: 4ms, proxy.ts: 11ms, application-code: 83ms)
+ GET /login 200 in 187ms (next.js: 24ms, proxy.ts: 12ms, application-code: 151ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21 200 in 412ms (next.js: 3ms, proxy.ts: 102ms, application-code: 307ms)
+⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>) {
+  page: '/api/financeiro/fluxo-de-caixa'
+}
+ GET /login 200 in 537ms (next.js: 145ms, proxy.ts: 246ms, application-code: 146ms)
+ GET /login 200 in 74ms (next.js: 5ms, proxy.ts: 19ms, application-code: 50ms)
+ GET /login 200 in 37ms (next.js: 4ms, proxy.ts: 5ms, application-code: 29ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 500 in 2.9s (next.js: 2.7s, proxy.ts: 72ms, application-code: 128ms)
+ GET /login 200 in 289ms (next.js: 83ms, proxy.ts: 8ms, application-code: 197ms)
+ GET /login 200 in 431ms (next.js: 18ms, proxy.ts: 6ms, application-code: 407ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 200 in 1305ms (next.js: 13ms, proxy.ts: 74ms, application-code: 1218ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+      <LoadingBoundary name="fluxo-de-c..." loading={null}>
+        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+          <RedirectBoundary>
+            <RedirectErrorBoundary router={{...}}>
+              <InnerLayoutRouter url={"/finance..."} tree={[...]} params={{}} renderTree={{...}} segmentPath={[...]} ...>
+                <SegmentViewNode type="page" pagePath="financeiro...">
+                  <SegmentTrieNode>
+                  <CashFlowPage>
+                    <AppShell>
+                      <div className="elos-app-s...">
+                        <BankAccountPaymentSelector>
+                        <ShellNavigation>
+                        <main className="elos-main">
+                          <header className="elos-header">
+                            <div>
+                            <div>
+                            <ProjectSwitcher companyId="00000000-0..." activeProjectId="00000000-0..." projects={[...]} ...>
+                              <form className="elos-proje..." action="/api/works..." method="post" ...>
+                                <input
+                                  type="hidden"
+                                  name="company_id"
+                                  value="00000000-0000-4000-8000-000000000005"
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                <input
+                                  type="hidden"
+                                  name="return_to"
+                                  value={"/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000..."}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                ...
+                            ...
+                          <div className="elos-modul...">
+                            <div>
+                            <section className="registry-t...">
+                              <form method="get" className="registry-f...">
+                                <label>
+                                  <input
+                                    type="date"
+                                    name="from"
+                                    defaultValue="2026-10-01"
+                                    required={true}
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                <label>
+                                  <input
+                                    type="date"
+                                    name="cutoff"
+                                    defaultValue="2026-10-21"
+                                    max="2026-10-22"
+                                    required={true}
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                <label>
+                                <label>
+                                <label>
+                                  <input
+                                    type="checkbox"
+                                    name="consolidated"
+                                    value="1"
+                                    defaultChecked={false}
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  ...
+                                ...
+                            <section>
+                            <section>
+                            <section>
+                            <section className="registry-t...">
+                              <div>
+                              <div>
+                              <details>
+                                <summary>
+                                <form action={function validateCashOpening} className="registry-f...">
+                                  <input
+                                    type="hidden"
+                                    name="command_id"
+                                    value="9f27bbfe-9a2b-4517-bc29-0beeb21707fa"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <label>
+                                  <label>
+                                    <input
+                                      name="restricted"
+                                      inputMode="decimal"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="evidence"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="reason"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  ...
+                            <section className="registry-t...">
+                              <details>
+                                <summary>
+                                <form action={function recordCashTransfer} className="registry-f...">
+                                  <input
+                                    type="hidden"
+                                    name="command_id"
+                                    value="e95633a7-1bbc-4722-9a50-3b4d4603baa1"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <label>
+                                  <label>
+                                  <label>
+                                  <label>
+                                    <input
+                                      name="amount"
+                                      inputMode="decimal"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="fee"
+                                      inputMode="decimal"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="debit_date"
+                                      type="date"
+                                      max="2026-10-22"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="credit_date"
+                                      type="date"
+                                      max="2026-10-22"
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="evidence"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="reason"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  ...
+                              ...
+                            <section>
+                            <section className="registry-t...">
+                              <details>
+                                <summary>
+                                <p>
+                                <form action={function saveCashScenario} className="registry-f...">
+                                  <input
+                                    type="hidden"
+                                    name="command_id"
+                                    value="709e1b56-0628-4ad2-97e4-49cd6a3eebf9"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <input
+                                    type="hidden"
+                                    name="entity_id"
+                                    value="00000000-0000-4000-8000-000000000007"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <input
+                                    type="hidden"
+                                    name="parent_id"
+                                    value=""
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <input
+                                    type="hidden"
+                                    name="cutoff"
+                                    value="2026-10-21"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <label>
+                                  <label>
+                                    <input
+                                      name="completion"
+                                      type="date"
+                                      min="2026-10-21"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="minimum"
+                                      inputMode="decimal"
+                                      defaultValue=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue="AP:efbf18b6-314c-40b3-9186-31c00f531041"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="7000.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue="2026-10-30"
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value="efbf18b6-314c-40b3-9186-31c00f531041"
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue="AR:d7c542d2-e95a-4be3-90f3-a38d326a4bc0"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="3000.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue="2026-10-30"
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value="d7c542d2-e95a-4be3-90f3-a38d326a4bc0"
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue="contract:90a7443e-b7db-4086-8797-e09dcd7fe24a"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="30000.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <label>
+                                    <input
+                                      name="evidence"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="reason"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  ...
+                            ...
+                ...
+              ...
+    ...
+ 
+ GET /login 200 in 359ms (next.js: 125ms, proxy.ts: 39ms, application-code: 196ms)
+ POST /api/auth/login 303 in 170ms (next.js: 8ms, proxy.ts: 28ms, application-code: 134ms)
+ GET /dashboard 307 in 429ms (next.js: 19ms, proxy.ts: 22ms, application-code: 387ms)
+ GET /login 200 in 148ms (next.js: 4ms, proxy.ts: 22ms, application-code: 122ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 200 in 956ms (next.js: 9ms, proxy.ts: 56ms, application-code: 891ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 200 in 711ms (next.js: 9ms, proxy.ts: 39ms, application-code: 663ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 200 in 327ms (next.js: 12ms, proxy.ts: 104ms, application-code: 211ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21 200 in 878ms (next.js: 321ms, proxy.ts: 54ms, application-code: 503ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 403 in 248ms (next.js: 6ms, proxy.ts: 43ms, application-code: 199ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 200 in 863ms (next.js: 4ms, proxy.ts: 45ms, application-code: 813ms)
+ GET /login 200 in 114ms (next.js: 6ms, proxy.ts: 50ms, application-code: 58ms)
+ POST /api/auth/login 303 in 138ms (next.js: 1.6ms, proxy.ts: 32ms, application-code: 104ms)
+ GET /dashboard 307 in 72ms (next.js: 1.6ms, proxy.ts: 9ms, application-code: 61ms)
+ GET /login 200 in 606ms (next.js: 9ms, proxy.ts: 15ms, application-code: 583ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 307 in 210ms (next.js: 9ms, proxy.ts: 49ms, application-code: 152ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 307 in 305ms (next.js: 4ms, proxy.ts: 86ms, application-code: 215ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 307 in 179ms (next.js: 3ms, proxy.ts: 85ms, application-code: 91ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21 307 in 186ms (next.js: 3ms, proxy.ts: 84ms, application-code: 99ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 307 in 769ms (next.js: 23ms, proxy.ts: 460ms, application-code: 285ms)
+ GET /login 200 in 80ms (next.js: 8ms, proxy.ts: 43ms, application-code: 29ms)
+ POST /api/auth/login 303 in 225ms (next.js: 1.8ms, proxy.ts: 76ms, application-code: 147ms)
+ GET /dashboard 307 in 94ms (next.js: 5ms, proxy.ts: 17ms, application-code: 72ms)
+ GET /login 200 in 82ms (next.js: 2ms, proxy.ts: 7ms, application-code: 73ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 307 in 189ms (next.js: 3ms, proxy.ts: 47ms, application-code: 139ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 307 in 291ms (next.js: 6ms, proxy.ts: 48ms, application-code: 238ms)
+⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>) {
+  page: '/api/financeiro/fluxo-de-caixa'
+}
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 500 in 1225ms (next.js: 1085ms, proxy.ts: 123ms, application-code: 17ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21 307 in 302ms (next.js: 63ms, proxy.ts: 99ms, application-code: 139ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 307 in 151ms (next.js: 4ms, proxy.ts: 65ms, application-code: 82ms)
+ GET /login 200 in 328ms (next.js: 95ms, proxy.ts: 114ms, application-code: 119ms)
+ POST /api/auth/login 303 in 170ms (next.js: 5ms, proxy.ts: 43ms, application-code: 123ms)
+ GET /dashboard 307 in 97ms (next.js: 8ms, proxy.ts: 12ms, application-code: 77ms)
+ GET /login 200 in 97ms (next.js: 2ms, proxy.ts: 11ms, application-code: 84ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 200 in 1373ms (next.js: 53ms, proxy.ts: 262ms, application-code: 1057ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 200 in 412ms (next.js: 3ms, proxy.ts: 105ms, application-code: 304ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 200 in 266ms (next.js: 6ms, proxy.ts: 80ms, application-code: 181ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21 200 in 267ms (next.js: 4ms, proxy.ts: 101ms, application-code: 162ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 403 in 231ms (next.js: 3ms, proxy.ts: 52ms, application-code: 175ms)
+ GET /login 200 in 74ms (next.js: 3ms, proxy.ts: 37ms, application-code: 34ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 200 in 858ms (next.js: 3ms, proxy.ts: 82ms, application-code: 773ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+      <LoadingBoundary name="fluxo-de-c..." loading={null}>
+        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+          <RedirectBoundary>
+            <RedirectErrorBoundary router={{...}}>
+              <InnerLayoutRouter url={"/finance..."} tree={[...]} params={{}} renderTree={{...}} segmentPath={[...]} ...>
+                <SegmentViewNode type="page" pagePath="financeiro...">
+                  <SegmentTrieNode>
+                  <CashFlowPage>
+                    <AppShell>
+                      <div className="elos-app-s...">
+                        <BankAccountPaymentSelector>
+                        <ShellNavigation>
+                        <main className="elos-main">
+                          <header className="elos-header">
+                            <div>
+                            <div>
+                            <ProjectSwitcher companyId="00000000-0..." activeProjectId="00000000-0..." projects={[...]} ...>
+                              <form className="elos-proje..." action="/api/works..." method="post" ...>
+                                <input
+                                  type="hidden"
+                                  name="company_id"
+                                  value="00000000-0000-4000-8000-000000000006"
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                <input
+                                  type="hidden"
+                                  name="return_to"
+                                  value={"/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000..."}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                ...
+                            ...
+                          <div className="elos-modul...">
+                            <div>
+                            <section className="registry-t...">
+                              <form method="get" className="registry-f...">
+                                <label>
+                                  <input
+                                    type="date"
+                                    name="from"
+                                    defaultValue="2026-10-01"
+                                    required={true}
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                <label>
+                                  <input
+                                    type="date"
+                                    name="cutoff"
+                                    defaultValue="2026-10-21"
+                                    max="2026-10-22"
+                                    required={true}
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                <label>
+                                <label>
+                                <label>
+                                  <input
+                                    type="checkbox"
+                                    name="consolidated"
+                                    value="1"
+                                    defaultChecked={false}
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  ...
+                                ...
+                            <section>
+                            <section>
+                            <section>
+                            <section className="registry-t...">
+                              <div>
+                              <div>
+                              <details>
+                                <summary>
+                                <form action={function validateCashOpening} className="registry-f...">
+                                  <input
+                                    type="hidden"
+                                    name="command_id"
+                                    value="e96373f7-618f-4b32-80dd-a3f08f268511"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <label>
+                                  <label>
+                                    <input
+                                      name="restricted"
+                                      inputMode="decimal"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="evidence"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="reason"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  ...
+                            <section className="registry-t...">
+                              <details>
+                                <summary>
+                                <form action={function recordCashTransfer} className="registry-f...">
+                                  <input
+                                    type="hidden"
+                                    name="command_id"
+                                    value="8d6ccdec-245b-4013-ae41-b8da0bb25d9d"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <label>
+                                  <label>
+                                  <label>
+                                  <label>
+                                    <input
+                                      name="amount"
+                                      inputMode="decimal"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="fee"
+                                      inputMode="decimal"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="debit_date"
+                                      type="date"
+                                      max="2026-10-22"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="credit_date"
+                                      type="date"
+                                      max="2026-10-22"
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="evidence"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="reason"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  ...
+                              ...
+                            <section>
+                            <section className="registry-t...">
+                              <details>
+                                <summary>
+                                <p>
+                                <form action={function saveCashScenario} className="registry-f...">
+                                  <input
+                                    type="hidden"
+                                    name="command_id"
+                                    value="cc0322de-7c0e-4748-acdf-a42d3bf02e78"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <input
+                                    type="hidden"
+                                    name="entity_id"
+                                    value="00000000-0000-4000-8000-000000000009"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <input
+                                    type="hidden"
+                                    name="parent_id"
+                                    value=""
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <input
+                                    type="hidden"
+                                    name="cutoff"
+                                    value="2026-10-21"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <label>
+                                  <label>
+                                    <input
+                                      name="completion"
+                                      type="date"
+                                      min="2026-10-21"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="minimum"
+                                      inputMode="decimal"
+                                      defaultValue=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue="AP:99c84217-1297-496b-8e07-834a821a8c3d"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="80000.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue="2026-10-30"
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value="99c84217-1297-496b-8e07-834a821a8c3d"
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue="AR:7747616f-9405-4ef5-af6f-5c3ae6209b54"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="40000.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue="2026-10-30"
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value="7747616f-9405-4ef5-af6f-5c3ae6209b54"
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue="contract:df84234e-973d-4d62-9a8a-8417d2391ea0"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="100000.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <label>
+                                    <input
+                                      name="evidence"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="reason"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  ...
+                            ...
+                ...
+              ...
+    ...
+ 
+ GET /api/financeiro/contas-bancarias/opcoes 200 in 140ms (next.js: 65ms, proxy.ts: 70ms, application-code: 6ms)
+ GET /api/financeiro/contas-bancarias/opcoes 200 in 155ms (next.js: 25ms, proxy.ts: 53ms, application-code: 77ms)
+⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>) {
+  page: '/login'
+}
+ GET /login 500 in 2.4s (next.js: 2.2s, proxy.ts: 123ms, application-code: 71ms)
+[browser] Uncaught SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /login 200 in 348ms (next.js: 91ms, proxy.ts: 92ms, application-code: 165ms)
+ POST /api/auth/login 303 in 161ms (next.js: 4ms, proxy.ts: 34ms, application-code: 123ms)
+ GET /dashboard 307 in 129ms (next.js: 10ms, proxy.ts: 15ms, application-code: 104ms)
+ GET /login 200 in 114ms (next.js: 3ms, proxy.ts: 8ms, application-code: 103ms)
+⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>) {
+  page: '/financeiro/fluxo-de-caixa'
+}
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 500 in 525ms (next.js: 446ms, proxy.ts: 66ms, application-code: 13ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 200 in 1038ms (next.js: 116ms, proxy.ts: 112ms, application-code: 810ms)
+⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>) {
+  page: '/api/financeiro/fluxo-de-caixa'
+}
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 500 in 472ms (next.js: 401ms, proxy.ts: 51ms, application-code: 20ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21 200 in 387ms (next.js: 98ms, proxy.ts: 51ms, application-code: 238ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 403 in 225ms (next.js: 3ms, proxy.ts: 84ms, application-code: 137ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 200 in 748ms (next.js: 44ms, proxy.ts: 78ms, application-code: 625ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+      <LoadingBoundary name="fluxo-de-c..." loading={null}>
+        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+          <RedirectBoundary>
+            <RedirectErrorBoundary router={{...}}>
+              <InnerLayoutRouter url={"/finance..."} tree={[...]} params={{}} renderTree={{...}} segmentPath={[...]} ...>
+                <SegmentViewNode type="page" pagePath="financeiro...">
+                  <SegmentTrieNode>
+                  <CashFlowPage>
+                    <AppShell>
+                      <div className="elos-app-s...">
+                        <BankAccountPaymentSelector>
+                        <ShellNavigation>
+                        <main className="elos-main">
+                          <header className="elos-header">
+                            <div>
+                            <div>
+                            <ProjectSwitcher companyId="00000000-0..." activeProjectId="00000000-0..." projects={[...]} ...>
+                              <form className="elos-proje..." action="/api/works..." method="post" ...>
+                                <input
+                                  type="hidden"
+                                  name="company_id"
+                                  value="00000000-0000-4000-8000-000000000006"
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                <input
+                                  type="hidden"
+                                  name="return_to"
+                                  value={"/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000..."}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                ...
+                            ...
+                          <div className="elos-modul...">
+                            <div>
+                            <section className="registry-t...">
+                              <form method="get" className="registry-f...">
+                                <label>
+                                  <input
+                                    type="date"
+                                    name="from"
+                                    defaultValue="2026-10-01"
+                                    required={true}
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                <label>
+                                  <input
+                                    type="date"
+                                    name="cutoff"
+                                    defaultValue="2026-10-21"
+                                    max="2026-10-22"
+                                    required={true}
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                <label>
+                                <label>
+                                <label>
+                                  <input
+                                    type="checkbox"
+                                    name="consolidated"
+                                    value="1"
+                                    defaultChecked={false}
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  ...
+                                ...
+                            <section>
+                            <section>
+                            <section>
+                            <section className="registry-t...">
+                              <div>
+                              <div>
+                              <details>
+                                <summary>
+                                <form action={function validateCashOpening} className="registry-f...">
+                                  <input
+                                    type="hidden"
+                                    name="command_id"
+                                    value="f42ce6a5-79c5-43b1-8ae0-05cafcc88262"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <label>
+                                  <label>
+                                    <input
+                                      name="restricted"
+                                      inputMode="decimal"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="evidence"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="reason"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  ...
+                            <section className="registry-t...">
+                              <details>
+                                <summary>
+                                <form action={function recordCashTransfer} className="registry-f...">
+                                  <input
+                                    type="hidden"
+                                    name="command_id"
+                                    value="fb72a555-73d9-4490-9d80-27982e6d430d"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <label>
+                                  <label>
+                                  <label>
+                                  <label>
+                                    <input
+                                      name="amount"
+                                      inputMode="decimal"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="fee"
+                                      inputMode="decimal"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="debit_date"
+                                      type="date"
+                                      max="2026-10-22"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="credit_date"
+                                      type="date"
+                                      max="2026-10-22"
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="evidence"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="reason"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  ...
+                              ...
+                            <section>
+                            <section className="registry-t...">
+                              <details>
+                                <summary>
+                                <p>
+                                <form action={function saveCashScenario} className="registry-f...">
+                                  <input
+                                    type="hidden"
+                                    name="command_id"
+                                    value="fcc21c7f-16a8-45ae-9ec4-9c4b6876271e"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <input
+                                    type="hidden"
+                                    name="entity_id"
+                                    value="00000000-0000-4000-8000-000000000009"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <input
+                                    type="hidden"
+                                    name="parent_id"
+                                    value=""
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <input
+                                    type="hidden"
+                                    name="cutoff"
+                                    value="2026-10-21"
+-                                   style={{caret-color:"transparent"}}
+                                  >
+                                  <label>
+                                  <label>
+                                    <input
+                                      name="completion"
+                                      type="date"
+                                      min="2026-10-21"
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="minimum"
+                                      inputMode="decimal"
+                                      defaultValue=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue="AP:99c84217-1297-496b-8e07-834a821a8c3d"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="80000.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue="2026-10-30"
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value="99c84217-1297-496b-8e07-834a821a8c3d"
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue="AR:7747616f-9405-4ef5-af6f-5c3ae6209b54"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="40000.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue="2026-10-30"
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value="7747616f-9405-4ef5-af6f-5c3ae6209b54"
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue="contract:df84234e-973d-4d62-9a8a-8417d2391ea0"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="100000.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <fieldset>
+                                    <legend>
+                                    <label>
+                                      <input
+                                        name="scope_key"
+                                        defaultValue=""
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="amount"
+                                        inputMode="decimal"
+                                        defaultValue="0.00"
+                                        readOnly={false}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <label>
+                                      <input
+                                        name="expected_date"
+                                        type="date"
+                                        min="2026-10-21"
+                                        defaultValue=""
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                    <input
+                                      type="hidden"
+                                      name="title_id"
+                                      value=""
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                    <label>
+                                    <label>
+                                    <label>
+                                      <input
+                                        name="payment_lag_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        defaultValue={0}
+-                                       style={{caret-color:"transparent"}}
+                                      >
+                                  <label>
+                                    <input
+                                      name="evidence"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  <label>
+                                    <input
+                                      name="reason"
+                                      minLength={5}
+                                      required={true}
+-                                     style={{caret-color:"transparent"}}
+                                    >
+                                  ...
+                            ...
+                ...
+              ...
+    ...
+ 
+ GET /api/financeiro/contas-bancarias/opcoes 200 in 140ms (next.js: 9ms, proxy.ts: 59ms, application-code: 71ms)
+ GET /api/financeiro/contas-bancarias/opcoes 200 in 126ms (next.js: 21ms, proxy.ts: 47ms, application-code: 58ms)
+⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>) {
+  page: '/login'
+}
+ GET /login 500 in 678ms (next.js: 466ms, proxy.ts: 198ms, application-code: 13ms)
+[browser] Uncaught SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /login 200 in 281ms (next.js: 92ms, proxy.ts: 40ms, application-code: 150ms)
+ POST /api/auth/login 303 in 152ms (next.js: 6ms, proxy.ts: 33ms, application-code: 113ms)
+ GET /dashboard 307 in 96ms (next.js: 8ms, proxy.ts: 11ms, application-code: 76ms)
+ GET /login 200 in 90ms (next.js: 3ms, proxy.ts: 6ms, application-code: 81ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 307 in 203ms (next.js: 9ms, proxy.ts: 39ms, application-code: 155ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 307 in 215ms (next.js: 3ms, proxy.ts: 90ms, application-code: 122ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 307 in 177ms (next.js: 5ms, proxy.ts: 87ms, application-code: 85ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21 307 in 198ms (next.js: 2ms, proxy.ts: 97ms, application-code: 99ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 307 in 160ms (next.js: 4ms, proxy.ts: 79ms, application-code: 77ms)
+⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>) {
+  page: '/login'
+}
+ GET /login 500 in 620ms (next.js: 479ms, proxy.ts: 124ms, application-code: 17ms)
+[browser] Uncaught SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /login 200 in 305ms (next.js: 81ms, proxy.ts: 46ms, application-code: 179ms)
+ POST /api/auth/login 303 in 160ms (next.js: 4ms, proxy.ts: 45ms, application-code: 111ms)
+ GET /dashboard 307 in 96ms (next.js: 8ms, proxy.ts: 10ms, application-code: 78ms)
+ GET /login 200 in 134ms (next.js: 3ms, proxy.ts: 11ms, application-code: 119ms)
+⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>) {
+  page: '/financeiro/fluxo-de-caixa'
+}
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 500 in 596ms (next.js: 511ms, proxy.ts: 72ms, application-code: 13ms)
+ GET /financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 307 in 501ms (next.js: 96ms, proxy.ts: 101ms, application-code: 305ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000009 307 in 188ms (next.js: 6ms, proxy.ts: 88ms, application-code: 93ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21 307 in 187ms (next.js: 2ms, proxy.ts: 89ms, application-code: 96ms)
+ GET /api/financeiro/fluxo-de-caixa?cutoff=2026-10-21&entity=00000000-0000-4000-8000-000000000007 307 in 190ms (next.js: 3ms, proxy.ts: 37ms, application-code: 150ms)
+[?25h

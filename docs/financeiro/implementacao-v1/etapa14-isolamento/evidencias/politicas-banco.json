@@ -1,0 +1,1932 @@
+[
+  {
+    "rls": true,
+    "table": "units",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "tablename": "units",
+        "permissive": "PERMISSIVE",
+        "policyname": "units_insert",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'sales.manage'::text)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'sales.view'::text) OR has_company_permission(company_id, 'sales.manage'::text))",
+        "roles": [
+          "public"
+        ],
+        "tablename": "units",
+        "permissive": "PERMISSIVE",
+        "policyname": "units_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "has_company_permission(company_id, 'sales.manage'::text)",
+        "roles": [
+          "public"
+        ],
+        "tablename": "units",
+        "permissive": "PERMISSIVE",
+        "policyname": "units_update",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'sales.manage'::text)"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "sales",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "tablename": "sales",
+        "permissive": "PERMISSIVE",
+        "policyname": "sales_insert",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'sales.manage'::text)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'sales.view'::text) OR has_company_permission(company_id, 'sales.manage'::text))",
+        "roles": [
+          "public"
+        ],
+        "tablename": "sales",
+        "permissive": "PERMISSIVE",
+        "policyname": "sales_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "has_company_permission(company_id, 'sales.manage'::text)",
+        "roles": [
+          "public"
+        ],
+        "tablename": "sales",
+        "permissive": "PERMISSIVE",
+        "policyname": "sales_update",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'sales.manage'::text)"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "roles",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "has_company_permission(company_id, 'admin.roles.manage'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "roles",
+        "permissive": "PERMISSIVE",
+        "policyname": "roles_manage",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'admin.roles.manage'::text)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "is_company_member(company_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "roles",
+        "permissive": "PERMISSIVE",
+        "policyname": "roles_select",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "profiles",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "can_view_profile(id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "profiles",
+        "permissive": "PERMISSIVE",
+        "policyname": "profiles_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "(id = auth.uid())",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "profiles",
+        "permissive": "PERMISSIVE",
+        "policyname": "profiles_update_self",
+        "schemaname": "public",
+        "with_check": "(id = auth.uid())"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "companies",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "is_company_member(id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "companies",
+        "permissive": "PERMISSIVE",
+        "policyname": "companies_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "has_company_permission(id, 'admin.company.manage'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "companies",
+        "permissive": "PERMISSIVE",
+        "policyname": "companies_update",
+        "schemaname": "public",
+        "with_check": "has_company_permission(id, 'admin.company.manage'::text)"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "permissions",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "true",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "permissions",
+        "permissive": "PERMISSIVE",
+        "policyname": "permissions_select",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "role_permissions",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "(EXISTS ( SELECT 1\n   FROM roles role\n  WHERE ((role.id = role_permissions.role_id) AND has_company_permission(role.company_id, 'admin.roles.manage'::text))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "role_permissions",
+        "permissive": "PERMISSIVE",
+        "policyname": "role_permissions_manage",
+        "schemaname": "public",
+        "with_check": "(EXISTS ( SELECT 1\n   FROM roles role\n  WHERE ((role.id = role_permissions.role_id) AND has_company_permission(role.company_id, 'admin.roles.manage'::text))))"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM roles role\n  WHERE ((role.id = role_permissions.role_id) AND is_company_member(role.company_id))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "role_permissions",
+        "permissive": "PERMISSIVE",
+        "policyname": "role_permissions_select",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "company_memberships",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "is_company_member(company_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "company_memberships",
+        "permissive": "PERMISSIVE",
+        "policyname": "company_memberships_select",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "project_memberships",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "(EXISTS ( SELECT 1\n   FROM projects project\n  WHERE ((project.id = project_memberships.project_id) AND has_company_permission(project.company_id, 'admin.users.manage'::text))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "project_memberships",
+        "permissive": "PERMISSIVE",
+        "policyname": "project_memberships_manage",
+        "schemaname": "public",
+        "with_check": "(EXISTS ( SELECT 1\n   FROM projects project\n  WHERE ((project.id = project_memberships.project_id) AND has_company_permission(project.company_id, 'admin.users.manage'::text))))"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM projects project\n  WHERE ((project.id = project_memberships.project_id) AND is_company_member(project.company_id))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "project_memberships",
+        "permissive": "PERMISSIVE",
+        "policyname": "project_memberships_select",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "suppliers",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "tablename": "suppliers",
+        "permissive": "PERMISSIVE",
+        "policyname": "suppliers_insert",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'suppliers.manage'::text)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'suppliers.view'::text) OR has_company_permission(company_id, 'suppliers.manage'::text))",
+        "roles": [
+          "public"
+        ],
+        "tablename": "suppliers",
+        "permissive": "PERMISSIVE",
+        "policyname": "suppliers_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "has_company_permission(company_id, 'suppliers.manage'::text)",
+        "roles": [
+          "public"
+        ],
+        "tablename": "suppliers",
+        "permissive": "PERMISSIVE",
+        "policyname": "suppliers_update",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'suppliers.manage'::text)"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "clients",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "tablename": "clients",
+        "permissive": "PERMISSIVE",
+        "policyname": "clients_insert",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'clients.manage'::text)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'clients.view'::text) OR has_company_permission(company_id, 'clients.manage'::text))",
+        "roles": [
+          "public"
+        ],
+        "tablename": "clients",
+        "permissive": "PERMISSIVE",
+        "policyname": "clients_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "has_company_permission(company_id, 'clients.manage'::text)",
+        "roles": [
+          "public"
+        ],
+        "tablename": "clients",
+        "permissive": "PERMISSIVE",
+        "policyname": "clients_update",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'clients.manage'::text)"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "projects",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "has_company_permission(company_id, 'projects.manage'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "projects",
+        "permissive": "PERMISSIVE",
+        "policyname": "projects_manage",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'projects.manage'::text)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "is_company_member(company_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "projects",
+        "permissive": "PERMISSIVE",
+        "policyname": "projects_select",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "legal_entities",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "legal_entities",
+        "permissive": "PERMISSIVE",
+        "policyname": "legal_entities_insert",
+        "schemaname": "public",
+        "with_check": "(has_company_permission(company_id, 'projects.manage'::text) OR has_company_permission(company_id, 'admin.company.manage'::text))"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(is_company_member(company_id) OR has_company_permission(company_id, 'projects.view'::text) OR has_company_permission(company_id, 'projects.manage'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "legal_entities",
+        "permissive": "PERMISSIVE",
+        "policyname": "legal_entities_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "(has_company_permission(company_id, 'projects.manage'::text) OR has_company_permission(company_id, 'admin.company.manage'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "legal_entities",
+        "permissive": "PERMISSIVE",
+        "policyname": "legal_entities_update",
+        "schemaname": "public",
+        "with_check": "(has_company_permission(company_id, 'projects.manage'::text) OR has_company_permission(company_id, 'admin.company.manage'::text))"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_bank_transactions",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'finance.bank_accounts.view'::text) OR has_company_permission(company_id, 'finance.bank_accounts.manage'::text) OR has_company_permission(company_id, 'finance.bank_accounts.reconcile'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_transactions",
+        "permissive": "PERMISSIVE",
+        "policyname": "finance_bank_transactions_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "ALL",
+        "qual": "(has_company_permission(company_id, 'finance.bank_accounts.manage'::text) OR has_company_permission(company_id, 'finance.bank_accounts.reconcile'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_transactions",
+        "permissive": "PERMISSIVE",
+        "policyname": "finance_bank_transactions_write",
+        "schemaname": "public",
+        "with_check": "(has_company_permission(company_id, 'finance.bank_accounts.manage'::text) OR has_company_permission(company_id, 'finance.bank_accounts.reconcile'::text))"
+      },
+      {
+        "cmd": "ALL",
+        "qual": "finance_entity_scope(company_id, legal_entity_id, false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_transactions",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_transaction_entity",
+        "schemaname": "public",
+        "with_check": "finance_entity_scope(company_id, legal_entity_id, true)"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_bank_transfers",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'finance.bank_accounts.view'::text) OR has_company_permission(company_id, 'finance.bank_accounts.transfer'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_transfers",
+        "permissive": "PERMISSIVE",
+        "policyname": "finance_bank_transfers_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "ALL",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.transfer'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_transfers",
+        "permissive": "PERMISSIVE",
+        "policyname": "finance_bank_transfers_write",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'finance.bank_accounts.transfer'::text)"
+      },
+      {
+        "cmd": "ALL",
+        "qual": "((EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE (a.id = finance_bank_transfers.from_account_id))) AND (EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE (a.id = finance_bank_transfers.to_account_id))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_transfers",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_transfer_entity",
+        "schemaname": "public",
+        "with_check": "((EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE ((a.id = finance_bank_transfers.from_account_id) AND finance_entity_scope(a.company_id, a.legal_entity_id, true)))) AND (EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE ((a.id = finance_bank_transfers.to_account_id) AND finance_entity_scope(a.company_id, a.legal_entity_id, true)))))"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_bank_accounts",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "finance_entity_scope(company_id, legal_entity_id, false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_accounts",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_account_entity",
+        "schemaname": "public",
+        "with_check": "finance_entity_scope(company_id, legal_entity_id, true)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'finance.bank_accounts.view'::text) OR has_company_permission(company_id, 'finance.bank_accounts.manage'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_accounts",
+        "permissive": "PERMISSIVE",
+        "policyname": "finance_bank_accounts_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "ALL",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.manage'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_accounts",
+        "permissive": "PERMISSIVE",
+        "policyname": "finance_bank_accounts_write",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'finance.bank_accounts.manage'::text)"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_bank_imports",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.view'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_imports",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_read",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE ((a.id = finance_bank_imports.bank_account_id) AND finance_entity_scope(a.company_id, a.legal_entity_id, false))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_imports",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_account_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_statement_entries",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.view'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_statement_entries",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_read",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE ((a.id = finance_statement_entries.bank_account_id) AND finance_entity_scope(a.company_id, a.legal_entity_id, false))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_statement_entries",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_account_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_reconciliation_links",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.view'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_reconciliation_links",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_read",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM finance_statement_entries e\n  WHERE (e.id = finance_reconciliation_links.entry_id)))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_reconciliation_links",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_link_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_bank_groups",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.view'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_groups",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_bank_audit",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.view'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_audit",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_read",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE ((a.id = finance_bank_audit.bank_account_id) AND finance_entity_scope(a.company_id, a.legal_entity_id, false))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_audit",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_account_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_bank_documents",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.view'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_documents",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_read",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE ((a.id = finance_bank_documents.bank_account_id) AND finance_entity_scope(a.company_id, a.legal_entity_id, false))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_documents",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_account_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_bank_instruments",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.view'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_instruments",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_read",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE ((a.id = finance_bank_instruments.bank_account_id) AND finance_entity_scope(a.company_id, a.legal_entity_id, false))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_bank_instruments",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_account_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_collection_drafts",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.view'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_collection_drafts",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_read",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE ((a.id = finance_collection_drafts.bank_account_id) AND finance_entity_scope(a.company_id, a.legal_entity_id, false))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_collection_drafts",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_account_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": false,
+    "table": "finance_bank_ledger",
+    "schema": "public",
+    "policies": [],
+    "view_options": [
+      "security_invoker=true"
+    ]
+  },
+  {
+    "rls": false,
+    "table": "finance_statement_balances",
+    "schema": "public",
+    "policies": [],
+    "view_options": [
+      "security_invoker=true"
+    ]
+  },
+  {
+    "rls": false,
+    "table": "finance_bank_reconciliation_candidates",
+    "schema": "public",
+    "policies": [],
+    "view_options": [
+      "security_invoker=true"
+    ]
+  },
+  {
+    "rls": false,
+    "table": "finance_bank_group_balances",
+    "schema": "public",
+    "policies": [],
+    "view_options": [
+      "security_invoker=true"
+    ]
+  },
+  {
+    "rls": true,
+    "table": "finance_company_controls",
+    "schema": "public",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_entity_permissions",
+    "schema": "public",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_title_audit",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(finance_entity_scope(company_id, legal_entity_id, false) AND has_company_permission(company_id,\nCASE title_type\n    WHEN 'payables'::text THEN 'payables.view'::text\n    ELSE 'receivables.view'::text\nEND))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_title_audit",
+        "permissive": "PERMISSIVE",
+        "policyname": "finance_audit_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "integration_mapping_audit",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "is_company_member(company_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "integration_mapping_audit",
+        "permissive": "PERMISSIVE",
+        "policyname": "integration_mapping_audit_select",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_title_commands",
+    "schema": "public",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": false,
+    "table": "engineering_services",
+    "schema": "public",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "integration_mappings",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "is_company_member(company_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "integration_mappings",
+        "permissive": "PERMISSIVE",
+        "policyname": "integration_mappings_select",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "payable_cost_allocations",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id, 'payables.view'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "payable_cost_allocations",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_allocation_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "koper_staging_records",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "is_company_member(company_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "koper_staging_records",
+        "permissive": "PERMISSIVE",
+        "policyname": "koper_staging_records_select",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_cash_scenarios",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'cashflow.view'::text) AND finance_entity_scope(company_id, legal_entity_id, false))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_cash_scenarios",
+        "permissive": "PERMISSIVE",
+        "policyname": "cash_read",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'payables.view'::text) AND has_company_permission(company_id, 'receivables.view'::text) AND has_company_permission(company_id, 'finance.bank_accounts.view'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_cash_scenarios",
+        "permissive": "RESTRICTIVE",
+        "policyname": "scenario_source_permissions",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "payables",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "finance_entity_scope(company_id, COALESCE(legal_entity_id, ( SELECT p.legal_entity_id\n   FROM projects p\n  WHERE (p.id = payables.project_id))), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "payables",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_payable_entity",
+        "schemaname": "public",
+        "with_check": "(finance_entity_scope(company_id, COALESCE(legal_entity_id, ( SELECT p.legal_entity_id\n   FROM projects p\n  WHERE (p.id = payables.project_id))), true) AND ((project_id IS NOT NULL) OR (EXISTS ( SELECT 1\n   FROM finance_obligation_validations v\n  WHERE ((v.title_id = payables.id) AND (v.company_id = payables.company_id))))))"
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "tablename": "payables",
+        "permissive": "PERMISSIVE",
+        "policyname": "payables_insert",
+        "schemaname": "public",
+        "with_check": "(has_company_permission(company_id, 'payables.manage'::text) AND is_company_member(company_id))"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'payables.view'::text) OR has_company_permission(company_id, 'payables.manage'::text))",
+        "roles": [
+          "public"
+        ],
+        "tablename": "payables",
+        "permissive": "PERMISSIVE",
+        "policyname": "payables_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "has_company_permission(company_id, 'payables.manage'::text)",
+        "roles": [
+          "public"
+        ],
+        "tablename": "payables",
+        "permissive": "PERMISSIVE",
+        "policyname": "payables_update",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'payables.manage'::text)"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_cash_openings",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'cashflow.view'::text) AND finance_entity_scope(company_id, legal_entity_id, false))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_cash_openings",
+        "permissive": "PERMISSIVE",
+        "policyname": "cash_read",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id, 'finance.bank_accounts.view'::text)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_cash_openings",
+        "permissive": "RESTRICTIVE",
+        "policyname": "opening_bank_permission",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_cash_scenario_rows",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM finance_cash_scenarios s\n  WHERE ((s.id = finance_cash_scenario_rows.scenario_id) AND (s.company_id = finance_cash_scenario_rows.company_id))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_cash_scenario_rows",
+        "permissive": "PERMISSIVE",
+        "policyname": "cash_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "receivables",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = receivables.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "receivables",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_receivable_entity",
+        "schemaname": "public",
+        "with_check": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = receivables.project_id)), true)"
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "tablename": "receivables",
+        "permissive": "PERMISSIVE",
+        "policyname": "receivables_insert",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'receivables.manage'::text)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'receivables.view'::text) OR has_company_permission(company_id, 'receivables.manage'::text))",
+        "roles": [
+          "public"
+        ],
+        "tablename": "receivables",
+        "permissive": "PERMISSIVE",
+        "policyname": "receivables_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "has_company_permission(company_id, 'receivables.manage'::text)",
+        "roles": [
+          "public"
+        ],
+        "tablename": "receivables",
+        "permissive": "PERMISSIVE",
+        "policyname": "receivables_update",
+        "schemaname": "public",
+        "with_check": "has_company_permission(company_id, 'receivables.manage'::text)"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_settlement_events",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(finance_entity_scope(company_id, legal_entity_id, false) AND has_company_permission(company_id,\nCASE title_type\n    WHEN 'AP'::text THEN 'payables.view'::text\n    ELSE 'receivables.view'::text\nEND))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_settlement_events",
+        "permissive": "PERMISSIVE",
+        "policyname": "settlement_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_settlement_lines",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id,\nCASE title_type\n    WHEN 'AP'::text THEN 'payables.view'::text\n    ELSE 'receivables.view'::text\nEND) AND (EXISTS ( SELECT 1\n   FROM finance_settlement_events e\n  WHERE ((e.id = finance_settlement_lines.event_id) AND (e.company_id = finance_settlement_lines.company_id) AND finance_entity_scope(e.company_id, e.legal_entity_id, false)))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_settlement_lines",
+        "permissive": "PERMISSIVE",
+        "policyname": "settlement_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_obligation_validations",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'payables.view'::text) AND finance_entity_scope(company_id, legal_entity_id, false))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_obligation_validations",
+        "permissive": "PERMISSIVE",
+        "policyname": "read_validated_obligations",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_title_charges",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id,\nCASE title_type\n    WHEN 'AP'::text THEN 'payables.view'::text\n    ELSE 'receivables.view'::text\nEND) AND (((title_type = 'AP'::text) AND (EXISTS ( SELECT 1\n   FROM payables p\n  WHERE ((p.id = finance_title_charges.title_id) AND (p.company_id = finance_title_charges.company_id))))) OR ((title_type = 'AR'::text) AND (EXISTS ( SELECT 1\n   FROM receivables r\n  WHERE ((r.id = finance_title_charges.title_id) AND (r.company_id = finance_title_charges.company_id)))))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_title_charges",
+        "permissive": "PERMISSIVE",
+        "policyname": "settlement_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": false,
+    "table": "finance_settlement_cash_rows",
+    "schema": "public",
+    "policies": [],
+    "view_options": [
+      "security_invoker=true"
+    ]
+  },
+  {
+    "rls": true,
+    "table": "finance_cash_coverage_links",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'cashflow.view'::text) AND finance_entity_scope(company_id, legal_entity_id, false))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_cash_coverage_links",
+        "permissive": "PERMISSIVE",
+        "policyname": "cash_read",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "has_company_permission(company_id,\nCASE title_type\n    WHEN 'AP'::text THEN 'payables.view'::text\n    ELSE 'receivables.view'::text\nEND)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_cash_coverage_links",
+        "permissive": "RESTRICTIVE",
+        "policyname": "coverage_title_permission",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_manual_invoice_installments",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = finance_manual_invoice_installments.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_manual_invoice_installments",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": false,
+    "table": "execution_service_contract_audit",
+    "schema": "public",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "engineering_schedule_baselines",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = engineering_schedule_baselines.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "engineering_schedule_baselines",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "engineering_schedule_activities",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = engineering_schedule_activities.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "engineering_schedule_activities",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_supplier_refund_rights",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'payables.view'::text) AND finance_entity_scope(company_id, legal_entity_id, false))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_supplier_refund_rights",
+        "permissive": "PERMISSIVE",
+        "policyname": "refund_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_supplier_refund_receipts",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'payables.view'::text) AND finance_entity_scope(company_id, legal_entity_id, false))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_supplier_refund_receipts",
+        "permissive": "PERMISSIVE",
+        "policyname": "refund_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "procurement_inventory_movements",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = procurement_inventory_movements.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "procurement_inventory_movements",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_cash_adjustment_realizations",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'cashflow.view'::text) AND finance_entity_scope(company_id, legal_entity_id, false) AND has_company_permission(company_id,\nCASE title_type\n    WHEN 'AP'::text THEN 'payables.view'::text\n    ELSE 'receivables.view'::text\nEND))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_cash_adjustment_realizations",
+        "permissive": "PERMISSIVE",
+        "policyname": "cash_adjustment_realizations_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "engineering_budget_items",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = engineering_budget_items.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "engineering_budget_items",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "procurement_purchase_order_items",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = procurement_purchase_order_items.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "procurement_purchase_order_items",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "procurement_inventory_balances",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = procurement_inventory_balances.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "procurement_inventory_balances",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "engineering_budgets",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = engineering_budgets.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "engineering_budgets",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "procurement_purchase_orders",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = procurement_purchase_orders.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "procurement_purchase_orders",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_manual_invoice_items",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = finance_manual_invoice_items.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_manual_invoice_items",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "execution_service_contract_amendments",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'execution.contracts.view'::text) OR has_company_permission(company_id, 'execution.contracts.manage'::text) OR has_company_permission(company_id, 'execution.contracts.approve'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "execution_service_contract_amendments",
+        "permissive": "PERMISSIVE",
+        "policyname": "native_scaffold_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_electronic_invoices",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = finance_electronic_invoices.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_electronic_invoices",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_electronic_invoice_items",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = finance_electronic_invoice_items.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_electronic_invoice_items",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "finance_manual_invoices",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = finance_manual_invoices.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "finance_manual_invoices",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "execution_service_contracts",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'execution.contracts.view'::text) OR has_company_permission(company_id, 'execution.contracts.manage'::text) OR has_company_permission(company_id, 'execution.contracts.approve'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "execution_service_contracts",
+        "permissive": "PERMISSIVE",
+        "policyname": "execution_service_contracts_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "ALL",
+        "qual": "(has_company_permission(company_id, 'execution.contracts.manage'::text) OR has_company_permission(company_id, 'execution.contracts.approve'::text) OR has_company_permission(company_id, 'execution.contracts.amend'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "execution_service_contracts",
+        "permissive": "PERMISSIVE",
+        "policyname": "execution_service_contracts_write",
+        "schemaname": "public",
+        "with_check": "(has_company_permission(company_id, 'execution.contracts.manage'::text) OR has_company_permission(company_id, 'execution.contracts.approve'::text) OR has_company_permission(company_id, 'execution.contracts.amend'::text))"
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "execution_service_contract_stages",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'execution.contract_procurement.view'::text) OR has_company_permission(company_id, 'execution.contracts.view'::text) OR has_company_permission(company_id, 'execution.measurements.view'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "execution_service_contract_stages",
+        "permissive": "PERMISSIVE",
+        "policyname": "native_scaffold_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "execution_service_contract_items",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "(has_company_permission(company_id, 'execution.contracts.view'::text) OR has_company_permission(company_id, 'execution.contracts.manage'::text) OR has_company_permission(company_id, 'execution.contracts.approve'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "execution_service_contract_items",
+        "permissive": "PERMISSIVE",
+        "policyname": "native_scaffold_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "execution_contract_measurement_items",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = execution_contract_measurement_items.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "execution_contract_measurement_items",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "execution_contract_measurements",
+    "schema": "public",
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "qual": "finance_entity_scope(company_id, ( SELECT projects.legal_entity_id\n   FROM projects\n  WHERE (projects.id = execution_contract_measurements.project_id)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "execution_contract_measurements",
+        "permissive": "PERMISSIVE",
+        "policyname": "fixture_scoped_read",
+        "schemaname": "public",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "objects",
+    "schema": "storage",
+    "policies": [
+      {
+        "cmd": "DELETE",
+        "qual": "((bucket_id = 'bank-documents'::text) AND (NOT (EXISTS ( SELECT 1\n   FROM finance_bank_documents d\n  WHERE (d.storage_path = objects.name)))) AND (EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE (((a.company_id)::text = (foldername(objects.name))[1]) AND ((a.id)::text = (foldername(objects.name))[2]) AND has_company_permission(a.company_id, 'finance.bank_accounts.manage'::text)))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "objects",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_document_cleanup",
+        "schemaname": "storage",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "((bucket_id = 'bank-documents'::text) AND (EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE (((a.company_id)::text = (foldername(objects.name))[1]) AND ((a.id)::text = (foldername(objects.name))[2]) AND has_company_permission(a.company_id, 'finance.bank_accounts.view'::text)))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "objects",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_document_read",
+        "schemaname": "storage",
+        "with_check": null
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "objects",
+        "permissive": "PERMISSIVE",
+        "policyname": "bank_document_upload",
+        "schemaname": "storage",
+        "with_check": "((bucket_id = 'bank-documents'::text) AND (EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE (((a.company_id)::text = (foldername(objects.name))[1]) AND ((a.id)::text = (foldername(objects.name))[2]) AND has_company_permission(a.company_id, 'finance.bank_accounts.manage'::text)))))"
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "objects",
+        "permissive": "RESTRICTIVE",
+        "policyname": "finance_document_upload_scope",
+        "schemaname": "storage",
+        "with_check": "((bucket_id <> 'bank-documents'::text) OR (EXISTS ( SELECT 1\n   FROM finance_bank_accounts a\n  WHERE (((a.company_id)::text = (foldername(objects.name))[1]) AND ((a.id)::text = (foldername(objects.name))[2]) AND finance_entity_scope(a.company_id, a.legal_entity_id, true)))))"
+      },
+      {
+        "cmd": "DELETE",
+        "qual": "((bucket_id = 'service-contract-documents'::text) AND has_company_permission(((foldername(name))[1])::uuid, 'execution.contracts.manage'::text))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "objects",
+        "permissive": "PERMISSIVE",
+        "policyname": "service_contract_documents_delete",
+        "schemaname": "storage",
+        "with_check": null
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "objects",
+        "permissive": "PERMISSIVE",
+        "policyname": "service_contract_documents_insert",
+        "schemaname": "storage",
+        "with_check": "((bucket_id = 'service-contract-documents'::text) AND has_company_permission(((foldername(name))[1])::uuid, 'execution.contracts.manage'::text))"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "((bucket_id = 'service-contract-documents'::text) AND (EXISTS ( SELECT 1\n   FROM company_memberships m\n  WHERE ((m.user_id = auth.uid()) AND (m.status = 'active'::text) AND ((m.company_id)::text = (foldername(objects.name))[1])))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "objects",
+        "permissive": "PERMISSIVE",
+        "policyname": "service_contract_documents_select",
+        "schemaname": "storage",
+        "with_check": null
+      }
+    ],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "migrations",
+    "schema": "storage",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "s3_multipart_uploads",
+    "schema": "storage",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "s3_multipart_uploads_parts",
+    "schema": "storage",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "buckets",
+    "schema": "storage",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "prefixes",
+    "schema": "storage",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "buckets_vectors",
+    "schema": "storage",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "vector_indexes",
+    "schema": "storage",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "buckets_analytics",
+    "schema": "storage",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "iceberg_namespaces",
+    "schema": "storage",
+    "policies": [],
+    "view_options": null
+  },
+  {
+    "rls": true,
+    "table": "iceberg_tables",
+    "schema": "storage",
+    "policies": [],
+    "view_options": null
+  }
+]

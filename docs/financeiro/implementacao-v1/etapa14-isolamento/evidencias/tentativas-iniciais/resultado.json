@@ -1,0 +1,10 @@
+{
+  "executed_at": "2026-10-22T20:07:50.905Z",
+  "completed": false,
+  "fatal_error": "Next isolado não ficou pronto",
+  "passed": 222,
+  "failed": 0,
+  "failures": [],
+  "resources_removed": true,
+  "production_or_koper_access": false
+}

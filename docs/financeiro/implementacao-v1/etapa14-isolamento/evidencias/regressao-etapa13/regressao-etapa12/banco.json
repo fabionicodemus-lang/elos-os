@@ -1,0 +1,194 @@
+{
+  "execution_context": {
+    "implementation_version": "Candidata Etapa12 sobre65fe2cc; hashes dos arquivos no manifesto da entrega",
+    "executed_at": "2026-10-22T20:15:04.381Z",
+    "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+    "environment": "PostgreSQL17 descartável, network=none, sem portas; papéis SQL/RLS; loaders reais via adaptador SQL, não Auth/PostgREST/browser",
+    "expected_origin": "Fixture aprovada, não calculada pelo Elos; aceite econômico adicional CT03 explicitamente fictício10.000",
+    "clock_control": "Default recorded_at de finance_title_audit no scaffold; nenhum evento imutável reescrito. Relógio local do renderer para o corte fictício20/11, sem alterar o relógio da aplicação"
+  },
+  "results": [
+    {
+      "name": "CT02_reimportacao_aprovacao_e_tres_cortes_persistidos",
+      "pass": true,
+      "evidence": {
+        "canonical_title_count": 1,
+        "original_snapshot_open_cents": 1000000,
+        "revised_snapshot_open_cents": 1200000,
+        "documented_bridge_cents": 200000,
+        "at_T_2026_10_21_K_2026_10_20_open_cents": 1000000
+      }
+    },
+    {
+      "name": "CT03_pagamento_e_conciliacao_nao_criam_custo_economico",
+      "pass": true,
+      "evidence": {
+        "after_P1_open_cents": 700000,
+        "after_P2_open_cents": 500000,
+        "I02_gross_disbursed_cents": 500000,
+        "bank_debit_count": 2,
+        "payment_count": 2,
+        "cash_created_by_reconciliation_cents": 0,
+        "I01_extra_cost_created_by_payments_cents": 0
+      }
+    },
+    {
+      "name": "CT18_cadeia_P_C_R_pagamento_AF_e_constituicao_persistida",
+      "pass": true,
+      "evidence": {
+        "actual": {
+          "states": [
+            {
+              "stage": "A",
+              "R_cents": 0,
+              "C_cents": 0,
+              "P_cents": 10000000,
+              "Q_cents": 10000000,
+              "AF_cents": 0
+            },
+            {
+              "stage": "B",
+              "R_cents": 0,
+              "C_cents": 6000000,
+              "P_cents": 4000000,
+              "Q_cents": 10000000,
+              "AF_cents": 0
+            },
+            {
+              "stage": "C",
+              "R_cents": 2000000,
+              "C_cents": 4000000,
+              "P_cents": 4000000,
+              "Q_cents": 10000000,
+              "AF_cents": 0
+            },
+            {
+              "stage": "D",
+              "R_cents": 1500000,
+              "C_cents": 4000000,
+              "P_cents": 4000000,
+              "Q_cents": 9500000,
+              "AF_cents": 0
+            },
+            {
+              "stage": "E",
+              "R_cents": 1500000,
+              "C_cents": 4000000,
+              "P_cents": 4000000,
+              "Q_cents": 9500000,
+              "AF_cents": 200000,
+              "Q_scenario_cents": 9700000
+            },
+            {
+              "stage": "F",
+              "R_cents": 1700000,
+              "C_cents": 4000000,
+              "P_cents": 4000000,
+              "Q_cents": 9700000,
+              "AF_cents": 0,
+              "Q_scenario_cents": 9700000
+            }
+          ]
+        },
+        "one_charge": true,
+        "concurrent_replay_same_result": true,
+        "immutable_original": true
+      }
+    },
+    {
+      "name": "CT29_agenda_persistida_restricao_e_amortizacao_uma_vez",
+      "pass": true,
+      "evidence": {
+        "available_opening_cents": 10000000,
+        "closing_month1_cents": 4000000,
+        "closing_month2_cents": -3000000,
+        "peak_additional_funding_cents": 5000000,
+        "additional_amortization_duplicate_cents": 0,
+        "unused_limit_in_available_cash_cents": 0
+      }
+    }
+  ],
+  "states": {
+    "CT02": {
+      "canonical_title_count": 1,
+      "original_snapshot_open_cents": 1000000,
+      "revised_snapshot_open_cents": 1200000,
+      "documented_bridge_cents": 200000,
+      "at_T_2026_10_21_K_2026_10_20_open_cents": 1000000
+    },
+    "CT03": {
+      "after_P1_open_cents": 700000,
+      "after_P2_open_cents": 500000,
+      "I02_gross_disbursed_cents": 500000,
+      "bank_debit_count": 2,
+      "payment_count": 2,
+      "cash_created_by_reconciliation_cents": 0,
+      "I01_extra_cost_created_by_payments_cents": 0
+    },
+    "CT18": {
+      "states": [
+        {
+          "stage": "A",
+          "R_cents": 0,
+          "C_cents": 0,
+          "P_cents": 10000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "B",
+          "R_cents": 0,
+          "C_cents": 6000000,
+          "P_cents": 4000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "C",
+          "R_cents": 2000000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 10000000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "D",
+          "R_cents": 1500000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9500000,
+          "AF_cents": 0
+        },
+        {
+          "stage": "E",
+          "R_cents": 1500000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9500000,
+          "AF_cents": 200000,
+          "Q_scenario_cents": 9700000
+        },
+        {
+          "stage": "F",
+          "R_cents": 1700000,
+          "C_cents": 4000000,
+          "P_cents": 4000000,
+          "Q_cents": 9700000,
+          "AF_cents": 0,
+          "Q_scenario_cents": 9700000
+        }
+      ]
+    },
+    "CT29": {
+      "available_opening_cents": 10000000,
+      "closing_month1_cents": 4000000,
+      "closing_month2_cents": -3000000,
+      "peak_additional_funding_cents": 5000000,
+      "additional_amortization_duplicate_cents": 0,
+      "unused_limit_in_available_cash_cents": 0
+    }
+  },
+  "container_removed": true,
+  "passed": 4,
+  "failed": 0
+}

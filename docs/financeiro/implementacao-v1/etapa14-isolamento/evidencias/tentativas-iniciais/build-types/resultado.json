@@ -1,0 +1,10 @@
+{
+  "executed_at": "2026-10-22T20:21:14.067Z",
+  "completed": false,
+  "fatal_error": "Build isolado recusado: 1; ver next-build.log",
+  "passed": 302,
+  "failed": 0,
+  "failures": [],
+  "resources_removed": true,
+  "production_or_koper_access": false
+}

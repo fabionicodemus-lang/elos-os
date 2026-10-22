@@ -1,0 +1,79 @@
+{
+  "passed": 8,
+  "failed": 0,
+  "results": [
+    {
+      "name": "migracao_repetida_nao_duplica_guard",
+      "pass": true,
+      "actual": {
+        "idempotent": true
+      }
+    },
+    {
+      "name": "permissoes_EXECUTE_sem_public_ou_anon",
+      "pass": true,
+      "actual": [
+        {
+          "function": "refresh_execution_service_contract_value",
+          "anon_execute": false,
+          "service_execute": true,
+          "authenticated_execute": true
+        },
+        {
+          "function": "refresh_execution_service_contract_measurements",
+          "anon_execute": false,
+          "service_execute": true,
+          "authenticated_execute": true
+        }
+      ]
+    },
+    {
+      "name": "financeiro_e_engenharia_legitimos_na_propria_empresa",
+      "pass": true,
+      "actual": {
+        "A": 30000,
+        "B": 100000
+      }
+    },
+    {
+      "name": "membro_desativado_perde_acesso_mesmo_com_identidade",
+      "pass": true,
+      "actual": {
+        "denied": true
+      }
+    },
+    {
+      "name": "perfil_desativado_perde_acesso",
+      "pass": true,
+      "actual": {
+        "denied": true
+      }
+    },
+    {
+      "name": "sem_sub_autenticado_nao_e_autorizado",
+      "pass": true,
+      "actual": {
+        "denied": true
+      }
+    },
+    {
+      "name": "worker_privilegiado_preservado_sem_chave_no_browser",
+      "pass": true,
+      "actual": {
+        "trusted_service_context": true,
+        "A": 30000,
+        "note": "Papel SQL privilegiado local; não é execução do worker remoto."
+      }
+    },
+    {
+      "name": "erros_de_banco_nao_viram_negacao_ou_zero",
+      "pass": true,
+      "actual": {
+        "only_known_scope_errors": true
+      }
+    }
+  ],
+  "network": "none",
+  "container_removed": true,
+  "auth_layer": "SQL roles/claims; supplementary to real Auth HTTP tests"
+}
