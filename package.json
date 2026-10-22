@@ -15,7 +15,8 @@
     "test:preconstruction": "node --test tests/preconstruction/*.test.mjs",
     "test:finance": "node --test tests/financeiro/money.test.mjs && python3 tests/financeiro/comparator_test.py && node tests/financeiro/run.mjs --backup",
     "test:koper-finance": "node tests/koper-finance/validate.mjs",
-    "test:finance-core": "node tests/finance-core/validate.mjs"
+    "test:finance-core": "node tests/finance-core/validate.mjs",
+    "test:cashflow": "node tests/cashflow/validate.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",

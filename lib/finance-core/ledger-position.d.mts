@@ -1,0 +1,1 @@
+export function titlesAt<T extends {id:string}>(input:{titles:T[];audits?:object[];events?:object[];lines?:object[];charges?:object[];cash?:object[];type:string;cutoff:string;knownAt?:string|null}):T[];

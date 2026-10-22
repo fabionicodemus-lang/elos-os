@@ -195,3 +195,9 @@ export async function reversePayableSettlement(formData: FormData){
  if(error)redirect(pageUrl(error.message));
  revalidateFinancialViews();redirect(pageUrl("Estorno registrado. O caixa só muda pelo valor de devolução informado com evidência.","success"));
 }
+
+export async function validateUnassignedObligation(formData:FormData){
+ const {supabase,companyId}=await requireCompanyPermission('payables.manage');
+ const {error}=await supabase.rpc('validate_unassigned_obligation',{p_company:companyId,p_object:String(formData.get('object_id')??''),p_command:String(formData.get('command_id')??''),p_competence:optional(formData,'competence'),p_economic_amount:optional(formData,'economic_amount')===null?null:parseMoney(formData.get('economic_amount')),p_evidence:String(formData.get('evidence')??''),p_reason:String(formData.get('reason')??'')});
+ if(error)redirect(pageUrl(error.message));revalidateFinancialViews();redirect(pageUrl('Obrigação validada na entidade; apropriação à obra continua pendente.','success'));
+}

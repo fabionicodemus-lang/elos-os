@@ -1,5 +1,5 @@
 import { loadSettlementCash } from "../finance-core/server";
-import { financialCoverage,contractRemainder } from "../finance-core/coverage.mjs";
+import { financialCoverage,contractRemainder,nativeFinancialBindings } from "../finance-core/coverage.mjs";
 import { titlePosition } from "../finance-core/titles.mjs";
 import { FINANCE_TITLE_COLUMNS, openTitleAmount, paidTitleCash, paidTitlePrincipal, type FinancialTitleFields } from "@/lib/finance-core/titles.mjs";
 import { allocatePersistedCosts } from "./cost-allocation.mjs";
@@ -545,7 +545,6 @@ export async function loadProjectForecast({
   ]);
   if(nativeInvoices.error) errors.push(nativeInvoices.error.message);
   if(nativeInstallments.error) errors.push(nativeInstallments.error.message);
-  const invoiceById=new Map(nativeInvoices.data.map(x=>[x.id,x]));
   const directContractByPayable=new Map<string,string>();
   const contractMeasurements = contractMeasurementsResult.data;
   const measurementByPayableId = new Map(contractMeasurements.filter((measurement) => measurement.payable_id).map((measurement) => [measurement.payable_id!, measurement]));
@@ -557,11 +556,9 @@ export async function loadProjectForecast({
     itemsByMeasurement.set(item.measurement_id, rows);
   }
 
-  for(const link of nativeInstallments.data){
-    const invoice=invoiceById.get(link.invoice_id);if(!link.payable_id||!invoice?.contract_id)continue;
-    const measured=invoice.measurement_id?contractMeasurements.find(x=>x.id===invoice.measurement_id):null;
-    if(measured) measurementByPayableId.set(link.payable_id,measured);
-    else directContractByPayable.set(link.payable_id,invoice.contract_id);
+  for(const link of nativeFinancialBindings({invoices:nativeInvoices.data,installments:nativeInstallments.data,measurements:contractMeasurements})){
+    const measured=link.measurement_id?contractMeasurements.find(x=>x.id===link.measurement_id):null;
+    if(measured)measurementByPayableId.set(link.title_id,measured);else directContractByPayable.set(link.title_id,link.contract_id);
   }
   const directRepresentation:AllocatedFinancialSource[]=[];
   const principalSettlements:AllocatedFinancialSource[]=[];

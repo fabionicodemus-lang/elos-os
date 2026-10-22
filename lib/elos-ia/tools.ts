@@ -1,3 +1,4 @@
+import {loadCashflow} from '@/lib/finance-core/cashflow-server';
 import {loadSettlementCash} from "@/lib/finance-core/server";
 import { FINANCE_TITLE_COLUMNS, type FinancialTitleFields } from "@/lib/finance-core/titles.mjs";
 // Elos IA — ferramentas de consulta ao Elos OS.
@@ -19,7 +20,6 @@ import { fetchAllRows } from "@/lib/supabase-pagination";
 import type { resolveActiveWorkspace } from "@/lib/workspace";
 import {
   addMonthsKey,
-  buildCashflowMonths,
   round2,
   summarizePayables,
   summarizeReceivables,
@@ -508,39 +508,9 @@ async function runContasAReceber(context: ElosIaToolContext, args: ToolArgs): Pr
 }
 
 async function runFluxoDeCaixa(context: ElosIaToolContext, args: ToolArgs): Promise<ToolResult> {
-  const scope = resolveProject(context, args.obra, true);
-  const projectId = scope.project?.id ?? null;
-  const canForecast = Boolean(projectId) && FORECAST_PERMISSIONS.every(context.can);
-  const [payables, receivables, forecastContext] = await Promise.all([
-    loadPayables(context, projectId),
-    loadReceivables(context, projectId),
-    projectId && canForecast ? loadForecast(context, projectId) : Promise.resolve(null),
-  ]);
-  const forecastFailed = Boolean(forecastContext?.errors.length);
-  if (forecastFailed) console.error("[elos-ia] Falha ao carregar a previsão de custos:", forecastContext?.errors.join(" · "));
-  // Projeção lida pela metade não entra: melhor avisar do que somar parcial.
-  const forecast = forecastFailed ? null : forecastContext?.forecast ?? null;
-  return {
-    obra: scope.label,
-    projecao_da_engenharia: forecast
-      ? "incluída"
-      : !projectId
-        ? "não incluída: selecione uma obra para somar a projeção da Engenharia"
-        : !canForecast
-          ? "não incluída: o usuário não tem permissão de orçamento/cronograma/contratos/medições"
-          : forecastFailed
-            ? "não incluída: o Elos OS não conseguiu ler a previsão de custos agora (avise o usuário que o saldo completo está sem a projeção)"
-            : "não incluída: a obra não tem cronograma linha de base com orçamento",
-    ...buildCashflowMonths({
-      cashRows:await loadSettlementCash(context.supabase,context.companyId,scope.project?.id??null),
-      payables,
-      receivables,
-      engineeringMonths: forecast?.months.map((month) => ({ key: month.key, engineeringProjected: month.engineeringProjected })) ?? [],
-      today: context.today,
-      monthsBack: numberArg(args.meses_atras),
-      monthsAhead: numberArg(args.meses_a_frente),
-    }),
-  };
+ const scope=resolveProject(context,args.obra,true);
+ const result=await loadCashflow({supabase:context.supabase,companyId:context.companyId,projectId:scope.project?.id??null,cutoff:context.today,from:context.today.slice(0,7)+'-01'});
+ return {obra:scope.label,corte:context.today,fonte:'Mesmo núcleo do fluxo de caixa',realizado:result.history,projecao:result.projection,obrigacoes_vencidas:result.payableBuckets,recebiveis_vencidos:result.receivableBuckets,pendencias:result.warnings,sem_obra_aberto_cents:result.unassignedOpenCents,fonte_sem_obra_a_validar_cents:result.unvalidatedUnassignedCents,versao:result.scenario?.id??null};
 }
 
 function scheduleSummary(schedule: Awaited<ReturnType<typeof loadSchedule>>, context: ElosIaToolContext, args: ToolArgs) {
@@ -922,27 +892,8 @@ async function runResumoDaObra(context: ElosIaToolContext, args: ToolArgs): Prom
     block(context.can("payables.view"), async () => summarizePayables(await loadPayables(context, project.id), { cashRows:await loadSettlementCash(context.supabase,context.companyId,project.id),today: context.today, limit: 1 }).resumo_geral as ToolResult),
     block(context.can("receivables.view"), async () => summarizeReceivables(await loadReceivables(context, project.id), { cashRows:await loadSettlementCash(context.supabase,context.companyId,project.id),today: context.today, limit: 1 }).resumo_geral as ToolResult),
     block(["cashflow.view", "payables.view", "receivables.view"].every(context.can), async () => {
-      const [payables, receivables, forecastContext] = await Promise.all([
-        loadPayables(context, project.id),
-        loadReceivables(context, project.id),
-        canCosts ? loadForecast(context, project.id) : Promise.resolve(null),
-      ]);
-      const forecast = forecastContext?.errors.length ? null : forecastContext?.forecast ?? null;
-      const cashflow = buildCashflowMonths({
-        cashRows:await loadSettlementCash(context.supabase,context.companyId,project.id),
-        payables,
-        receivables,
-        engineeringMonths: forecast?.months.map((month) => ({ key: month.key, engineeringProjected: month.engineeringProjected })) ?? [],
-        today: context.today,
-        monthsBack: 0,
-        monthsAhead: 0,
-      });
-      return {
-        projecao_da_engenharia: forecast ? "incluída" : "não incluída (sem permissão, sem linha de base com orçamento ou falha de leitura)",
-        totais: cashflow.totais_de_toda_a_obra,
-        primeiro_mes_com_saldo_acumulado_completo_negativo: cashflow.primeiro_mes_com_saldo_acumulado_completo_negativo,
-        saldo_acumulado_completo_ja_negativo_antes_do_mes_atual: cashflow.saldo_acumulado_completo_ja_negativo_antes_do_mes_atual,
-      };
+      const result=await loadCashflow({supabase:context.supabase,companyId:context.companyId,projectId:project.id,cutoff:context.today,from:context.today.slice(0,7)+'-01'});
+      return {fonte:'Mesmo núcleo do fluxo de caixa',realizado:result.history,projecao:result.projection,pendencias:result.warnings};
     }),
     block(["sales.view", "projects.view"].every(context.can), async () => {
       const { units, sales } = await loadUnitsAndSales(context, project.id);

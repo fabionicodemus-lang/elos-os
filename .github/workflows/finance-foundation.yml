@@ -6,6 +6,10 @@ on:
       - 'lib/forecast/**'
       - 'lib/finance-core/**'
       - 'tests/finance-core/**'
+      - 'tests/cashflow/**'
+      - 'supabase/migrations/20261022100000_entity_obligations.sql'
+      - 'supabase/migrations/20261022110000_cashflow_versions.sql'
+      - 'supabase/migrations/20261022120000_cash_transfers.sql'
       - 'app/financeiro/**'
       - 'supabase/migrations/20261021160000_financial_settlement_ledger.sql'
       - 'supabase/migrations/20261021163000_financial_ai_settlements.sql'
@@ -28,7 +32,7 @@ permissions:
 jobs:
   foundation:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       FINANCE_EVIDENCE_DIR: ${{ runner.temp }}/finance-validation
     steps:
@@ -46,6 +50,9 @@ jobs:
       - run: npm run test:finance-core
         env:
           FINANCE7_EVIDENCE_DIR: ${{ runner.temp }}/finance-core-validation
+      - run: npm run test:cashflow
+        env:
+          FINANCE8_EVIDENCE_DIR: ${{ runner.temp }}/cashflow-validation
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -54,3 +61,4 @@ jobs:
             ${{ env.FINANCE_EVIDENCE_DIR }}/
             ${{ runner.temp }}/koper-validation/
             ${{ runner.temp }}/finance-core-validation/
+            ${{ runner.temp }}/cashflow-validation/

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import {fetchAllRows} from "@/lib/supabase-pagination";
-import { cancelPayable, markPayablePaid, reversePayableSettlement } from "./actions";
+import { cancelPayable, markPayablePaid, validateUnassignedObligation, reversePayableSettlement } from "./actions";
 import { PayableCreateForm } from "./payable-create-form";
 import { resolveDateRange } from "@/lib/date-range";
 import { requireCompanyPermission } from "@/lib/workspace";
@@ -155,6 +155,9 @@ export default async function PayablesPage({
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
   const totalPages = Math.max(1, Math.ceil((listResult.count ?? 0) / PAGE_SIZE));
   const project = projectResult.data;
+  const unassignedResult=await supabase.rpc('list_unassigned_obligations',{p_company:companyId});
+  if(unassignedResult.error)throw Error(unassignedResult.error.message);
+  const unassigned=(Array.isArray(unassignedResult.data)?unassignedResult.data:[]) as {object_id:string;target_id:string|null;legal_entity_id:string|null;document:string|null;external_id:string;principal_cents:number;reported_paid_cents:number;operational_open_cents:number|null;source_evidence:string|null;economic_pending?:boolean}[];
   type SettlementHistory={id:string;title_id:string;principal:number;interest:number;discount:number;noncash:number;excess_credit:number;credit_class:string|null;finance_settlement_events:{id:string;kind:string;reversal_of:string|null;effective_date:string;reason:string;created_by:string;created_at:string}|{id:string;kind:string;reversal_of:string|null;effective_date:string;reason:string;created_by:string;created_at:string}[]};
   const historyResult=payables.length?await fetchAllRows<SettlementHistory>(async(from,to)=>{
     const {data,error}=await supabase.from("finance_settlement_lines").select("id,title_id,principal,interest,discount,noncash,excess_credit,credit_class,finance_settlement_events!inner(id,kind,reversal_of,effective_date,reason,created_by,created_at)").eq("company_id",companyId).eq("title_type","AP").in("title_id",payables.map(x=>x.id)).order("created_at").order("id").range(from,to);
@@ -221,6 +224,7 @@ export default async function PayablesPage({
             ) : null}
           </section>
 
+          {unassigned.length?<section className="registry-table-panel"><h2>Obrigações sem obra — apropriação pendente</h2><p>Fonte declarada e saldo operacional permanecem separados. Validar a obrigação não atribui obra nem confirma pagamento.</p>{unassigned.map(o=><div key={o.object_id}><strong>{o.document||o.external_id}</strong><p>Principal da fonte: {money(o.principal_cents/100)} · Aberto operacional: {o.operational_open_cents===null?'Ainda não validado':money(o.operational_open_cents/100)} · {o.legal_entity_id?'Entidade identificada':'Titular em apuração'}{o.economic_pending?' · Custo econômico em apuração':''}</p>{canManage&&!o.target_id&&o.legal_entity_id&&o.source_evidence?<details><summary>Validar obrigação da entidade sem obra</summary><form action={validateUnassignedObligation} className="registry-form-grid"><input type="hidden" name="object_id" value={o.object_id}/><input type="hidden" name="command_id" value={crypto.randomUUID()}/><label>Custo econômico comprovado (vazio se em apuração)<input name="economic_amount" inputMode="decimal"/></label><label>Competência do fato econômico (com custo comprovado)<input name="competence" type="date"/></label><label>Documento e aceite econômico<input name="evidence" minLength={5} required/></label><label>Motivo da validação<input name="reason" minLength={5} required/></label><button type="submit">Registrar validação explícita</button></form></details>:null}</div>)}</section>:null}
           <section className="registry-table-panel">
             <div className="section-heading">
               <div><span>Lançamentos</span><h2>Contas encontradas</h2></div>

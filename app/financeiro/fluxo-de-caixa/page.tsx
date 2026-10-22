@@ -1,239 +1,61 @@
-import {fetchAllRows} from "@/lib/supabase-pagination";
-import { financialTitleEntries } from "@/lib/finance-core/cash.mjs";
-import { loadSettlementCash } from "@/lib/finance-core/server";
-import { FINANCE_TITLE_COLUMNS, type FinancialTitleFields } from "@/lib/finance-core/titles.mjs";
-import Link from "next/link";
-import "../../forecast.css";
-import { AppShell } from "@/components/app-shell";
-import { DateRangeFilter } from "@/components/date-range-filter";
-import { dateRangePresetLabels, resolveDateRange } from "@/lib/date-range";
-import { loadProjectForecast } from "@/lib/forecast/server";
-import { requireCompanyPermission } from "@/lib/workspace";
-
-type Supplier = { id: string; legal_name: string; trade_name: string | null };
-type Client = { id: string; name: string };
-type Unit = { id: string; code: string };
-type Sale = { id: string; number: string };
-type Payable = FinancialTitleFields & {
-  id: string; due_date: string; amount: number; status: "open" | "paid" | "cancelled";
-  document: string | null; installment_label: string | null; paid_at: string | null; paid_amount: number | null;
-  paid_account_name: string | null; source_system: string | null; notes: string | null;
-  suppliers: Supplier | Supplier[] | null;
-};
-type Receivable = FinancialTitleFields & {
-  id: string; sale_id: string; due_date: string; amount: number; adjusted_amount: number | null;
-  status: "open" | "paid" | "cancelled"; category: string; description: string;
-  sequence_number: number; sequence_total: number; paid_at: string | null; paid_amount: number | null;
-  paid_account_name: string | null; source_system: string | null;
-  clients: Client | Client[] | null; units: Unit | Unit[] | null; sales: Sale | Sale[] | null;
-};
-type CashEntry = {
-  id: string; direction: "in" | "out"; situation: "realized" | "forecast";
-  effectiveDate: string; dueDate: string; paidAt: string | null; amount: number;
-  party: string; reference: string; installment: string; account: string; origin: string; link: string;
-};
-type Bucket = {
-  key: string; label: string; received: number; receivable: number; realized: number; payable: number;
-  engineeringProjected: number; periodBalance: number; accumulatedBalance: number; accumulatedCompleteBalance: number;
-};
-
-const PAGE_SIZE = 50;
-const categoryLabels: Record<string, string> = { entry: "Entrada", monthly: "Mensal", reinforcement: "Reforço", keys: "Chaves", post_keys: "Pós-chaves", other: "Outra" };
-
-function todayIso() {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
-function relatedOne<T>(value: T | T[] | null): T | null { return Array.isArray(value) ? value[0] ?? null : value; }
-function cleanDate(value: string | null | undefined) { return value ? value.slice(0, 10) : ""; }
-function dateBR(value: string | null | undefined) { const clean = cleanDate(value); if (!clean) return "—"; const [year, month, day] = clean.split("-"); return `${day}/${month}/${year}`; }
-function money(value: number | null | undefined) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value ?? 0)); }
-function compactMoney(value: number) { const absolute = Math.abs(value); if (absolute >= 1_000_000) return `${value < 0 ? "-" : ""}R$ ${(absolute / 1_000_000).toFixed(1).replace(".", ",")} mi`; if (absolute >= 1_000) return `${value < 0 ? "-" : ""}R$ ${(absolute / 1_000).toFixed(0)} mil`; return money(value); }
-function periodKey(date: string, grouping: "month" | "quarter" | "year") { const [year, month] = date.split("-").map(Number); if (grouping === "year") return String(year); if (grouping === "quarter") return `${year}-Q${Math.floor((month - 1) / 3) + 1}`; return `${year}-${String(month).padStart(2, "0")}`; }
-function periodLabel(key: string, grouping: "month" | "quarter" | "year") { if (grouping === "year") return key; if (grouping === "quarter") { const [year, quarter] = key.split("-Q"); return `${quarter}º tri/${year.slice(2)}`; } const [year, month] = key.split("-"); return `${month}/${year.slice(2)}`; }
-function originLabel(value: string | null, fallback: string) { if (!value || value === "elos_os") return fallback; if (value.includes("koper")) return "Koper"; return value; }
-function buildQuery(params: Record<string, string>, page?: number) { const query = new URLSearchParams(params); if (page) query.set("page", String(page)); return `?${query.toString()}`; }
-
-export default async function CashFlowPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; grouping?: string; direction?: string; situation?: string; period?: string; from?: string; to?: string; page?: string }>;
-}) {
-  const params = await searchParams;
-  const { supabase, company, companyId, projectId } = await requireCompanyPermission("cashflow.view");
-  const queryText = (params.q ?? "").trim().toLowerCase();
-  const grouping = (["month", "quarter", "year"].includes(params.grouping ?? "") ? params.grouping : "month") as "month" | "quarter" | "year";
-  const direction = ["in", "out"].includes(params.direction ?? "") ? params.direction! : "";
-  const situation = ["realized", "forecast"].includes(params.situation ?? "") ? params.situation! : "";
-  const dateRange = resolveDateRange(params.period, params.from, params.to);
-  const dateFrom = dateRange.from;
-  const dateTo = dateRange.to;
-  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
-
-  const projectQuery = projectId
-    ? supabase.from("projects").select("id, name, code").eq("id", projectId).maybeSingle()
-    : Promise.resolve({ data: null, error: null });
-  let payablesQuery = supabase
-    .from("payables")
-    .select(`id, due_date, amount, status, document, installment_label, paid_at, paid_amount, paid_account_name, source_system, notes, suppliers(id, legal_name, trade_name),${FINANCE_TITLE_COLUMNS}`)
-    .eq("company_id", companyId).neq("status", "cancelled").order("due_date", { ascending: true });
-  let receivablesQuery = supabase
-    .from("receivables")
-    .select(`id, sale_id, due_date, amount, adjusted_amount, status, category, description, sequence_number, sequence_total, paid_at, paid_amount, paid_account_name, source_system, clients(id, name), units(id, code), sales(id, number),${FINANCE_TITLE_COLUMNS}`)
-    .eq("company_id", companyId).neq("status", "cancelled").order("due_date", { ascending: true });
-  if (projectId) { payablesQuery = payablesQuery.eq("project_id", projectId); receivablesQuery = receivablesQuery.eq("project_id", projectId); }
-
-  const [projectResult, payablesResult, receivablesResult, forecastContext] = await Promise.all([
-    projectQuery,
-    fetchAllRows<Payable>(async(from,to)=>{const {data,error}=await payablesQuery.order("id").range(from,to);return {data:(data??[]) as unknown as Payable[],error};}),
-    fetchAllRows<Receivable>(async(from,to)=>{const {data,error}=await receivablesQuery.order("id").range(from,to);return {data:(data??[]) as unknown as Receivable[],error};}),
-    projectId
-      ? loadProjectForecast({ supabase, companyId, projectId, asOfDate: todayIso() })
-      : Promise.resolve(null),
-  ]);
-  const payables = (payablesResult.data ?? []) as unknown as Payable[];
-  const receivables = (receivablesResult.data ?? []) as unknown as Receivable[];
-  const project = projectResult.data;
-  const forecast = forecastContext?.forecast ?? null;
-
-  if (payablesResult.error || receivablesResult.error) throw new Error(payablesResult.error?.message ?? receivablesResult.error?.message);
-  const cashRows=await loadSettlementCash(supabase,companyId,projectId);
-  const payableEntries: CashEntry[] = financialTitleEntries(payables,"AP",cashRows).map((fact) => {
-    const payable=fact.source;
-    const supplier = relatedOne(payable.suppliers);
-
-    return {
-      id: fact.id, direction: "out", situation: fact.situation,
-      effectiveDate: fact.effectiveDate, dueDate: cleanDate(payable.due_date), paidAt: fact.paidAt,
-      amount: fact.amount, party: supplier?.trade_name || supplier?.legal_name || "Fornecedor",
-      reference: payable.document || payable.notes || "Conta a pagar", installment: payable.installment_label || "—", account: payable.paid_account_name || "—",
-      origin: originLabel(payable.source_system, "Contas a Pagar"), link: "/financeiro/contas-a-pagar",
-    };
-  });
-  const receivableEntries: CashEntry[] = financialTitleEntries(receivables,"AR",cashRows).map((fact) => {
-    const receivable=fact.source;
-    const client = relatedOne(receivable.clients); const unit = relatedOne(receivable.units); const sale = relatedOne(receivable.sales);
-    return {
-      id: fact.id, direction: "in", situation: fact.situation,
-      effectiveDate: fact.effectiveDate, dueDate: cleanDate(receivable.due_date), paidAt: fact.paidAt,
-      amount: fact.amount,
-      party: client?.name || "Cliente", reference: `${unit?.code ? `Unidade ${unit.code}` : "Unidade"}${sale?.number ? ` · Venda ${sale.number}` : ""}`,
-      installment: `${categoryLabels[receivable.category] || receivable.description} · ${receivable.sequence_number}/${receivable.sequence_total}`,
-      account: receivable.paid_account_name || "—", origin: originLabel(receivable.source_system, "Contas a Receber"), link: `/comercial/vendas/${receivable.sale_id}`,
-    };
-  });
-
-  const allEntries = [...receivableEntries, ...payableEntries].filter((entry) => Boolean(entry.effectiveDate)).sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate) || a.direction.localeCompare(b.direction));
-  const entries = allEntries
-    .filter((entry) => !direction || entry.direction === direction)
-    .filter((entry) => !situation || entry.situation === situation)
-    .filter((entry) => !dateFrom || entry.effectiveDate >= dateFrom)
-    .filter((entry) => !dateTo || entry.effectiveDate <= dateTo)
-    .filter((entry) => !queryText || [entry.party, entry.reference, entry.installment, entry.account, entry.origin].join(" ").toLowerCase().includes(queryText));
-
-  const received = entries.filter((entry) => entry.direction === "in" && entry.situation === "realized").reduce((sum, entry) => sum + entry.amount, 0);
-  const toReceive = entries.filter((entry) => entry.direction === "in" && entry.situation === "forecast").reduce((sum, entry) => sum + entry.amount, 0);
-  const realizedOut = entries.filter((entry) => entry.direction === "out" && entry.situation === "realized").reduce((sum, entry) => sum + entry.amount, 0);
-  const toPay = entries.filter((entry) => entry.direction === "out" && entry.situation === "forecast").reduce((sum, entry) => sum + entry.amount, 0);
-  const includeEngineering = Boolean(forecast && (!direction || direction === "out") && (!situation || situation === "forecast") && !queryText);
-  const engineeringMonths = includeEngineering
-    ? forecast!.months.filter((month) => (!dateFrom || `${month.key}-01` >= dateFrom.slice(0, 7) + "-01") && (!dateTo || `${month.key}-01` <= dateTo.slice(0, 7) + "-01"))
-    : [];
-  const engineeringProjected = engineeringMonths.reduce((sum, month) => sum + month.engineeringProjected, 0);
-  const currentBalance = received - realizedOut;
-  const projectedBalance = received + toReceive - realizedOut - toPay;
-  const completeProjectedBalance = projectedBalance - engineeringProjected;
-
-  const bucketMap = new Map<string, Omit<Bucket, "periodBalance" | "accumulatedBalance" | "accumulatedCompleteBalance">>();
-  entries.forEach((entry) => {
-    const key = periodKey(entry.effectiveDate, grouping);
-    const bucket = bucketMap.get(key) ?? { key, label: periodLabel(key, grouping), received: 0, receivable: 0, realized: 0, payable: 0, engineeringProjected: 0 };
-    if (entry.direction === "in" && entry.situation === "realized") bucket.received += entry.amount;
-    if (entry.direction === "in" && entry.situation === "forecast") bucket.receivable += entry.amount;
-    if (entry.direction === "out" && entry.situation === "realized") bucket.realized += entry.amount;
-    if (entry.direction === "out" && entry.situation === "forecast") bucket.payable += entry.amount;
-    bucketMap.set(key, bucket);
-  });
-  engineeringMonths.forEach((month) => {
-    const key = periodKey(`${month.key}-01`, grouping);
-    const bucket = bucketMap.get(key) ?? { key, label: periodLabel(key, grouping), received: 0, receivable: 0, realized: 0, payable: 0, engineeringProjected: 0 };
-    bucket.engineeringProjected += month.engineeringProjected;
-    bucketMap.set(key, bucket);
-  });
-
-  const bucketAccumulation = [...bucketMap.values()]
-    .sort((a, b) => a.key.localeCompare(b.key))
-    .reduce<{ rows: Bucket[]; accumulatedBalance: number; accumulatedCompleteBalance: number }>((state, bucket) => {
-      const periodBalance = bucket.received + bucket.receivable - bucket.realized - bucket.payable;
-      const accumulatedBalance = state.accumulatedBalance + periodBalance;
-      const accumulatedCompleteBalance = state.accumulatedCompleteBalance + periodBalance - bucket.engineeringProjected;
-      return {
-        rows: [...state.rows, { ...bucket, periodBalance, accumulatedBalance, accumulatedCompleteBalance }],
-        accumulatedBalance,
-        accumulatedCompleteBalance,
-      };
-    }, { rows: [], accumulatedBalance: 0, accumulatedCompleteBalance: 0 });
-  const buckets = bucketAccumulation.rows;
-  const maxBarValue = Math.max(1, ...buckets.flatMap((bucket) => [bucket.received, bucket.receivable, bucket.realized, bucket.payable, bucket.engineeringProjected]));
-
-  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageEntries = entries.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const filterParams = { q: params.q ?? "", grouping, direction, situation, period: dateRange.preset, from: dateFrom, to: dateTo };
-  const context = project ? `${project.code ? `${project.code} · ` : ""}${project.name}` : "Todas as obras";
-  const availableFrom = allEntries[0]?.effectiveDate ?? "";
-  const availableTo = allEntries[allEntries.length - 1]?.effectiveDate ?? "";
-  const displayedFrom = dateRange.preset === "all" ? availableFrom : dateFrom;
-  const displayedTo = dateRange.preset === "all" ? availableTo : dateTo;
-  const periodDescription = displayedFrom || displayedTo ? displayedFrom && displayedTo ? `${dateBR(displayedFrom)} a ${dateBR(displayedTo)}` : displayedFrom ? `a partir de ${dateBR(displayedFrom)}` : `até ${dateBR(displayedTo)}` : "sem lançamentos";
-  const periodHeading = dateRange.preset === "all" ? "Todo o período da obra" : dateRangePresetLabels[dateRange.preset];
-
-  return (
-    <AppShell
-      activeGroup="finance"
-      activeItem="cashflow"
-      eyebrow="Financeiro · Gestão"
-      title="Fluxo de Caixa"
-      description={`${company.name} · ${context} · previsto, realizado e projeção completa de ${periodDescription}.`}
-      actions={<><Link prefetch={false} className="elos-button" href="/financeiro/contas-a-pagar">Contas a Pagar</Link><Link prefetch={false} className="elos-button" href="/financeiro/contas-a-receber">Contas a Receber</Link><Link prefetch={false} className="elos-button elos-button-primary" href="/engenharia/previsao-financeira">Previsão por serviço</Link></>}
-    >
-      {payablesResult.error || receivablesResult.error ? <div className="auth-message error workspace-message">Não foi possível consolidar o fluxo de caixa.</div> : null}
-      {forecastContext?.errors.length ? <div className="auth-message error workspace-message">A projeção da Engenharia está incompleta: {forecastContext.errors.join(" · ")}</div> : null}
-
-      <section className="finance-summary-grid cashflow-summary-grid">
-        <article><span>Recebido</span><strong>{money(received)}</strong><small>entradas realizadas</small></article>
-        <article><span>A receber</span><strong>{money(toReceive)}</strong><small>carteira em aberto</small></article>
-        <article><span>Realizado</span><strong>{money(realizedOut)}</strong><small>saídas efetivamente pagas</small></article>
-        <article><span>A realizar</span><strong>{money(toPay)}</strong><small>payables já cadastradas</small></article>
-        <article><span>Projetado Engenharia</span><strong>{money(engineeringProjected)}</strong><small>contratos não faturados + a comprometer</small></article>
-        <article><span>Saldo atual</span><strong className={currentBalance < 0 ? "cashflow-negative" : ""}>{money(currentBalance)}</strong><small>recebido menos realizado</small></article>
-        <article><span>Saldo projetado</span><strong className={projectedBalance < 0 ? "cashflow-negative" : ""}>{money(projectedBalance)}</strong><small>sem projeção adicional da Engenharia</small></article>
-        <article><span>Saldo projetado completo</span><strong className={completeProjectedBalance < 0 ? "cashflow-negative" : ""}>{money(completeProjectedBalance)}</strong><small>inclui todas as camadas futuras</small></article>
-      </section>
-
-      <section className="forecast-engineering-projection">
-        <header><div><span>Fronteira anti-dupla-contagem</span><h2>Projetado Engenharia</h2></div><strong>{money(engineeringProjected)}</strong></header>
-        <p>Esta série contém somente o comprometido futuro ainda não transformado em conta a pagar e o saldo a comprometer. Payables abertas permanecem exclusivamente em “A realizar”.</p>
-        {!projectId ? <p><strong>Selecione uma obra</strong> para incluir a projeção da Engenharia.</p> : null}
-        {forecast ? <div className="forecast-engineering-projection-grid">{engineeringMonths.map((month) => <article key={month.key}><div className="forecast-engineering-projection-bar"><span style={{ height: `${month.engineeringProjected / Math.max(1, ...engineeringMonths.map((item) => item.engineeringProjected)) * 100}%` }} /></div><strong>{periodLabel(periodKey(`${month.key}-01`, "month"), "month")}</strong><small>{compactMoney(month.engineeringProjected)}</small></article>)}</div> : null}
-      </section>
-
-      <section className="registry-toolbar cashflow-toolbar"><form className="cashflow-filter" method="get"><input name="q" defaultValue={params.q ?? ""} placeholder="Cliente, fornecedor, unidade, documento ou conta" /><select name="grouping" defaultValue={grouping}><option value="month">Visão mensal</option><option value="quarter">Visão trimestral</option><option value="year">Visão anual</option></select><select name="direction" defaultValue={direction}><option value="">Entradas e saídas</option><option value="in">Somente entradas</option><option value="out">Somente saídas</option></select><select name="situation" defaultValue={situation}><option value="">Realizado e previsto</option><option value="realized">Somente realizado</option><option value="forecast">Somente previsto</option></select><DateRangeFilter defaultPreset={dateRange.preset} defaultFrom={dateFrom} defaultTo={dateTo} /><button type="submit">Filtrar</button><Link prefetch={false} href="/financeiro/fluxo-de-caixa">Limpar</Link></form></section>
-
-      <section className="cashflow-chart-panel">
-        <div className="section-heading"><div><span>{periodHeading}</span><h2>Entradas, saídas e saldo acumulado</h2></div><p>{buckets.length} período(s) · {entries.length} lançamento(s)</p></div>
-        <div className="cashflow-legend"><span><i className="received" />Recebido</span><span><i className="receivable" />A receber</span><span><i className="realized" />Realizado</span><span><i className="payable" />A realizar</span><span><i className="engineering-projected" />Projetado Engenharia</span></div>
-        <div className="cashflow-chart-scroll"><div className="cashflow-chart" style={{ minWidth: `${Math.max(920, buckets.length * 104)}px` }}>{buckets.map((bucket) => <article className="cashflow-period" key={bucket.key}><div className="cashflow-bars" title={`${bucket.label} · saldo completo ${money(bucket.accumulatedCompleteBalance)}`}><span className="cashflow-bar received" style={{ height: `${Math.max(bucket.received > 0 ? 3 : 0, bucket.received / maxBarValue * 100)}%` }} /><span className="cashflow-bar receivable" style={{ height: `${Math.max(bucket.receivable > 0 ? 3 : 0, bucket.receivable / maxBarValue * 100)}%` }} /><span className="cashflow-bar realized" style={{ height: `${Math.max(bucket.realized > 0 ? 3 : 0, bucket.realized / maxBarValue * 100)}%` }} /><span className="cashflow-bar payable" style={{ height: `${Math.max(bucket.payable > 0 ? 3 : 0, bucket.payable / maxBarValue * 100)}%` }} /><span className="cashflow-bar engineering-projected" style={{ height: `${Math.max(bucket.engineeringProjected > 0 ? 3 : 0, bucket.engineeringProjected / maxBarValue * 100)}%` }} /></div><strong>{bucket.label}</strong><small className={bucket.accumulatedCompleteBalance < 0 ? "negative" : ""}>{compactMoney(bucket.accumulatedCompleteBalance)}</small></article>)}{!buckets.length ? <div className="cashflow-empty">Nenhum lançamento encontrado.</div> : null}</div></div>
-        <p className="cashflow-chart-caption">O valor abaixo de cada período é o saldo acumulado completo, já descontando a projeção da Engenharia.</p>
-      </section>
-
-      <section className="registry-table-panel cashflow-table-panel">
-        <div className="section-heading"><div><span>Planilha financeira</span><h2>Lançamentos consolidados</h2></div><p>{entries.length} lançamento(s)</p></div>
-        <div className="registry-table-wrap"><table className="registry-table cashflow-table"><thead><tr><th>Data</th><th>Movimento</th><th>Situação</th><th>Cliente / fornecedor</th><th>Documento / referência</th><th>Parcela</th><th>Vencimento</th><th>Baixa</th><th>Conta</th><th>Origem</th><th>Valor</th><th>Ação</th></tr></thead><tbody>{pageEntries.map((entry) => <tr key={entry.id}><td>{dateBR(entry.effectiveDate)}</td><td><span className={`cashflow-direction ${entry.direction}`}>{entry.direction === "in" ? "Entrada" : "Saída"}</span></td><td><span className={`status-badge ${entry.situation === "realized" ? "paid" : "open"}`}>{entry.situation === "realized" ? "Realizado" : "Previsto"}</span></td><td><strong>{entry.party}</strong></td><td>{entry.reference}</td><td>{entry.installment}</td><td>{dateBR(entry.dueDate)}</td><td>{dateBR(entry.paidAt)}</td><td>{entry.account}</td><td>{entry.origin}</td><td><strong>{money(entry.amount)}</strong></td><td><Link prefetch={false} href={entry.link}>Abrir</Link></td></tr>)}{!pageEntries.length ? <tr><td colSpan={12}>Nenhum lançamento encontrado.</td></tr> : null}</tbody></table></div>
-        {totalPages > 1 ? <div className="registry-pagination"><span>Página {safePage} de {totalPages}</span><div>{safePage > 1 ? <Link prefetch={false} href={buildQuery(filterParams, safePage - 1)}>Anterior</Link> : <span>Anterior</span>}{safePage < totalPages ? <Link prefetch={false} href={buildQuery(filterParams, safePage + 1)}>Próxima</Link> : <span>Próxima</span>}</div></div> : null}
-      </section>
-    </AppShell>
-  );
+import Link from 'next/link';
+import {AppShell} from '@/components/app-shell';
+import {requireCompanyPermission} from '@/lib/workspace';
+import {loadCashflow} from '@/lib/finance-core/cashflow-server';
+import {isoDay,toCents,type CashRow} from '@/lib/finance-core/cashflow.mjs';
+import {saveCashScenario,validateCashOpening,linkCashCoverage,reprogramCashSchedule,convertCashScopeToContract,recordCashTransfer,completeCashTransfer,reverseCashTransfer} from './actions';
+const labels:Record<string,string>={R:'Obrigações abertas',C:'Contratos sem títulos',P:'Gastos não contratados',AR:'Recebíveis',AR_FUTURE:'Entradas contratuais sem títulos',REVENUE:'Receita comercial estimada',AF:'Ajustes futuros',FINANCING_IN:'Financiamento previsto',FINANCING_OUT:'Amortização/encargos não incluídos'};
+const money=(n:number|null|undefined)=>n==null?'Não validado':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n/100);
+const day=(s:string)=>s.split('-').reverse().join('/');
+const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+export default async function CashFlowPage({searchParams}:{searchParams:Promise<{from?:string;cutoff?:string;entity?:string;version?:string;consolidated?:string;page?:string;error?:string;success?:string}>}){
+ const params=await searchParams;const {supabase,company,companyId,projectId}=await requireCompanyPermission('cashflow.view');
+ const cutoff=isoDay(params.cutoff??today()),from=isoDay(params.from??cutoff.slice(0,7)+'-01');
+ if(cutoff>today())throw Error('Use data efetiva até hoje para realizado; datas futuras pertencem à projeção.');
+ const view=await loadCashflow({supabase,companyId,projectId,entityId:params.entity||null,scenarioId:params.version||null,cutoff,from,consolidate:params.consolidated==='1'});
+ const [manage,reconcile,transfer]=await Promise.all(['cashflow.manage','finance.bank_accounts.reconcile','finance.bank_accounts.transfer'].map(permission=>supabase.rpc('has_company_permission',{target_company_id:companyId,target_permission:permission})));
+ const page=Math.max(1,Number.parseInt(params.page??'1')||1),movements=[...view.movements].sort((a,b)=>a.transaction_date.localeCompare(b.transaction_date)||a.id.localeCompare(b.id)),shown=movements.slice((page-1)*50,page*50);
+ const query=(p:number)=>'?'+new URLSearchParams({...Object.fromEntries(Object.entries(params).filter(([,v])=>v!==undefined) as [string,string][]),page:String(p)});
+ const editable:CashRow[]=view.editorRows.length?view.editorRows:[...view.future.rows.filter(r=>['R','AR','C'].includes(r.category)).map(r=>({...r,amount_cents:r.reference_amount_cents??r.amount_cents})),...Array.from({length:5},(_,i)=>({id:'draft-'+i,scope_key:'',category:'P',amount_cents:0,expected_date:null}))];
+ const originalMonths=new Map(view.baseline?.months.map(m=>[m.month,m])??[]);
+ return <AppShell activeGroup="finance" activeItem="cashflow" eyebrow="Financeiro" title="Fluxo de caixa" description={`${company.name} · corte ${day(cutoff)} · ${projectId?'movimentos da obra e contas da entidade':'contas e projeção do perímetro autorizado'}`}>
+  {params.error?<p role="alert">{params.error}</p>:null}{params.success?<p role="status">{params.success}</p>:null}
+  <section className="registry-table-panel"><form method="get" className="registry-form-grid">
+   <label>Realizado desde<input type="date" name="from" defaultValue={from} required/></label><label>Data de corte<input type="date" name="cutoff" defaultValue={cutoff} max={today()} required/></label>
+   <label>Entidade<select name="entity" defaultValue={view.selectedEntity??''}><option value="">Perímetro autorizado</option>{view.entities.map(e=><option key={e.id} value={e.id}>{e.legal_name}</option>)}</select></label>
+   <label>Versão financeira<select name="version" defaultValue={view.scenario?.id??''}><option value="">Previsão atual</option>{view.scenarios.map(s=><option key={s.id} value={s.id}>{s.parent_id?'Reprogramação':'Original'} · {day(s.cutoff)} · {s.reason}</option>)}</select></label>
+   <label><input type="checkbox" name="consolidated" value="1" defaultChecked={params.consolidated==='1'}/>Consolidar operações documentadas entre entidades visíveis</label><button type="submit">Consultar</button>
+  </form></section>
+  {view.warnings.length?<section className="registry-table-panel" role="status"><strong>Posição parcial — pendências preservadas</strong>{view.warnings.map(w=><p key={w}>{w}</p>)}</section>:null}
+  <section className="finance-summary-grid">
+   <article><span>Saldo inicial registrado</span><strong>{money(view.history.opening_cents)}</strong></article><article><span>Saldo final registrado</span><strong>{money(view.history.closing_cents)}</strong></article>
+   <article><span>Saldo final com vínculos de extrato</span><strong>{money(view.history.confirmed_closing_cents)}</strong><small>Não inclui movimentos sem confirmação</small></article>
+   <article><span>Movimentos a confirmar</span><strong>{money(view.history.unconfirmed_movement_cents)}</strong></article><article><span>Transferências em trânsito</span><strong>{money(view.history.transfer_in_transit_cents)}</strong></article>
+   <article><span>Obrigações sem obra — entidade</span><strong>{money(view.unassignedOpenCents)}</strong><small>Fonte ainda não validada: {money(view.unvalidatedUnassignedCents)}</small><small>Apropriação pendente não elimina a obrigação</small></article>
+  </section>
+  <section className="registry-table-panel"><div className="section-heading"><h2>Saldos por conta e titular</h2><p>Abertura + entradas − saídas. Conta compartilhada conserva saldo da entidade.</p></div>
+   <div className="registry-table-wrap"><table className="registry-table"><thead><tr><th>Conta</th><th>Abertura registrada</th><th>Entradas</th><th>Saídas</th><th>Fechamento registrado</th><th>Fechamento confirmado</th></tr></thead><tbody>{view.history.accounts.map(a=><tr key={a.account_id}><td>{view.accounts.find(x=>x.id===a.account_id)?.label}</td><td>{money(a.opening_cents)}</td><td>{money(a.incoming_cents)}</td><td>{money(a.outgoing_cents)}</td><td>{money(a.closing_cents)}</td><td>{money(a.confirmed_closing_cents)}</td></tr>)}</tbody></table></div>
+   {reconcile.data===true?<details><summary>Registrar comprovação do saldo inicial e restrições</summary><form action={validateCashOpening} className="registry-form-grid"><input type="hidden" name="command_id" value={crypto.randomUUID()}/><label>Conta<select name="account_id" required>{view.accounts.map(a=><option key={a.id} value={a.id}>{a.label} · abertura {money(toCents(a.opening_balance))}</option>)}</select></label><label>Valor restrito no saldo inicial<input name="restricted" inputMode="decimal" required/></label><label>Documento / extrato<input name="evidence" minLength={5} required/></label><label>Motivo<input name="reason" minLength={5} required/></label><button type="submit">Registrar evidência</button></form></details>:null}
+  </section>
+  {transfer.data===true?<section className="registry-table-panel"><details><summary>Registrar transferência efetivada</summary><form action={recordCashTransfer} className="registry-form-grid"><input type="hidden" name="command_id" value={crypto.randomUUID()}/><label>Conta de origem<select name="from_account" required>{view.accounts.map(a=><option key={a.id} value={a.id}>{a.label}</option>)}</select></label><label>Conta de destino<select name="to_account" required>{view.accounts.map(a=><option key={a.id} value={a.id}>{a.label}</option>)}</select></label><label>Natureza<select name="nature" required><option value="">Selecione conforme documento</option><option value="own">Contas do mesmo titular</option><option value="loan">Mútuo documentado entre titulares</option></select></label><label>Principal<input name="amount" inputMode="decimal" required/></label><label>Tarifa comprovada (zero se não houve)<input name="fee" inputMode="decimal" required/></label><label>Débito efetivo<input name="debit_date" type="date" max={today()} required/></label><label>Crédito efetivo (vazio mantém em trânsito)<input name="credit_date" type="date" max={today()}/></label><label>Comprovante / contrato<input name="evidence" minLength={5} required/></label><label>Motivo<input name="reason" minLength={5} required/></label><button type="submit">Registrar movimento local</button></form></details>
+  {view.transfers.filter(t=>t.credit_transaction_id&&!view.transfers.some(other=>other.reversal_of===t.id)).map(t=><details key={'inverse:'+t.id}><summary>Registrar evento inverso documentado — {money(toCents(t.amount))}</summary><p>O movimento original e a tarifa original permanecem no histórico. Preencher somente movimentos efetivos comprovados.</p><form action={reverseCashTransfer} className="registry-form-grid"><input type="hidden" name="transfer_id" value={t.id}/><input type="hidden" name="command_id" value={crypto.randomUUID()}/><label>Débito efetivo de retorno<input name="debit_date" type="date" max={today()} required/></label><label>Crédito efetivo de retorno<input name="credit_date" type="date" max={today()}/></label><label>Tarifa nova comprovada (zero se não houve)<input name="fee" inputMode="decimal" required/></label><label>Comprovante<input name="evidence" minLength={5} required/></label><label>Motivo<input name="reason" minLength={5} required/></label><button type="submit">Preservar evento inverso</button></form></details>)}
+  {view.transfers.filter(t=>!t.credit_transaction_id).map(t=><details key={t.id}><summary>Confirmar crédito da transferência em trânsito — {money(toCents(t.amount))}</summary><form action={completeCashTransfer} className="registry-form-grid"><input type="hidden" name="transfer_id" value={t.id}/><label>Data efetiva do crédito<input name="credit_date" type="date" max={today()} required/></label><label>Comprovante<input name="evidence" minLength={5} required/></label><label>Motivo<input name="reason" minLength={5} required/></label><button type="submit">Registrar crédito efetivo</button></form></details>)}</section>:null}
+  <section className="registry-table-panel"><div className="section-heading"><h2>Projeção por origem</h2><p>{view.projection.complete?'Perímetro calculado com as fontes informadas':'Parcial — não homologado documentalmente'} · receita estimada fica em cenário comercial separado.</p></div>
+   <div className="finance-summary-grid"><article><span>Saídas nos próximos 30 dias</span><strong>{money(view.projection.horizon_30.outgoing_cents)}</strong></article><article><span>Saídas nos próximos 90 dias</span><strong>{money(view.projection.horizon_90.outgoing_cents)}</strong><small>Janelas cumulativas, não somar</small></article><article><span>Recebíveis próximos 30 dias</span><strong>{money(view.projection.horizon_30.receivables_cents)}</strong></article><article><span>Recebíveis próximos 90 dias</span><strong>{money(view.projection.horizon_90.receivables_cents)}</strong></article><article><span>Obrigações vencidas</span><strong>{money(view.payableBuckets.overdue_cents)}</strong></article><article><span>Recebíveis vencidos</span><strong>{money(view.receivableBuckets.overdue_cents)}</strong></article><article><span>Saldo até a conclusão informada</span><strong>{money(view.projection.closing_cents)}</strong></article><article><span>Maior necessidade adicional</span><strong>{money(view.projection.peak_additional_funding_cents)}</strong><small>{view.projection.complete?'Dentro do perímetro informado':'Necessidade parcial; lacunas podem ampliá-la'}</small></article><article><span>Sem data estimada</span><strong>{money(view.projection.undated_cents)}</strong></article></div>
+   <div className="registry-table-wrap"><table className="registry-table"><thead><tr><th>Mês</th><th>R</th><th>C</th><th>P</th><th>Recebíveis</th><th>Entradas contratuais</th><th>Receita estimada</th><th>Total de saídas estimadas</th><th>Saldo original preservado</th><th>Saldo da previsão atual</th><th>Saldo cenário comercial</th></tr></thead><tbody>{view.projection.months.map(m=><tr key={m.month}><td>{m.month}</td>{['R','C','P','AR','AR_FUTURE','REVENUE'].map(k=><td key={k}>{money(m.components[k])}</td>)}<td>{money(m.outgoing_cents)}</td><td>{money(originalMonths.get(m.month)?.closing_cents)}</td><td>{money(m.closing_cents)}{m.closing_cents!==null&&m.closing_cents<0?<small>Insuficiência de caixa</small>:null}</td><td>{money(m.commercial_closing_cents)}</td></tr>)}</tbody></table></div>
+   <details><summary>Composição, vencimentos e datas previstas</summary><table className="registry-table"><thead><tr><th>Origem</th><th>Referência</th><th>Valor</th><th>Vencimento legal</th><th>Caixa previsto</th></tr></thead><tbody>{view.future.rows.map(r=><tr key={r.id}><td>{labels[r.category]}</td><td>{r.scope_key}</td><td>{money(r.amount_cents)}</td><td>{r.legal_due?day(r.legal_due):'—'}</td><td>{r.expected_date?day(r.expected_date):'A definir — vencido ou sem data'}</td></tr>)}</tbody></table></details>
+  </section>
+  {view.entityProjections.length>1?<section className="registry-table-panel"><h2>Insuficiências e recursos por entidade</h2><p>O consolidado não transfere automaticamente o recurso de um titular para outro.</p><table className="registry-table"><thead><tr><th>Entidade</th><th>Mês</th><th>Saldo projetado</th><th>Necessidade adicional da entidade</th></tr></thead><tbody>{view.entityProjections.flatMap(e=>e.projection.months.map(m=><tr key={e.entity_id+m.month}><td>{view.entities.find(x=>x.id===e.entity_id)?.legal_name}</td><td>{m.month}</td><td>{money(m.closing_cents)}</td><td>{money(e.projection.peak_additional_funding_cents)}</td></tr>))}</tbody></table></section>:null}
+  {manage.data===true&&view.selectedEntity?<section className="registry-table-panel"><details><summary>{view.scenario?'Reprogramar somente datas futuras':'Registrar planejamento financeiro original'}</summary><p>O original e as versões anteriores ficam preservados. A previsão de recebimento não altera o vencimento legal. Use referências de ocorrência distintas e vínculos documentados para substituir previsões por títulos.</p>
+   <form action={saveCashScenario} className="registry-form-grid"><input type="hidden" name="command_id" value={crypto.randomUUID()}/><input type="hidden" name="entity_id" value={view.selectedEntity}/><input type="hidden" name="parent_id" value={view.scenario?.id??''}/><input type="hidden" name="cutoff" value={cutoff}/><label>Cronograma físico de referência<select name="baseline_id" defaultValue={view.scenario?.baseline_id??''}><option value="">Sem vínculo físico — premissa documentada</option>{view.baselines.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+    <label>Conclusão financeira (inclui retenções)<input name="completion" type="date" min={cutoff} defaultValue={view.scenario?.completion_date} required/></label><label>Caixa mínimo aprovado<input name="minimum" inputMode="decimal" defaultValue={view.scenario?.minimum_cash??''}/></label>
+    {editable.map((r,i)=><fieldset key={r.id}><legend>Parcela de previsão {i+1}</legend><label>Referência de escopo / ocorrência<input name="scope_key" defaultValue={r.scope_key} readOnly={!!view.scenario}/></label><label>Origem<select name="category" defaultValue={r.category}>{Object.entries(labels).filter(([k])=>!view.scenario&& !['R','AR'].includes(r.category)?!['R','AR'].includes(k):true).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label><label>Valor de referência<input name="amount" inputMode="decimal" defaultValue={(r.amount_cents/100).toFixed(2)} readOnly={!!view.scenario}/></label><label>Data prevista<input name="expected_date" type="date" min={cutoff} defaultValue={r.expected_date??''}/></label><input type="hidden" name="title_id" value={r.title_id??''}/><label>Contrato de origem (para compromisso)<select name="source_id" defaultValue={r.source_id??''}><option value="">Estimativa / referência documentada</option>{view.contracts.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select></label><label>Atividade física<select name="activity_id" defaultValue={r.activity_id??''}><option value="">Sem vínculo de atividade</option>{view.activities.map(a=><option key={a.id} value={a.id}>{a.name} · {day(a.planned_finish)}</option>)}</select></label><label>Prazo após atividade (dias aprovados)<input name="payment_lag_days" type="number" min="0" max="365" defaultValue={r.payment_lag_days??0}/></label></fieldset>)}
+    <label>Documento / premissas aprovadas<input name="evidence" minLength={5} required/></label><label>Motivo e efeito esperado<input name="reason" minLength={5} required/></label><button type="submit">Preservar versão financeira</button>
+   </form></details></section>:null}
+  {manage.data===true&&view.scenario?<section className="registry-table-panel"><details><summary>Substituir previsão por título documentado</summary><form action={linkCashCoverage} className="registry-form-grid"><input type="hidden" name="command_id" value={crypto.randomUUID()}/><input type="hidden" name="entity_id" value={view.scenario.legal_entity_id}/><input type="hidden" name="scenario_id" value={view.scenario.id}/><label>Escopo / ocorrência<select name="scope_key" required>{view.editorRows.filter(r=>['C','P','AR_FUTURE','FINANCING_OUT','FINANCING_IN'].includes(r.category)).map(r=><option key={r.id} value={r.scope_key}>{r.scope_key} · {labels[r.category]}</option>)}</select></label><label>Título correspondente<select name="title" required>{view.titleOptions.map(t=><option key={t.type+t.id} value={t.type+':'+t.id}>{t.type==='AP'?'A pagar':'A receber'} · {day(t.due)} · {money(toCents(t.amount))} · {t.id.slice(0,8)}</option>)}</select></label><label>Documento do vínculo<input name="evidence" minLength={5} required/></label><label>Motivo<input name="reason" minLength={5} required/></label><button type="submit">Vincular cobertura uma vez</button></form></details>
+  <details><summary>Substituir previsão por contrato aprovado</summary><form action={convertCashScopeToContract} className="registry-form-grid"><input type="hidden" name="parent_id" value={view.scenario.id}/><input type="hidden" name="command_id" value={crypto.randomUUID()}/><label>Previsão sem cobertura<select name="scope_key" required>{view.editorRows.filter(r=>r.category==='P').map(r=><option key={r.id} value={r.scope_key}>{r.scope_key}</option>)}</select></label><label>Contrato firme<select name="contract_id" required>{view.contracts.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select></label><label>Documento aprovado<input name="evidence" minLength={5} required/></label><label>Motivo<input name="reason" minLength={5} required/></label><button type="submit">Preservar nova cobertura</button></form></details>
+  {view.scenario.baseline_id?<details><summary>Reprogramar pela atividade física vinculada</summary><form action={reprogramCashSchedule} className="registry-form-grid"><input type="hidden" name="parent_id" value={view.scenario.id}/><input type="hidden" name="command_id" value={crypto.randomUUID()}/><input type="hidden" name="cutoff" value={cutoff}/><p>Usar término das atividades futuras mais prazo aprovado. Vencimentos e realizado permanecem preservados.</p><label>Evidência do cronograma revisado<input name="evidence" minLength={5} required/></label><label>Motivo e efeito<input name="reason" minLength={5} required/></label><button type="submit">Preservar nova versão</button></form></details>:null}</section>:null}
+  <section className="registry-table-panel"><div className="section-heading"><h2>Movimentos registrados do período</h2><p>{movements.length} movimento(s); confirmação depende do vínculo de extrato.</p></div><div className="registry-table-wrap"><table className="registry-table"><thead><tr><th>Data bancária registrada</th><th>Conta</th><th>Descrição</th><th>Origem</th><th>Valor</th><th>Estado operacional</th></tr></thead><tbody>{shown.map(m=><tr key={m.id}><td>{day(m.transaction_date)}</td><td>{view.accounts.find(a=>a.id===m.bank_account_id)?.label}</td><td>{m.description}</td><td>{m.project_id?'Obra identificada':'Sem obra / movimento da entidade'}</td><td>{m.direction==='debit'?'−':'+'}{money(toCents(m.amount))}</td><td>{m.status}</td></tr>)}</tbody></table></div><nav>{page>1?<Link href={query(page-1)}>Anterior</Link>:null} · {page} · {page*50<movements.length?<Link href={query(page+1)}>Próxima</Link>:null}</nav></section>
+  {view.scenario?<p>Versão registrada por {view.scenario.created_by} · {new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(view.scenario.created_at))} · {view.scenario.reason}</p>:null}
+ </AppShell>;
 }
