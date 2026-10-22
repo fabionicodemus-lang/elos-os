@@ -7,6 +7,8 @@ on:
       - 'lib/finance-core/**'
       - 'tests/finance-core/**'
       - 'tests/cashflow/**'
+      - 'tests/supplier-refunds/**'
+      - 'supabase/migrations/20261023100000_supplier_advance_refunds.sql'
       - 'supabase/migrations/20261022100000_entity_obligations.sql'
       - 'supabase/migrations/20261022110000_cashflow_versions.sql'
       - 'supabase/migrations/20261022120000_cash_transfers.sql'
@@ -53,6 +55,9 @@ jobs:
       - run: npm run test:cashflow
         env:
           FINANCE8_EVIDENCE_DIR: ${{ runner.temp }}/cashflow-validation
+      - run: npm run test:supplier-refunds
+        env:
+          FINANCE10_EVIDENCE_DIR: ${{ runner.temp }}/supplier-refund-validation
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -62,3 +67,4 @@ jobs:
             ${{ runner.temp }}/koper-validation/
             ${{ runner.temp }}/finance-core-validation/
             ${{ runner.temp }}/cashflow-validation/
+            ${{ runner.temp }}/supplier-refund-validation/

@@ -510,7 +510,7 @@ async function runContasAReceber(context: ElosIaToolContext, args: ToolArgs): Pr
 async function runFluxoDeCaixa(context: ElosIaToolContext, args: ToolArgs): Promise<ToolResult> {
  const scope=resolveProject(context,args.obra,true);
  const result=await loadCashflow({supabase:context.supabase,companyId:context.companyId,projectId:scope.project?.id??null,cutoff:context.today,from:context.today.slice(0,7)+'-01'});
- return {obra:scope.label,corte:context.today,fonte:'Mesmo núcleo do fluxo de caixa',realizado:result.history,projecao:result.projection,obrigacoes_vencidas:result.payableBuckets,recebiveis_vencidos:result.receivableBuckets,pendencias:result.warnings,sem_obra_aberto_cents:result.unassignedOpenCents,fonte_sem_obra_a_validar_cents:result.unvalidatedUnassignedCents,versao:result.scenario?.id??null};
+ return {obra:scope.label,corte:context.today,fonte:'Mesmo núcleo do fluxo de caixa',realizado:result.history,projecao:result.projection,restituicoes_de_fornecedores:result.supplierRefunds,natureza_restituicao:'Recuperação de adiantamento; não é receita operacional',obrigacoes_vencidas:result.payableBuckets,recebiveis_vencidos:result.receivableBuckets,pendencias:result.warnings,sem_obra_aberto_cents:result.unassignedOpenCents,fonte_sem_obra_a_validar_cents:result.unvalidatedUnassignedCents,versao:result.scenario?.id??null};
 }
 
 function scheduleSummary(schedule: Awaited<ReturnType<typeof loadSchedule>>, context: ElosIaToolContext, args: ToolArgs) {

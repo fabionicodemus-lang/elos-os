@@ -53,3 +53,18 @@ export async function reverseCashTransfer(form:FormData){
  const {error}=await supabase.rpc('reverse_cash_transfer',{p_original:text(form,'transfer_id'),p_command:text(form,'command_id'),p_debit:text(form,'debit_date'),p_credit:optional(form,'credit_date'),p_fee:amount(text(form,'fee')),p_evidence:text(form,'evidence'),p_reason:text(form,'reason')});
  if(error)redirect(path+'?error='+encodeURIComponent(error.message));revalidateFinancialViews();redirect(path+'?success=Evento+inverso+registrado+com+original+preservado');
 }
+export async function cancelSupplierAdvanceContract(form:FormData){
+ const {supabase,companyId,projectId}=await requireCompanyPermission('payables.manage');
+ const [contractId,advanceLine]=text(form,'advance').split(':');
+ const target=await supabase.from('execution_service_contracts').select('project_id').eq('company_id',companyId).eq('id',contractId).maybeSingle();
+ if(target.error||!target.data||projectId&&target.data.project_id!==projectId)redirect(path+'?error=Contrato+fora+do+escopo');
+ const {error}=await supabase.rpc('cancel_supplier_advance_contract',{p_company:companyId,p_contract:contractId,p_advance_line:advanceLine,p_command:text(form,'command_id'),p_date:text(form,'effective_date'),p_no_execution_evidence:text(form,'no_execution_evidence'),p_refund_evidence:text(form,'refund_evidence'),p_reason:text(form,'reason'),p_expected_refund_date:optional(form,'expected_refund_date')});
+ if(error)redirect(path+'?error='+encodeURIComponent(error.message));revalidateFinancialViews();redirect(path+'?success=Cancelamento+documentado+e+direito+de+restituição+registrados');
+}
+export async function receiveSupplierRefund(form:FormData){
+ const {supabase,companyId,projectId}=await requireCompanyPermission('payables.manage');
+ const target=await supabase.from('finance_supplier_refund_rights').select('project_id').eq('company_id',companyId).eq('id',text(form,'right_id')).maybeSingle();
+ if(target.error||!target.data||projectId&&target.data.project_id!==projectId)redirect(path+'?error=Direito+fora+do+escopo');
+ const {error}=await supabase.rpc('receive_supplier_refund',{p_company:companyId,p_right:text(form,'right_id'),p_account:text(form,'account_id'),p_command:text(form,'command_id'),p_date:text(form,'effective_date'),p_amount:amount(text(form,'amount')),p_external_id:text(form,'external_id'),p_evidence:text(form,'evidence'),p_reason:text(form,'reason')});
+ if(error)redirect(path+'?error='+encodeURIComponent(error.message));revalidateFinancialViews();redirect(path+'?success=Restituição+registrada+sem+reabrir+o+título+original');
+}

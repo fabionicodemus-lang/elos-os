@@ -1,0 +1,21 @@
+import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';
+const root=path.resolve(process.env.FINANCE10_EVIDENCE_DIR??'docs/financeiro/implementacao-v1/etapa10-ct10/evidencias');fs.mkdirSync(root,{recursive:true});const results=[];
+const env={...process.env,FINANCE10_EVIDENCE_DIR:root,FINANCE8_EVIDENCE_DIR:root+'/etapa8',FINANCE7_EVIDENCE_DIR:root+'/etapa8/anteriores',FINANCE9_EVIDENCE_DIR:root+'/etapa9'};
+function run(cmd,args,log){fs.mkdirSync(path.dirname(root+'/'+log),{recursive:true});const fd=fs.openSync(root+'/'+log,'w');let r;try{r=spawnSync(cmd,args,{stdio:['ignore',fd,fd],env});}finally{fs.closeSync(fd);}results.push({command:[cmd,...args],log,exit_code:r?.status});fs.writeFileSync(root+'/execucoes.json',JSON.stringify(results,null,2)+'\n');if(r?.status!==0)throw Error(log+': saída '+r?.status);}
+run(process.execPath,['tests/supplier-refunds/database.mjs'],'banco.log');
+run(process.execPath,['--test','tests/supplier-refunds/server.test.mjs'],'servidor-tela.log');
+run('python3',['tests/financeiro/fixtures/comparar_resultados.py',root+'/casos-obtidos.json','--only','CT10','--report',root+'/comparacao-ct10.json'],'comparacao-ct10.log');
+run(process.execPath,['tests/supplier-refunds/prior-stages.mjs','--backup'],'etapas5-7.log');
+run(process.execPath,['tests/supplier-refunds/replay-previous.mjs','8'],'etapa8/banco.log');
+run(process.execPath,['--test','tests/cashflow/engine.test.mjs'],'etapa8/componentes.log');
+run(process.execPath,['--test','tests/cashflow/server.test.mjs'],'etapa8/servidor-tela.log');
+run(process.execPath,['--test','tests/finance-core/components.test.mjs','tests/finance-core/forecast.test.mjs'],'etapa8/anteriores/componentes.log');
+run(process.execPath,['--test','tests/finance-core/render.test.mjs'],'etapa8/anteriores/render.log');
+run(process.execPath,['tests/supplier-refunds/replay-previous.mjs','9'],'etapa9/banco.log');
+run('python3',['tests/financeiro/fixtures/comparar_resultados.py',root+'/etapa9/casos-obtidos-novos.json','--only','CT13','CT14','CT23','--report',root+'/etapa9/comparacao-integrais.json'],'etapa9/comparacao-integrais.log');
+run(process.execPath,['tests/financial-acceptance/components.mjs'],'etapa9/componentes.log');
+run('python3',['tests/financeiro/fixtures/comparar_resultados.py',root+'/etapa9/casos-componentes-adicionais.json','--only','CT02','CT11','--report',root+'/etapa9/comparacao-componentes.json'],'etapa9/comparacao-componentes.log');
+run(process.execPath,['--test','--test-reporter=spec','lib/forecast/engine.test.mjs','lib/forecast/snapshot-comparison.test.mjs','lib/elos-ia/summaries.test.mjs','app/engenharia/contratos/contract-calculations.test.mjs','lib/banking/ofx.test.mjs','tests/banking/bank-operations.test.mjs','lib/elos-ia/finance-safe-write-db.test.mjs','tests/homologation/aurora-regressions.test.mjs','tests/commercial/development-costs.test.mjs','tests/commercial/development-result.test.mjs','tests/financeiro/money.test.mjs'],'regressao-81.log');
+run('npx',['tsc','--noEmit'],'typescript.log');
+run('npx',['eslint','lib/finance-core/cashflow.mjs','lib/finance-core/cashflow-server.ts','app/financeiro/fluxo-de-caixa','lib/elos-ia/tools.ts','tests/supplier-refunds'],'eslint.log');
+console.log('CT10 conforme ao oráculo fixo. Regressões das Etapas5–9 repetidas; homologação financeira global e aceite nominal continuam pendentes.');
