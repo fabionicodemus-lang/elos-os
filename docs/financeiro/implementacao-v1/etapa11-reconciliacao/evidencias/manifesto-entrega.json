@@ -1,0 +1,114 @@
+{
+  "executed_at_utc": "2026-10-22T17:16:38.556173+00:00",
+  "repository": "fabionicodemus-lang/elos-os",
+  "branch": "audit/financeiro-etapa11-f011-f007",
+  "base_commit": "9c5d0169ddb0c8e4d57c0163d019608296a41d5f",
+  "prior_commits_present": {
+    "494c55c": true,
+    "95d659e": true,
+    "3daa96e": true,
+    "5e18d7f": true,
+    "6ec4f47": true,
+    "c72ec54": true,
+    "6354e59": true,
+    "282436d": true,
+    "9c5d016": true
+  },
+  "runtime": {
+    "python": "3.12.14",
+    "node": "v24.19.0",
+    "pymupdf": "1.26.6",
+    "openpyxl": "3.1.5",
+    "tools": "Poppler pdftotext/pdfinfo, PyMuPDF, Python Decimal/openpyxl; dados locais somente leitura",
+    "test_database": "PGlite em memória, apenas nos testes existentes que o criam",
+    "managed_status": "capabilities=[]; network_policy.mode=restricted/state=unknown; sem credencial financeira configurada"
+  },
+  "sources": {
+    "F007": {
+      "sha256": "005ab0a4acc825b38b97feea92950c779d9cb44c2cde6eb524820868b16f072b",
+      "matches_catalog_and_archive": true,
+      "unchanged_after_audit": true
+    },
+    "F011": {
+      "sha256": "141d3fb0b3931e050e3865c6d69948d1d999111a5991166b9490a8ad0a3fb686",
+      "matches_catalog_and_archive": true,
+      "unchanged_after_audit": true
+    }
+  },
+  "archive_sha256": "96660223f73de6d3e58fa0595a1b654d76e1dfe173a5e7ff8ae203aa0c1e5a25",
+  "normative_rules_sha256": "30f19b5ef98157d72c32a9c471c8893bac3b17a60167d6a417a346c6efb36c28",
+  "approved_30_cases_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+  "prior_code_migrations_fixtures_audits_and_evidence_unchanged": true,
+  "scope_of_changes": "docs/financeiro/implementacao-v1/etapa11-reconciliacao",
+  "production_modified": false,
+  "koper_modified": false,
+  "financial_remote_connections": false,
+  "financial_rule_changes": false,
+  "financial_cause_proven": false,
+  "financial_total_certified": false,
+  "financial_acceptance_recorded": false,
+  "tests": [
+    {
+      "command": "python scripts/reconciliar.py",
+      "log": "reconciliacao.log",
+      "exit_code": 0,
+      "passed": null
+    },
+    {
+      "command": "python scripts/test_reconciliacao.py",
+      "log": "testes-diagnostico.log",
+      "exit_code": 0,
+      "passed": 12
+    },
+    {
+      "command": "python scripts/quadro.py",
+      "log": "verificacao-quadro.json",
+      "exit_code": 0,
+      "passed": null
+    },
+    {
+      "command": "node --test tests/koper-finance/collection.test.mjs tests/financeiro/money.test.mjs tests/finance-core/components.test.mjs tests/cashflow/engine.test.mjs",
+      "log": "regressao-financeira.log",
+      "exit_code": 0,
+      "passed": 28
+    },
+    {
+      "command": "Lista preservada em tests/supplier-refunds/validate.mjs para regressao-81.log; comando completo em CASOS-DE-TESTE.md",
+      "log": "regressao-81.log",
+      "exit_code": 0,
+      "passed": 81
+    },
+    {
+      "command": "npm test",
+      "log": "npm-test-142.log",
+      "exit_code": 0,
+      "passed": 142
+    }
+  ],
+  "full_25_and_24_database_controls_rerun": false,
+  "full_30_scenarios_rerun": false,
+  "page_line_locators_verified": 3261,
+  "file_hashes": {
+    ".gitignore": "32dae3052f331ee34d628ef535709b301259a45df7c7522c4d35dcf49873f00b",
+    "CASOS-DE-TESTE.md": "80e25bfd0d1f55f37d2bee8f7ac59883b90b237d20a5c9a06a7f51541556cd23",
+    "Elos_OS_Quadro_Etapa11_Reconciliacao.xlsx": "7001096bf3a29510b54e47ab34f8465010ed083e23497a43c277125a1b63f0e5",
+    "README.md": "886842b67634c262b9e8b183987201e4d1edc79ac0499c2d14a217e6adef8b36",
+    "evidencias/F007-cabecalho.png": "7aa7e2cb1bfcc43829c3e0a92c75dd73766a5d451a5e96cc7afdda75afd8b811",
+    "evidencias/Reconciliacao_F011_F007.xlsx": "92edbf626c43f1748c369327304b458ace49eac42d872089bd2de50dac2d6d7c",
+    "evidencias/controle-paginas.csv": "013c6a34e60021d20258d2fb44d54e3270a1937e2915d545b36c0acec8ab57c6",
+    "evidencias/npm-test-142.log": "b728d4405398434e98097f8618d02ddceb3f0e639d5940be21a385423369f858",
+    "evidencias/paginas.json": "03674d4a8cd3d6daab72e09b1ff5c2360dbbfae3f786dbc649634882232b1b05",
+    "evidencias/reconciliacao-por-registro.csv": "7e91226f747e33f0e0bbfbdadced06933322b66e929ce7df9b483ef57bf6a6ca",
+    "evidencias/reconciliacao.json": "684cac46ef60dabb2a397baaec6194a736fb78da0e5d1a157928a87eafe2cdca",
+    "evidencias/reconciliacao.log": "cadf48d218c77a625889b388f920c986425caee22109303417e488538ce7fdfc",
+    "evidencias/registros.json": "6ea16153df65e76c7b6f796fa5527e1aef29e84d80a8822d71838b9981d91e51",
+    "evidencias/regressao-81.log": "e0e9c21880cba9e69cb33bc03e7fe9d3d1e35d40ab1cb95b6473e757ccdf70eb",
+    "evidencias/regressao-financeira.log": "5e4477dd92dbb72815e981e7105a53805b1e9b9460c2673918f16b81fe3b547b",
+    "evidencias/testes-diagnostico.log": "b7087b9cbe7cad036a923fa353db356639fd87eb85e56208c2ebd544cc365058",
+    "evidencias/verificacao-quadro.json": "17b9d308d8d2eb8fdfdef4b4ccf2cfdb45fcaaa58f948c12a51a6a456b4f9088",
+    "scripts/quadro.py": "5077ef33cabd40f5c3112f99a8a9dd20b41e3d1abdb3c35bd13c6f44de110da7",
+    "scripts/reconciliar.py": "be50d06c98c4f6cc4e5665e8a56832812f857c2a815cd9899de497c964c69ce1",
+    "scripts/test_reconciliacao.py": "aa514ce9d6fb37323d38f3ae8257f00e02620ef96efe16884d0aaa3cc3369526",
+    "scripts/verificar.py": "23046ead1417ff4653befd361293fb3837016b1f4337eb085e56e10683a2868f"
+  }
+}

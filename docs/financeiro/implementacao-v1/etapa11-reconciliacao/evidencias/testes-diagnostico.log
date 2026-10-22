@@ -1,0 +1,17 @@
+test_actual_sources_fixed_documentary_oracle (__main__.ReconciliationTests.test_actual_sources_fixed_documentary_oracle) ... ok
+test_actual_sources_two_extractors_and_all_records (__main__.ReconciliationTests.test_actual_sources_two_extractors_and_all_records) ... ok
+test_decimal_exact_and_missing (__main__.ReconciliationTests.test_decimal_exact_and_missing) ... ok
+test_discount_interest_hypothesis_does_not_close_difference (__main__.ReconciliationTests.test_discount_interest_hypothesis_does_not_close_difference) ... ok
+test_duplicate_is_not_silently_paired (__main__.ReconciliationTests.test_duplicate_is_not_silently_paired) ... ok
+test_exclusive_ids_are_not_compensated (__main__.ReconciliationTests.test_exclusive_ids_are_not_compensated) ... ok
+test_footer_date_does_not_create_a_payment (__main__.ReconciliationTests.test_footer_date_does_not_create_a_payment) ... ok
+test_missing_amount_is_not_zero (__main__.ReconciliationTests.test_missing_amount_is_not_zero) ... ok
+test_missing_page_and_ambiguous_amount_stop_analysis (__main__.ReconciliationTests.test_missing_page_and_ambiguous_amount_stop_analysis) ... ok
+test_record_values_differ (__main__.ReconciliationTests.test_record_values_differ) ... ok
+test_synthetic_document_is_not_a_fiscal_link (__main__.ReconciliationTests.test_synthetic_document_is_not_a_fiscal_link) ... ok
+test_unknown_amount_prevents_equality (__main__.ReconciliationTests.test_unknown_amount_prevents_equality) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.027s
+
+OK

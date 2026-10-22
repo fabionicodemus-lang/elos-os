@@ -1,0 +1,155 @@
+{
+  "executed_at_utc": "2026-10-22T17:16:36.763914+00:00",
+  "scope": "Auditoria documental offline, sem banco/rede/alterações financeiras",
+  "sources": {
+    "F007": {
+      "fonte_id": "F007",
+      "arquivo_original": "Contas a pagar (20).pdf",
+      "categoria_principal": "obrigacoes",
+      "empresa": "Não identificado",
+      "obra": "Não identificado",
+      "evidencia_identidade": "Identidade da empresa e obra não exposta no cabeçalho",
+      "periodo": "Vencimento: 01/10/2020 até 22/07/2026",
+      "data_corte": "Não declarada; emissão em 22/07/2026 não confirma corte contábil",
+      "origem": "Koper",
+      "data_extracao": "22/07/2026 10:00:47",
+      "data_entrada_UTC": "2026-07-22T13:09:02.303632Z",
+      "data_modificacao_UTC": "2026-07-22T13:09:02.303950Z",
+      "cobertura": "3261 registros",
+      "limitacoes": "Cabeçalho não identifica empresa/obra. Conta bancária e fornecedor não comprovam obra. Contém previsões misturadas às obrigações. Segregar por documento e validar natureza.",
+      "sha256": "005ab0a4acc825b38b97feea92950c779d9cb44c2cde6eb524820868b16f072b",
+      "library_file_id": "libfile_e1cd23a72d648191bb8392f8400314ad",
+      "versao": "",
+      "caminho_original": "01_originais/obrigacoes/F007/Contas a pagar (20).pdf",
+      "observed_sha256": "005ab0a4acc825b38b97feea92950c779d9cb44c2cde6eb524820868b16f072b"
+    },
+    "F011": {
+      "fonte_id": "F011",
+      "arquivo_original": "Koper_Contas_a_Pagar_Flow_Apropriacoes_Comissoes_Mao_de_Obra_e_OS.xlsx",
+      "categoria_principal": "obrigacoes",
+      "empresa": "Bossa (nome no cabeçalho; CNPJ não identificado)",
+      "obra": "Flow Aptos (escopo declarado)",
+      "evidencia_identidade": "Titulos_Koper!A1; obra individual depende do centro de custo",
+      "periodo": "Vencimentos observados 15/11/2023 a 22/07/2026; pagamentos 08/11/2023 a 20/07/2026",
+      "data_corte": "Não declarada",
+      "origem": "Derivada de Koper Contas a Pagar, Fluxo e vínculos Compras/NFe/OS",
+      "data_extracao": "Não identificado",
+      "data_entrada_UTC": "2026-08-19T18:48:44.355498Z",
+      "data_modificacao_UTC": "2026-08-20T01:07:57.670529Z",
+      "cobertura": "3261 títulos; mesma carteira em versões de apropriação",
+      "limitacoes": "Data de geração não declarada. Cruzamento de centro financeiro usa fluxo 01/03/2025–30/04/2026 nas versões iniciais. Não somar versões.",
+      "sha256": "141d3fb0b3931e050e3865c6d69948d1d999111a5991166b9490a8ad0a3fb686",
+      "library_file_id": "libfile_a3a65a198d3c8191839c992d34d60a85",
+      "versao": "8",
+      "caminho_original": "01_originais/obrigacoes/F011/Koper_Contas_a_Pagar_Flow_Apropriacoes_Comissoes_Mao_de_Obra_e_OS.xlsx",
+      "observed_sha256": "141d3fb0b3931e050e3865c6d69948d1d999111a5991166b9490a8ad0a3fb686"
+    }
+  },
+  "counts": {
+    "F011": 3261,
+    "F007": 3261,
+    "pages": 165,
+    "with_paid_date": 3255,
+    "without_paid_date": 6
+  },
+  "classifications": {
+    "same_displayed_value_and_dates": 3261
+  },
+  "header": {
+    "total_cents": 1356123699,
+    "paid_cents": 1353762437,
+    "unpaid_cents": 2361262,
+    "discount_cents": 1332534,
+    "interest_late_fee_cents": 132528,
+    "consolidated_recurrences_cents": 170434723,
+    "count": 3261
+  },
+  "totals": {
+    "F011": {
+      "known_subtotal_cents": 1371082632,
+      "missing_count": 0,
+      "total_cents": 1371082632
+    },
+    "F007_lines": {
+      "known_subtotal_cents": 1371082632,
+      "missing_count": 0,
+      "total_cents": 1371082632
+    },
+    "F007_dated": {
+      "known_subtotal_cents": 1368721370,
+      "missing_count": 0,
+      "total_cents": 1368721370
+    },
+    "F007_undated": {
+      "known_subtotal_cents": 2361262,
+      "missing_count": 0,
+      "total_cents": 2361262
+    }
+  },
+  "document_classifications": {
+    "synthetic_KOPER_reference_for_missing_document": 724,
+    "same_reference": 2537
+  },
+  "identity_checks": {
+    "F011_distinct_ids": 3261,
+    "F007_distinct_ids": 3261,
+    "F011_distinct_keys": 3261,
+    "F007_distinct_keys": 3261,
+    "F011_duplicate_keys": 0,
+    "F007_duplicate_keys": 0,
+    "scope": "ID/parcela somente neste par documental; entidade/obra jurídica não validadas"
+  },
+  "visual_identity_observation": {
+    "source": "F007 página1, renderização visual",
+    "commercial_logo": "Bossa / Flow Aptos",
+    "legal_entity_id": null,
+    "project_filter_validated": null,
+    "note": "Logo ausente no texto extraído; complementa o catálogo, sem comprovar identidade jurídica por linha"
+  },
+  "bridge": {
+    "F011_minus_F007_lines_cents": 0,
+    "F007_lines_minus_header_cents": 14958933,
+    "dated_lines_minus_paid_header_cents": 14958933,
+    "undated_lines_minus_unpaid_header_cents": 0,
+    "total_difference_cents": 14958933,
+    "financially_explained_cents": 0,
+    "financial_cause_unallocated_cents": 14958933,
+    "certified_financial_total_cents": null
+  },
+  "conditional_gross_net_check": {
+    "assumption": "Somente se Valor for principal e todo desconto/encargo pertencer às mesmas linhas e ao mesmo corte; não comprovado",
+    "lines_less_discount_plus_interest_cents": 1369882626,
+    "hypothetical_net_minus_header_cents": 13758927
+  },
+  "extraction_checks": {
+    "second_engine": "PyMuPDF coordenadas vs Poppler blocos",
+    "matched_rows": 3261,
+    "matched_fields": [
+      "ID/parcela",
+      "valor exibido",
+      "vencimento",
+      "pagamento informado",
+      "página"
+    ],
+    "poppler_text_sha256": "e02698ff55d28eca5c43d50989af0b444e3338bf2107fbf32429c96a3f0580de",
+    "preserved_text_sha256": "e02698ff55d28eca5c43d50989af0b444e3338bf2107fbf32429c96a3f0580de",
+    "preserved_text_matches": true,
+    "document_text_seen_count": 2530
+  },
+  "xlsx_internal_metadata": {
+    "created": "2026-10-22 17:16:36.129002",
+    "modified": "2026-10-22 17:16:36.129002",
+    "creator": "openpyxl",
+    "warning": "Metadados internos não comprovam extração; divergem da data de entrada informada no catálogo."
+  },
+  "financial_cause_proven": false,
+  "corrected_indicator": null,
+  "production_modified": false,
+  "missing": [
+    "Resposta bruta Koper/HTML e consulta/fórmula do relatório no instante 22/07/2026 10:00:47, com filtros, paginação e identidade legal/obra",
+    "billValue, paymentValue, desconto/juros/multa/outros, relações pai/agrupamento/recorrência e eventos de cada ID/parcela naquele snapshot",
+    "Manifesto/transformador original da F011 com corte e proveniência dos campos Status/Valor Pago",
+    "Eventos de parciais, cancelamentos e estornos; extratos e comprovantes se a medida pretendida for caixa",
+    "Snapshot Elos no mesmo T/K para investigar efeito no destino; responsável pelo aceite financeiro"
+  ]
+}

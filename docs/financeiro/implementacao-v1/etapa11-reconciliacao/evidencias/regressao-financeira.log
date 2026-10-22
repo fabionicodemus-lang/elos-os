@@ -1,0 +1,36 @@
+✔ saldo contínuo entre períodos; confirmação usa data do extrato, não data da conferência (2.650461ms)
+✔ conta compartilhada não cria saldo por obra nem copia abertura; saída sem obra fica na entidade (0.406044ms)
+✔ devolução mantém débito histórico e fluxo inverso; conciliação não cria nova liquidação (0.241408ms)
+✔ CT29: restrição, caixa mínimo e amortização já incluída; limite não utilizado não vira caixa (3.116864ms)
+✔ receita comercial estimada é cenário separado e insuficiência diária não some no fechamento mensal (0.413635ms)
+✔ pendência de data, caixa mínimo ou abertura não vira zero nem selo de completude (0.462457ms)
+✔ CT04: cortes efetivos não usam o estado quitado atual em 21/10 nem movem caixa para 24/10 (1.725236ms)
+✔ vínculo nativo reutiliza cobertura do contrato: R 400 + C 600, sem somar 1.400 (2.005762ms)
+✔ CT18: R/C/P exclusivos e AF sai quando encargo é constituído (2.373709ms)
+✔ CT19: ETC independente do orçamento e aditivo proposto não vira compromisso (0.375398ms)
+✔ CT21: desconhecido não vira zero nem Q artificial de 980 mil (0.20221ms)
+✔ CT04: janelas 30/90 cumulativas, hoje e desconhecido separados (1.253925ms)
+✔ CT13: coorte de principal exigível exclui carteira futura e juros (6.000742ms)
+✔ mesma parcial em resumo IA, agenda de relatório e mês financeiro (10.618087ms)
+✔ rateio não elimina A Apropriar; sobrecobertura não vira C zero certificado (0.947338ms)
+✔ resultado comercial usa os mesmos saldos de recebimento e pagamento parciais (1.729962ms)
+✔ T06: 1.005 preserva arredondamento decimal para 101 centavos (1.479049ms)
+✔ T06: dinheiro desconhecido não vira zero (0.32909ms)
+✔ T06: centavos fora do intervalo seguro são rejeitados (0.27583ms)
+✔ T07: 31/02 não é vencimento válido (0.452934ms)
+✔ T06/CT11 componente: maior resto desempata por ID, independente da ordem (1.261186ms)
+✔ T06/CT11 componente: rateio 60/40 e parcial conservam centavos (0.303692ms)
+✔ T06: divisão de parcelas preserva soma (0.433134ms)
+✔ CT26: 3 páginas completas; página ausente, retry e cursor repetido (2.089787ms)
+✔ Universo desconhecido, repetição de ID e total divergente nunca certificam (0.522116ms)
+✔ Baixa parcial, valores desconhecidos e contexto sem obra não são inventados (0.600293ms)
+✔ A Apropriar conserva valor explícito e valor omitido; parcial usa denominador do título (1.563284ms)
+✔ Excedente de pagamento não vira custo de serviço nem desaparece (0.289801ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 500.2552

@@ -1,0 +1,28 @@
+{
+  "source_sha256": "46e241fb96d6b20d0058a2dde258e40bfa85d258d8fbc21ef455d4a13359ab88",
+  "derived_sha256": "7001096bf3a29510b54e47ab34f8465010ed083e23497a43c277125a1b63f0e5",
+  "modified_existing_cells": [
+    "Acompanhamento!I21",
+    "Acompanhamento!S21",
+    "Acompanhamento!I48",
+    "Acompanhamento!S48",
+    "Acompanhamento!I54",
+    "Acompanhamento!S54",
+    "Acompanhamento!I55",
+    "Acompanhamento!S55"
+  ],
+  "old_sheets_preserved": [
+    "Acompanhamento",
+    "Testes",
+    "Evidencias",
+    "Decisoes",
+    "Etapa7_Cobertura",
+    "Etapa8_Cobertura",
+    "Etapa9_Confronto",
+    "Etapa10_CT10"
+  ],
+  "all_30_case_cells_unchanged": true,
+  "expected_formulas_acceptances_dependencies_and_statuses_unchanged": true,
+  "financial_acceptance_recorded": false,
+  "formula_caches_recomputed": false
+}

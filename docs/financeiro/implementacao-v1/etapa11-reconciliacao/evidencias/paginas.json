@@ -1,0 +1,827 @@
+[
+  {
+    "page": 1,
+    "rows": 19,
+    "displayed_cents": 26489264
+  },
+  {
+    "page": 2,
+    "rows": 20,
+    "displayed_cents": 5759725
+  },
+  {
+    "page": 3,
+    "rows": 18,
+    "displayed_cents": 9090391
+  },
+  {
+    "page": 4,
+    "rows": 18,
+    "displayed_cents": 3701218
+  },
+  {
+    "page": 5,
+    "rows": 19,
+    "displayed_cents": 8737876
+  },
+  {
+    "page": 6,
+    "rows": 18,
+    "displayed_cents": 12606584
+  },
+  {
+    "page": 7,
+    "rows": 18,
+    "displayed_cents": 10722987
+  },
+  {
+    "page": 8,
+    "rows": 18,
+    "displayed_cents": 7215367
+  },
+  {
+    "page": 9,
+    "rows": 19,
+    "displayed_cents": 22434671
+  },
+  {
+    "page": 10,
+    "rows": 21,
+    "displayed_cents": 2167289
+  },
+  {
+    "page": 11,
+    "rows": 19,
+    "displayed_cents": 3466309
+  },
+  {
+    "page": 12,
+    "rows": 19,
+    "displayed_cents": 13950565
+  },
+  {
+    "page": 13,
+    "rows": 18,
+    "displayed_cents": 4230383
+  },
+  {
+    "page": 14,
+    "rows": 19,
+    "displayed_cents": 15799891
+  },
+  {
+    "page": 15,
+    "rows": 18,
+    "displayed_cents": 5580576
+  },
+  {
+    "page": 16,
+    "rows": 18,
+    "displayed_cents": 4615713
+  },
+  {
+    "page": 17,
+    "rows": 18,
+    "displayed_cents": 4576170
+  },
+  {
+    "page": 18,
+    "rows": 19,
+    "displayed_cents": 9005632
+  },
+  {
+    "page": 19,
+    "rows": 18,
+    "displayed_cents": 16353563
+  },
+  {
+    "page": 20,
+    "rows": 18,
+    "displayed_cents": 9899774
+  },
+  {
+    "page": 21,
+    "rows": 18,
+    "displayed_cents": 4149051
+  },
+  {
+    "page": 22,
+    "rows": 19,
+    "displayed_cents": 4748911
+  },
+  {
+    "page": 23,
+    "rows": 18,
+    "displayed_cents": 7205802
+  },
+  {
+    "page": 24,
+    "rows": 19,
+    "displayed_cents": 4616788
+  },
+  {
+    "page": 25,
+    "rows": 18,
+    "displayed_cents": 13634194
+  },
+  {
+    "page": 26,
+    "rows": 19,
+    "displayed_cents": 14981229
+  },
+  {
+    "page": 27,
+    "rows": 19,
+    "displayed_cents": 13841198
+  },
+  {
+    "page": 28,
+    "rows": 19,
+    "displayed_cents": 6115882
+  },
+  {
+    "page": 29,
+    "rows": 18,
+    "displayed_cents": 7476492
+  },
+  {
+    "page": 30,
+    "rows": 18,
+    "displayed_cents": 11547475
+  },
+  {
+    "page": 31,
+    "rows": 18,
+    "displayed_cents": 12658884
+  },
+  {
+    "page": 32,
+    "rows": 18,
+    "displayed_cents": 3699168
+  },
+  {
+    "page": 33,
+    "rows": 19,
+    "displayed_cents": 5483389
+  },
+  {
+    "page": 34,
+    "rows": 18,
+    "displayed_cents": 6214897
+  },
+  {
+    "page": 35,
+    "rows": 18,
+    "displayed_cents": 9376247
+  },
+  {
+    "page": 36,
+    "rows": 18,
+    "displayed_cents": 5028450
+  },
+  {
+    "page": 37,
+    "rows": 19,
+    "displayed_cents": 7487790
+  },
+  {
+    "page": 38,
+    "rows": 18,
+    "displayed_cents": 13716665
+  },
+  {
+    "page": 39,
+    "rows": 21,
+    "displayed_cents": 5804010
+  },
+  {
+    "page": 40,
+    "rows": 17,
+    "displayed_cents": 3653788
+  },
+  {
+    "page": 41,
+    "rows": 17,
+    "displayed_cents": 9920734
+  },
+  {
+    "page": 42,
+    "rows": 19,
+    "displayed_cents": 5111217
+  },
+  {
+    "page": 43,
+    "rows": 19,
+    "displayed_cents": 7965317
+  },
+  {
+    "page": 44,
+    "rows": 18,
+    "displayed_cents": 6438895
+  },
+  {
+    "page": 45,
+    "rows": 19,
+    "displayed_cents": 11686413
+  },
+  {
+    "page": 46,
+    "rows": 17,
+    "displayed_cents": 6376053
+  },
+  {
+    "page": 47,
+    "rows": 18,
+    "displayed_cents": 3531069
+  },
+  {
+    "page": 48,
+    "rows": 19,
+    "displayed_cents": 6388638
+  },
+  {
+    "page": 49,
+    "rows": 20,
+    "displayed_cents": 8150771
+  },
+  {
+    "page": 50,
+    "rows": 18,
+    "displayed_cents": 4958606
+  },
+  {
+    "page": 51,
+    "rows": 19,
+    "displayed_cents": 4679732
+  },
+  {
+    "page": 52,
+    "rows": 19,
+    "displayed_cents": 3244870
+  },
+  {
+    "page": 53,
+    "rows": 19,
+    "displayed_cents": 14264628
+  },
+  {
+    "page": 54,
+    "rows": 18,
+    "displayed_cents": 2311859
+  },
+  {
+    "page": 55,
+    "rows": 18,
+    "displayed_cents": 6348350
+  },
+  {
+    "page": 56,
+    "rows": 19,
+    "displayed_cents": 3177204
+  },
+  {
+    "page": 57,
+    "rows": 19,
+    "displayed_cents": 11901169
+  },
+  {
+    "page": 58,
+    "rows": 18,
+    "displayed_cents": 4619668
+  },
+  {
+    "page": 59,
+    "rows": 18,
+    "displayed_cents": 7818599
+  },
+  {
+    "page": 60,
+    "rows": 19,
+    "displayed_cents": 2854104
+  },
+  {
+    "page": 61,
+    "rows": 20,
+    "displayed_cents": 9380426
+  },
+  {
+    "page": 62,
+    "rows": 20,
+    "displayed_cents": 5242024
+  },
+  {
+    "page": 63,
+    "rows": 20,
+    "displayed_cents": 9166661
+  },
+  {
+    "page": 64,
+    "rows": 20,
+    "displayed_cents": 5499082
+  },
+  {
+    "page": 65,
+    "rows": 19,
+    "displayed_cents": 12032622
+  },
+  {
+    "page": 66,
+    "rows": 20,
+    "displayed_cents": 7996481
+  },
+  {
+    "page": 67,
+    "rows": 19,
+    "displayed_cents": 6444621
+  },
+  {
+    "page": 68,
+    "rows": 20,
+    "displayed_cents": 2041650
+  },
+  {
+    "page": 69,
+    "rows": 19,
+    "displayed_cents": 8141700
+  },
+  {
+    "page": 70,
+    "rows": 19,
+    "displayed_cents": 10174669
+  },
+  {
+    "page": 71,
+    "rows": 18,
+    "displayed_cents": 3424193
+  },
+  {
+    "page": 72,
+    "rows": 19,
+    "displayed_cents": 9641257
+  },
+  {
+    "page": 73,
+    "rows": 21,
+    "displayed_cents": 6949888
+  },
+  {
+    "page": 74,
+    "rows": 20,
+    "displayed_cents": 7903803
+  },
+  {
+    "page": 75,
+    "rows": 20,
+    "displayed_cents": 12364704
+  },
+  {
+    "page": 76,
+    "rows": 20,
+    "displayed_cents": 3140199
+  },
+  {
+    "page": 77,
+    "rows": 19,
+    "displayed_cents": 5986955
+  },
+  {
+    "page": 78,
+    "rows": 22,
+    "displayed_cents": 8972195
+  },
+  {
+    "page": 79,
+    "rows": 21,
+    "displayed_cents": 16156430
+  },
+  {
+    "page": 80,
+    "rows": 21,
+    "displayed_cents": 6384678
+  },
+  {
+    "page": 81,
+    "rows": 21,
+    "displayed_cents": 9460963
+  },
+  {
+    "page": 82,
+    "rows": 20,
+    "displayed_cents": 3554402
+  },
+  {
+    "page": 83,
+    "rows": 20,
+    "displayed_cents": 13419227
+  },
+  {
+    "page": 84,
+    "rows": 20,
+    "displayed_cents": 10818662
+  },
+  {
+    "page": 85,
+    "rows": 21,
+    "displayed_cents": 5617070
+  },
+  {
+    "page": 86,
+    "rows": 20,
+    "displayed_cents": 4530716
+  },
+  {
+    "page": 87,
+    "rows": 20,
+    "displayed_cents": 5494045
+  },
+  {
+    "page": 88,
+    "rows": 20,
+    "displayed_cents": 16218392
+  },
+  {
+    "page": 89,
+    "rows": 19,
+    "displayed_cents": 3155415
+  },
+  {
+    "page": 90,
+    "rows": 20,
+    "displayed_cents": 6072653
+  },
+  {
+    "page": 91,
+    "rows": 18,
+    "displayed_cents": 4334543
+  },
+  {
+    "page": 92,
+    "rows": 20,
+    "displayed_cents": 4070950
+  },
+  {
+    "page": 93,
+    "rows": 20,
+    "displayed_cents": 9302574
+  },
+  {
+    "page": 94,
+    "rows": 21,
+    "displayed_cents": 13358632
+  },
+  {
+    "page": 95,
+    "rows": 20,
+    "displayed_cents": 3097226
+  },
+  {
+    "page": 96,
+    "rows": 19,
+    "displayed_cents": 6487018
+  },
+  {
+    "page": 97,
+    "rows": 19,
+    "displayed_cents": 3882865
+  },
+  {
+    "page": 98,
+    "rows": 20,
+    "displayed_cents": 10535908
+  },
+  {
+    "page": 99,
+    "rows": 21,
+    "displayed_cents": 7095076
+  },
+  {
+    "page": 100,
+    "rows": 19,
+    "displayed_cents": 11501812
+  },
+  {
+    "page": 101,
+    "rows": 20,
+    "displayed_cents": 5792442
+  },
+  {
+    "page": 102,
+    "rows": 21,
+    "displayed_cents": 4759251
+  },
+  {
+    "page": 103,
+    "rows": 19,
+    "displayed_cents": 9851130
+  },
+  {
+    "page": 104,
+    "rows": 20,
+    "displayed_cents": 9062589
+  },
+  {
+    "page": 105,
+    "rows": 21,
+    "displayed_cents": 6934306
+  },
+  {
+    "page": 106,
+    "rows": 19,
+    "displayed_cents": 6906989
+  },
+  {
+    "page": 107,
+    "rows": 21,
+    "displayed_cents": 7993222
+  },
+  {
+    "page": 108,
+    "rows": 19,
+    "displayed_cents": 7785739
+  },
+  {
+    "page": 109,
+    "rows": 18,
+    "displayed_cents": 8898438
+  },
+  {
+    "page": 110,
+    "rows": 21,
+    "displayed_cents": 18817615
+  },
+  {
+    "page": 111,
+    "rows": 21,
+    "displayed_cents": 4668883
+  },
+  {
+    "page": 112,
+    "rows": 23,
+    "displayed_cents": 5597842
+  },
+  {
+    "page": 113,
+    "rows": 20,
+    "displayed_cents": 3671513
+  },
+  {
+    "page": 114,
+    "rows": 21,
+    "displayed_cents": 6842664
+  },
+  {
+    "page": 115,
+    "rows": 20,
+    "displayed_cents": 3792177
+  },
+  {
+    "page": 116,
+    "rows": 21,
+    "displayed_cents": 16125935
+  },
+  {
+    "page": 117,
+    "rows": 20,
+    "displayed_cents": 4158679
+  },
+  {
+    "page": 118,
+    "rows": 23,
+    "displayed_cents": 3263116
+  },
+  {
+    "page": 119,
+    "rows": 23,
+    "displayed_cents": 4073305
+  },
+  {
+    "page": 120,
+    "rows": 22,
+    "displayed_cents": 13055649
+  },
+  {
+    "page": 121,
+    "rows": 22,
+    "displayed_cents": 13285884
+  },
+  {
+    "page": 122,
+    "rows": 21,
+    "displayed_cents": 3869531
+  },
+  {
+    "page": 123,
+    "rows": 21,
+    "displayed_cents": 9676811
+  },
+  {
+    "page": 124,
+    "rows": 23,
+    "displayed_cents": 2882701
+  },
+  {
+    "page": 125,
+    "rows": 22,
+    "displayed_cents": 9097058
+  },
+  {
+    "page": 126,
+    "rows": 20,
+    "displayed_cents": 8914793
+  },
+  {
+    "page": 127,
+    "rows": 21,
+    "displayed_cents": 9275103
+  },
+  {
+    "page": 128,
+    "rows": 21,
+    "displayed_cents": 9350751
+  },
+  {
+    "page": 129,
+    "rows": 25,
+    "displayed_cents": 4887488
+  },
+  {
+    "page": 130,
+    "rows": 23,
+    "displayed_cents": 7413493
+  },
+  {
+    "page": 131,
+    "rows": 21,
+    "displayed_cents": 7667484
+  },
+  {
+    "page": 132,
+    "rows": 21,
+    "displayed_cents": 5158851
+  },
+  {
+    "page": 133,
+    "rows": 21,
+    "displayed_cents": 12013029
+  },
+  {
+    "page": 134,
+    "rows": 22,
+    "displayed_cents": 17163271
+  },
+  {
+    "page": 135,
+    "rows": 24,
+    "displayed_cents": 2041430
+  },
+  {
+    "page": 136,
+    "rows": 23,
+    "displayed_cents": 11553600
+  },
+  {
+    "page": 137,
+    "rows": 21,
+    "displayed_cents": 10122199
+  },
+  {
+    "page": 138,
+    "rows": 21,
+    "displayed_cents": 11306767
+  },
+  {
+    "page": 139,
+    "rows": 19,
+    "displayed_cents": 8330563
+  },
+  {
+    "page": 140,
+    "rows": 19,
+    "displayed_cents": 9224033
+  },
+  {
+    "page": 141,
+    "rows": 23,
+    "displayed_cents": 5976116
+  },
+  {
+    "page": 142,
+    "rows": 24,
+    "displayed_cents": 3516099
+  },
+  {
+    "page": 143,
+    "rows": 22,
+    "displayed_cents": 15237542
+  },
+  {
+    "page": 144,
+    "rows": 19,
+    "displayed_cents": 6498350
+  },
+  {
+    "page": 145,
+    "rows": 19,
+    "displayed_cents": 13403901
+  },
+  {
+    "page": 146,
+    "rows": 20,
+    "displayed_cents": 10298006
+  },
+  {
+    "page": 147,
+    "rows": 22,
+    "displayed_cents": 19740303
+  },
+  {
+    "page": 148,
+    "rows": 22,
+    "displayed_cents": 2952437
+  },
+  {
+    "page": 149,
+    "rows": 22,
+    "displayed_cents": 9518831
+  },
+  {
+    "page": 150,
+    "rows": 21,
+    "displayed_cents": 11442098
+  },
+  {
+    "page": 151,
+    "rows": 20,
+    "displayed_cents": 19084699
+  },
+  {
+    "page": 152,
+    "rows": 21,
+    "displayed_cents": 6712995
+  },
+  {
+    "page": 153,
+    "rows": 19,
+    "displayed_cents": 12554852
+  },
+  {
+    "page": 154,
+    "rows": 21,
+    "displayed_cents": 12395766
+  },
+  {
+    "page": 155,
+    "rows": 24,
+    "displayed_cents": 1428971
+  },
+  {
+    "page": 156,
+    "rows": 21,
+    "displayed_cents": 10060850
+  },
+  {
+    "page": 157,
+    "rows": 19,
+    "displayed_cents": 14223523
+  },
+  {
+    "page": 158,
+    "rows": 20,
+    "displayed_cents": 8356900
+  },
+  {
+    "page": 159,
+    "rows": 18,
+    "displayed_cents": 3688485
+  },
+  {
+    "page": 160,
+    "rows": 22,
+    "displayed_cents": 7652031
+  },
+  {
+    "page": 161,
+    "rows": 20,
+    "displayed_cents": 14415054
+  },
+  {
+    "page": 162,
+    "rows": 23,
+    "displayed_cents": 12151899
+  },
+  {
+    "page": 163,
+    "rows": 21,
+    "displayed_cents": 10392384
+  },
+  {
+    "page": 164,
+    "rows": 20,
+    "displayed_cents": 11432126
+  },
+  {
+    "page": 165,
+    "rows": 8,
+    "displayed_cents": 4017549
+  }
+]
