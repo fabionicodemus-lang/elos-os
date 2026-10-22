@@ -6,7 +6,8 @@ import {toCents} from '@/lib/finance-core/cashflow.mjs';
 const path='/financeiro/fluxo-de-caixa';
 const text=(f:FormData,k:string)=>String(f.get(k)??'').trim();
 const optional=(f:FormData,k:string)=>text(f,k)||null;
-function amount(s:string){if(!s.trim())throw Error('Valor não informado');const v=s.includes(',')?s.replaceAll('.','').replace(',','.'):s;return toCents(v)/100;}
+function decimalInput(s:string){if(!s.trim())throw Error('Valor não informado');return s.includes(',')?s.replaceAll('.','').replace(',','.'):s;}
+function amount(s:string){return toCents(decimalInput(s))/100;}
 export async function saveCashScenario(form:FormData){
  const {supabase,companyId,projectId}=await requireCompanyPermission('cashflow.manage');
  const parent=optional(form,'parent_id');const scopes=form.getAll('scope_key').map(String);const categories=form.getAll('category').map(String);const amounts=form.getAll('amount').map(String);const dates=form.getAll('expected_date').map(String);const titles=form.getAll('title_id').map(String);const sources=form.getAll('source_id').map(String);const activities=form.getAll('activity_id').map(String),lags=form.getAll('payment_lag_days').map(String);
@@ -14,6 +15,27 @@ export async function saveCashScenario(form:FormData){
  try{rows=scopes.flatMap((scope,i)=>scope.trim()?[{scope_key:scope.trim(),category:categories[i],amount_cents:toCents(String(amount(amounts[i]))),expected_date:dates[i]||null,title_id:titles[i]||null,title_type:categories[i]==='AR'?'AR':categories[i]==='R'?'AP':null,source_kind:categories[i]==='C'?'contract':['R','AR'].includes(categories[i])?'title':'documented_estimate',source_id:sources[i]||null,activity_id:activities[i]||null,payment_lag_days:activities[i]?Number(lags[i]):null}]:[]);}catch{redirect(path+'?error=Valores+financeiros+inválidos');}
  const {error}=await supabase.rpc('save_cash_scenario',{p_company:companyId,p_entity:text(form,'entity_id'),p_project:projectId,p_parent:parent,p_command:text(form,'command_id'),p_cutoff:text(form,'cutoff'),p_completion:text(form,'completion'),p_minimum:optional(form,'minimum')===null?null:amount(text(form,'minimum')),p_baseline:optional(form,'baseline_id'),p_rows:rows,p_evidence:text(form,'evidence'),p_reason:text(form,'reason')});
  if(error)redirect(path+'?error='+encodeURIComponent(error.message));revalidateFinancialViews();redirect(path+'?success=Versão+financeira+preservada');
+}
+export async function appendCashAdjustment(form:FormData){
+ const {supabase,companyId,projectId}=await requireCompanyPermission('cashflow.manage');
+ const parent=await supabase.from('finance_cash_scenarios').select('id,legal_entity_id,project_id,cutoff,completion_date,minimum_cash,baseline_id').eq('company_id',companyId).eq('id',text(form,'parent_id')).maybeSingle();
+ if(parent.error||!parent.data||projectId&&parent.data.project_id!==projectId)redirect(path+'?error=Versão+fora+do+escopo');
+ const source=await supabase.from('finance_cash_scenario_rows').select('scope_key,category,amount_cents,expected_date,title_id,title_type,source_kind,source_id,activity_id,payment_lag_days').eq('company_id',companyId).eq('scenario_id',parent.data.id).order('id');
+ if(source.error)redirect(path+'?error='+encodeURIComponent(source.error.message));
+ const command=text(form,'command_id'),title=text(form,'title_id');let value;
+ try{value=toCents(decimalInput(text(form,'amount')));}catch{redirect(path+'?error=Valor+do+ajuste+inválido');}
+ const rows=[...(source.data??[]),{scope_key:'adjustment:'+command,category:'AF',amount_cents:value,expected_date:text(form,'expected_date'),title_id:title,title_type:'AP',source_kind:'title',source_id:title}];
+ const {error}=await supabase.rpc('save_cash_scenario',{p_company:companyId,p_entity:parent.data.legal_entity_id,p_project:parent.data.project_id,p_parent:parent.data.id,p_command:command,p_cutoff:parent.data.cutoff,p_completion:parent.data.completion_date,p_minimum:parent.data.minimum_cash,p_baseline:parent.data.baseline_id,p_rows:rows,p_evidence:text(form,'evidence'),p_reason:text(form,'reason'),p_change_kind:'adjustment'});
+ if(error)redirect(path+'?error='+encodeURIComponent(error.message));revalidateFinancialViews();redirect(path+'?entity='+parent.data.legal_entity_id+'&success=Ajuste+futuro+registrado+em+nova+versão');
+}
+export async function realizeCashAdjustment(form:FormData){
+ const {supabase,companyId,projectId}=await requireCompanyPermission('cashflow.manage');
+ const target=await supabase.from('finance_cash_scenario_rows').select('id,project_id,category,title_type,title_id,amount_cents').eq('company_id',companyId).eq('id',text(form,'forecast_id')).maybeSingle();
+ if(target.error||!target.data||target.data.category!=='AF'||target.data.title_type!=='AP'||!target.data.title_id||projectId&&target.data.project_id!==projectId)redirect(path+'?error=Ajuste+fora+do+escopo');
+ // Numeric RPC receives an exact decimal string, including at the safe-cent boundary.
+ const digits=String(target.data.amount_cents).padStart(3,'0');
+ const {error}=await supabase.rpc('realize_cash_adjustment',{p_company:companyId,p_forecast:target.data.id,p_type:'AP',p_title:target.data.title_id,p_command:text(form,'command_id'),p_amount:digits.slice(0,-2)+'.'+digits.slice(-2),p_date:text(form,'effective_date'),p_evidence:text(form,'evidence'),p_reason:text(form,'reason')});
+ if(error)redirect(path+'?error='+encodeURIComponent(error.message));revalidateFinancialViews();redirect(path+'?success=Encargo+constituído+sem+repetir+o+ajuste+futuro');
 }
 export async function validateCashOpening(form:FormData){
  const {supabase}=await requireCompanyPermission('finance.bank_accounts.reconcile');

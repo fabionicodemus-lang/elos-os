@@ -509,8 +509,8 @@ async function runContasAReceber(context: ElosIaToolContext, args: ToolArgs): Pr
 
 async function runFluxoDeCaixa(context: ElosIaToolContext, args: ToolArgs): Promise<ToolResult> {
  const scope=resolveProject(context,args.obra,true);
- const result=await loadCashflow({supabase:context.supabase,companyId:context.companyId,projectId:scope.project?.id??null,cutoff:context.today,from:context.today.slice(0,7)+'-01'});
- return {obra:scope.label,corte:context.today,fonte:'Mesmo núcleo do fluxo de caixa',realizado:result.history,projecao:result.projection,restituicoes_de_fornecedores:result.supplierRefunds,natureza_restituicao:'Recuperação de adiantamento; não é receita operacional',obrigacoes_vencidas:result.payableBuckets,recebiveis_vencidos:result.receivableBuckets,pendencias:result.warnings,sem_obra_aberto_cents:result.unassignedOpenCents,fonte_sem_obra_a_validar_cents:result.unvalidatedUnassignedCents,versao:result.scenario?.id??null};
+ const result=await loadCashflow({supabase:context.supabase,companyId:context.companyId,projectId:scope.project?.id??null,entityId:text(args.entidade_id),cutoff:context.today,from:context.today.slice(0,7)+'-01'});
+ return {obra:scope.label,entidade_id:result.selectedEntity,corte:context.today,fonte:'Mesmo núcleo do fluxo de caixa',realizado:result.history,projecao:result.projection,projecoes_por_entidade:result.entityProjections,restituicoes_de_fornecedores:result.supplierRefunds,natureza_restituicao:'Recuperação de adiantamento; não é receita operacional',obrigacoes_vencidas:result.payableBuckets,recebiveis_vencidos:result.receivableBuckets,pendencias:result.warnings,sem_obra_aberto_cents:result.unassignedOpenCents,fonte_sem_obra_a_validar_cents:result.unvalidatedUnassignedCents,versao:result.scenario?.id??null};
 }
 
 function scheduleSummary(schedule: Awaited<ReturnType<typeof loadSchedule>>, context: ElosIaToolContext, args: ToolArgs) {
@@ -999,6 +999,7 @@ const TOOLS: ToolDefinition[] = [
     permissions: ["cashflow.view", "payables.view", "receivables.view"],
     properties: {
       obra: OBRA_OR_ALL_PROPERTY,
+      entidade_id: { type: ["string", "null"], description: "UUID da entidade legal autorizada para comparar disponibilidade e necessidade de recursos no mesmo perímetro da tela. Null mantém o perímetro das obras; nunca compensar automaticamente titulares diferentes." },
       meses_atras: { type: ["integer", "null"], description: "Meses anteriores ao atual na janela (padrão 3, máximo 24)." },
       meses_a_frente: { type: ["integer", "null"], description: "Meses à frente do atual na janela (padrão 6, máximo 36)." },
     },

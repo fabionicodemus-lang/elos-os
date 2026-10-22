@@ -17,7 +17,8 @@
     "test:koper-finance": "node tests/koper-finance/validate.mjs",
     "test:finance-core": "node tests/finance-core/validate.mjs",
     "test:cashflow": "node tests/cashflow/validate.mjs",
-    "test:supplier-refunds": "node tests/supplier-refunds/validate.mjs"
+    "test:supplier-refunds": "node tests/supplier-refunds/validate.mjs",
+    "test:finance-partials": "node tests/finance-partials/validate.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",
