@@ -1,0 +1,16 @@
+{
+  "verified_at": "2026-10-23T14:57:57.491180+00:00",
+  "verification_phase": "Commit de código publicado; documentação/evidências publicadas no commit posterior da mesma branch. Este é um recibo histórico, não um hash autorreferente da entrega.",
+  "branch": "fix/financeiro-etapa14c-rpc-authorization",
+  "code_commit": "47be2b9f5e24ed75a46debb4a3ad80c7b9eab103",
+  "code_commit_url": "https://github.com/fabionicodemus-lang/elos-os/commit/47be2b9f5e24ed75a46debb4a3ad80c7b9eab103",
+  "branch_url": "https://github.com/fabionicodemus-lang/elos-os/tree/fix/financeiro-etapa14c-rpc-authorization",
+  "remote_branch_ref_at_code_publication": "47be2b9f5e24ed75a46debb4a3ad80c7b9eab103",
+  "main_ref_unchanged": "460147e74be9b67c9cff2613b710a9cf0c264274",
+  "original_39d858c_now_reachable_in_published_history": true,
+  "no_main_push": true,
+  "no_force_push": true,
+  "pull_request_created": false,
+  "workflow_dispatch_triggered": false,
+  "production_migration_or_deploy_commanded": false
+}

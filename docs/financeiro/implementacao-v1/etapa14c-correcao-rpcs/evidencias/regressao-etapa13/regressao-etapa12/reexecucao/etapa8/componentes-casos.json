@@ -1,0 +1,33 @@
+{
+  "states": {
+    "CT29": {
+      "available_opening_cents": 10000000,
+      "closing_month1_cents": 4000000,
+      "closing_month2_cents": -3000000,
+      "peak_additional_funding_cents": 5000000,
+      "additional_amortization_duplicate_cents": 0,
+      "unused_limit_in_available_cash_cents": 0
+    },
+    "CT04": {
+      "date_fixture": {
+        "september_cost_cents": 1000000,
+        "open_at_2026_10_21_cents": 1000000,
+        "overdue_at_2026_10_21_cents": 1000000,
+        "cash_at_2026_10_21_cents": 0,
+        "bank_cash_on_2026_10_22_cents": 1000000,
+        "new_cash_on_2026_10_24_cents": 0
+      },
+      "bucket_fixture": {
+        "R_cents": 2800000,
+        "overdue_cents": 100000,
+        "due_today_cents": 200000,
+        "next_30_days_cents": 300000,
+        "next_90_days_cents": 1200000,
+        "beyond_90_days_cents": 600000,
+        "unknown_due_cents": 700000,
+        "immediate_need_through_30_days_cents": 600000
+      }
+    }
+  },
+  "perimeter": "Núcleo com fontes fictícias explícitas; CT04 não comprova persistência econômica"
+}

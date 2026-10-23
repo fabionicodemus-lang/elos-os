@@ -1,0 +1,126 @@
+{
+  "execution_context": {
+    "implementation_version": "Candidata Etapa12 sobre65fe2cc; hashes dos arquivos no manifesto da entrega",
+    "executed_at": "2026-10-23T14:38:20.234Z",
+    "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+    "environment": "PostgreSQL17 descartável, network=none, sem portas; papéis SQL/RLS; loaders reais via adaptador SQL, não Auth/PostgREST/browser",
+    "expected_origin": "Fixture aprovada, não calculada pelo Elos; aceite econômico adicional CT03 explicitamente fictício10.000",
+    "clock_control": "Default recorded_at de finance_title_audit no scaffold; nenhum evento imutável reescrito. Relógio local do renderer para o corte fictício20/11, sem alterar o relógio da aplicação"
+  },
+  "cases": [
+    {
+      "id": "CT02",
+      "status": "executado",
+      "actual": {
+        "canonical_title_count": 1,
+        "original_snapshot_open_cents": 1000000,
+        "revised_snapshot_open_cents": 1200000,
+        "documented_bridge_cents": 200000,
+        "at_T_2026_10_21_K_2026_10_20_open_cents": 1000000
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "views.json"
+      ]
+    },
+    {
+      "id": "CT03",
+      "status": "executado",
+      "actual": {
+        "after_P1_open_cents": 700000,
+        "after_P2_open_cents": 500000,
+        "I02_gross_disbursed_cents": 500000,
+        "bank_debit_count": 2,
+        "payment_count": 2,
+        "cash_created_by_reconciliation_cents": 0,
+        "I01_extra_cost_created_by_payments_cents": 0
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "views.json"
+      ]
+    },
+    {
+      "id": "CT18",
+      "status": "executado",
+      "actual": {
+        "states": [
+          {
+            "stage": "A",
+            "R_cents": 0,
+            "C_cents": 0,
+            "P_cents": 10000000,
+            "Q_cents": 10000000,
+            "AF_cents": 0
+          },
+          {
+            "stage": "B",
+            "R_cents": 0,
+            "C_cents": 6000000,
+            "P_cents": 4000000,
+            "Q_cents": 10000000,
+            "AF_cents": 0
+          },
+          {
+            "stage": "C",
+            "R_cents": 2000000,
+            "C_cents": 4000000,
+            "P_cents": 4000000,
+            "Q_cents": 10000000,
+            "AF_cents": 0
+          },
+          {
+            "stage": "D",
+            "R_cents": 1500000,
+            "C_cents": 4000000,
+            "P_cents": 4000000,
+            "Q_cents": 9500000,
+            "AF_cents": 0
+          },
+          {
+            "stage": "E",
+            "R_cents": 1500000,
+            "C_cents": 4000000,
+            "P_cents": 4000000,
+            "Q_cents": 9500000,
+            "AF_cents": 200000,
+            "Q_scenario_cents": 9700000
+          },
+          {
+            "stage": "F",
+            "R_cents": 1700000,
+            "C_cents": 4000000,
+            "P_cents": 4000000,
+            "Q_cents": 9700000,
+            "AF_cents": 0,
+            "Q_scenario_cents": 9700000
+          }
+        ]
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "views.json"
+      ]
+    },
+    {
+      "id": "CT29",
+      "status": "executado",
+      "actual": {
+        "available_opening_cents": 10000000,
+        "closing_month1_cents": 4000000,
+        "closing_month2_cents": -3000000,
+        "peak_additional_funding_cents": 5000000,
+        "additional_amortization_duplicate_cents": 0,
+        "unused_limit_in_available_cash_cents": 0
+      },
+      "evidence": [
+        "banco.json",
+        "registros.json",
+        "views.json"
+      ]
+    }
+  ]
+}

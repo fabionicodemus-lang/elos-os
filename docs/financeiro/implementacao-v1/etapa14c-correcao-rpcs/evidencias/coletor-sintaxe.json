@@ -1,0 +1,13 @@
+{
+  "environment": "ISOLADO network:none, catálogo sem objetos de negócio",
+  "syntax_valid": true,
+  "actual": {
+    "role": "postgres",
+    "limits": "Busca textual é heurística; conferir também chamadores transitivos, SQL dinâmico e objetos externos. Nenhum dado financeiro consultado.",
+    "callers": [],
+    "database": "elos_finance_test",
+    "captured_at": "2026-10-23T14:53:28.142977+00:00",
+    "payable_trigger": []
+  },
+  "production_calls": 0
+}

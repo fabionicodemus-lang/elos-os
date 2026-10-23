@@ -1,0 +1,18 @@
+✔ CT18 ação cria somente AF em nova versão, origem e empresa vêm do servidor (106.995839ms)
+✔ CT18 ação constitui o valor persistido do AF, sem aceitar valor forjado pelo cliente (26.351987ms)
+✔ CT18 ação preserva o limite inteiro de centavos sem ida e volta por ponto flutuante (27.549307ms)
+✔ CT18 ações negam versão de outra obra, linha invisível e valor ausente (62.014917ms)
+✔ CT29: tela real conserva abertura100mil, insuficiência30mil e necessidade50mil (202.994513ms)
+✔ CT18: tela real usa R17mil, previsão80mil e nunca adiciona AF constituído (77.391866ms)
+✔ CT29/CT18: ferramenta real da IA recebe entidade e devolve a mesma projeção persistida (204.099481ms)
+✔ AF não é eliminado se o encargo vinculado não estiver na posição (1.080757ms)
+✔ corte K reconhece fusos equivalentes e não usa título futuro como fallback (0.796194ms)
+✔ carregador recusa entidade negada e obra incoerente, sem devolver zeros aparentes (22.574591ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 862.181261

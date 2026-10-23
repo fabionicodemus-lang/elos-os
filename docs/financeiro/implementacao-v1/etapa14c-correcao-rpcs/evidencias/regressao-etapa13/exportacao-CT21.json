@@ -1,0 +1,44 @@
+{
+  "company_id": "00000000-0000-4000-8000-000000000005",
+  "entity_id": "cec35168-d4aa-4c3c-9657-88a37265d19b",
+  "project_id": null,
+  "version_id": "10d0a563-c412-4b95-bf85-8db47edc1890",
+  "indicators": {
+    "known_obligations_subtotal_cents": 14000000,
+    "contract_amount_shown_separately_cents": 84000000,
+    "C_cents": null,
+    "P_cents": null,
+    "Q_cents": null,
+    "AF_cents": 0,
+    "Q_scenario_cents": null,
+    "incurred_cost_cents": null,
+    "ETC_cents": null,
+    "EAC_cents": null,
+    "budget_variance_cents": null,
+    "budget_variance_percent": null,
+    "external_coverage_percent": null,
+    "status": "incompleto"
+  },
+  "sources": {
+    "cutoff": "2026-10-21",
+    "known_at": null,
+    "historical_knowledge_supported": false,
+    "tables": [
+      "payables",
+      "execution_service_contracts",
+      "finance_cash_scenario_rows",
+      "finance_cash_coverage_links"
+    ],
+    "missing": [
+      "Universo externo não comprovado",
+      "ETC econômico e orçamento vigente não certificados neste relatório"
+    ]
+  },
+  "warnings": [
+    "Saldo informado não certificado: 37de9270-5e93-4a24-824e-74ac7c0e1e95",
+    "Saldo informado não certificado: 9d6f5d57-0f36-45ee-966f-1c2a1e1f83c3",
+    "Vínculo contrato–título ausente: 37de9270-5e93-4a24-824e-74ac7c0e1e95; totais podem se sobrepor",
+    "Vínculo contrato–título ausente: 9d6f5d57-0f36-45ee-966f-1c2a1e1f83c3; totais podem se sobrepor"
+  ],
+  "financial_acceptance": "Pendente"
+}

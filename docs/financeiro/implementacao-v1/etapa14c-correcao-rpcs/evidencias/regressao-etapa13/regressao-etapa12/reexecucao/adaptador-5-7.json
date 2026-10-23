@@ -1,0 +1,10 @@
+{
+  "original_file": "tests/cashflow/prior-stages.mjs",
+  "original_sha256": "9626648e2f3b2ceffb77161740e760d47186b3184305663a6bc8a435576911fc",
+  "adapter_sha256": "e63879e5880b2a75ae3a3b3c22dcafc17df0cc22b2a5dec09965db84c2195ad9",
+  "changes": [
+    "Instalação candidata após pré-requisitos, imports absolutos, diretório novo de evidência"
+  ],
+  "assertions_inputs_expected_changed": false,
+  "legacy_CT10_probe_uses_preserved_stage10_adapter": false
+}

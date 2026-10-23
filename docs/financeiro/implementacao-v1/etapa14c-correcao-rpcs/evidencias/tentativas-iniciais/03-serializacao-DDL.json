@@ -1,0 +1,457 @@
+{
+  "executed_at": "2026-10-23T14:38:13.043Z",
+  "environment": "ISOLADO FICTÍCIO Horizonte/Atlântico",
+  "network": "Docker internal; sem portas publicadas; gateway localhost",
+  "images": {
+    "auth": "supabase/gotrue@sha256:c485010238ab429edf4ac8eb70b37b41aae0a0905277a935d4a0b64bb848e393",
+    "rest": "postgrest/postgrest@sha256:0a46780309a604cdc8b56c776c6e5e15788ce58174d709e40459ab5a2d44d228",
+    "storage": "supabase/storage-api@sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177"
+  },
+  "passed": 30,
+  "failed": 1,
+  "fatal_error": null,
+  "resources_removed": true,
+  "production_calls": 0,
+  "koper_calls": 0,
+  "checks": [
+    {
+      "name": "dependencia_comprovada_guard14_bloqueia_aprovador_minimo",
+      "passed": true,
+      "actual": {
+        "permission": "execution.measurements.approve",
+        "contract_view": false,
+        "old_guard_denied": true
+      }
+    },
+    {
+      "name": "formulas_nativas_das_tres_funcoes_preservadas",
+      "passed": true,
+      "actual": {
+        "refresh_execution_work_order_values": {
+          "native_sha256": "cf5b6eb2ffc93f2d2c8f974d6ea60e469e56c0c90cc9c0bc90ef56175f5085c8",
+          "financial_sha256": "cf5b6eb2ffc93f2d2c8f974d6ea60e469e56c0c90cc9c0bc90ef56175f5085c8"
+        },
+        "refresh_execution_service_contract_value": {
+          "native_sha256": "b9308b74b59777ccec415f77d6e64660059f9f1c1c7a3d883bed384ed7e6fba2",
+          "financial_sha256": "b9308b74b59777ccec415f77d6e64660059f9f1c1c7a3d883bed384ed7e6fba2"
+        },
+        "refresh_execution_service_contract_measurements": {
+          "native_sha256": "7afadaf2098ce851353fd772b6e3e9375336edfbd1ecdad9011acfdcbc6a2eb5",
+          "financial_sha256": "7afadaf2098ce851353fd772b6e3e9375336edfbd1ecdad9011acfdcbc6a2eb5"
+        }
+      }
+    },
+    {
+      "name": "reaplicacao_idempotente",
+      "passed": true,
+      "actual": true
+    },
+    {
+      "name": "refresh_execution_service_contract_value-anon-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": null,
+        "requested_id": "38c0b409-449c-470d-bfd8-f6eac0ee3b3f",
+        "status": 401,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_value"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_value-foreign-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": {
+          "id": "a90cdc5d-040e-49a7-9dea-b0b2789623fc",
+          "company": "A",
+          "profile": "finance"
+        },
+        "requested_id": "38c0b409-449c-470d-bfd8-f6eac0ee3b3f",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_value"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_value-viewer-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": {
+          "id": "59b236d8-6f2a-432b-b773-b5a205b84550",
+          "company": "B",
+          "profile": "viewer"
+        },
+        "requested_id": "38c0b409-449c-470d-bfd8-f6eac0ee3b3f",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_value"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_value-admin_direct-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": {
+          "id": "e2ad32be-0ae2-469f-b03b-6ce80ed5a58c",
+          "company": "B",
+          "profile": "admin"
+        },
+        "requested_id": "38c0b409-449c-470d-bfd8-f6eac0ee3b3f",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_value"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_measurements-anon-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": null,
+        "requested_id": "38c0b409-449c-470d-bfd8-f6eac0ee3b3f",
+        "status": 401,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_measurements"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_measurements-foreign-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": {
+          "id": "a90cdc5d-040e-49a7-9dea-b0b2789623fc",
+          "company": "A",
+          "profile": "finance"
+        },
+        "requested_id": "38c0b409-449c-470d-bfd8-f6eac0ee3b3f",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_measurements"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_measurements-viewer-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": {
+          "id": "59b236d8-6f2a-432b-b773-b5a205b84550",
+          "company": "B",
+          "profile": "viewer"
+        },
+        "requested_id": "38c0b409-449c-470d-bfd8-f6eac0ee3b3f",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_measurements"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_measurements-admin_direct-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": {
+          "id": "e2ad32be-0ae2-469f-b03b-6ce80ed5a58c",
+          "company": "B",
+          "profile": "admin"
+        },
+        "requested_id": "38c0b409-449c-470d-bfd8-f6eac0ee3b3f",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_measurements"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_work_order_values-anon-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": null,
+        "requested_id": "08355fbe-5a83-48c6-aefb-5ea731811970",
+        "status": 401,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_work_order_values"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_work_order_values-foreign-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": {
+          "id": "a90cdc5d-040e-49a7-9dea-b0b2789623fc",
+          "company": "A",
+          "profile": "finance"
+        },
+        "requested_id": "08355fbe-5a83-48c6-aefb-5ea731811970",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_work_order_values"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_work_order_values-viewer-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": {
+          "id": "59b236d8-6f2a-432b-b773-b5a205b84550",
+          "company": "B",
+          "profile": "viewer"
+        },
+        "requested_id": "08355fbe-5a83-48c6-aefb-5ea731811970",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_work_order_values"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_work_order_values-admin_direct-RPC_direta_negada",
+      "passed": true,
+      "actual": {
+        "identity": {
+          "id": "e2ad32be-0ae2-469f-b03b-6ce80ed5a58c",
+          "company": "B",
+          "profile": "admin"
+        },
+        "requested_id": "08355fbe-5a83-48c6-aefb-5ea731811970",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_work_order_values"
+        },
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "contract_value-chamador_definer_nao_contorna_empresa_ou_permissao",
+      "passed": true,
+      "actual": {
+        "foreign_admin_denied": true,
+        "viewer_denied": true,
+        "anonymous_denied": true,
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "measurements-chamador_definer_nao_contorna_empresa_ou_permissao",
+      "passed": true,
+      "actual": {
+        "foreign_admin_denied": true,
+        "viewer_denied": true,
+        "anonymous_denied": true,
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "order_values-chamador_definer_nao_contorna_empresa_ou_permissao",
+      "passed": true,
+      "actual": {
+        "foreign_admin_denied": true,
+        "viewer_denied": true,
+        "anonymous_denied": true,
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "contrato_ativacao_nativa_autorizada_preservada",
+      "passed": true,
+      "actual": {
+        "response": {
+          "status": 200,
+          "body": "active"
+        },
+        "expected": 100000,
+        "actual": 100000
+      }
+    },
+    {
+      "name": "medicao_aprovacao_nativa_com_permissao_minima_preservada",
+      "passed": true,
+      "actual": {
+        "response": {
+          "status": 200,
+          "body": "approved"
+        },
+        "expected": [
+          20000,
+          2000
+        ],
+        "actual": [
+          20000,
+          2000
+        ],
+        "no_contract_read_permission_granted": true
+      }
+    },
+    {
+      "name": "OS_progresso_nativo_autorizado_preservado",
+      "passed": true,
+      "actual": {
+        "response": {
+          "status": 200,
+          "body": 8000
+        },
+        "expected": [
+          20000,
+          8000,
+          7000,
+          6000
+        ],
+        "actual": [
+          20000,
+          8000,
+          7000,
+          6000
+        ]
+      }
+    },
+    {
+      "name": "RPCs_operacionais_negam_viewer_e_empresa_estrangeira",
+      "passed": true,
+      "actual": {
+        "denied": true,
+        "values_unchanged": true
+      }
+    },
+    {
+      "name": "trigger_nativo_de_pagamento_preservado_sem_permissao_contratual_de_escrita",
+      "passed": true,
+      "actual": {
+        "expected_paid": 18000,
+        "actual_paid": 18000,
+        "expected_retained": 2000,
+        "actual_retained": 2000,
+        "through": "settle_finance_titles → native payables trigger → helper"
+      }
+    },
+    {
+      "name": "membership_suspensa_e_perfil_inativo_negados_no_helper",
+      "passed": true,
+      "actual": {
+        "denied": true
+      }
+    },
+    {
+      "name": "sessao_sem_identidade_negada_em_chamada_interna",
+      "passed": true,
+      "actual": {
+        "denied": true
+      }
+    },
+    {
+      "name": "servico_e_sessao_do_proprietario_preservados",
+      "passed": true,
+      "actual": {
+        "trusted_service_role": true,
+        "direct_owner": true,
+        "financial_result": 100000
+      }
+    },
+    {
+      "name": "ACL_remove_PUBLIC_anon_authenticated_e_grant_customizado",
+      "passed": true,
+      "actual": [
+        {
+          "anon": false,
+          "custom": false,
+          "service": true,
+          "function": "refresh_execution_service_contract_value",
+          "authenticated": false
+        },
+        {
+          "anon": false,
+          "custom": false,
+          "service": true,
+          "function": "refresh_execution_service_contract_measurements",
+          "authenticated": false
+        },
+        {
+          "anon": false,
+          "custom": false,
+          "service": true,
+          "function": "refresh_execution_work_order_values",
+          "authenticated": false
+        }
+      ]
+    },
+    {
+      "name": "drift_financeiro_aborta_migracao_sem_alteracao_parcial",
+      "passed": true,
+      "actual": {
+        "missing_target_aborts_transaction": true,
+        "previous_targets_unchanged": true
+      }
+    },
+    {
+      "name": "corpo_desconhecido_nao_e_sobrescrito",
+      "passed": false,
+      "error": "\"undefined\" is not valid JSON"
+    },
+    {
+      "name": "proprietario_distinto_do_chamador_exige_revisao",
+      "passed": true,
+      "actual": {
+        "unexpected_owner_rejected": true
+      }
+    },
+    {
+      "name": "heranca_de_papel_privilegiado_exige_revisao",
+      "passed": true,
+      "actual": {
+        "privileged_inheritance_rejected": true
+      }
+    }
+  ]
+}

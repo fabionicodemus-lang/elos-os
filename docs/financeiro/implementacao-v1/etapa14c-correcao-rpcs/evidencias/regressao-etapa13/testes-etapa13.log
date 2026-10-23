@@ -1,0 +1,16 @@
+✔ CT21: dashboard, exportação e IA conservam140mil e840mil separados; Q/EAC/cobertura null (406.623933ms)
+✔ CT24: canais reais não incluem contrato/obra/empresa estrangeiros na posição de UA (159.005675ms)
+✔ Exportação rejeita K não suportado e período inválido; falha de autorização não vira zero (8.325715ms)
+✔ CT21: título certificado não torna exclusiva a soma com contrato sem vínculo (5.281877ms)
+✔ Vínculo nativo explícito substitui cobertura uma vez, sem adivinhar por valor (0.918767ms)
+✔ Vínculo em outra categoria não certifica cobertura de contrato (0.278074ms)
+✔ Sem contrato ambíguo não se altera a posição de um título (0.16797ms)
+✔ Vínculo de outra obra não certifica cobertura no consolidado (1.103742ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 913.598719

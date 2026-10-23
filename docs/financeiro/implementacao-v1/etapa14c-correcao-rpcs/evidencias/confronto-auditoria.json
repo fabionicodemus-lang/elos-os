@@ -1,0 +1,63 @@
+{
+  "report_sha256": "fd55e241398da0eb86074a75fff58ff68eb3a4017730deb75fb2108b2d729707",
+  "source": "Relatório fornecido pelo solicitante; metadados transcritos, não nova conexão produtiva.",
+  "production_database_vulnerable_definitions": "CONFIRMADAS NO RELATÓRIO",
+  "production_HTTP_exposure": "NÃO COMPROVADA",
+  "checks": [
+    {
+      "function": "refresh_execution_service_contract_measurements",
+      "source": "supabase/migrations/20260801_0067_service_contract_procurement.sql",
+      "received_body_sha256": "7afadaf2098ce851353fd772b6e3e9375336edfbd1ecdad9011acfdcbc6a2eb5",
+      "lf_normalized_sha256": "7afadaf2098ce851353fd772b6e3e9375336edfbd1ecdad9011acfdcbc6a2eb5",
+      "local_native_lf_sha256": "7afadaf2098ce851353fd772b6e3e9375336edfbd1ecdad9011acfdcbc6a2eb5",
+      "identical_except_line_endings": true,
+      "definition_md5_provided": true,
+      "definition_md5_consistent": true
+    },
+    {
+      "function": "refresh_execution_service_contract_value",
+      "source": "supabase/migrations/20260728_0038_execution_service_contracts.sql",
+      "received_body_sha256": "b9308b74b59777ccec415f77d6e64660059f9f1c1c7a3d883bed384ed7e6fba2",
+      "lf_normalized_sha256": "b9308b74b59777ccec415f77d6e64660059f9f1c1c7a3d883bed384ed7e6fba2",
+      "local_native_lf_sha256": "b9308b74b59777ccec415f77d6e64660059f9f1c1c7a3d883bed384ed7e6fba2",
+      "identical_except_line_endings": true,
+      "definition_md5_provided": true,
+      "definition_md5_consistent": true
+    },
+    {
+      "function": "refresh_execution_work_order_values",
+      "source": "supabase/migrations/20260729_0040_execution_work_orders.sql",
+      "received_body_sha256": "cf5b6eb2ffc93f2d2c8f974d6ea60e469e56c0c90cc9c0bc90ef56175f5085c8",
+      "lf_normalized_sha256": "cf5b6eb2ffc93f2d2c8f974d6ea60e469e56c0c90cc9c0bc90ef56175f5085c8",
+      "local_native_lf_sha256": "cf5b6eb2ffc93f2d2c8f974d6ea60e469e56c0c90cc9c0bc90ef56175f5085c8",
+      "identical_except_line_endings": true,
+      "definition_md5_provided": true,
+      "definition_md5_consistent": true
+    },
+    {
+      "function": "has_company_permission",
+      "source": "supabase/migrations/20260810_0081_owner_admin_full_access.sql",
+      "received_body_sha256": "786b7ab62d0c304f4136cbc21c84b802340b8426ebe7c25f5bbd8604e2a223b1",
+      "lf_normalized_sha256": "786b7ab62d0c304f4136cbc21c84b802340b8426ebe7c25f5bbd8604e2a223b1",
+      "local_native_lf_sha256": "786b7ab62d0c304f4136cbc21c84b802340b8426ebe7c25f5bbd8604e2a223b1",
+      "identical_except_line_endings": true,
+      "definition_md5_provided": false,
+      "definition_md5_consistent": null
+    },
+    {
+      "function": "is_company_member",
+      "source": "supabase/migrations/20260722_0001_multitenancy.sql",
+      "received_body_sha256": "3184417c0fcf34b005db3acf34ee473aaac3202d1af8fc28cfef1b936aecd5bd",
+      "lf_normalized_sha256": "b512f5d8ee30a167d0556d4b1177a385dc581efe5b4cb453c6442313345649d9",
+      "local_native_lf_sha256": "b512f5d8ee30a167d0556d4b1177a385dc581efe5b4cb453c6442313345649d9",
+      "identical_except_line_endings": true,
+      "definition_md5_provided": false,
+      "definition_md5_consistent": null
+    }
+  ],
+  "original_patch_local_commit": "39d858c68012791929bb530c0aacfc4807efb3b3",
+  "original_patch_paths": [
+    "supabase/migrations/20261025100000_contract_refresh_tenant_guards.sql",
+    "supabase/migrations/20261025110000_work_order_financial_tenant_guard.sql"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "scope": "Comparação das saídas fornecidas. Este script não executa o Elos e não verifica a autenticidade dos links de evidência.",
+  "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb",
+  "context_errors": [],
+  "selected_count": 1,
+  "passed_count": 1,
+  "complete": true,
+  "cases": [
+    {
+      "id": "CT10",
+      "status": "comparado",
+      "passed": true,
+      "differences": []
+    }
+  ]
+}

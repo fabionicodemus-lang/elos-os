@@ -1,0 +1,236 @@
+{
+  "method": "Leitura estática dos corpos SQL mais recentes por assinatura; chamadas dinâmicas/objetos externos exigem inventário implantado. Profundidade máxima4.",
+  "callers": [
+    {
+      "signature": "public.save_execution_service_contract(uuid,uuid,uuid,uuid,uuid,text,text,date,date,date,numeric,numeric,integer,integer,text,date,text,text,text,text,jsonb)",
+      "function": "public.save_execution_service_contract",
+      "path": "supabase/migrations/20260728_0038_execution_service_contracts.sql",
+      "line": 203,
+      "permission_keys": [
+        "execution.contracts.manage"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_service_contract_value"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.activate_execution_service_contract(uuid,uuid,uuid)",
+      "function": "public.activate_execution_service_contract",
+      "path": "supabase/migrations/20260728_0038_execution_service_contracts.sql",
+      "line": 256,
+      "permission_keys": [
+        "execution.contracts.approve"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_service_contract_value"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.add_execution_service_contract_amendment(uuid,uuid,uuid,text,text,numeric,date,text)",
+      "function": "public.add_execution_service_contract_amendment",
+      "path": "supabase/migrations/20260728_0038_execution_service_contracts.sql",
+      "line": 289,
+      "permission_keys": [
+        "execution.contracts.amend"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_service_contract_value"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.approve_execution_contract_measurement(uuid,uuid,uuid,text)",
+      "function": "public.approve_execution_contract_measurement",
+      "path": "supabase/migrations/20261013_0092_measurement_approval_waits_invoice.sql",
+      "line": 20,
+      "permission_keys": [
+        "execution.measurements.approve"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_service_contract_measurements"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.send_execution_contract_measurement_to_finance(uuid,uuid,uuid,text,date,numeric,date,text,text)",
+      "function": "public.send_execution_contract_measurement_to_finance",
+      "path": "supabase/migrations/20260728_0039_execution_contract_measurements.sql",
+      "line": 343,
+      "permission_keys": [
+        "execution.measurements.finance"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_service_contract_measurements"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.sync_contract_measurement_from_payable()",
+      "function": "public.sync_contract_measurement_from_payable",
+      "path": "supabase/migrations/20260803_0075_execution_contract_finance.sql",
+      "line": 106,
+      "permission_keys": [],
+      "security_definer": true,
+      "trigger": true,
+      "calls": [
+        "refresh_execution_service_contract_measurements"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.save_execution_work_order(uuid,uuid,uuid,uuid,text,text,date,date,text,text,text,text,text,text,jsonb,jsonb)",
+      "function": "public.save_execution_work_order",
+      "path": "supabase/migrations/20260729_0040_execution_work_orders.sql",
+      "line": 246,
+      "permission_keys": [
+        "execution.work_orders.manage"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_work_order_values"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.update_execution_work_order_progress(uuid,uuid,uuid,jsonb,text)",
+      "function": "public.update_execution_work_order_progress",
+      "path": "supabase/migrations/20260729_0040_execution_work_orders.sql",
+      "line": 358,
+      "permission_keys": [
+        "execution.work_orders.progress"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_work_order_values"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.accept_execution_work_order(uuid,uuid,uuid,text,text,text,text,jsonb)",
+      "function": "public.accept_execution_work_order",
+      "path": "supabase/migrations/20260729_0040_execution_work_orders.sql",
+      "line": 383,
+      "permission_keys": [
+        "execution.work_orders.accept"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_work_order_values"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.generate_execution_service_contract_from_competition(uuid,uuid,uuid,text,text,date,date,date,numeric,numeric,integer,integer,text,date,text,text,text,text,jsonb)",
+      "function": "public.generate_execution_service_contract_from_competition",
+      "path": "supabase/migrations/20260801_0067_service_contract_procurement.sql",
+      "line": 375,
+      "permission_keys": [
+        "execution.contract_procurement.contract"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_service_contract_value"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.add_execution_service_contract_amendment_with_items(uuid,uuid,uuid,text,text,numeric,date,text,jsonb)",
+      "function": "public.add_execution_service_contract_amendment_with_items",
+      "path": "supabase/migrations/20260803_0072_execution_contract_workflows.sql",
+      "line": 5,
+      "permission_keys": [
+        "execution.contracts.amend"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_service_contract_value"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.reverse_execution_contract_measurement(uuid,uuid,uuid,text)",
+      "function": "public.reverse_execution_contract_measurement",
+      "path": "supabase/migrations/20260803_0075_execution_contract_finance.sql",
+      "line": 59,
+      "permission_keys": [
+        "execution.measurements.reverse"
+      ],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_service_contract_measurements"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "elos_import.wave3a_contracts(uuid,uuid,uuid,uuid)",
+      "function": "elos_import.wave3a_contracts",
+      "path": "supabase/migrations/20261018130000_clean_import_wave3a_contracts_measurements.sql",
+      "line": 13,
+      "permission_keys": [],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_service_contract_measurements",
+        "refresh_execution_service_contract_value"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "elos_import.wave4_other_payables(uuid,uuid,uuid,uuid)",
+      "function": "elos_import.wave4_other_payables",
+      "path": "supabase/migrations/20261018150000_clean_import_wave4_other_payables.sql",
+      "line": 13,
+      "permission_keys": [],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "refresh_execution_service_contract_measurements"
+      ],
+      "graph_depth": 1
+    },
+    {
+      "signature": "public.save_execution_work_order_with_financial_plan(uuid,uuid,uuid,uuid,text,text,date,date,text,text,text,text,text,text,jsonb,jsonb,text,jsonb)",
+      "function": "public.save_execution_work_order_with_financial_plan",
+      "path": "supabase/migrations/20260731_0063_universal_financial_installments.sql",
+      "line": 262,
+      "permission_keys": [],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "save_execution_work_order"
+      ],
+      "graph_depth": 2
+    },
+    {
+      "signature": "public.accept_execution_work_order_with_financial(uuid,uuid,uuid,text,text,text,text,jsonb)",
+      "function": "public.accept_execution_work_order_with_financial",
+      "path": "supabase/migrations/20260731_0063_universal_financial_installments.sql",
+      "line": 332,
+      "permission_keys": [],
+      "security_definer": true,
+      "trigger": false,
+      "calls": [
+        "accept_execution_work_order"
+      ],
+      "graph_depth": 2
+    }
+  ]
+}

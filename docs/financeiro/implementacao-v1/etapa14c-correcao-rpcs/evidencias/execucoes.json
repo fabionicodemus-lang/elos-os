@@ -1,0 +1,36 @@
+{
+  "mode": "Comandos do runner executados individualmente nesta sessão; validate.mjs reúne a sequência para reprodução.",
+  "recorded_at": "2026-10-23T14:56:42.036228+00:00",
+  "results": [
+    {
+      "command": [
+        "node",
+        "tests/finance-rpc-security/run.mjs"
+      ],
+      "log": "testes.log",
+      "exit_code": 0,
+      "security_controls": 33
+    },
+    {
+      "command": [
+        "node",
+        "tests/finance-second/validate.mjs"
+      ],
+      "log": "regressoes.log",
+      "exit_code": 0,
+      "evidence_dir": "regressao-etapa13"
+    },
+    {
+      "command": [
+        "npx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "tests/finance-rpc-security"
+      ],
+      "log": "eslint.log",
+      "exit_code": 0
+    }
+  ],
+  "migration_sha256_at_capture": "91ae37c7612c63aaa87c468af6ad39c3a39357a3e8a06587aab08090ce5b68d2"
+}

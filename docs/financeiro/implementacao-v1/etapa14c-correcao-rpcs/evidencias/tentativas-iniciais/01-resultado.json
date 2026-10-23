@@ -1,0 +1,17 @@
+{
+  "executed_at": "2026-10-23T14:33:09.284Z",
+  "environment": "ISOLADO FICTÍCIO Horizonte/Atlântico",
+  "network": "Docker internal; sem portas publicadas; gateway localhost",
+  "images": {
+    "auth": "supabase/gotrue@sha256:c485010238ab429edf4ac8eb70b37b41aae0a0905277a935d4a0b64bb848e393",
+    "rest": "postgrest/postgrest@sha256:0a46780309a604cdc8b56c776c6e5e15788ce58174d709e40459ab5a2d44d228",
+    "storage": "supabase/storage-api@sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177"
+  },
+  "passed": 0,
+  "failed": 0,
+  "fatal_error": "Error: ERROR:  relation \"finance_bank_movements\" does not exist\nLINE 1: ...tlement_events),'movements',(select count(*) from finance_ba...\n                                                             ^\n    at ChildProcess.<anonymous> (file:///workspace/elos-os/tests/financeiro/runtime.mjs:24:60)\n    at ChildProcess.emit (node:events:509:28)\n    at maybeClose (node:internal/child_process:1141:16)\n    at ChildProcess._handle.onexit (node:internal/child_process:306:5)",
+  "resources_removed": true,
+  "production_calls": 0,
+  "koper_calls": 0,
+  "checks": []
+}

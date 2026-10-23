@@ -1,0 +1,44 @@
+{
+  "company_id": "00000000-0000-4000-8000-000000000005",
+  "entity_id": "00000000-0000-4000-8000-000000000007",
+  "project_id": null,
+  "version_id": null,
+  "indicators": {
+    "known_obligations_subtotal_cents": 100000,
+    "contract_amount_shown_separately_cents": 100000,
+    "C_cents": null,
+    "P_cents": null,
+    "Q_cents": null,
+    "AF_cents": 0,
+    "Q_scenario_cents": null,
+    "incurred_cost_cents": null,
+    "ETC_cents": null,
+    "EAC_cents": null,
+    "budget_variance_cents": null,
+    "budget_variance_percent": null,
+    "external_coverage_percent": null,
+    "status": "incompleto"
+  },
+  "sources": {
+    "cutoff": "2026-10-21",
+    "known_at": null,
+    "historical_knowledge_supported": false,
+    "tables": [
+      "payables",
+      "execution_service_contracts",
+      "finance_cash_scenario_rows",
+      "finance_cash_coverage_links"
+    ],
+    "missing": [
+      "Universo externo não comprovado",
+      "ETC econômico e orçamento vigente não certificados neste relatório"
+    ]
+  },
+  "warnings": [
+    "Saldo informado não certificado: 735873ac-da93-4040-9842-b6bd15065627",
+    "Vínculo contrato–título ausente: 735873ac-da93-4040-9842-b6bd15065627; totais podem se sobrepor",
+    "Previsão aprovada até conclusão ausente em parte do perímetro",
+    "Saldo inicial ou restrições sem comprovação"
+  ],
+  "financial_acceptance": "Pendente"
+}

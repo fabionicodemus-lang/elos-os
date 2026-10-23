@@ -1,0 +1,538 @@
+{
+  "executed_at": "2026-10-23T14:38:48.445Z",
+  "base_commit": "3eae06b41292fd81b2d8151efd1e0c54a1b07f1f",
+  "mode": "candidato_isolado",
+  "image": "postgres@sha256:a63c1ea3f6a3a5a1621f97d2aba3b30faecfab4224c1b0000cc85ced57bb1939",
+  "postgres_version": "PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+  "postgres_container": "elos-finance-test-1294438",
+  "network": "none",
+  "published_ports": {},
+  "tmpfs": {
+    "/var/lib/postgresql/data": "rw,size=512m"
+  },
+  "fixture_count": 30,
+  "supabase_auth": "auth.uid() lê claim em GUC local, sem servidor Auth",
+  "surface": "PostgreSQL/RLS/RPC; não inclui navegador/API Next/Storage real",
+  "candidate_migration_sha256": "4aab50fe4f34711108f243f55d013b08e0b945afe61e61ac6fbbbc80123ef531",
+  "results": [
+    {
+      "id": "dataset_30_casos_hash_preservado",
+      "passed": true,
+      "evidence": {
+        "cases": 30,
+        "fixture_sha256": "fad6ded4f65b20848b8e8b3c95ca087eff8893fac387571fc8aac8d0cc1fd6fb"
+      }
+    },
+    {
+      "id": "empresa_A_nao_le_empresa_B",
+      "passed": true,
+      "evidence": {
+        "count": 0
+      }
+    },
+    {
+      "id": "perfil_leitura_nao_altera",
+      "passed": true,
+      "evidence": {
+        "changes": 0
+      }
+    },
+    {
+      "id": "entidade_A1_nao_le_A2",
+      "passed": true,
+      "evidence": {
+        "count": 0
+      }
+    },
+    {
+      "id": "recebiveis_tambem_respeitam_entidade",
+      "passed": true,
+      "evidence": {
+        "count": 0
+      }
+    },
+    {
+      "id": "agregado_respeita_entidade",
+      "passed": true,
+      "evidence": {
+        "open_cents": 100000
+      }
+    },
+    {
+      "id": "usuario_multientidade_consolida_autorizado",
+      "passed": true,
+      "evidence": {
+        "open_cents": 400000
+      }
+    },
+    {
+      "id": "RPC_saldo_nao_expoe_entidade_alheia",
+      "passed": true,
+      "evidence": "Operação recusada por autorização/integridade; não por falta de função ou erro de sintaxe"
+    },
+    {
+      "id": "RPC_importacao_nao_aceita_conta_de_A2",
+      "passed": true,
+      "evidence": "Operação recusada por autorização/integridade; não por falta de função ou erro de sintaxe"
+    },
+    {
+      "id": "fornecedor_de_outra_empresa_recusado",
+      "passed": true,
+      "evidence": "Operação recusada por autorização/integridade; não por falta de função ou erro de sintaxe"
+    },
+    {
+      "id": "obra_de_outra_empresa_recusada",
+      "passed": true,
+      "evidence": "Operação recusada por autorização/integridade; não por falta de função ou erro de sintaxe"
+    },
+    {
+      "id": "NaN_nao_persiste_como_dinheiro",
+      "passed": true,
+      "evidence": "Operação recusada por autorização/integridade; não por falta de função ou erro de sintaxe"
+    },
+    {
+      "id": "concorrencia_liquidacao_exatamente_uma",
+      "passed": true,
+      "evidence": {
+        "movements": 1,
+        "cash": 1000,
+        "connections": 2,
+        "accepted": 1,
+        "rejected": 1
+      }
+    },
+    {
+      "id": "concorrencia_mesma_identidade_nao_duplica",
+      "passed": true,
+      "evidence": {
+        "count": 1,
+        "sum": 10
+      }
+    },
+    {
+      "id": "concorrencia_recebimento_exatamente_um",
+      "passed": true,
+      "evidence": {
+        "movements": 1,
+        "received": 1000,
+        "connections": 2,
+        "accepted": 1,
+        "rejected": 1
+      }
+    },
+    {
+      "id": "revisao_idempotente_autoria_motivo_antes_depois_T_K",
+      "passed": true,
+      "evidence": {
+        "audit": {
+          "versions": 2,
+          "before": 10000,
+          "after": 12000,
+          "actors": 2,
+          "reason": "Criação do título"
+        },
+        "history": {
+          "original": 10000,
+          "restated": 12000
+        },
+        "concurrent_connections": 2,
+        "command_count": 1,
+        "known_cut": "2026-10-23T14:38:35.744247+00:00"
+      }
+    },
+    {
+      "id": "atualizacao_sem_motivo_recusada",
+      "passed": true,
+      "evidence": "Operação recusada por autorização/integridade; não por falta de função ou erro de sintaxe"
+    },
+    {
+      "id": "identidade_origem_nao_e_reescrita",
+      "passed": true,
+      "evidence": "Operação recusada por autorização/integridade; não por falta de função ou erro de sintaxe"
+    },
+    {
+      "id": "autoria_de_origem_nao_e_forjada",
+      "passed": true,
+      "evidence": "Operação recusada por autorização/integridade; não por falta de função ou erro de sintaxe"
+    },
+    {
+      "id": "RPC_revisao_nao_aceita_centavo_fracionario",
+      "passed": true,
+      "evidence": "Operação recusada por autorização/integridade; não por falta de função ou erro de sintaxe"
+    },
+    {
+      "id": "preflight_somente_leitura_da_base_ficticia",
+      "passed": true,
+      "evidence": "payables_non_finite|0\nreceivables_non_finite|0\npayable_project_company|0\npayable_supplier_company|0\nreceivable_sale_scope|0\nbank_account_scope|0\nunidentified_payable_source|0"
+    },
+    {
+      "id": "comparador_nao_certifica_casos_parciais",
+      "passed": true,
+      "evidence": {
+        "comparator_exit": 1,
+        "integral_cases_certified": 0,
+        "partial_cases": 3,
+        "unrun_cases": 27
+      }
+    },
+    {
+      "id": "backup_restauracao_e_controles_restaurados",
+      "passed": true,
+      "evidence": {
+        "backup": "Backup criptografado e snapshot consistente: 61 tabelas; arquivo elos-os-20261023T143838223238Z.dump.gpg\n",
+        "restore": "Restauração verificada: 61 tabelas; destino local elos_restore_fixture; nenhum erro ignorado\n",
+        "backup_manifest": {
+          "version": 2,
+          "archive": "elos-os-20261023T143838223238Z.dump.gpg",
+          "archive_sha256": "64e4f43ff97a9d80ccbd4796c37021f2831c09d31b0c9c02b9f4806b10e742ab",
+          "dump_sha256": "d06ea119f6c67f756b8ca7ff64dd39e13fc8a056160d63572a4ec67d1922f1f0",
+          "snapshot": "0000001A-00000004-1",
+          "tables": [
+            {
+              "schema": "auth",
+              "name": "users",
+              "count": 4
+            },
+            {
+              "schema": "elos_import",
+              "name": "backup_rows",
+              "count": 0
+            },
+            {
+              "schema": "elos_import",
+              "name": "financial_batches",
+              "count": 0
+            },
+            {
+              "schema": "elos_import",
+              "name": "financial_objects",
+              "count": 0
+            },
+            {
+              "schema": "elos_import",
+              "name": "financial_revisions",
+              "count": 0
+            },
+            {
+              "schema": "elos_import",
+              "name": "issues",
+              "count": 0
+            },
+            {
+              "schema": "elos_import",
+              "name": "runs",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "clients",
+              "count": 2
+            },
+            {
+              "schema": "public",
+              "name": "companies",
+              "count": 2
+            },
+            {
+              "schema": "public",
+              "name": "company_memberships",
+              "count": 5
+            },
+            {
+              "schema": "public",
+              "name": "engineering_services",
+              "count": 1
+            },
+            {
+              "schema": "public",
+              "name": "execution_contract_measurements",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "execution_service_contract_audit",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "execution_service_contracts",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_bank_accounts",
+              "count": 3
+            },
+            {
+              "schema": "public",
+              "name": "finance_bank_audit",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_bank_documents",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_bank_groups",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_bank_imports",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_bank_instruments",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_bank_transactions",
+              "count": 3
+            },
+            {
+              "schema": "public",
+              "name": "finance_bank_transfers",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_cash_adjustment_realizations",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_cash_coverage_links",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_cash_openings",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_cash_scenario_rows",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_cash_scenarios",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_collection_drafts",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_company_controls",
+              "count": 2
+            },
+            {
+              "schema": "public",
+              "name": "finance_entity_permissions",
+              "count": 6
+            },
+            {
+              "schema": "public",
+              "name": "finance_manual_invoices",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_obligation_validations",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_reconciliation_links",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_settlement_events",
+              "count": 3
+            },
+            {
+              "schema": "public",
+              "name": "finance_settlement_lines",
+              "count": 3
+            },
+            {
+              "schema": "public",
+              "name": "finance_statement_entries",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_supplier_refund_receipts",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_supplier_refund_rights",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_title_audit",
+              "count": 15
+            },
+            {
+              "schema": "public",
+              "name": "finance_title_charges",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "finance_title_commands",
+              "count": 1
+            },
+            {
+              "schema": "public",
+              "name": "integration_mapping_audit",
+              "count": 15
+            },
+            {
+              "schema": "public",
+              "name": "integration_mappings",
+              "count": 15
+            },
+            {
+              "schema": "public",
+              "name": "koper_staging_records",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "legal_entities",
+              "count": 3
+            },
+            {
+              "schema": "public",
+              "name": "payable_cost_allocations",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "payables",
+              "count": 7
+            },
+            {
+              "schema": "public",
+              "name": "permissions",
+              "count": 31
+            },
+            {
+              "schema": "public",
+              "name": "profiles",
+              "count": 4
+            },
+            {
+              "schema": "public",
+              "name": "project_memberships",
+              "count": 0
+            },
+            {
+              "schema": "public",
+              "name": "projects",
+              "count": 3
+            },
+            {
+              "schema": "public",
+              "name": "receivables",
+              "count": 3
+            },
+            {
+              "schema": "public",
+              "name": "role_permissions",
+              "count": 19
+            },
+            {
+              "schema": "public",
+              "name": "roles",
+              "count": 3
+            },
+            {
+              "schema": "public",
+              "name": "sales",
+              "count": 3
+            },
+            {
+              "schema": "public",
+              "name": "suppliers",
+              "count": 2
+            },
+            {
+              "schema": "public",
+              "name": "units",
+              "count": 3
+            },
+            {
+              "schema": "storage",
+              "name": "buckets",
+              "count": 1
+            },
+            {
+              "schema": "storage",
+              "name": "objects",
+              "count": 0
+            },
+            {
+              "schema": "validation",
+              "name": "cases",
+              "count": 30
+            },
+            {
+              "schema": "validation",
+              "name": "snapshot_churn",
+              "count": 1
+            }
+          ],
+          "role_names": [
+            "postgres",
+            "anon",
+            "authenticated",
+            "service_role"
+          ],
+          "limitations": "Restauração de teste recria papéis ausentes NOLOGIN; não certifica serviço Auth, extensões externas ou privilégios de login de produção."
+        },
+        "counts": {
+          "titles": 7,
+          "sum": 126010
+        },
+        "restoredCounts": {
+          "titles": 7,
+          "sum": 126010
+        },
+        "historyHash": "945980d8339db0f5d3ada834b5f9b571",
+        "concurrent_source_writes": 20,
+        "rls_and_immutable_audit_preserved": true
+      }
+    },
+    {
+      "id": "backup_corrompido_e_destino_existente_sao_recusados",
+      "passed": true,
+      "evidence": {
+        "existing_destination_rejected": true,
+        "corrupt_checksum_rejected": true
+      }
+    },
+    {
+      "id": "erro_do_pg_restore_bloqueia_certificacao",
+      "passed": true,
+      "evidence": {
+        "invalid_archive_rejected_by_pg_restore": true,
+        "success_not_reported": true
+      }
+    }
+  ],
+  "passed": 25,
+  "failed": 0,
+  "container_removed": true
+}

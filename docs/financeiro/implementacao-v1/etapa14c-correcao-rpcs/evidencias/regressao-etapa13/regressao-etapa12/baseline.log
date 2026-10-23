@@ -1,0 +1,57 @@
+{
+  "base_commit": "65fe2cc",
+  "CT18": {
+    "expected_Q_scenario_cents": 9700000,
+    "actual_Q_scenario_cents": 9900000,
+    "rows": [
+      {
+        "id": "AP:title",
+        "scope_key": "AP:title",
+        "category": "R",
+        "amount_cents": 1700000,
+        "legal_due": "2026-11-20",
+        "expected_date": "2026-11-20",
+        "project_id": null,
+        "source_id": "title",
+        "title_id": "title",
+        "title_type": "AP",
+        "source_kind": "title"
+      },
+      {
+        "id": "C",
+        "scope_key": "C",
+        "category": "C",
+        "amount_cents": 4000000,
+        "reference_amount_cents": 6000000,
+        "project_id": null
+      },
+      {
+        "id": "P",
+        "scope_key": "P",
+        "category": "P",
+        "amount_cents": 4000000,
+        "reference_amount_cents": 4000000,
+        "project_id": null
+      },
+      {
+        "id": "AF",
+        "scope_key": "AF",
+        "category": "AF",
+        "amount_cents": 200000,
+        "reference_amount_cents": 200000,
+        "project_id": null
+      }
+    ],
+    "cause": "futureCashRows não recebe/consome vínculo de AF com encargo constituído; função pura de cobertura já o separa."
+  },
+  "CT02_extension": {
+    "expected_visible_before_first_known_version": 0,
+    "actual_visible": 1,
+    "cause": "titlesAt filtra histórico por K antes de verificar existência; sem versão conhecida usa título atual."
+  },
+  "CT02_offset": {
+    "expected_principal_cents": 1000000,
+    "actual_principal_cents": 1200000,
+    "cause": "Comparação lexical de timestamps não reconhece o mesmo instante em UTC e America/Sao_Paulo."
+  }
+}

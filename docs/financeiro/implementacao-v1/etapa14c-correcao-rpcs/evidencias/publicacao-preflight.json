@@ -1,0 +1,122 @@
+{
+  "branch": "fix/financeiro-etapa14c-rpc-authorization",
+  "push_workflows": [
+    {
+      "workflow": ".github/workflows/patch-koper-historical-suppliers.yml",
+      "push_config": {
+        "branches": [
+          "main"
+        ],
+        "paths": [
+          ".github/workflows/patch-koper-historical-suppliers.yml"
+        ]
+      },
+      "branch_matches": false
+    },
+    {
+      "workflow": ".github/workflows/build.yml",
+      "push_config": {
+        "branches": [
+          "main"
+        ]
+      },
+      "branch_matches": false
+    },
+    {
+      "workflow": ".github/workflows/apply-supabase-0097-0098.yml",
+      "push_config": {
+        "branches": [
+          "main"
+        ],
+        "paths": [
+          "supabase/migrations/20261015111500_integration_mapping_foundation.sql",
+          "supabase/migrations/20261015112000_integration_mapping_legacy_bridge.sql",
+          "supabase/migrations/20261015133000_engineering_budget_import_staging.sql",
+          "supabase/migrations/20261015143000_engineering_budget_import_promotion.sql",
+          ".github/scripts/apply-supabase-0096.sh",
+          ".github/scripts/apply-supabase-0097.sh",
+          ".github/scripts/apply-supabase-0098.sh",
+          ".github/tests/integration-mappings-0096.sql",
+          ".github/workflows/apply-supabase-0097-0098.yml"
+        ]
+      },
+      "branch_matches": false
+    },
+    {
+      "workflow": ".github/workflows/aurora-homologation.yml",
+      "push_config": {
+        "branches": [
+          "main"
+        ],
+        "paths": [
+          "supabase/migrations/*aurora*",
+          ".github/workflows/aurora-homologation.yml"
+        ]
+      },
+      "branch_matches": false
+    },
+    {
+      "workflow": ".github/workflows/brisa-supply-fixes.yml",
+      "push_config": {
+        "branches": [
+          "main"
+        ],
+        "paths": [
+          ".github/workflows/brisa-supply-fixes.yml",
+          ".github/scripts/apply-brisa-supply-fixes.sh",
+          "supabase/migrations/*brisa_quotation*",
+          "tests/procurement/*.test.mjs",
+          "supabase/migrations/*brisa_contract*",
+          "supabase/migrations/*brisa_order*",
+          "supabase/migrations/*brisa_receipt*",
+          "supabase/migrations/*brisa_usability*"
+        ]
+      },
+      "branch_matches": false
+    },
+    {
+      "workflow": ".github/workflows/preconstruction-95-ci.yml",
+      "push_config": {
+        "branches": [
+          "feat/preobra-95"
+        ],
+        "paths": [
+          "app/engenharia/preobra/**",
+          "app/engenharia/curva-abc/**",
+          "app/engenharia/orcamentos/**",
+          "app/engenharia/produtividade/**",
+          "app/engenharia/caminho-critico/**",
+          "app/engenharia/calendario/**",
+          "app/engenharia/sinapi/**",
+          "app/preconstruction-95.css",
+          "components/shell-navigation.tsx",
+          "lib/preconstruction/**",
+          "supabase/migrations/2026101409*.sql",
+          "tests/preconstruction/**",
+          "package.json",
+          ".github/workflows/preconstruction-95-ci.yml"
+        ]
+      },
+      "branch_matches": false
+    },
+    {
+      "workflow": ".github/workflows/homologation-agent.yml",
+      "push_config": {
+        "branches": [
+          "main"
+        ],
+        "paths": [
+          "services/homologation-agent/**",
+          ".github/workflows/homologation-agent.yml"
+        ]
+      },
+      "branch_matches": false
+    }
+  ],
+  "unparsed_trigger_headers": [],
+  "matching_push_workflows": 0,
+  "pull_request_created": false,
+  "workflow_dispatch_triggered": false,
+  "production_branch_reported": "main",
+  "external_preview_behavior": "Não inspecionado nesta sessão; não implica autorização para produção."
+}

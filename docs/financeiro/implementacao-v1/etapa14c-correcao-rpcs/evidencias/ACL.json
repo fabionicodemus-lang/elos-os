@@ -1,0 +1,23 @@
+[
+  {
+    "anon": false,
+    "custom": false,
+    "service": true,
+    "function": "refresh_execution_service_contract_value",
+    "authenticated": false
+  },
+  {
+    "anon": false,
+    "custom": false,
+    "service": true,
+    "function": "refresh_execution_service_contract_measurements",
+    "authenticated": false
+  },
+  {
+    "anon": false,
+    "custom": false,
+    "service": true,
+    "function": "refresh_execution_work_order_values",
+    "authenticated": false
+  }
+]
