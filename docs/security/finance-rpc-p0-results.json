@@ -1,0 +1,712 @@
+{
+  "executed_at": "2026-10-23T18:54:21.785Z",
+  "base_commit": "460147e74be9b67c9cff2613b710a9cf0c264274",
+  "migration_sha256": "6e73049104a95bf905c8774d1bb604af362850d86091efd021b61e7aa43dd8d6",
+  "postgres_image": "postgres@sha256:a63c1ea3f6a3a5a1621f97d2aba3b30faecfab4224c1b0000cc85ced57bb1939",
+  "native_DDL_sources": [
+    "20260722_0001_multitenancy.sql",
+    "20260722_0002_suppliers_clients.sql",
+    "20260722_0003_flow_payables.sql",
+    "20260723_0004_flow_sales.sql",
+    "20260723_0005_receivables.sql",
+    "20260723_0006_correction_indices.sql",
+    "20260724_0014_engineering_budgets.sql",
+    "20260724_0015_engineering_services.sql",
+    "20260724_0016_engineering_inputs.sql",
+    "20260724_0017_engineering_input_prices.sql",
+    "20260724_0019_engineering_service_compositions.sql",
+    "20260724_0021_engineering_takeoffs.sql",
+    "20260726_0023_engineering_schedule_baseline.sql",
+    "20260727_0030_legal_entities.sql",
+    "20260728_0033_execution_material_requests.sql",
+    "20260728_0038_execution_service_contracts.sql",
+    "20260728_0039_execution_contract_measurements.sql",
+    "20260729_0040_execution_work_orders.sql",
+    "20260729_0041_procurement_material_quotations.sql",
+    "20260729_0042_procurement_purchase_orders.sql",
+    "20260729_0043_procurement_material_receipts.sql",
+    "20260729_0044_procurement_inventory.sql",
+    "20260729_0045_finance_electronic_invoices.sql",
+    "20260729_0046_finance_supplier_product_mappings.sql",
+    "20260729_0047_finance_manual_invoices.sql",
+    "20260729_0048_finance_bank_accounts.sql",
+    "20260729_0048a_finance_bank_accounts_security_fix.sql",
+    "20260729_0056_system_permissions.sql",
+    "20260731_0063_universal_financial_installments.sql",
+    "20260801_0067_service_contract_procurement.sql",
+    "20260803_0071_execution_contract_commitments.sql",
+    "20260803_0072_execution_contract_workflows.sql",
+    "20260803_0075_execution_contract_finance.sql",
+    "20260810_0081_owner_admin_full_access.sql",
+    "20261013_0092_measurement_approval_waits_invoice.sql",
+    "20261014_0093_security_audit_trail.sql"
+  ],
+  "platform_prerequisites": "auth/storage platform stubs; JWT signature/roles verified by real PostgREST. Native business tables/constraints/RLS/functions/triggers, no experimental financial schema.",
+  "native_0048_data_backfill_skipped": true,
+  "baseline": [
+    {
+      "function": "refresh_execution_service_contract_value",
+      "layer": "Native SQL session/authenticator/anon, rolled back",
+      "unauthorized_native_execution_succeeded": true,
+      "identity": {
+        "current_user": "anon",
+        "session_user": "authenticator"
+      }
+    },
+    {
+      "function": "refresh_execution_service_contract_measurements",
+      "layer": "Native SQL session/authenticator/anon, rolled back",
+      "unauthorized_native_execution_succeeded": true,
+      "identity": {
+        "current_user": "anon",
+        "session_user": "authenticator"
+      }
+    },
+    {
+      "function": "refresh_execution_work_order_values",
+      "layer": "Native SQL session/authenticator/anon, rolled back",
+      "unauthorized_native_execution_succeeded": true,
+      "identity": {
+        "current_user": "anon",
+        "session_user": "authenticator"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "name": "standalone_native_structure_no_experimental_migrations",
+      "passed": true,
+      "actual": {
+        "native_DDL_sources": 36,
+        "business_scaffolds": 0,
+        "security_migrations_applied": [
+          "supabase/migrations/20261023180000_financial_rpc_p0_isolation.sql"
+        ],
+        "financial_rows_unchanged": true
+      }
+    },
+    {
+      "name": "three_financial_bodies_identical_and_invoker_search_path",
+      "passed": true,
+      "actual": {
+        "refresh_execution_work_order_values": {
+          "before_sha256": "cf5b6eb2ffc93f2d2c8f974d6ea60e469e56c0c90cc9c0bc90ef56175f5085c8",
+          "financial_after_sha256": "cf5b6eb2ffc93f2d2c8f974d6ea60e469e56c0c90cc9c0bc90ef56175f5085c8",
+          "definer": false,
+          "config": [
+            "search_path=pg_catalog, pg_temp"
+          ]
+        },
+        "refresh_execution_service_contract_value": {
+          "before_sha256": "b9308b74b59777ccec415f77d6e64660059f9f1c1c7a3d883bed384ed7e6fba2",
+          "financial_after_sha256": "b9308b74b59777ccec415f77d6e64660059f9f1c1c7a3d883bed384ed7e6fba2",
+          "definer": false,
+          "config": [
+            "search_path=pg_catalog, pg_temp"
+          ]
+        },
+        "refresh_execution_service_contract_measurements": {
+          "before_sha256": "7afadaf2098ce851353fd772b6e3e9375336edfbd1ecdad9011acfdcbc6a2eb5",
+          "financial_after_sha256": "7afadaf2098ce851353fd772b6e3e9375336edfbd1ecdad9011acfdcbc6a2eb5",
+          "definer": false,
+          "config": [
+            "search_path=pg_catalog, pg_temp"
+          ]
+        }
+      }
+    },
+    {
+      "name": "reapplication_safe",
+      "passed": true,
+      "actual": {
+        "identical": true
+      }
+    },
+    {
+      "name": "ACL_effective_and_native_owner_not_superuser",
+      "passed": true,
+      "actual": [
+        {
+          "anon": false,
+          "service": true,
+          "function": "refresh_execution_service_contract_value",
+          "authenticated": false,
+          "owner_bypassrls": true,
+          "owner_superuser": false
+        },
+        {
+          "anon": false,
+          "service": true,
+          "function": "refresh_execution_service_contract_measurements",
+          "authenticated": false,
+          "owner_bypassrls": true,
+          "owner_superuser": false
+        },
+        {
+          "anon": false,
+          "service": true,
+          "function": "refresh_execution_work_order_values",
+          "authenticated": false,
+          "owner_bypassrls": true,
+          "owner_superuser": false
+        }
+      ]
+    },
+    {
+      "name": "refresh_execution_service_contract_value-HTTP-anon",
+      "passed": true,
+      "actual": {
+        "user": null,
+        "role": "anon",
+        "requested_id": "10000000-0000-4000-8000-000000000214",
+        "status": 401,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_value"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_value-HTTP-foreign",
+      "passed": true,
+      "actual": {
+        "user": "10000000-0000-4000-8000-000000000001",
+        "role": "authenticated",
+        "requested_id": "10000000-0000-4000-8000-000000000214",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_value"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_value-HTTP-viewer",
+      "passed": true,
+      "actual": {
+        "user": "10000000-0000-4000-8000-000000000006",
+        "role": "authenticated",
+        "requested_id": "10000000-0000-4000-8000-000000000214",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_value"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_value-HTTP-own_admin_direct",
+      "passed": true,
+      "actual": {
+        "user": "10000000-0000-4000-8000-000000000002",
+        "role": "authenticated",
+        "requested_id": "10000000-0000-4000-8000-000000000214",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_value"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_measurements-HTTP-anon",
+      "passed": true,
+      "actual": {
+        "user": null,
+        "role": "anon",
+        "requested_id": "10000000-0000-4000-8000-000000000214",
+        "status": 401,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_measurements"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_measurements-HTTP-foreign",
+      "passed": true,
+      "actual": {
+        "user": "10000000-0000-4000-8000-000000000001",
+        "role": "authenticated",
+        "requested_id": "10000000-0000-4000-8000-000000000214",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_measurements"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_measurements-HTTP-viewer",
+      "passed": true,
+      "actual": {
+        "user": "10000000-0000-4000-8000-000000000006",
+        "role": "authenticated",
+        "requested_id": "10000000-0000-4000-8000-000000000214",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_measurements"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_service_contract_measurements-HTTP-own_admin_direct",
+      "passed": true,
+      "actual": {
+        "user": "10000000-0000-4000-8000-000000000002",
+        "role": "authenticated",
+        "requested_id": "10000000-0000-4000-8000-000000000214",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_service_contract_measurements"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_work_order_values-HTTP-anon",
+      "passed": true,
+      "actual": {
+        "user": null,
+        "role": "anon",
+        "requested_id": "10000000-0000-4000-8000-000000000243",
+        "status": 401,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_work_order_values"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_work_order_values-HTTP-foreign",
+      "passed": true,
+      "actual": {
+        "user": "10000000-0000-4000-8000-000000000001",
+        "role": "authenticated",
+        "requested_id": "10000000-0000-4000-8000-000000000243",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_work_order_values"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_work_order_values-HTTP-viewer",
+      "passed": true,
+      "actual": {
+        "user": "10000000-0000-4000-8000-000000000006",
+        "role": "authenticated",
+        "requested_id": "10000000-0000-4000-8000-000000000243",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_work_order_values"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "refresh_execution_work_order_values-HTTP-own_admin_direct",
+      "passed": true,
+      "actual": {
+        "user": "10000000-0000-4000-8000-000000000002",
+        "role": "authenticated",
+        "requested_id": "10000000-0000-4000-8000-000000000243",
+        "status": 403,
+        "body": {
+          "code": "42501",
+          "details": null,
+          "hint": null,
+          "message": "permission denied for function refresh_execution_work_order_values"
+        },
+        "unchanged": true
+      }
+    },
+    {
+      "name": "definer_does_not_bypass_tenant_or_permission-value",
+      "passed": true,
+      "actual": {
+        "foreign_and_viewer_denied": true,
+        "unchanged": true
+      }
+    },
+    {
+      "name": "definer_does_not_bypass_tenant_or_permission-measurement",
+      "passed": true,
+      "actual": {
+        "foreign_and_viewer_denied": true,
+        "unchanged": true
+      }
+    },
+    {
+      "name": "definer_does_not_bypass_tenant_or_permission-order",
+      "passed": true,
+      "actual": {
+        "foreign_and_viewer_denied": true,
+        "unchanged": true
+      }
+    },
+    {
+      "name": "mutable_claim_role_does_not_grant_service_bypass",
+      "passed": true,
+      "actual": {
+        "denied": true
+      }
+    },
+    {
+      "name": "inconsistent_legacy_subject_rejected",
+      "passed": true,
+      "actual": {
+        "original_JWT_subject": "10000000-0000-4000-8000-000000000001",
+        "forged_legacy_subject": "10000000-0000-4000-8000-000000000002",
+        "old_14c_decision_accepts": true,
+        "new_guard_denied": true,
+        "limit": "Controlled SQL probe; no public claim-setter endpoint or 14C exploitation demonstrated."
+      }
+    },
+    {
+      "name": "role_and_session_identity_escalation_rejected",
+      "passed": true,
+      "actual": {
+        "actual_role_and_session_user_changes_denied": true
+      }
+    },
+    {
+      "name": "temporary_objects_do_not_shadow_company_or_authorization",
+      "passed": true,
+      "actual": {
+        "denied": true
+      }
+    },
+    {
+      "name": "forged_JWT_signature_rejected_by_real_gateway",
+      "passed": true,
+      "actual": {
+        "status": 401
+      }
+    },
+    {
+      "name": "native_contract_activation",
+      "passed": true,
+      "actual": {
+        "expected": {
+          "value": 30000,
+          "status": "active"
+        },
+        "actual": {
+          "value": 30000,
+          "status": "active"
+        }
+      }
+    },
+    {
+      "name": "native_measurement_approval_minimal_capability",
+      "passed": true,
+      "actual": {
+        "expected": {
+          "status": "approved"
+        },
+        "actual": {
+          "status": "approved"
+        },
+        "no_contract_read_privilege_added": true
+      }
+    },
+    {
+      "name": "native_OS_progress_minimal_capability",
+      "passed": true,
+      "actual": {
+        "expected": 8000,
+        "actual": 8000
+      }
+    },
+    {
+      "name": "native_pay_finance_payable_trigger_helper_HTTP",
+      "passed": true,
+      "actual": {
+        "path": "pay_finance_payable → native trigger0075 → helper",
+        "expected": {
+          "paid": 18000,
+          "retained": 2000,
+          "bank_transactions": 1
+        },
+        "actual": {
+          "paid": 18000,
+          "retained": 2000,
+          "bank_transactions": 1
+        }
+      }
+    },
+    {
+      "name": "native_payment_foreign_or_readonly_denied",
+      "passed": true,
+      "actual": {
+        "denied": true,
+        "unchanged": true
+      }
+    },
+    {
+      "name": "native_payment_bad_cross_company_measurement_rolls_back_bank_and_title",
+      "passed": true,
+      "actual": {
+        "response": {
+          "status": 403,
+          "body": {
+            "code": "42501",
+            "details": null,
+            "hint": null,
+            "message": "Registro indisponível ou sem autorização."
+          }
+        },
+        "bank_and_title_and_measurement_unchanged": true
+      }
+    },
+    {
+      "name": "inactive_membership_and_role_denied",
+      "passed": true,
+      "actual": {
+        "denied": true
+      }
+    },
+    {
+      "name": "trusted_service_and_direct_native_owner",
+      "passed": true,
+      "actual": {
+        "service_HTTP_value": 100000,
+        "service_HTTP": [
+          {
+            "function": "refresh_execution_service_contract_value",
+            "status": 200
+          },
+          {
+            "function": "refresh_execution_service_contract_measurements",
+            "status": 204
+          },
+          {
+            "function": "refresh_execution_work_order_values",
+            "status": 204
+          }
+        ],
+        "native_owner_SQL_all_three": true
+      }
+    },
+    {
+      "name": "native_contract_generation_from_competition",
+      "passed": true,
+      "actual": {
+        "expected": 100000,
+        "actual": 100000
+      }
+    },
+    {
+      "name": "native_contract_amendment",
+      "passed": true,
+      "actual": {
+        "expected": 110000,
+        "actual": 110000
+      }
+    },
+    {
+      "name": "native_contract_save_existing_draft",
+      "passed": true,
+      "actual": {
+        "expected": 30000,
+        "actual": 30000
+      }
+    },
+    {
+      "name": "native_contract_amendment_with_item_allocation",
+      "passed": true,
+      "actual": {
+        "expected": 110000,
+        "actual": 110000
+      }
+    },
+    {
+      "name": "native_measurement_to_finance",
+      "passed": true,
+      "actual": {
+        "expected": {
+          "measured": 40000,
+          "invoiced": 36000
+        },
+        "actual": {
+          "invoiced": 36000,
+          "measured": 40000
+        }
+      }
+    },
+    {
+      "name": "native_OS_save_direct",
+      "passed": true,
+      "actual": {
+        "expected": 10000,
+        "actual": 10000
+      }
+    },
+    {
+      "name": "native_OS_save_indirect_financial_plan",
+      "passed": true,
+      "actual": {
+        "expected": 10000,
+        "actual": 10000
+      }
+    },
+    {
+      "name": "native_OS_acceptance_indirect_financial_wrapper",
+      "passed": true,
+      "actual": {
+        "expected": {
+          "accepted": 8000,
+          "status": "finished"
+        },
+        "actual": {
+          "status": "finished",
+          "accepted": 8000
+        }
+      }
+    },
+    {
+      "name": "native_measurement_reverse",
+      "passed": true,
+      "actual": {
+        "expected": {
+          "measured": 0,
+          "paid": 0
+        },
+        "actual": {
+          "paid": 0,
+          "measured": 0
+        }
+      }
+    },
+    {
+      "name": "concurrent_native_payment_does_not_duplicate",
+      "passed": true,
+      "actual": {
+        "responses": [
+          {
+            "status": 200,
+            "body": "6ecb699b-88c2-4b62-a070-ad1629e0efed"
+          },
+          {
+            "status": 400,
+            "body": {
+              "code": "P0001",
+              "details": null,
+              "hint": null,
+              "message": "Conta a pagar não disponível para baixa."
+            }
+          }
+        ],
+        "expected": {
+          "count": 1,
+          "amount": 18000
+        },
+        "actual": {
+          "count": 1,
+          "amount": 18000
+        }
+      }
+    },
+    {
+      "name": "guard_marker_alone_is_not_trusted_on_reapplication",
+      "passed": true,
+      "actual": {
+        "altered_guard_repaired": true
+      }
+    },
+    {
+      "name": "unknown_financial_drift_aborts_without_partial_changes",
+      "passed": true,
+      "actual": {
+        "rejected": true,
+        "first_two_functions_and_business_rows_unchanged": true
+      }
+    },
+    {
+      "name": "service_table_privileges_not_silently_broadened",
+      "passed": true,
+      "actual": {
+        "missing_grant_blocks_migration": true
+      }
+    },
+    {
+      "name": "privileged_membership_and_extra_overload_block_migration",
+      "passed": true,
+      "actual": {
+        "noinherit_member_rejected": true,
+        "overload_rejected": true
+      }
+    }
+  ],
+  "passed": 46,
+  "failed": 0,
+  "fatal_error": null,
+  "resources_removed": true,
+  "production_calls": 0,
+  "regression": {
+    "command": "npm test",
+    "passed": 153,
+    "failed": 0,
+    "exit_code": 0
+  },
+  "lint": {
+    "command": "./node_modules/.bin/eslint --max-warnings 0 tests/security/finance-rpc-runtime.mjs tests/security/finance-rpc-fixture.mjs tests/security/finance-rpc-native.mjs",
+    "exit_code": 0
+  },
+  "metadata_SQL_check": {
+    "file": "docs/security/finance-rpc-p0-metadata.sql",
+    "result": "passed",
+    "environment": "discardable native schema after standalone patch",
+    "production_calls": 0
+  },
+  "scope": {
+    "production_access": false,
+    "Koper_access": false,
+    "financial_homologation_claimed": false,
+    "GoTrue_certified": false,
+    "private_import_jobs_executed": false
+  },
+  "source_sha256": {
+    "supabase/migrations/20261023180000_financial_rpc_p0_isolation.sql": "6e73049104a95bf905c8774d1bb604af362850d86091efd021b61e7aa43dd8d6",
+    "tests/security/finance-rpc-fixture.mjs": "8cc3a1e13392375edb17faf6fc9e3618312f9f6b17c1741e46ecb750a3d5360a",
+    "tests/security/finance-rpc-native.mjs": "cb107b750c66a16a36e05b4fc5806df678ac3c3438c0a9ab8d6844af4ef7d51b",
+    "tests/security/finance-rpc-runtime.mjs": "6bd73d0933d33e14fa471a5ceb24d7e7f47e2010baca50d2ba0cac6e2f40161f"
+  },
+  "harness_note": "The technical-identity test expects HTTP 200 for numeric and 204 for void PostgREST functions. An intermediate assertion incorrectly expected 200 for void; corrected without changing any financial expected result. Final full run: 46/46."
+}
