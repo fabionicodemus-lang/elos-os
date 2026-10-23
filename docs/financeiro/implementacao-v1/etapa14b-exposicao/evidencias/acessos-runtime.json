@@ -1,0 +1,13 @@
+{
+  "observed_at": "2026-10-23T12:29:42.183Z",
+  "observations_current": true,
+  "connectivity": "connected",
+  "network_policy": {
+    "mode": "restricted",
+    "state": "unknown"
+  },
+  "capabilities": [],
+  "secrets": [],
+  "runtime_variables": [],
+  "outbound_identities": []
+}

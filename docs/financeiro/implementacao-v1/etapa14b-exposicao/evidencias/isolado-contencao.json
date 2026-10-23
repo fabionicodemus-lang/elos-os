@@ -1,0 +1,307 @@
+{
+  "limits": "Dependências de PL/pgSQL/SQL dinâmico podem não constar em pg_depend. Busca textual é indício. Nenhuma RPC foi invocada; nenhum registro de negócio foi lido.",
+  "tables": [
+    {
+      "kind": "r",
+      "name": "execution_service_contracts",
+      "owner": "postgres",
+      "policies": [
+        {
+          "name": "own_contract",
+          "using": "is_company_member(company_id)",
+          "command": "r",
+          "role_oids": [
+            "16386"
+          ],
+          "permissive": true,
+          "with_check": null
+        }
+      ],
+      "rls_forced": false,
+      "rls_enabled": true
+    },
+    {
+      "kind": "r",
+      "name": "execution_work_orders",
+      "owner": "postgres",
+      "policies": null,
+      "rls_forced": false,
+      "rls_enabled": false
+    }
+  ],
+  "database": "elos_finance_test",
+  "functions": [
+    {
+      "oid": "16411",
+      "body": "\ndeclare total numeric; amendment_total numeric; begin\n-- E14_TENANT_GUARD_BEGIN\n  if coalesce(current_setting('role',true),'') <> 'service_role' and (\n    auth.uid() is null or not exists(\n      select 1 from public.execution_service_contracts scope_contract\n      where scope_contract.id=p_contract_id\n        and public.is_company_member(scope_contract.company_id)\n        and (public.has_company_permission(scope_contract.company_id,'execution.contracts.view')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.manage')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.approve')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.amend'))\n    )) then\n    raise exception using errcode='42501',message='Contrato indisponível ou sem autorização.';\n  end if;\n-- E14_TENANT_GUARD_END\n\n  select coalesce(sum(total_value),0) into total from public.execution_service_contract_items where contract_id=p_contract_id;\n  select coalesce(sum(value_change),0) into amendment_total from public.execution_service_contract_amendments where contract_id=p_contract_id;\n  update public.execution_service_contracts set original_value=total,amendments_value=amendment_total,current_value=greatest(0,total+amendment_total),updated_at=now() where id=p_contract_id;\n  return greatest(0,total+amendment_total);\nend; ",
+      "name": "refresh_execution_service_contract_value",
+      "owner": "postgres",
+      "config": [
+        "search_path=public"
+      ],
+      "result": "numeric",
+      "schema": "public",
+      "acl_raw": "{postgres=X/postgres,service_role=X/postgres}",
+      "language": "plpgsql",
+      "signature": "refresh_execution_service_contract_value(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION public.refresh_execution_service_contract_value(p_contract_id uuid)\n RETURNS numeric\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare total numeric; amendment_total numeric; begin\n-- E14_TENANT_GUARD_BEGIN\n  if coalesce(current_setting('role',true),'') <> 'service_role' and (\n    auth.uid() is null or not exists(\n      select 1 from public.execution_service_contracts scope_contract\n      where scope_contract.id=p_contract_id\n        and public.is_company_member(scope_contract.company_id)\n        and (public.has_company_permission(scope_contract.company_id,'execution.contracts.view')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.manage')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.approve')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.amend'))\n    )) then\n    raise exception using errcode='42501',message='Contrato indisponível ou sem autorização.';\n  end if;\n-- E14_TENANT_GUARD_END\n\n  select coalesce(sum(total_value),0) into total from public.execution_service_contract_items where contract_id=p_contract_id;\n  select coalesce(sum(value_change),0) into amendment_total from public.execution_service_contract_amendments where contract_id=p_contract_id;\n  update public.execution_service_contracts set original_value=total,amendments_value=amendment_total,current_value=greatest(0,total+amendment_total),updated_at=now() where id=p_contract_id;\n  return greatest(0,total+amendment_total);\nend; $function$\n",
+      "acl_expanded": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "effective_roles": [
+        {
+          "role": "anon",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticator",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        }
+      ],
+      "owner_bypassrls": true,
+      "owner_superuser": true,
+      "security_definer": true,
+      "identity_arguments": "p_contract_id uuid"
+    },
+    {
+      "oid": "16413",
+      "body": "\nbegin\n-- E14_WORK_ORDER_GUARD_BEGIN\n  if coalesce(current_setting('role',true),'') <> 'service_role' and (\n    auth.uid() is null or not exists(\n      select 1 from public.execution_work_orders scope_order\n      where scope_order.id=p_work_order_id\n        and public.is_company_member(scope_order.company_id)\n        and (public.has_company_permission(scope_order.company_id,'execution.work_orders.view')\n          or public.has_company_permission(scope_order.company_id,'execution.work_orders.manage')\n          or public.has_company_permission(scope_order.company_id,'execution.work_orders.release')\n          or public.has_company_permission(scope_order.company_id,'execution.work_orders.progress')\n          or public.has_company_permission(scope_order.company_id,'execution.work_orders.accept'))\n    )) then\n    raise exception using errcode='42501',message='Ordem indisponível ou sem autorização.';\n  end if;\n-- E14_WORK_ORDER_GUARD_END\n\n  update public.execution_work_orders wo\n  set authorized_value=coalesce(x.authorized,0),\n      executed_value=coalesce(x.executed,0),\n      accepted_value=coalesce(x.accepted,0),\n      measured_value=coalesce(x.measured,0),\n      updated_at=now()\n  from (\n    select p_work_order_id id,\n      coalesce(sum(authorized_value),0) authorized,\n      coalesce(sum(executed_value),0) executed,\n      coalesce(sum(accepted_value),0) accepted,\n      coalesce(sum(measured_value),0) measured\n    from public.execution_work_order_items where work_order_id=p_work_order_id\n  ) x where wo.id=x.id;\nend; ",
+      "name": "refresh_execution_work_order_values",
+      "owner": "postgres",
+      "config": [
+        "search_path=public"
+      ],
+      "result": "void",
+      "schema": "public",
+      "acl_raw": "{postgres=X/postgres,service_role=X/postgres}",
+      "language": "plpgsql",
+      "signature": "refresh_execution_work_order_values(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION public.refresh_execution_work_order_values(p_work_order_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n-- E14_WORK_ORDER_GUARD_BEGIN\n  if coalesce(current_setting('role',true),'') <> 'service_role' and (\n    auth.uid() is null or not exists(\n      select 1 from public.execution_work_orders scope_order\n      where scope_order.id=p_work_order_id\n        and public.is_company_member(scope_order.company_id)\n        and (public.has_company_permission(scope_order.company_id,'execution.work_orders.view')\n          or public.has_company_permission(scope_order.company_id,'execution.work_orders.manage')\n          or public.has_company_permission(scope_order.company_id,'execution.work_orders.release')\n          or public.has_company_permission(scope_order.company_id,'execution.work_orders.progress')\n          or public.has_company_permission(scope_order.company_id,'execution.work_orders.accept'))\n    )) then\n    raise exception using errcode='42501',message='Ordem indisponível ou sem autorização.';\n  end if;\n-- E14_WORK_ORDER_GUARD_END\n\n  update public.execution_work_orders wo\n  set authorized_value=coalesce(x.authorized,0),\n      executed_value=coalesce(x.executed,0),\n      accepted_value=coalesce(x.accepted,0),\n      measured_value=coalesce(x.measured,0),\n      updated_at=now()\n  from (\n    select p_work_order_id id,\n      coalesce(sum(authorized_value),0) authorized,\n      coalesce(sum(executed_value),0) executed,\n      coalesce(sum(accepted_value),0) accepted,\n      coalesce(sum(measured_value),0) measured\n    from public.execution_work_order_items where work_order_id=p_work_order_id\n  ) x where wo.id=x.id;\nend; $function$\n",
+      "acl_expanded": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "effective_roles": [
+        {
+          "role": "anon",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticator",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        }
+      ],
+      "owner_bypassrls": true,
+      "owner_superuser": true,
+      "security_definer": true,
+      "identity_arguments": "p_work_order_id uuid"
+    },
+    {
+      "oid": "16412",
+      "body": "\nbegin\n-- E14_TENANT_GUARD_BEGIN\n  if coalesce(current_setting('role',true),'') <> 'service_role' and (\n    auth.uid() is null or not exists(\n      select 1 from public.execution_service_contracts scope_contract\n      where scope_contract.id=p_contract_id\n        and public.is_company_member(scope_contract.company_id)\n        and (public.has_company_permission(scope_contract.company_id,'execution.contracts.view')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.manage')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.approve')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.amend'))\n    )) then\n    raise exception using errcode='42501',message='Contrato indisponível ou sem autorização.';\n  end if;\n-- E14_TENANT_GUARD_END\n\n update public.execution_service_contract_stages s set\n  measured_quantity=s.opening_measured_quantity+coalesce(x.quantity,0),\n  measured_value=s.opening_measured_value+coalesce(x.amount,0),updated_at=now()\n from (\n  select s0.id stage_id,coalesce(sum(mi.current_quantity) filter(where m.status in('approved','invoiced','paid')),0) quantity,\n   coalesce(sum(mi.current_amount) filter(where m.status in('approved','invoiced','paid')),0) amount\n  from public.execution_service_contract_stages s0\n  left join public.execution_contract_measurement_items mi on mi.contract_stage_id=s0.id\n  left join public.execution_contract_measurements m on m.id=mi.measurement_id\n  where s0.contract_id=p_contract_id group by s0.id\n ) x where s.id=x.stage_id;\n\n update public.execution_service_contract_items ci set measured_quantity=coalesce(x.quantity,0),measured_value=coalesce(x.amount,0),updated_at=now()\n from (\n  select mi.contract_item_id,sum(mi.current_quantity) quantity,sum(mi.current_amount) amount\n  from public.execution_contract_measurement_items mi join public.execution_contract_measurements m on m.id=mi.measurement_id\n  where mi.contract_id=p_contract_id and m.status in('approved','invoiced','paid') group by mi.contract_item_id\n ) x where ci.id=x.contract_item_id;\n update public.execution_service_contract_items ci set measured_quantity=0,measured_value=0,updated_at=now()\n where ci.contract_id=p_contract_id and not exists(select 1 from public.execution_contract_measurement_items mi join public.execution_contract_measurements m on m.id=mi.measurement_id where mi.contract_item_id=ci.id and m.status in('approved','invoiced','paid'));\n\n update public.execution_service_contracts c set measured_value=coalesce(x.measured,0),retained_value=coalesce(x.retained,0),invoiced_value=coalesce(x.invoiced,0),paid_value=coalesce(x.paid,0),updated_at=now()\n from (\n  select p_contract_id contract_id,coalesce(sum(gross_amount) filter(where status in('approved','invoiced','paid')),0) measured,\n   coalesce(sum(contractual_retention_amount+guarantee_retention_amount) filter(where status in('approved','invoiced','paid')),0) retained,\n   coalesce(sum(net_amount) filter(where status in('invoiced','paid')),0) invoiced,coalesce(sum(paid_amount) filter(where status='paid'),0) paid\n  from public.execution_contract_measurements where contract_id=p_contract_id\n ) x where c.id=x.contract_id;\nend ",
+      "name": "refresh_execution_service_contract_measurements",
+      "owner": "postgres",
+      "config": [
+        "search_path=public"
+      ],
+      "result": "void",
+      "schema": "public",
+      "acl_raw": "{postgres=X/postgres,service_role=X/postgres}",
+      "language": "plpgsql",
+      "signature": "refresh_execution_service_contract_measurements(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION public.refresh_execution_service_contract_measurements(p_contract_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n-- E14_TENANT_GUARD_BEGIN\n  if coalesce(current_setting('role',true),'') <> 'service_role' and (\n    auth.uid() is null or not exists(\n      select 1 from public.execution_service_contracts scope_contract\n      where scope_contract.id=p_contract_id\n        and public.is_company_member(scope_contract.company_id)\n        and (public.has_company_permission(scope_contract.company_id,'execution.contracts.view')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.manage')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.approve')\n          or public.has_company_permission(scope_contract.company_id,'execution.contracts.amend'))\n    )) then\n    raise exception using errcode='42501',message='Contrato indisponível ou sem autorização.';\n  end if;\n-- E14_TENANT_GUARD_END\n\n update public.execution_service_contract_stages s set\n  measured_quantity=s.opening_measured_quantity+coalesce(x.quantity,0),\n  measured_value=s.opening_measured_value+coalesce(x.amount,0),updated_at=now()\n from (\n  select s0.id stage_id,coalesce(sum(mi.current_quantity) filter(where m.status in('approved','invoiced','paid')),0) quantity,\n   coalesce(sum(mi.current_amount) filter(where m.status in('approved','invoiced','paid')),0) amount\n  from public.execution_service_contract_stages s0\n  left join public.execution_contract_measurement_items mi on mi.contract_stage_id=s0.id\n  left join public.execution_contract_measurements m on m.id=mi.measurement_id\n  where s0.contract_id=p_contract_id group by s0.id\n ) x where s.id=x.stage_id;\n\n update public.execution_service_contract_items ci set measured_quantity=coalesce(x.quantity,0),measured_value=coalesce(x.amount,0),updated_at=now()\n from (\n  select mi.contract_item_id,sum(mi.current_quantity) quantity,sum(mi.current_amount) amount\n  from public.execution_contract_measurement_items mi join public.execution_contract_measurements m on m.id=mi.measurement_id\n  where mi.contract_id=p_contract_id and m.status in('approved','invoiced','paid') group by mi.contract_item_id\n ) x where ci.id=x.contract_item_id;\n update public.execution_service_contract_items ci set measured_quantity=0,measured_value=0,updated_at=now()\n where ci.contract_id=p_contract_id and not exists(select 1 from public.execution_contract_measurement_items mi join public.execution_contract_measurements m on m.id=mi.measurement_id where mi.contract_item_id=ci.id and m.status in('approved','invoiced','paid'));\n\n update public.execution_service_contracts c set measured_value=coalesce(x.measured,0),retained_value=coalesce(x.retained,0),invoiced_value=coalesce(x.invoiced,0),paid_value=coalesce(x.paid,0),updated_at=now()\n from (\n  select p_contract_id contract_id,coalesce(sum(gross_amount) filter(where status in('approved','invoiced','paid')),0) measured,\n   coalesce(sum(contractual_retention_amount+guarantee_retention_amount) filter(where status in('approved','invoiced','paid')),0) retained,\n   coalesce(sum(net_amount) filter(where status in('invoiced','paid')),0) invoiced,coalesce(sum(paid_amount) filter(where status='paid'),0) paid\n  from public.execution_contract_measurements where contract_id=p_contract_id\n ) x where c.id=x.contract_id;\nend $function$\n",
+      "acl_expanded": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "effective_roles": [
+        {
+          "role": "anon",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticator",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        }
+      ],
+      "owner_bypassrls": true,
+      "owner_superuser": true,
+      "security_definer": true,
+      "identity_arguments": "p_contract_id uuid"
+    }
+  ],
+  "captured_at": "2026-10-23T12:40:01.832268+00:00",
+  "environment": "ISOLADO_FICTICIO_NAO_PRODUCAO",
+  "current_user": "e14b_metadata_reader",
+  "session_user": "postgres",
+  "format_version": 1,
+  "server_version": "17.11 (Debian 17.11-1.pgdg13+2)",
+  "role_memberships": [
+    {
+      "role": "anon",
+      "member": "authenticator",
+      "admin_option": false
+    },
+    {
+      "role": "authenticated",
+      "member": "authenticator",
+      "admin_option": false
+    }
+  ],
+  "requested_targets": [
+    {
+      "name": "refresh_execution_service_contract_value",
+      "overloads_found": 1,
+      "expected_signature": "public.refresh_execution_service_contract_value(uuid)",
+      "expected_signature_exists": true
+    },
+    {
+      "name": "refresh_execution_service_contract_measurements",
+      "overloads_found": 1,
+      "expected_signature": "public.refresh_execution_service_contract_measurements(uuid)",
+      "expected_signature_exists": true
+    },
+    {
+      "name": "refresh_execution_work_order_values",
+      "overloads_found": 1,
+      "expected_signature": "public.refresh_execution_work_order_values(uuid)",
+      "expected_signature_exists": true
+    }
+  ],
+  "catalog_dependencies": null,
+  "authorization_helpers": [
+    {
+      "owner": "postgres",
+      "config": null,
+      "signature": "auth.uid()",
+      "definition": "CREATE OR REPLACE FUNCTION auth.uid()\n RETURNS uuid\n LANGUAGE sql\nAS $function$ select null::uuid $function$\n",
+      "security_definer": false
+    },
+    {
+      "owner": "postgres",
+      "config": null,
+      "signature": "is_company_member(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION public.is_company_member(uuid)\n RETURNS boolean\n LANGUAGE sql\nAS $function$ select false $function$\n",
+      "security_definer": false
+    },
+    {
+      "owner": "postgres",
+      "config": null,
+      "signature": "has_company_permission(uuid,text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.has_company_permission(uuid, text)\n RETURNS boolean\n LANGUAGE sql\nAS $function$ select false $function$\n",
+      "security_definer": false
+    }
+  ],
+  "transaction_isolation": "repeatable read",
+  "transaction_read_only": "on",
+  "textual_callers_heuristic": null,
+  "api_role_database_settings": null,
+  "api_settings_visible_in_session": {
+    "note": "NULL não comprova ausência; configuração externa do gateway/PostgREST requer atestado.",
+    "db_schemas": null,
+    "db_pre_request": null
+  }
+}

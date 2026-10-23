@@ -1,0 +1,16 @@
+{
+  "source_sha256": "991637878db2d36515a9804641641b0b264780277f3af28f527da36850dbe134",
+  "derived_sha256": "bd4bf70b5728d462ce9d94534804a2e1678561bab9cfa38a913c203468e98bda",
+  "modified_cells": [
+    "Acompanhamento!I52",
+    "Acompanhamento!S52",
+    "Acompanhamento!I54",
+    "Acompanhamento!S54",
+    "Acompanhamento!I55",
+    "Acompanhamento!S55"
+  ],
+  "all_prior_sheet_cells_identical_except_explicit_evidence_and_notes": true,
+  "all_30_case_expected_actual_and_classifications_unchanged": true,
+  "formal_acceptance_task_statuses_and_formulas_unchanged": true,
+  "formula_caches_recomputed": false
+}

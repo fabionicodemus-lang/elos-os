@@ -1,0 +1,79 @@
+{
+  "executed_at": "2026-10-23T12:40:02.489Z",
+  "image": "postgres@sha256:a63c1ea3f6a3a5a1621f97d2aba3b30faecfab4224c1b0000cc85ced57bb1939",
+  "network": "none",
+  "published_ports": [],
+  "environment": "ISOLADO_FICTICIO",
+  "scaffold": "Duas tabelas sentinelas e helpers inertes; corpos das três RPCs extraídos literalmente das migrações. Não certifica autorização funcional: ver guards/ordens-servico.",
+  "checks": [
+    {
+      "name": "coletor_sem_acesso_a_linhas_de_negocio",
+      "passed": true,
+      "result": {
+        "metadata_readable": true,
+        "business_select_denied": true,
+        "values_unchanged": [
+          12345.67,
+          765.43
+        ]
+      }
+    },
+    {
+      "name": "ACL_default_PUBLIC_e_RLS_inventariados",
+      "passed": true,
+      "result": {
+        "default_public_execute": true,
+        "owner_bypasses_RLS": true
+      }
+    },
+    {
+      "name": "candidatas_preservam_todos_os_corpos_financeiros",
+      "passed": true,
+      "result": {
+        "functions": 3,
+        "values_unchanged": [
+          12345.67,
+          765.43
+        ]
+      }
+    },
+    {
+      "name": "reaplicacao_das_duas_candidatas_idempotente",
+      "passed": true,
+      "result": true
+    },
+    {
+      "name": "comparador_offline_distingue_antes_depois",
+      "passed": true,
+      "result": {
+        "before_differences": 3,
+        "after_equivalent": 3,
+        "no_production_claim": true
+      }
+    },
+    {
+      "name": "contencao_fecha_execucao_interativa_sem_reabrir_vulnerabilidade",
+      "passed": true,
+      "result": {
+        "interactive_denied": true,
+        "service_preserved": true,
+        "guards_preserved": true
+      }
+    },
+    {
+      "name": "overload_e_assinatura_ausente_nao_sao_inferidos",
+      "passed": true,
+      "result": {
+        "overload_detected": true,
+        "missing_not_zero_or_safe": true
+      }
+    }
+  ],
+  "passed": 7,
+  "failed": 0,
+  "fatal_error": null,
+  "container_removed": true,
+  "production_connections": 0,
+  "production_RPC_calls": 0,
+  "business_production_rows_read": 0
+}

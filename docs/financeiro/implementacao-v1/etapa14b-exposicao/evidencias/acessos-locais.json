@@ -1,0 +1,40 @@
+{
+  "observed_at": "2026-10-23T12:40:49.389076+00:00",
+  "cli": {
+    "psql": null,
+    "supabase": null,
+    "vercel": null,
+    "docker": "/usr/local/bin/docker"
+  },
+  "runtime_database_selector_names": [],
+  "config_presence": {
+    ".vercel/project.json": false,
+    "supabase/.temp/project-ref": false,
+    ".env": false,
+    ".env.local": false,
+    ".env.production": false
+  },
+  "identity_manifest": {
+    "exists": true,
+    "version": 1,
+    "connection_count": 0
+  },
+  "network": {
+    "version": 1,
+    "vpn_configured": false,
+    "tcp_network_access": {
+      "domains": [],
+      "ip_ranges": []
+    },
+    "http_policy_type": "restricted"
+  },
+  "available_database_deployment_connectors": [],
+  "secret_files_read": false,
+  "remote_attempts": [],
+  "missing": [
+    "Identificação/proveniência do projeto e ambiente implantado",
+    "Conexão autorizada ou snapshot atestado de metadados",
+    "Configuração externa não secreta do gateway/PostgREST"
+  ],
+  "conclusion": "NÃO FOI POSSÍVEL COMPROVAR"
+}

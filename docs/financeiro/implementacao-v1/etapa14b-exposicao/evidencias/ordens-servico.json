@@ -1,0 +1,77 @@
+{
+  "baseline": {
+    "identity": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "company": "00000000-0000-4000-8000-000000000005",
+      "profile": "finance"
+    },
+    "target_company": "00000000-0000-4000-8000-000000000006",
+    "target_id": "7e64b731-92cb-44c9-847d-9c32520e5e9f",
+    "layer": "SQL authenticated role/claims; real native function",
+    "foreign_rows_visible_before": 0,
+    "before": {
+      "id": "7e64b731-92cb-44c9-847d-9c32520e5e9f",
+      "company_id": "00000000-0000-4000-8000-000000000006",
+      "project_id": "00000000-0000-4000-8000-000000000012",
+      "updated_at": "2026-10-23T12:40:29.536349+00:00",
+      "accepted_value": 0,
+      "executed_value": 0,
+      "measured_value": 0,
+      "authorized_value": 0
+    },
+    "unauthorized_after": {
+      "id": "7e64b731-92cb-44c9-847d-9c32520e5e9f",
+      "company_id": "00000000-0000-4000-8000-000000000006",
+      "project_id": "00000000-0000-4000-8000-000000000012",
+      "updated_at": "2026-10-23T12:40:29.822815+00:00",
+      "accepted_value": 7000,
+      "executed_value": 8000,
+      "measured_value": 6000,
+      "authorized_value": 20000
+    }
+  },
+  "native_source_sha256": "8c0663de7d36ab048e4b9fa63d4a51753c9df58d8295a4fd832f4efb278f9d9c",
+  "results": [
+    {
+      "name": "formula_nativa_preservada",
+      "pass": true,
+      "actual": {
+        "financial_body_sha256": "fcc43e7213b719a1b79a92c0e62c3cdf683f40e678b0c893e1ca24726db52e30",
+        "stripped_after_sha256": "fcc43e7213b719a1b79a92c0e62c3cdf683f40e678b0c893e1ca24726db52e30"
+      }
+    },
+    {
+      "name": "empresa_estrangeira_nao_recalcula_OS",
+      "pass": true,
+      "actual": {
+        "denied": true,
+        "foreign_value_unchanged": 0
+      }
+    },
+    {
+      "name": "anon_nao_executa_OS",
+      "pass": true,
+      "actual": {
+        "denied": true
+      }
+    },
+    {
+      "name": "OS_legitima_conserva_valores_independentes",
+      "pass": true,
+      "actual": {
+        "id": "7e64b731-92cb-44c9-847d-9c32520e5e9f",
+        "company_id": "00000000-0000-4000-8000-000000000006",
+        "project_id": "00000000-0000-4000-8000-000000000012",
+        "updated_at": "2026-10-23T12:40:30.56801+00:00",
+        "accepted_value": 7000,
+        "executed_value": 8000,
+        "measured_value": 6000,
+        "authorized_value": 20000
+      }
+    }
+  ],
+  "passed": 4,
+  "failed": 0,
+  "container_removed": true,
+  "HTTP_Auth_certified": false
+}

@@ -1,0 +1,80 @@
+{
+  "execution_mode": "Runner sequencial; novos recursos locais por teste SQL.",
+  "executions": [
+    {
+      "command": [
+        "node",
+        "tests/finance-exposure/metadata.mjs"
+      ],
+      "log": "testes-metadados.log",
+      "started_at": "2026-10-23T12:39:56.580Z",
+      "ended_at": "2026-10-23T12:40:02.505Z",
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "tests/finance-isolation/guards.mjs"
+      ],
+      "log": "guards.log",
+      "started_at": "2026-10-23T12:40:02.505Z",
+      "ended_at": "2026-10-23T12:40:19.159Z",
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "tests/finance-isolation/work-orders.mjs"
+      ],
+      "log": "ordens-servico.log",
+      "started_at": "2026-10-23T12:40:19.159Z",
+      "ended_at": "2026-10-23T12:40:30.956Z",
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "--test-reporter=spec",
+        "lib/forecast/engine.test.mjs",
+        "lib/forecast/snapshot-comparison.test.mjs",
+        "lib/elos-ia/summaries.test.mjs",
+        "app/engenharia/contratos/contract-calculations.test.mjs",
+        "lib/banking/ofx.test.mjs",
+        "tests/banking/bank-operations.test.mjs",
+        "lib/elos-ia/finance-safe-write-db.test.mjs",
+        "tests/homologation/aurora-regressions.test.mjs",
+        "tests/commercial/development-costs.test.mjs",
+        "tests/commercial/development-result.test.mjs",
+        "tests/financeiro/money.test.mjs"
+      ],
+      "log": "regressao-81.log",
+      "started_at": "2026-10-23T12:40:30.956Z",
+      "ended_at": "2026-10-23T12:40:36.690Z",
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "npm",
+        "test"
+      ],
+      "log": "npm-test.log",
+      "started_at": "2026-10-23T12:40:36.690Z",
+      "ended_at": "2026-10-23T12:40:40.136Z",
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "npx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "tests/finance-exposure"
+      ],
+      "log": "eslint.log",
+      "started_at": "2026-10-23T12:40:40.136Z",
+      "ended_at": "2026-10-23T12:40:41.516Z",
+      "exit_code": 0
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+{
+  "results": [
+    {
+      "function": "refresh_execution_service_contract_value",
+      "signature": "public.refresh_execution_service_contract_value(uuid)",
+      "source_environment": "ISOLADO_FICTICIO_NAO_PRODUCAO",
+      "production_exposure": "NÃO VERIFICADA",
+      "requires_operator_attestation_and_gateway_metadata": true,
+      "body_sha256": "e6ee92d3e3b471a76f5b19d4b638d084a683adb86709361fa1ced20acdfdce98",
+      "reference_body_sha256": "e6ee92d3e3b471a76f5b19d4b638d084a683adb86709361fa1ced20acdfdce98",
+      "definition_sha256": "8e9f293c8ec4e53f400aafe7d0fe6a843d2d0298005c7f7cca7c3ffbea24c9c3",
+      "same_body": true,
+      "same_execution_mode": true,
+      "same_result_and_language": true,
+      "same_function_config": true,
+      "expected_core_acl": true,
+      "public_execute": false,
+      "effective_roles": [
+        {
+          "role": "anon",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticator",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        }
+      ],
+      "acl_expanded": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "comparison": "CORPO E ACL BÁSICA EQUIVALENTES À CANDIDATA LOCAL"
+    },
+    {
+      "function": "refresh_execution_service_contract_measurements",
+      "signature": "public.refresh_execution_service_contract_measurements(uuid)",
+      "source_environment": "ISOLADO_FICTICIO_NAO_PRODUCAO",
+      "production_exposure": "NÃO VERIFICADA",
+      "requires_operator_attestation_and_gateway_metadata": true,
+      "body_sha256": "f29603f6a527f92b49dda031604ca5dc4d3b1b3d87f0face632e1be8c4602863",
+      "reference_body_sha256": "f29603f6a527f92b49dda031604ca5dc4d3b1b3d87f0face632e1be8c4602863",
+      "definition_sha256": "3fc18085c331686fc141ad2c5282398cda8067d851129c0aaa37c8159aedfe59",
+      "same_body": true,
+      "same_execution_mode": true,
+      "same_result_and_language": true,
+      "same_function_config": true,
+      "expected_core_acl": true,
+      "public_execute": false,
+      "effective_roles": [
+        {
+          "role": "anon",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticator",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        }
+      ],
+      "acl_expanded": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "comparison": "CORPO E ACL BÁSICA EQUIVALENTES À CANDIDATA LOCAL"
+    },
+    {
+      "function": "refresh_execution_work_order_values",
+      "signature": "public.refresh_execution_work_order_values(uuid)",
+      "source_environment": "ISOLADO_FICTICIO_NAO_PRODUCAO",
+      "production_exposure": "NÃO VERIFICADA",
+      "requires_operator_attestation_and_gateway_metadata": true,
+      "body_sha256": "5ce787f527af6577d45ce9dd8ab77f866f017f487078dd960d7777786aea8dca",
+      "reference_body_sha256": "5ce787f527af6577d45ce9dd8ab77f866f017f487078dd960d7777786aea8dca",
+      "definition_sha256": "d439a710ddff9ce621c754a48d4c4fa908a14f97b082e2e691390a064c269f83",
+      "same_body": true,
+      "same_execution_mode": true,
+      "same_result_and_language": true,
+      "same_function_config": true,
+      "expected_core_acl": true,
+      "public_execute": false,
+      "effective_roles": [
+        {
+          "role": "anon",
+          "execute": false,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        },
+        {
+          "role": "authenticator",
+          "execute": true,
+          "inherit": true,
+          "bypassrls": false,
+          "superuser": false,
+          "schema_usage": true
+        }
+      ],
+      "acl_expanded": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "comparison": "CORPO E ACL BÁSICA EQUIVALENTES À CANDIDATA LOCAL"
+    }
+  ],
+  "warning": "Comparação não certifica produção, helpers, RLS, proprietários, grants adicionais, gateway nem exploração. Ausência de assinatura vale somente para o snapshot atestado."
+}
