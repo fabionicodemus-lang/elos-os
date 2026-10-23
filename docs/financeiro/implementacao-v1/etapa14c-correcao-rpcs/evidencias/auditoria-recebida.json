@@ -1,0 +1,240 @@
+{
+  "audit": "Elos OS Etapa 14B",
+  "date": "2026-10-23",
+  "mode": "Somente leitura de metadados; nenhuma RPC alvo executada; nenhum registro financeiro consultado",
+  "project": {
+    "id": "uqxflulrjdnhzrhptyla",
+    "name": "elos-os-dev",
+    "status": "ACTIVE_HEALTHY",
+    "region": "ca-central-1"
+  },
+  "production_binding": {
+    "vercel_project": "elos-os",
+    "project_id": "prj_0YWOgA4pn6PnEDERmcCpOu7Pfdm9",
+    "production_deployment": "dpl_EQkbzWrpscobcdXXypLJE2yTaFy3",
+    "production_commit": "460147e74be9b67c9cff2613b710a9cf0c264274",
+    "environment_key": "NEXT_PUBLIC_SUPABASE_URL",
+    "environment_target": [
+      "development",
+      "preview",
+      "production"
+    ],
+    "configured_url": "https://uqxflulrjdnhzrhptyla.supabase.co/rest/v1/",
+    "configuration_updated_at": "2026-07-22",
+    "client_normalization": "lib/supabase/config.ts utiliza parsedUrl.origin"
+  },
+  "finding": "SIM: definições vulneráveis implantadas no banco configurado para produção; exposição HTTP pela Data API NÃO COMPROVADA",
+  "comparison_requested": {
+    "commit": "39d858c",
+    "github_fetch_status": "422 No commit found",
+    "other_commit": "10ae3f7",
+    "other_fetch_status": "422 No commit found",
+    "branch": "test/financeiro-etapa14-isolamento",
+    "branch_search_results": 0,
+    "literal_diff": "NÃO COMPROVADO; não houve acesso ao conteúdo do patch"
+  },
+  "historical_comparison": [
+    {
+      "function_name": "refresh_execution_service_contract_value",
+      "path": "supabase/migrations/20260728_0038_execution_service_contracts.sql",
+      "body_equal_normalized": true,
+      "source_body": "\ndeclare total numeric; amendment_total numeric; begin\n  select coalesce(sum(total_value),0) into total from public.execution_service_contract_items where contract_id=p_contract_id;\n  select coalesce(sum(value_change),0) into amendment_total from public.execution_service_contract_amendments where contract_id=p_contract_id;\n  update public.execution_service_contracts set original_value=total,amendments_value=amendment_total,current_value=greatest(0,total+amendment_total),updated_at=now() where id=p_contract_id;\n  return greatest(0,total+amendment_total);\nend; "
+    },
+    {
+      "function_name": "refresh_execution_service_contract_measurements",
+      "path": "supabase/migrations/20260801_0067_service_contract_procurement.sql",
+      "body_equal_normalized": true,
+      "source_body": "\nbegin\n update public.execution_service_contract_stages s set\n  measured_quantity=s.opening_measured_quantity+coalesce(x.quantity,0),\n  measured_value=s.opening_measured_value+coalesce(x.amount,0),updated_at=now()\n from (\n  select s0.id stage_id,coalesce(sum(mi.current_quantity) filter(where m.status in('approved','invoiced','paid')),0) quantity,\n   coalesce(sum(mi.current_amount) filter(where m.status in('approved','invoiced','paid')),0) amount\n  from public.execution_service_contract_stages s0\n  left join public.execution_contract_measurement_items mi on mi.contract_stage_id=s0.id\n  left join public.execution_contract_measurements m on m.id=mi.measurement_id\n  where s0.contract_id=p_contract_id group by s0.id\n ) x where s.id=x.stage_id;\n\n update public.execution_service_contract_items ci set measured_quantity=coalesce(x.quantity,0),measured_value=coalesce(x.amount,0),updated_at=now()\n from (\n  select mi.contract_item_id,sum(mi.current_quantity) quantity,sum(mi.current_amount) amount\n  from public.execution_contract_measurement_items mi join public.execution_contract_measurements m on m.id=mi.measurement_id\n  where mi.contract_id=p_contract_id and m.status in('approved','invoiced','paid') group by mi.contract_item_id\n ) x where ci.id=x.contract_item_id;\n update public.execution_service_contract_items ci set measured_quantity=0,measured_value=0,updated_at=now()\n where ci.contract_id=p_contract_id and not exists(select 1 from public.execution_contract_measurement_items mi join public.execution_contract_measurements m on m.id=mi.measurement_id where mi.contract_item_id=ci.id and m.status in('approved','invoiced','paid'));\n\n update public.execution_service_contracts c set measured_value=coalesce(x.measured,0),retained_value=coalesce(x.retained,0),invoiced_value=coalesce(x.invoiced,0),paid_value=coalesce(x.paid,0),updated_at=now()\n from (\n  select p_contract_id contract_id,coalesce(sum(gross_amount) filter(where status in('approved','invoiced','paid')),0) measured,\n   coalesce(sum(contractual_retention_amount+guarantee_retention_amount) filter(where status in('approved','invoiced','paid')),0) retained,\n   coalesce(sum(net_amount) filter(where status in('invoiced','paid')),0) invoiced,coalesce(sum(paid_amount) filter(where status='paid'),0) paid\n  from public.execution_contract_measurements where contract_id=p_contract_id\n ) x where c.id=x.contract_id;\nend "
+    },
+    {
+      "function_name": "refresh_execution_work_order_values",
+      "path": "supabase/migrations/20260729_0040_execution_work_orders.sql",
+      "body_equal_normalized": true,
+      "source_body": "\nbegin\n  update public.execution_work_orders wo\n  set authorized_value=coalesce(x.authorized,0),\n      executed_value=coalesce(x.executed,0),\n      accepted_value=coalesce(x.accepted,0),\n      measured_value=coalesce(x.measured,0),\n      updated_at=now()\n  from (\n    select p_work_order_id id,\n      coalesce(sum(authorized_value),0) authorized,\n      coalesce(sum(executed_value),0) executed,\n      coalesce(sum(accepted_value),0) accepted,\n      coalesce(sum(measured_value),0) measured\n    from public.execution_work_order_items where work_order_id=p_work_order_id\n  ) x where wo.id=x.id;\nend; "
+    }
+  ],
+  "functions": [
+    {
+      "collected_at": "2026-10-23 14:07:23.803125+00",
+      "schema_name": "public",
+      "function_name": "refresh_execution_service_contract_measurements",
+      "identity_arguments": "p_contract_id uuid",
+      "arguments_with_defaults": "p_contract_id uuid",
+      "result_type": "void",
+      "language": "plpgsql",
+      "security_definer": true,
+      "function_settings": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "owner_superuser": false,
+      "owner_bypassrls": true,
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "anon_schema_usage": true,
+      "authenticated_schema_usage": true,
+      "definition": "CREATE OR REPLACE FUNCTION public.refresh_execution_service_contract_measurements(p_contract_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n update public.execution_service_contract_stages s set\n  measured_quantity=s.opening_measured_quantity+coalesce(x.quantity,0),\n  measured_value=s.opening_measured_value+coalesce(x.amount,0),updated_at=now()\n from (\n  select s0.id stage_id,coalesce(sum(mi.current_quantity) filter(where m.status in('approved','invoiced','paid')),0) quantity,\n   coalesce(sum(mi.current_amount) filter(where m.status in('approved','invoiced','paid')),0) amount\n  from public.execution_service_contract_stages s0\n  left join public.execution_contract_measurement_items mi on mi.contract_stage_id=s0.id\n  left join public.execution_contract_measurements m on m.id=mi.measurement_id\n  where s0.contract_id=p_contract_id group by s0.id\n ) x where s.id=x.stage_id;\n\n update public.execution_service_contract_items ci set measured_quantity=coalesce(x.quantity,0),measured_value=coalesce(x.amount,0),updated_at=now()\n from (\n  select mi.contract_item_id,sum(mi.current_quantity) quantity,sum(mi.current_amount) amount\n  from public.execution_contract_measurement_items mi join public.execution_contract_measurements m on m.id=mi.measurement_id\n  where mi.contract_id=p_contract_id and m.status in('approved','invoiced','paid') group by mi.contract_item_id\n ) x where ci.id=x.contract_item_id;\n update public.execution_service_contract_items ci set measured_quantity=0,measured_value=0,updated_at=now()\n where ci.contract_id=p_contract_id and not exists(select 1 from public.execution_contract_measurement_items mi join public.execution_contract_measurements m on m.id=mi.measurement_id where mi.contract_item_id=ci.id and m.status in('approved','invoiced','paid'));\n\n update public.execution_service_contracts c set measured_value=coalesce(x.measured,0),retained_value=coalesce(x.retained,0),invoiced_value=coalesce(x.invoiced,0),paid_value=coalesce(x.paid,0),updated_at=now()\n from (\n  select p_contract_id contract_id,coalesce(sum(gross_amount) filter(where status in('approved','invoiced','paid')),0) measured,\n   coalesce(sum(contractual_retention_amount+guarantee_retention_amount) filter(where status in('approved','invoiced','paid')),0) retained,\n   coalesce(sum(net_amount) filter(where status in('invoiced','paid')),0) invoiced,coalesce(sum(paid_amount) filter(where status='paid'),0) paid\n  from public.execution_contract_measurements where contract_id=p_contract_id\n ) x where c.id=x.contract_id;\nend $function$\n",
+      "definition_md5": "ec1e57424f2f90a04f875273ed311542"
+    },
+    {
+      "collected_at": "2026-10-23 14:07:23.803125+00",
+      "schema_name": "public",
+      "function_name": "refresh_execution_service_contract_value",
+      "identity_arguments": "p_contract_id uuid",
+      "arguments_with_defaults": "p_contract_id uuid",
+      "result_type": "numeric",
+      "language": "plpgsql",
+      "security_definer": true,
+      "function_settings": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "owner_superuser": false,
+      "owner_bypassrls": true,
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "anon_schema_usage": true,
+      "authenticated_schema_usage": true,
+      "definition": "CREATE OR REPLACE FUNCTION public.refresh_execution_service_contract_value(p_contract_id uuid)\n RETURNS numeric\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare total numeric; amendment_total numeric; begin\n  select coalesce(sum(total_value),0) into total from public.execution_service_contract_items where contract_id=p_contract_id;\n  select coalesce(sum(value_change),0) into amendment_total from public.execution_service_contract_amendments where contract_id=p_contract_id;\n  update public.execution_service_contracts set original_value=total,amendments_value=amendment_total,current_value=greatest(0,total+amendment_total),updated_at=now() where id=p_contract_id;\n  return greatest(0,total+amendment_total);\nend; $function$\n",
+      "definition_md5": "dab2933441ab277d8f0b70cf18fe8091"
+    },
+    {
+      "collected_at": "2026-10-23 14:07:23.803125+00",
+      "schema_name": "public",
+      "function_name": "refresh_execution_work_order_values",
+      "identity_arguments": "p_work_order_id uuid",
+      "arguments_with_defaults": "p_work_order_id uuid",
+      "result_type": "void",
+      "language": "plpgsql",
+      "security_definer": true,
+      "function_settings": [
+        "search_path=public"
+      ],
+      "owner": "postgres",
+      "owner_superuser": false,
+      "owner_bypassrls": true,
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "anon_schema_usage": true,
+      "authenticated_schema_usage": true,
+      "definition": "CREATE OR REPLACE FUNCTION public.refresh_execution_work_order_values(p_work_order_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  update public.execution_work_orders wo\n  set authorized_value=coalesce(x.authorized,0),\n      executed_value=coalesce(x.executed,0),\n      accepted_value=coalesce(x.accepted,0),\n      measured_value=coalesce(x.measured,0),\n      updated_at=now()\n  from (\n    select p_work_order_id id,\n      coalesce(sum(authorized_value),0) authorized,\n      coalesce(sum(executed_value),0) executed,\n      coalesce(sum(accepted_value),0) accepted,\n      coalesce(sum(measured_value),0) measured\n    from public.execution_work_order_items where work_order_id=p_work_order_id\n  ) x where wo.id=x.id;\nend; $function$\n",
+      "definition_md5": "b50e12175f5bbce79456d7b932381e38"
+    }
+  ],
+  "exposure": [
+    {
+      "collected_at": "2026-10-23 14:07:29.922369+00",
+      "source": "session",
+      "database_name": "postgres",
+      "role_name": "postgres",
+      "db_schemas": null,
+      "extra_search_path": null
+    }
+  ],
+  "rls": [
+    {
+      "schema_name": "public",
+      "table_name": "execution_contract_measurement_items",
+      "rls_enabled": true,
+      "force_rls": false,
+      "owner": "postgres"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "execution_contract_measurements",
+      "rls_enabled": true,
+      "force_rls": false,
+      "owner": "postgres"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "execution_service_contract_amendments",
+      "rls_enabled": true,
+      "force_rls": false,
+      "owner": "postgres"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "execution_service_contract_items",
+      "rls_enabled": true,
+      "force_rls": false,
+      "owner": "postgres"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "execution_service_contract_stages",
+      "rls_enabled": true,
+      "force_rls": false,
+      "owner": "postgres"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "execution_service_contracts",
+      "rls_enabled": true,
+      "force_rls": false,
+      "owner": "postgres"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "execution_work_order_items",
+      "rls_enabled": true,
+      "force_rls": false,
+      "owner": "postgres"
+    },
+    {
+      "schema_name": "public",
+      "table_name": "execution_work_orders",
+      "rls_enabled": true,
+      "force_rls": false,
+      "owner": "postgres"
+    }
+  ],
+  "helpers": [
+    {
+      "schema_name": "public",
+      "function_name": "has_company_permission",
+      "identity_arguments": "target_company_id uuid, target_permission text",
+      "definition": "CREATE OR REPLACE FUNCTION public.has_company_permission(target_company_id uuid, target_permission text)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\n  select exists (\n    select 1\n    from public.company_memberships membership\n    join public.roles role\n      on role.id = membership.role_id\n     and role.company_id = membership.company_id\n    where membership.company_id = target_company_id\n      and membership.user_id = auth.uid()\n      and membership.status = 'active'\n      and role.status = 'active'\n      and (\n        role.key in ('owner', 'admin')\n        or exists (\n          select 1\n          from public.role_permissions role_permission\n          where role_permission.role_id = membership.role_id\n            and role_permission.permission_key = target_permission\n            and role_permission.allowed = true\n        )\n      )\n  );\n$function$\n"
+    },
+    {
+      "schema_name": "public",
+      "function_name": "is_company_member",
+      "identity_arguments": "target_company_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION public.is_company_member(target_company_id uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n  select exists (\r\n    select 1\r\n    from public.company_memberships membership\r\n    where membership.company_id = target_company_id\r\n      and membership.user_id = auth.uid()\r\n      and membership.status = 'active'\r\n  );\r\n$function$\n"
+    }
+  ],
+  "triggers": [
+    {
+      "table_name": "execution_service_contracts",
+      "trigger_name": "execution_contract_require_competition",
+      "enabled": "O",
+      "trigger_definition": "CREATE TRIGGER execution_contract_require_competition BEFORE INSERT ON public.execution_service_contracts FOR EACH ROW EXECUTE FUNCTION block_direct_execution_contract_insert()",
+      "function_schema": "public",
+      "function_name": "block_direct_execution_contract_insert"
+    },
+    {
+      "table_name": "execution_service_contracts",
+      "trigger_name": "execution_contract_validate_stages",
+      "enabled": "O",
+      "trigger_definition": "CREATE TRIGGER execution_contract_validate_stages BEFORE UPDATE OF status ON public.execution_service_contracts FOR EACH ROW EXECUTE FUNCTION validate_execution_contract_stages_before_activation()",
+      "function_schema": "public",
+      "function_name": "validate_execution_contract_stages_before_activation"
+    },
+    {
+      "table_name": "execution_service_contracts",
+      "trigger_name": "zz_security_audit",
+      "enabled": "O",
+      "trigger_definition": "CREATE TRIGGER zz_security_audit AFTER INSERT OR DELETE OR UPDATE ON public.execution_service_contracts FOR EACH ROW EXECUTE FUNCTION security_audit_row_change()",
+      "function_schema": "public",
+      "function_name": "security_audit_row_change"
+    }
+  ],
+  "audit_trigger": [
+    {
+      "definition": "CREATE OR REPLACE FUNCTION public.security_audit_row_change()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  old_j jsonb := case when tg_op in ('UPDATE','DELETE') then to_jsonb(old) end;\n  new_j jsonb := case when tg_op in ('INSERT','UPDATE') then to_jsonb(new) end;\n  diff_old jsonb;\n  diff_new jsonb;\n  keys jsonb;\nbegin\n  if tg_op = 'UPDATE' then\n    select coalesce(jsonb_object_agg(n.key, o.value), '{}'::jsonb),\n           coalesce(jsonb_object_agg(n.key, n.value), '{}'::jsonb),\n           coalesce(jsonb_agg(n.key), '[]'::jsonb)\n      into diff_old, diff_new, keys\n      from jsonb_each(new_j) n\n      left join jsonb_each(old_j) o on o.key = n.key\n     where o.value is distinct from n.value and n.key <> 'updated_at';\n    if keys = '[]'::jsonb then return new; end if;\n  end if;\n\n  insert into public.security_audit_log(company_id, table_name, record_id, action, changed_fields, old_values, new_values)\n  values (\n    nullif(coalesce(new_j->>'company_id', old_j->>'company_id'), '')::uuid,\n    tg_table_name,\n    coalesce(new_j->>'id', old_j->>'id'),\n    lower(tg_op),\n    keys,\n    case when tg_op = 'UPDATE' then diff_old else old_j end,\n    case when tg_op = 'UPDATE' then diff_new else new_j end\n  );\n  return coalesce(new, old);\nend $function$\n"
+    }
+  ]
+}
