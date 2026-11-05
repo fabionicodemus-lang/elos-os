@@ -224,12 +224,15 @@ export function ShellNavigation({
   homeActive,
   assistantHref,
   assistantActive,
+  platformAdminHref,
 }: {
   groups: ShellNavigationGroup[];
   homeActive?: boolean;
   /** Link do Elos IA; ausente quando o usuário não tem a permissão. */
   assistantHref?: string;
   assistantActive?: boolean;
+  /** Só é informado após a verificação de administrador global no banco. */
+  platformAdminHref?: string;
 }) {
   const pathname = usePathname();
   const navigationGroups = buildNavigationGroups(groups, pathname);
@@ -283,6 +286,14 @@ export function ShellNavigation({
             <Link prefetch={false} className={`elos-main-item ${assistantActive ? "active" : ""}`} href={assistantHref} onClick={closeMobile}>
               <span className="elos-icon">✦</span>
               <span>Elos IA</span>
+            </Link>
+          ) : null}
+
+          {platformAdminHref ? (
+            <Link prefetch={false} className={`elos-main-item ${pathname.startsWith("/plataforma/") ? "active" : ""}`}
+              href={platformAdminHref} onClick={closeMobile}>
+              <span className="elos-icon">▣</span>
+              <span>Administração Elos OS</span>
             </Link>
           ) : null}
 
