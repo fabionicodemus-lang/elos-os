@@ -290,7 +290,7 @@ begin
     raise exception 'Área restrita à administração da plataforma.';
   end if;
   return query
-  select m.id, coalesce(u.email, ''), coalesce(p.full_name, ''), r.key,
+  select m.id, coalesce(u.email, '')::text, coalesce(p.full_name, ''), r.key,
     r.name, m.status, u.email_confirmed_at is not null, m.created_at,
     count(*) over()
   from public.company_memberships m
