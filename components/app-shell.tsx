@@ -27,10 +27,11 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
     : role.id
       ? supabase.from("role_permissions").select("permission_key").eq("role_id", role.id).eq("allowed", true)
       : Promise.resolve({ data: [], error: null });
-  const [projectsResult, profileResult, permissionResult] = await Promise.all([
+  const [projectsResult, profileResult, permissionResult, platformResult] = await Promise.all([
     supabase.from("projects").select("id, name, code").eq("company_id", companyId).neq("status", "archived").order("name"),
     supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
     permissionQuery,
+    supabase.rpc("is_platform_admin"),
   ]);
   const projects = (projectsResult.data ?? []) as Project[];
   const permissions = new Set(
@@ -42,6 +43,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const fullName = profileResult.data?.full_name?.trim() || email.split("@")[0] || "Usuário";
   const activeProject = projects.find((project) => project.id === projectId) ?? projects[0] ?? null;
   const assistantHref = can("ai.assistant.use") ? "/elos-ia" : undefined;
+  const platformAdminHref = platformResult.data === true ? "/plataforma/ambientes" : undefined;
   const permissionsHref = privileged || can("admin.roles.view") || can("admin.roles.manage") ? "/configuracoes/permissoes" : undefined;
   const dataBackupHref = privileged || can("admin.data.view") || can("admin.data.export") || can("admin.data.restore") || can("admin.data.manage") ? "/configuracoes/dados-backup" : undefined;
   const auditTrailHref = can("security.audit.view") ? "/configuracoes/auditoria" : undefined;
@@ -230,7 +232,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
 
   return <div className="elos-app-shell">
     <BankAccountPaymentSelector />
-    <ShellNavigation groups={groups} homeActive={activeGroup === "home"} assistantHref={assistantHref} assistantActive={activeGroup === "ai"} />
+    <ShellNavigation groups={groups} homeActive={activeGroup === "home"} assistantHref={assistantHref} assistantActive={activeGroup === "ai"} platformAdminHref={platformAdminHref} />
     <main className="elos-main">
       <header className="elos-header">
         <div className="elos-org"><span className="elos-org-icon">▥</span><span className="elos-org-text"><strong>{company.name}</strong><span>{role.name}</span></span></div>
