@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export function AcceptInviteForm() {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
+  // O cliente de Auth depende de variáveis públicas presentes no navegador.
+  // Criá-lo durante o render causaria erro na pré-renderização sem env do CI.
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   const [ready, setReady] = useState(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -15,6 +17,14 @@ export function AcceptInviteForm() {
 
   useEffect(() => {
     let active = true;
+    let supabase: ReturnType<typeof createClient>;
+    try {
+      supabase = createClient();
+      supabaseRef.current = supabase;
+    } catch {
+      setError("A autenticação ainda não está configurada neste ambiente.");
+      return;
+    }
     async function prepareSession() {
       try {
         const hash = new URLSearchParams(window.location.hash.slice(1));
@@ -58,11 +68,16 @@ export function AcceptInviteForm() {
     }
     void prepareSession();
     return () => { active = false; };
-  }, [supabase]);
+  }, []);
 
   async function savePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (working) return;
+    const supabase = supabaseRef.current;
+    if (!supabase) {
+      setError("Não foi possível inicializar a autenticação. Atualize a página.");
+      return;
+    }
     if (password.length < 8) {
       setError("Sua senha precisa ter pelo menos 8 caracteres.");
       return;
