@@ -1,5 +1,5 @@
 -- Elos OS: teste transacional do onboarding global em um banco isolado.
--- Execute APENAS em homologacao com as migrations 0001, 0056, 0061 e 20261105 aplicadas.
+-- Execute APENAS em homologacao com as migrations 0001, 0056, 0061 e as duas de 20261105 aplicadas.
 -- Todos os usuarios e vinculos ficticios sao descartados ao final.
 begin;
 
@@ -50,6 +50,13 @@ begin
   ) ->> 'company_id')::uuid into v_company_b;
   if v_company_b is null or v_company_b = v_company_a then
     raise exception 'FALHA: empresas nao isoladas';
+  end if;
+
+  select count(*) into v_count
+  from public.platform_list_environments() env
+  where env.company_id in (v_company_a, v_company_b);
+  if v_count <> 2 then
+    raise exception 'FALHA: listagem global de empresas esperava 2 e recebeu %', v_count;
   end if;
 
   select count(*) into v_count
@@ -112,6 +119,20 @@ begin
   end;
   if not v_rejected then
     raise exception 'FALHA: consulta global liberada ao colaborador';
+  end if;
+
+  v_rejected := false;
+  begin
+    perform public.platform_list_environments();
+  exception when others then
+    if position('restrita' in sqlerrm) > 0 then
+      v_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not v_rejected then
+    raise exception 'FALHA: listagem global liberada ao colaborador';
   end if;
 
   v_rejected := false;
