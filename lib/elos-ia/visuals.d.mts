@@ -103,6 +103,8 @@ export function buildElosIaVisuals(input: {
   observations: ElosIaToolObservation[];
   today: string;
   generatedAt?: string;
+  /** Current user question only; never previous conversation or model text. */
+  question?: string;
 }): ElosIaVisual[];
 /** Validate HTTP/cache data, discard unknown fields and bound payload sizes. */
 export function sanitizeElosIaVisuals(value: unknown): ElosIaVisual[];
