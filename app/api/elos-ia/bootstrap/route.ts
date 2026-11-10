@@ -22,6 +22,7 @@ export async function GET(){
     configured:Boolean(config.apiKey),
     personas:ELOS_IA_PERSONAS.map((persona)=>({key:persona.key,label:persona.label,tagline:persona.tagline,pilotNote:persona.pilotNote??null,suggestions:persona.suggestions,sources:[]})),
     defaultPersona:defaultPersonaForRole(workspace.roleKey),
+    activeProjectId:activeProject?.id??null,
     activeProjectLabel,
     initialQuota:quotaView(config,usage),
     maxQuestionChars:config.maxQuestionChars,

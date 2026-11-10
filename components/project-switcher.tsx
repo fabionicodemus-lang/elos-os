@@ -63,7 +63,7 @@ export function ProjectSwitcher({
           </option>
         ))}
       </select>
-      <GlobalElosIaDrawer activeProjectLabel={activeProjectLabel} />
+      <GlobalElosIaDrawer key={`${companyId}:${activeProject?.id ?? "company"}`} activeProjectLabel={activeProjectLabel} />
       <button className="elos-visually-hidden" type="submit">Aplicar</button>
     </form>
   );
