@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ElosIaChat, type ElosIaChatPersona, type ElosIaPageContext } from "@/app/elos-ia/elos-ia-chat";
+import { elosIaChatStorageKey } from "@/lib/elos-ia/chat-storage";
 
 type Quota={tracking:boolean;costTracking:boolean;userTokensToday:number;dailyUserTokens:number;companyTokensMonth:number;monthlyCompanyTokens:number;companyUsdMonth:number;monthlyCompanyUsd:number};
 type Bootstrap={
@@ -12,6 +13,7 @@ type Bootstrap={
   configured:boolean;
   personas:ElosIaChatPersona[];
   defaultPersona:string;
+  activeProjectId:string|null;
   activeProjectLabel:string|null;
   initialQuota:Quota;
   maxQuestionChars:number;
@@ -35,10 +37,12 @@ function visiblePageContext(pathname:string,activeProjectLabel:string|null):Elos
 
 export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:string|null}){
   const pathname=usePathname();
+  const fullScreen=pathname==="/elos-ia";
   const [mounted,setMounted]=useState(false);
   const [open,setOpen]=useState(false);
   const [bootstrap,setBootstrap]=useState<Bootstrap|null>(null);
   const [loading,setLoading]=useState(false);
+  const [busy,setBusy]=useState(false);
   const [error,setError]=useState<string|null>(null);
   const [reloadKey,setReloadKey]=useState(0);
   const [context,setContext]=useState<ElosIaPageContext>({pathname,activeProjectLabel});
@@ -51,9 +55,9 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
   useEffect(()=>{
     if(!mounted)return;
     try{sessionStorage.setItem(OPEN_KEY,open?"1":"0");}catch{}
-    document.body.classList.toggle(SPLIT_CLASS,open);
+    document.body.classList.toggle(SPLIT_CLASS,open&&!fullScreen);
     return()=>document.body.classList.remove(SPLIT_CLASS);
-  },[mounted,open]);
+  },[mounted,open,fullScreen]);
 
   useEffect(()=>{
     if(!mounted)return;
@@ -62,7 +66,7 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
   },[mounted,pathname,activeProjectLabel,open]);
 
   useEffect(()=>{
-    if(!open||bootstrap||error)return;
+    if(!open||fullScreen||bootstrap||error)return;
     const controller=new AbortController();
     setLoading(true);
     fetch("/api/elos-ia/bootstrap",{headers:{accept:"application/json"},cache:"no-store",signal:controller.signal})
@@ -79,33 +83,40 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
       })
       .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
-  },[open,bootstrap,error,reloadKey]);
+  },[open,fullScreen,bootstrap,error,reloadKey]);
 
   useEffect(()=>{
-    if(!open)return;
+    if(!open||busy)return;
     const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false);};
     window.addEventListener("keydown",onKey);
     return()=>window.removeEventListener("keydown",onKey);
-  },[open]);
+  },[open,busy]);
 
   const retry=()=>{setError(null);setBootstrap(null);setLoading(false);setReloadKey((value)=>value+1);};
   const contextLabel=[activeProjectLabel,context.screen].filter(Boolean).join(" · ")||"Contexto atual";
+  const storageKey=bootstrap?elosIaChatStorageKey(bootstrap.companyId,bootstrap.userId,bootstrap.activeProjectId):undefined;
+
+  // A single mounted chat owns the session history, including when expanding a chart.
+  if(fullScreen)return null;
 
   const drawer=mounted&&open?createPortal(
     <aside className="elos-ai-drawer" aria-label="Elos IA" aria-live="polite">
       <header className="elos-ai-drawer-head">
         <div><strong><span aria-hidden="true">✦</span> Elos IA</strong><span>{contextLabel}</span></div>
-        <div className="elos-ai-drawer-actions"><Link href="/elos-ia" title="Abrir Elos IA em tela completa" aria-label="Abrir Elos IA em tela completa">↗</Link><button type="button" onClick={()=>setOpen(false)} title="Fechar Elos IA" aria-label="Fechar Elos IA">×</button></div>
+        <div className="elos-ai-drawer-actions">
+          {busy?<button type="button" disabled title="Aguarde a resposta para abrir em tela completa" aria-label="Aguarde a resposta para abrir em tela completa">↗</button>:<Link href="/elos-ia" title="Abrir Elos IA em tela completa" aria-label="Abrir Elos IA em tela completa">↗</Link>}
+          <button type="button" disabled={busy} onClick={()=>setOpen(false)} title={busy?"Aguarde a resposta para fechar o painel":"Fechar Elos IA"} aria-label={busy?"Aguarde a resposta para fechar o painel":"Fechar Elos IA"}>×</button>
+        </div>
       </header>
       <div className="elos-ai-drawer-body">
         {loading&&!bootstrap?<div className="elos-ai-drawer-state"><span className="elos-ai-drawer-spark">✦</span><strong>Preparando o contexto desta tela…</strong></div>:null}
         {error?<div className="elos-ai-drawer-state error"><strong>{error}</strong><button type="button" className="elos-button" onClick={retry}>Tentar novamente</button></div>:null}
-        {bootstrap?<ElosIaChat personas={bootstrap.personas} defaultPersona={bootstrap.defaultPersona} configured={bootstrap.configured} activeProjectLabel={activeProjectLabel??bootstrap.activeProjectLabel} initialQuota={bootstrap.initialQuota} maxQuestionChars={bootstrap.maxQuestionChars} companyId={bootstrap.companyId} userId={bootstrap.userId} compact pageContext={context} storageKey={`elos-ia-global:${bootstrap.companyId}:${bootstrap.userId}`}/>:null}
+        {bootstrap?<ElosIaChat key={storageKey} personas={bootstrap.personas} defaultPersona={bootstrap.defaultPersona} configured={bootstrap.configured} activeProjectLabel={activeProjectLabel??bootstrap.activeProjectLabel} initialQuota={bootstrap.initialQuota} maxQuestionChars={bootstrap.maxQuestionChars} companyId={bootstrap.companyId} userId={bootstrap.userId} compact pageContext={context} storageKey={storageKey} onBusyChange={setBusy}/>:null}
       </div>
     </aside>,document.body):null;
 
   return <>
-    <button type="button" className={`elos-ai-launcher ${open?"active":""}`} onClick={()=>setOpen((value)=>!value)} title={open?"Fechar Elos IA":"Abrir Elos IA"} aria-label={open?"Fechar Elos IA":"Abrir Elos IA"} aria-expanded={open}>
+    <button type="button" disabled={busy} className={`elos-ai-launcher ${open?"active":""}`} onClick={()=>setOpen((value)=>!value)} title={busy?"Elos IA está preparando sua resposta":open?"Fechar Elos IA":"Abrir Elos IA"} aria-label={busy?"Elos IA está preparando sua resposta":open?"Fechar Elos IA":"Abrir Elos IA"} aria-expanded={open}>
       <span aria-hidden="true">✦</span><b>IA</b>
     </button>
     {drawer}

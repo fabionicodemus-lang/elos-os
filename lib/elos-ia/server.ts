@@ -12,6 +12,8 @@ import { elosIaFinanceToolLabel, elosIaFinanceToolSchemas, elosIaFinanceToolsFor
 import { elosIaFinanceActionToolLabel, elosIaFinanceActionToolSchemas, elosIaFinanceActionToolsForPersona, isElosIaFinanceActionTool, runElosIaFinanceActionTool } from "./finance-action-tools";
 import {scheduleToolsForPersona,scheduleActionToolSchemas,isScheduleActionTool,scheduleActionToolLabel,runScheduleActionTool,type ScheduleActionContext} from "./schedule-action-tools";
 import { elosIaWorksiteToolLabel, elosIaWorksiteToolSchemas, elosIaWorksiteToolsForPersona, isElosIaWorksiteTool, runElosIaWorksiteTool } from "./worksite-tools";
+import { elosIaCommercialToolLabel, elosIaCommercialToolSchemas, elosIaCommercialToolsForPersona, isElosIaCommercialTool, runElosIaCommercialTool } from "./commercial-tools";
+import { buildElosIaVisuals, type ElosIaVisual, type ElosIaToolObservation } from "./visuals.mjs";
 
 type Workspace = Awaited<ReturnType<typeof resolveActiveWorkspace>>;
 const ANSWER_DEADLINE_MS = 55_000;
@@ -23,7 +25,7 @@ export type ElosIaActionView = {
   requiredPermission:string; canExecute:boolean; createdAt:string; expiresAt:string;
 };
 export type ElosIaAnswer =
-  | { ok:true; text:string; persona:ElosIaPersonaKey; consultas:Array<{nome:string;ok:boolean}>; tokens:number; quota:ElosIaQuotaView; actions:ElosIaActionView[] }
+  | { ok:true; text:string; persona:ElosIaPersonaKey; consultas:Array<{nome:string;ok:boolean}>; tokens:number; quota:ElosIaQuotaView; actions:ElosIaActionView[]; visuals:ElosIaVisual[] }
   | { ok:false; status:number; error:string; quota?:ElosIaQuotaView };
 
 export function elosIaToday() {
@@ -64,6 +66,7 @@ function finalText(text: string, status: "ok" | "incomplete" | "empty") {
   return text;
 }
 function toolLabel(name:string){
+  if(isElosIaCommercialTool(name))return elosIaCommercialToolLabel(name);
   if(isScheduleActionTool(name))return scheduleActionToolLabel(name);
   if(isElosIaFinanceActionTool(name))return elosIaFinanceActionToolLabel(name);
   if(isElosIaActionTool(name))return elosIaActionToolLabel(name);
@@ -124,8 +127,27 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
   const financeTools=elosIaFinanceToolsForPersona(persona.key);
   const financeActionTools=elosIaFinanceActionToolsForPersona(persona.key);
   const worksiteTools=elosIaWorksiteToolsForPersona(persona.key);
-  const tools=[...scheduleActionToolSchemas(scheduleTools),...elosIaToolSchemas(persona.tools),...elosIaWorksiteToolSchemas(worksiteTools),...elosIaFinanceToolSchemas(financeTools),...elosIaActionToolSchemas(actionTools),...elosIaFinanceActionToolSchemas(financeActionTools)];
+  const commercialTools=elosIaCommercialToolsForPersona(persona.key);
+  const tools=[...scheduleActionToolSchemas(scheduleTools),...elosIaToolSchemas(persona.tools),...elosIaWorksiteToolSchemas(worksiteTools),...elosIaFinanceToolSchemas(financeTools),...elosIaActionToolSchemas(actionTools),...elosIaFinanceActionToolSchemas(financeActionTools),...elosIaCommercialToolSchemas(commercialTools)];
   const userContent=elosIaAttachmentContent(question,registeredAttachments);
+
+  const observations: ElosIaToolObservation[] = [];
+  let nextSequence = 0;
+  const runObservedTool = async (name: string, args: Record<string, unknown>) => {
+    // Sequence is assigned before await: runAgentTurn executes each round in parallel.
+    const sequence = nextSequence++;
+    const result = await (
+      isScheduleActionTool(name) ? runScheduleActionTool(actionContext as ScheduleActionContext,scheduleTools,name,args)
+      : isElosIaFinanceActionTool(name) ? runElosIaFinanceActionTool(actionContext,financeActionTools,name,args)
+      : isElosIaActionTool(name) ? runElosIaActionTool(actionContext,actionTools,name,args)
+      : isElosIaFinanceTool(name) ? runElosIaFinanceTool(toolContext,financeTools,name,args)
+      : isElosIaWorksiteTool(name) ? runElosIaWorksiteTool(toolContext,worksiteTools,name,args)
+      : isElosIaCommercialTool(name) ? runElosIaCommercialTool(toolContext,commercialTools,name,args)
+      : runElosIaTool(toolContext,persona.tools,name,args)
+    );
+    observations.push({ sequence, name, args, result });
+    return result;
+  };
 
   const record=async(status:"ok"|"incomplete"|"empty"|"error",usage:AgentUsage,trace:AgentToolTrace[])=>{
     const estimatedCostUsd=estimateElosIaUsageCost(config,usage);
@@ -136,12 +158,22 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
   try{
     const result=await runAgentTurn({
       callModel:({input:items,toolChoice})=>createOpenAiResponse({config,instructions,input:items,tools,toolChoice,timeoutMs:startedAt+HARD_DEADLINE_MS-Date.now()}),
-      runTool:(name,args)=>isScheduleActionTool(name)?runScheduleActionTool(actionContext as ScheduleActionContext,scheduleTools,name,args):isElosIaFinanceActionTool(name)?runElosIaFinanceActionTool(actionContext,financeActionTools,name,args):isElosIaActionTool(name)?runElosIaActionTool(actionContext,actionTools,name,args):isElosIaFinanceTool(name)?runElosIaFinanceTool(toolContext,financeTools,name,args):isElosIaWorksiteTool(name)?runElosIaWorksiteTool(toolContext,worksiteTools,name,args):runElosIaTool(toolContext,persona.tools,name,args),
+      runTool:runObservedTool,
       history:trimHistory(input.history),question,userContent,maxRounds:config.maxRounds,turnTokenBudget:config.turnTokenBudget,deadlineAt:startedAt+ANSWER_DEADLINE_MS,
     });
     const estimatedCostUsd=await record(result.status,result.usage,result.toolTrace);
     const actions=await loadTurnActions(access,turnId);
-    return {ok:true,text:finalText(result.text,result.status),persona:persona.key,consultas:result.toolTrace.map((item)=>({nome:toolLabel(item.name),ok:item.ok})),tokens:result.usage.totalTokens,quota:quotaView(config,usageSnapshot,result.usage.totalTokens,estimatedCostUsd),actions};
+    const visuals=buildElosIaVisuals({
+      // A successful query can still be rejected by the loop's turn-data budget.
+      // Do not display charts for denied, failed or rejected tool output.
+      observations:observations.filter((observation)=>{
+        const trace=result.toolTrace[observation.sequence];
+        return trace?.ok && trace.name===observation.name;
+      }),
+      today,
+      generatedAt:new Date(startedAt).toISOString(),
+    });
+    return {ok:true,text:finalText(result.text,result.status),persona:persona.key,consultas:result.toolTrace.map((item)=>({nome:toolLabel(item.name),ok:item.ok})),tokens:result.usage.totalTokens,quota:quotaView(config,usageSnapshot,result.usage.totalTokens,estimatedCostUsd),actions,visuals};
   }catch(error){
     const partial=error as {usage?:AgentUsage;toolTrace?:AgentToolTrace[]};
     const usage=partial.usage??emptyUsage();

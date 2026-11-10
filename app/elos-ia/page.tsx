@@ -6,6 +6,8 @@ import { defaultPersonaForRole, ELOS_IA_PERSONAS } from "@/lib/elos-ia/personas"
 import { loadElosIaProjects, resolveElosIaAccess } from "@/lib/elos-ia/server";
 import { elosIaToolLabel, elosIaToolPermissions } from "@/lib/elos-ia/tools";
 import { elosIaActionToolLabel, elosIaActionToolPermissions, elosIaActionToolsForPersona } from "@/lib/elos-ia/action-tools";
+import { elosIaCommercialToolLabel, elosIaCommercialToolPermissions, elosIaCommercialToolsForPersona } from "@/lib/elos-ia/commercial-tools";
+import { elosIaChatStorageKey } from "@/lib/elos-ia/chat-storage";
 import { loadElosIaUsage, quotaView } from "@/lib/elos-ia/usage";
 import { ElosIaChat, type ElosIaChatPersona } from "./elos-ia-chat";
 
@@ -20,19 +22,21 @@ export default async function ElosIaPage() {
   ]);
   const activeProject = projects.find((project) => project.id === workspace.projectId) ?? null;
   const activeProjectLabel = activeProject ? [activeProject.code, activeProject.name].filter(Boolean).join(" · ") : null;
+  const storageKey = elosIaChatStorageKey(workspace.companyId, workspace.userId, activeProject?.id ?? null);
 
   const personas: ElosIaChatPersona[] = ELOS_IA_PERSONAS.map((persona) => ({
     key:persona.key,label:persona.label,tagline:persona.tagline,pilotNote:persona.pilotNote ?? null,suggestions:persona.suggestions,
     sources:[
       ...persona.tools.filter((tool)=>tool!=="listar_obras").map((tool)=>({label:elosIaToolLabel(tool),available:elosIaToolPermissions(tool).every(access.can)})),
+      ...elosIaCommercialToolsForPersona(persona.key).map((tool)=>({label:elosIaCommercialToolLabel(tool),available:elosIaCommercialToolPermissions(tool).every(access.can)})),
       ...elosIaActionToolsForPersona(persona.key).map((tool)=>({label:`Ação · ${elosIaActionToolLabel(tool)}`,available:elosIaActionToolPermissions(tool).every(access.can)})),
     ],
   }));
 
   return <AppShell activeGroup="ai" eyebrow="Elos IA · Copiloto operacional" title="Elos IA"
-    description={`${workspace.company.name} · ${activeProjectLabel ?? "Todas as obras"} · analisa, lê documentos e prepara lançamentos para revisão humana.`}
+    description={`${workspace.company.name} · ${activeProjectLabel ?? "Todas as obras"} · respostas com dados, gráficos e ações para sua revisão.`}
     actions={<Link className="elos-button" prefetch={false} href="/elos-ia/acoes">Ações pendentes</Link>}>
-    <ElosIaChat personas={personas} defaultPersona={defaultPersonaForRole(workspace.roleKey)} configured={Boolean(config.apiKey)} activeProjectLabel={activeProjectLabel}
+    <ElosIaChat key={storageKey} storageKey={storageKey} personas={personas} defaultPersona={defaultPersonaForRole(workspace.roleKey)} configured={Boolean(config.apiKey)} activeProjectLabel={activeProjectLabel}
       initialQuota={quotaView(config,usage)} maxQuestionChars={config.maxQuestionChars} companyId={workspace.companyId} userId={workspace.userId}/>
   </AppShell>;
 }

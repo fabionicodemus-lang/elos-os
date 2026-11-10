@@ -2,44 +2,55 @@
 
 import { useEffect,useRef,useState,type ChangeEvent,type KeyboardEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { ElosIaMarkdown } from "./elos-ia-markdown";
+import { ElosIaAnswer } from "./elos-ia-visuals";
+import { sanitizeElosIaVisuals, type ElosIaVisual } from "@/lib/elos-ia/visuals.mjs";
 import { ElosIaActionCard,type ElosIaClientAction } from "./elos-ia-action-card";
 
 export type ElosIaChatPersona={key:string;label:string;tagline:string;pilotNote:string|null;suggestions:string[];sources:Array<{label:string;available:boolean}>};
 export type ElosIaPageContext={pathname?:string|null;module?:string|null;screen?:string|null;eyebrow?:string|null;activeProjectLabel?:string|null};
 type Quota={tracking:boolean;costTracking:boolean;userTokensToday:number;dailyUserTokens:number;companyTokensMonth:number;monthlyCompanyTokens:number;companyUsdMonth:number;monthlyCompanyUsd:number};
-type ChatMessage={id:string;role:"user"|"assistant";content:string;error?:boolean;consultas?:Array<{nome:string;ok:boolean}>;tokens?:number;attachments?:string[];actions?:ElosIaClientAction[]};
-type ChatResponse={ok?:boolean;text?:string;error?:string;consultas?:Array<{nome:string;ok:boolean}>;tokens?:number;quota?:Quota|null;actions?:ElosIaClientAction[]};
+type ChatMessage={id:string;role:"user"|"assistant";content:string;error?:boolean;consultas?:Array<{nome:string;ok:boolean}>;tokens?:number;attachments?:string[];actions?:ElosIaClientAction[];visuals?:ElosIaVisual[]};
+type ChatResponse={ok?:boolean;text?:string;error?:string;consultas?:Array<{nome:string;ok:boolean}>;tokens?:number;quota?:Quota|null;actions?:ElosIaClientAction[];visuals?:unknown};
 type UploadedAttachment={path:string;fileName:string;mimeType:string;size:number};
 type StoredChat={personaKey?:string;threads?:Record<string,ChatMessage[]>};
 
 const MAX_FILES=3,MAX_FILE_BYTES=15*1024*1024,MAX_TOTAL_BYTES=25*1024*1024;
+const EMPTY_MESSAGES:ChatMessage[]=[];
 const ACCEPT=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.csv,.txt,.doc,.docx";
 function tokenLabel(value:number){if(value>=1_000_000)return `${(value/1_000_000).toLocaleString("pt-BR",{maximumFractionDigits:1})} mi`;if(value>=1_000)return `${(value/1_000).toLocaleString("pt-BR",{maximumFractionDigits:1})} mil`;return value.toLocaleString("pt-BR");}
 function usdLabel(value:number){return `US$ ${Number(value||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`;}
 function uniqueSources(consultas:Array<{nome:string;ok:boolean}>){const map=new Map<string,boolean>();for(const c of consultas)map.set(c.nome,(map.get(c.nome)??true)&&c.ok);return [...map.entries()].map(([nome,ok])=>({nome,ok}));}
 function safeName(value:string){return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9._-]+/g,"-").replace(/-+/g,"-").slice(-150)||"arquivo";}
 function inferMime(file:File){if(file.type)return file.type;const ext=file.name.toLowerCase().split(".").pop();return ({pdf:"application/pdf",jpg:"image/jpeg",jpeg:"image/jpeg",png:"image/png",webp:"image/webp",xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",xls:"application/vnd.ms-excel",csv:"text/csv",txt:"text/plain",docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",doc:"application/msword"} as Record<string,string>)[ext??""]??"application/octet-stream";}
+function restoreThreads(value:unknown,personas:ElosIaChatPersona[]):Record<string,ChatMessage[]>{
+  if(!value||typeof value!=="object"||Array.isArray(value))return {};
+  const result:Record<string,ChatMessage[]>={};
+  for(const persona of personas){
+    const rows=(value as Record<string,unknown>)[persona.key];if(!Array.isArray(rows))continue;
+    result[persona.key]=rows.slice(-60).filter((message):message is ChatMessage=>Boolean(message)&&typeof message==="object"&&typeof message.id==="string"&&(message.role==="user"||message.role==="assistant")&&typeof message.content==="string").map((message)=>({...message,visuals:sanitizeElosIaVisuals(message.visuals),consultas:Array.isArray(message.consultas)?message.consultas.filter((source)=>source&&typeof source.nome==="string"&&typeof source.ok==="boolean"):[],attachments:Array.isArray(message.attachments)?message.attachments.filter((name)=>typeof name==="string"):[],actions:Array.isArray(message.actions)?message.actions.filter((action)=>action&&typeof action.id==="string"&&typeof action.actionType==="string"&&typeof action.title==="string"&&typeof action.status==="string"):[]}));
+  }
+  return result;
+}
 let counter=0;const nextId=()=>`m${Date.now()}-${++counter}`;
 
-export function ElosIaChat({personas,defaultPersona,configured,activeProjectLabel,initialQuota,maxQuestionChars,companyId,userId,compact=false,pageContext=null,storageKey}:{personas:ElosIaChatPersona[];defaultPersona:string;configured:boolean;activeProjectLabel:string|null;initialQuota:Quota;maxQuestionChars:number;companyId:string;userId:string;compact?:boolean;pageContext?:ElosIaPageContext|null;storageKey?:string}){
+export function ElosIaChat({personas,defaultPersona,configured,activeProjectLabel,initialQuota,maxQuestionChars,companyId,userId,compact=false,pageContext=null,storageKey,onBusyChange}:{personas:ElosIaChatPersona[];defaultPersona:string;configured:boolean;activeProjectLabel:string|null;initialQuota:Quota;maxQuestionChars:number;companyId:string;userId:string;compact?:boolean;pageContext?:ElosIaPageContext|null;storageKey?:string;onBusyChange?:(busy:boolean)=>void}){
   const [personaKey,setPersonaKey]=useState(personas.some((p)=>p.key===defaultPersona)?defaultPersona:personas[0]?.key??"");
   const [threads,setThreads]=useState<Record<string,ChatMessage[]>>({});
   const [storageReady,setStorageReady]=useState(!storageKey);
   const [draft,setDraft]=useState("");const [files,setFiles]=useState<File[]>([]);const [fileError,setFileError]=useState<string|null>(null);
   const [pendingPersona,setPendingPersona]=useState<string|null>(null);const [quota,setQuota]=useState(initialQuota);
-  const bottomRef=useRef<HTMLDivElement|null>(null);const fileRef=useRef<HTMLInputElement|null>(null);
-  const persona=personas.find((p)=>p.key===personaKey)??personas[0];const messages=threads[personaKey]??[];const waiting=pendingPersona===personaKey;const busy=pendingPersona!==null;
+  const bottomRef=useRef<HTMLDivElement|null>(null);const lastMessageRef=useRef<HTMLElement|null>(null);const fileRef=useRef<HTMLInputElement|null>(null);
+  const persona=personas.find((p)=>p.key===personaKey)??personas[0];const messages=threads[personaKey]??EMPTY_MESSAGES;const waiting=pendingPersona===personaKey;const busy=pendingPersona!==null;
   const dailyUsedUp=quota.tracking&&quota.dailyUserTokens>0&&quota.userTokensToday>=quota.dailyUserTokens;const monthlyUsdUsedUp=quota.tracking&&quota.monthlyCompanyUsd>0&&quota.companyUsdMonth>=quota.monthlyCompanyUsd;const canType=configured&&!dailyUsedUp&&!monthlyUsdUsedUp;const dailyPercent=quota.dailyUserTokens>0?Math.min(100,quota.userTokensToday/quota.dailyUserTokens*100):0;
 
-  useEffect(()=>{bottomRef.current?.scrollIntoView({block:"end",behavior:"smooth"});},[messages.length,waiting]);
+  useEffect(()=>{const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;const last=messages[messages.length-1];const target=last?.role==="assistant"&&!waiting?lastMessageRef.current:bottomRef.current;target?.scrollIntoView({block:last?.role==="assistant"&&!waiting?"start":"end",behavior:reducedMotion?"instant":"smooth"});},[messages,waiting]);
   useEffect(()=>{
     if(!storageKey)return;
     try{
       const raw=sessionStorage.getItem(storageKey);
       if(raw){
         const stored=JSON.parse(raw) as StoredChat;
-        if(stored.threads&&typeof stored.threads==="object")setThreads(stored.threads);
+        if(stored.threads)setThreads(restoreThreads(stored.threads,personas));
         if(stored.personaKey&&personas.some((item)=>item.key===stored.personaKey))setPersonaKey(stored.personaKey);
       }
     }catch{}
@@ -76,16 +87,16 @@ export function ElosIaChat({personas,defaultPersona,configured,activeProjectLabe
   async function send(value:string){
     const question=value.trim();if(!question||busy||!canType||!persona)return;
     const key=persona.key;const selected=[...files];const history=(threads[key]??[]).filter((m)=>!m.error).map(({role,content})=>({role,content}));
-    setPendingPersona(key);setFileError(null);
+    setPendingPersona(key);onBusyChange?.(true);setFileError(null);
     try{
       const attachments=await uploadFiles(selected);
       append(key,{id:nextId(),role:"user",content:question,attachments:selected.map((file)=>file.name)});setDraft("");setFiles([]);
       const response=await fetch("/api/elos-ia/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({persona:key,question,history,attachments,pageContext})});
       const payload=await response.json().catch(()=>null) as ChatResponse|null;if(payload?.quota)setQuota(payload.quota);
       if(!response.ok||!payload?.ok||typeof payload.text!=="string")append(key,{id:nextId(),role:"assistant",error:true,content:payload?.error??"O Elos IA não conseguiu responder agora. Tente novamente."});
-      else append(key,{id:nextId(),role:"assistant",content:payload.text,consultas:payload.consultas??[],tokens:payload.tokens??0,actions:payload.actions??[]});
+      else append(key,{id:nextId(),role:"assistant",content:payload.text,consultas:payload.consultas??[],tokens:payload.tokens??0,actions:payload.actions??[],visuals:sanitizeElosIaVisuals(payload.visuals)});
     }catch(error){append(key,{id:nextId(),role:"assistant",error:true,content:error instanceof Error?error.message:"Sem conexão com o Elos OS."});}
-    finally{setPendingPersona(null);}
+    finally{setPendingPersona(null);onBusyChange?.(false);}
   }
 
   function onKeyDown(event:KeyboardEvent<HTMLTextAreaElement>){if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void send(draft);}}
@@ -100,8 +111,8 @@ export function ElosIaChat({personas,defaultPersona,configured,activeProjectLabe
       {persona.pilotNote?<p className="elos-ia-note">{persona.pilotNote}</p>:null}
       <div className="elos-ia-messages" aria-live="polite">
         {!messages.length?<div className="elos-ia-empty"><h2>{compact?"Estou vendo esta tela com você":`Pergunte sobre ${activeProjectLabel??"as obras da empresa"}`}</h2><p>{compact?`Contexto: ${[activeProjectLabel,pageContext?.screen].filter(Boolean).join(" · ")||"visão atual do Elos OS"}. Pergunte, peça uma análise ou uma ação.`:"Além de analisar os dados, agora você pode anexar orçamento de fornecedor ou boletim de medição. A IA prepara o lançamento e você revisa antes de gravar."}</p><div className="elos-ia-suggestions">{persona.suggestions.map((suggestion)=><button key={suggestion} type="button" disabled={busy||!canType} onClick={()=>void send(suggestion)}>{suggestion}</button>)}</div></div>:null}
-        {messages.map((message)=><article key={message.id} className={`elos-ia-message ${message.role} ${message.error?"error":""}`}>
-          {message.role==="assistant"&&!message.error?<ElosIaMarkdown text={message.content}/>:<p>{message.content}</p>}
+        {messages.map((message,index)=><article key={message.id} ref={index===messages.length-1?lastMessageRef:undefined} className={`elos-ia-message ${message.role} ${message.error?"error":""} ${message.visuals?.length?"has-visuals":""}`}>
+          {message.role==="assistant"&&!message.error?<ElosIaAnswer text={message.content} visuals={message.visuals}/>:<p>{message.content}</p>}
           {message.attachments?.length?<div className="elos-ia-message-files">{message.attachments.map((name)=><span key={name}>📎 {name}</span>)}</div>:null}
           {message.actions?.map((action)=><ElosIaActionCard key={action.id} action={action} onChange={(next)=>replaceAction(personaKey,message.id,next)}/>) }
           {message.role==="assistant"&&!message.error?<footer>{uniqueSources(message.consultas??[]).length?<><span>Usou</span>{uniqueSources(message.consultas??[]).map((c)=><span key={c.nome} className={`elos-ia-chip ${c.ok?"":"off"}`}>{c.nome}</span>)}</>:<span>Respondeu sem ferramentas</span>}{message.tokens?<span className="elos-ia-tokens">{tokenLabel(message.tokens)} tokens</span>:null}</footer>:null}

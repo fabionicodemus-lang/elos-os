@@ -13,6 +13,7 @@
 
 import type { ForecastServiceRow } from "@/lib/forecast/engine.mjs";
 import { loadProjectForecast } from "@/lib/forecast/server";
+import { buildDashboardPhysicalMonths } from "@/lib/dashboard-physical-curve.mjs";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import type { resolveActiveWorkspace } from "@/lib/workspace";
 import {
@@ -538,8 +539,24 @@ async function runFluxoDeCaixa(context: ElosIaToolContext, args: ToolArgs): Prom
 
 function scheduleSummary(schedule: Awaited<ReturnType<typeof loadSchedule>>, context: ElosIaToolContext, args: ToolArgs) {
   if (!schedule.baseline) return { erro: "Esta obra ainda não tem cronograma linha de base cadastrado (Engenharia › Cronograma Físico · Linha Base)." };
+  const physicalMonths = buildDashboardPhysicalMonths({
+    activities: schedule.activities,
+    measurements: schedule.measurements,
+    serviceWeights: schedule.weights,
+    today: context.today,
+    // Ask for one extra month to detect an oversized history, not silently
+    // display a truncated S curve as though it were the complete schedule.
+    maxMonths: 73,
+  });
+  const monthEnd = new Date(Date.UTC(Number(context.today.slice(0, 4)), Number(context.today.slice(5, 7)), 0, 12)).toISOString().slice(0, 10);
+  const needsTodayPoint = context.today !== monthEnd && physicalMonths.some((row: { key: string }) => row.key === context.today.slice(0, 7));
+  const curveTooLong = physicalMonths.length + (needsTodayPoint ? 1 : 0) > 72;
   return {
     linha_de_base: `${schedule.baseline.code} · ${schedule.baseline.name} (versão ${schedule.baseline.version}, ${schedule.baseline.status === "approved" ? "aprovada" : "não aprovada"})`,
+    // The same service/activity weights as summarizeSchedule and the dashboard.
+    // No future actuals or extrapolated projection is synthesized for the chart.
+    curva_fisica: curveTooLong ? [] : physicalMonths,
+    ...(curveTooLong ? { aviso_da_curva: "A curva completa ultrapassa o limite de 72 pontos do chat. Consulte o cronograma para visualizar todo o período; os indicadores abaixo continuam considerando todas as atividades." } : {}),
     ...summarizeSchedule({
       activities: schedule.activities,
       measurements: schedule.measurements,
@@ -904,13 +921,19 @@ async function runResumoDaObra(context: ElosIaToolContext, args: ToolArgs): Prom
     block(context.can("schedule.view"), async () => {
       const summary = scheduleSummary(await loadSchedule(context, project.id), context, { limite: 3 }) as ToolResult;
       if ("erro" in summary) return summary;
-      return { linha_de_base: summary.linha_de_base, ultima_medicao_de_avanco: summary.ultima_medicao_de_avanco, fisico_geral: summary.fisico_geral, prazo: summary.prazo, atividades: summary.atividades };
+      return { linha_de_base: summary.linha_de_base, ultima_medicao_de_avanco: summary.ultima_medicao_de_avanco, fisico_geral: summary.fisico_geral, prazo: summary.prazo, atividades: summary.atividades, curva_fisica: summary.curva_fisica, aviso_da_curva: summary.aviso_da_curva };
     }),
     block(canCosts, async () => {
       const forecastContext = await loadForecast(context, project.id);
       failIfErrors(forecastContext.errors);
       if (!forecastContext.forecast) return { erro: "Obra sem cronograma linha de base ligado a um orçamento; previsão de custos indisponível." };
-      return { ...costTotals(forecastContext.forecast), servicos_com_estouro: forecastContext.forecast.services.filter((row) => row.deviation > 0.005).length };
+      return {
+        ...costTotals(forecastContext.forecast),
+        orcamento_usado: forecastContext.budget ? `${forecastContext.budget.code} · ${forecastContext.budget.name} (versão ${forecastContext.budget.version})` : null,
+        linha_de_base: forecastContext.baseline ? `${forecastContext.baseline.code} · ${forecastContext.baseline.name}` : null,
+        servicos_com_estouro: forecastContext.forecast.services.filter((row) => row.deviation > 0.005).length,
+        avisos_do_motor: { quantidade: forecastContext.forecast.warnings.length, exemplos: forecastContext.forecast.warnings.slice(0, 5).map((warning) => warning.message) },
+      };
     }),
     block(context.can("payables.view"), async () => summarizePayables(await loadPayables(context, project.id), { today: context.today, limit: 1 }).resumo_geral as ToolResult),
     block(context.can("receivables.view"), async () => summarizeReceivables(await loadReceivables(context, project.id), { today: context.today, limit: 1 }).resumo_geral as ToolResult),
@@ -1125,3 +1148,6 @@ export async function runElosIaTool(context: ElosIaToolContext, allowed: ElosIaT
     return { erro: "Falha inesperada ao consultar o Elos OS. Avise o usuário e sugira tentar de novo." };
   }
 }
+
+/** Shared resolver: authorized projects only; null means the active project. */
+export { resolveProject as resolveElosIaProject };
