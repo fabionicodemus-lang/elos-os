@@ -17,6 +17,7 @@ As ferramentas comerciais estão disponíveis nas personas Diretoria e Financeir
 ## Integridade dos dados
 
 - Os gráficos são gerados por `lib/elos-ia/visuals.mjs`, a partir de resultados autorizados das ferramentas. O texto do modelo nunca é convertido em série numérica.
+- A pergunta atual seleciona os tipos de gráfico relevantes, antes do limite de cartões. Uma consulta ao resumo geral não autoriza exibir custo numa resposta focada em prazo. Pedidos de vários temas mantêm os tipos solicitados; uma visão geral pode apresentar o conjunto disponível. Se o gráfico do tema pedido estiver indisponível, outro tema não ocupa seu lugar.
 - `server.ts` captura os resultados da pergunta atual, preserva a ordem das chamadas paralelas e exclui consultas negadas, com erro ou recusadas pelo limite global de dados da rodada. O corte de texto de uma consulta para o contexto do modelo não altera seu resultado completo no servidor.
 - O servidor envia apenas a estrutura permitida do gráfico. O cliente valida novamente a resposta e os dados recuperados do histórico.
 - Composições de custo e resultado precisam reconciliar os totais. Números ausentes, infinitos ou incompatíveis não viram zeros nem gráficos parciais.
@@ -59,6 +60,8 @@ npm run build
 ```
 
 O roteiro funcional começa em Bossa Empreendimentos / Flow Aptos, com as cinco perguntas acima. Conferir painel lateral, expansão mantendo a conversa, tabela dos valores, versão móvel e resposta sem base suficiente. A comparação com o vídeo é visual; os números de aceite vêm das consultas do sistema.
+
+A regressão de mudança de assunto cobre custo → “a obra vai atrasar?” na mesma conversa, inclusive quando a segunda consulta usa `resumo_da_obra`. A resposta de prazo deve conter apenas o gráfico de prazo. Sem curva física válida, não deve aparecer um gráfico de custo como substituto. Também são verificados a troca inversa, pedidos de vários temas e atrasos/prazos financeiros que não dizem respeito ao cronograma físico.
 
 ## Dependência de segurança
 

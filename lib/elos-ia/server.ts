@@ -164,6 +164,7 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
     const estimatedCostUsd=await record(result.status,result.usage,result.toolTrace);
     const actions=await loadTurnActions(access,turnId);
     const visuals=buildElosIaVisuals({
+      question,
       // A successful query can still be rejected by the loop's turn-data budget.
       // Do not display charts for denied, failed or rejected tool output.
       observations:observations.filter((observation)=>{
