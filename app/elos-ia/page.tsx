@@ -9,6 +9,9 @@ import { elosIaActionToolLabel, elosIaActionToolPermissions, elosIaActionToolsFo
 import { elosIaCommercialToolLabel, elosIaCommercialToolPermissions, elosIaCommercialToolsForPersona } from "@/lib/elos-ia/commercial-tools";
 import { elosIaChatStorageKey } from "@/lib/elos-ia/chat-storage";
 import { loadElosIaUsage, quotaView } from "@/lib/elos-ia/usage";
+import { elosIaDocumentActionsEnabled } from "@/lib/elos-ia/document-action-shared";
+import { commercialDocumentToolsForPersona, commercialDocumentToolPermissions, commercialDocumentToolLabel } from "@/lib/elos-ia/commercial-document-tools";
+import { procurementDocumentToolsForPersona, procurementDocumentToolPermissions, procurementDocumentToolLabel } from "@/lib/elos-ia/procurement-document-tools";
 import { ElosIaChat, type ElosIaChatPersona } from "./elos-ia-chat";
 
 export default async function ElosIaPage() {
@@ -16,6 +19,7 @@ export default async function ElosIaPage() {
   if (!access.allowed) redirect("/dashboard?error=Você%20não%20possui%20acesso%20ao%20Elos%20IA.");
   const { workspace } = access;
   const config = getElosIaConfig();
+  const documentActionsEnabled=elosIaDocumentActionsEnabled();
   const [projects, usage] = await Promise.all([
     loadElosIaProjects(workspace),
     loadElosIaUsage(workspace.supabase, workspace.companyId).catch(() => ({ tracking:false,costTracking:false,userTokensToday:0,companyTokensMonth:0,companyUsdMonth:0,companyUsdLimit:null })),
@@ -30,13 +34,15 @@ export default async function ElosIaPage() {
       ...persona.tools.filter((tool)=>tool!=="listar_obras").map((tool)=>({label:elosIaToolLabel(tool),available:elosIaToolPermissions(tool).every(access.can)})),
       ...elosIaCommercialToolsForPersona(persona.key).map((tool)=>({label:elosIaCommercialToolLabel(tool),available:elosIaCommercialToolPermissions(tool).every(access.can)})),
       ...elosIaActionToolsForPersona(persona.key).map((tool)=>({label:`Ação · ${elosIaActionToolLabel(tool)}`,available:elosIaActionToolPermissions(tool).every(access.can)})),
+      ...(documentActionsEnabled?commercialDocumentToolsForPersona(persona.key).map((tool)=>({label:commercialDocumentToolLabel(tool),available:commercialDocumentToolPermissions(tool).every(access.can)})):[]),
+      ...(documentActionsEnabled?procurementDocumentToolsForPersona(persona.key).filter((tool)=>tool!=="consultar_contexto_documentos_operacionais").map((tool)=>({label:procurementDocumentToolLabel(tool),available:procurementDocumentToolPermissions(tool).every(access.can)})):[]),
     ],
   }));
 
   return <AppShell activeGroup="ai" eyebrow="Elos IA · Copiloto operacional" title="Elos IA"
     description={`${workspace.company.name} · ${activeProjectLabel ?? "Todas as obras"} · respostas com dados, gráficos e ações para sua revisão.`}
-    actions={<Link className="elos-button" prefetch={false} href="/elos-ia/acoes">Ações pendentes</Link>}>
-    <ElosIaChat key={storageKey} storageKey={storageKey} personas={personas} defaultPersona={defaultPersonaForRole(workspace.roleKey)} configured={Boolean(config.apiKey)} activeProjectLabel={activeProjectLabel}
+    actions={<Link className="elos-button" prefetch={false} href="/elos-ia/acoes">Revisão e histórico</Link>}>
+    <ElosIaChat key={storageKey} storageKey={storageKey} personas={personas} defaultPersona={defaultPersonaForRole(workspace.roleKey)} configured={Boolean(config.apiKey)} activeProjectLabel={activeProjectLabel} documentActionsEnabled={documentActionsEnabled}
       initialQuota={quotaView(config,usage)} maxQuestionChars={config.maxQuestionChars} companyId={workspace.companyId} userId={workspace.userId}/>
   </AppShell>;
 }

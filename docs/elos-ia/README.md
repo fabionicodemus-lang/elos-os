@@ -1,5 +1,9 @@
 # Elos IA — copiloto operacional
 
+## Documentos com ações — extensão de novembro de 2026
+
+A extensão com venda por contrato, nova cotação por orçamento e contrato de empreiteiro está documentada em [Documentos com revisão e confirmação](documentos-com-acoes.md). Ela reutiliza os cartões e a fila descritos abaixo, adiciona revisão completa, validação canônica no banco e histórico com o documento original. O recurso depende de quatro migrações e da flag `ELOS_IA_DOCUMENT_ACTIONS_ENABLED`, desligada por padrão até homologação. O documento específico lista o escopo, os limites financeiros e o roteiro de implantação.
+
 Assistente do Elos OS com quatro personas (Diretoria, Engenharia, Financeiro e Clientes). Além de analisar os dados lançados no sistema, a Elos IA pode ler documentos e **preparar lançamentos para revisão humana**, sempre respeitando as permissões do usuário e as regras do módulo de destino.
 
 ## Princípio de segurança

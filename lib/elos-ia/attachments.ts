@@ -1,4 +1,6 @@
 import type { resolveActiveWorkspace } from "@/lib/workspace";
+import { createHash } from "node:crypto";
+import { validateDocumentBytes } from "./attachment-validation.mjs";
 
 type SupabaseClientLike = Awaited<ReturnType<typeof resolveActiveWorkspace>>["supabase"];
 
@@ -55,6 +57,7 @@ export async function registerElosIaAttachments(input:{
   userId:string;
   turnId:string;
   attachments:ElosIaAttachmentInput[];
+  verifyDocuments?:boolean;
 }):Promise<RegisteredElosIaAttachment[]> {
   const { supabase,companyId,projectId,userId,turnId,attachments }=input;
   if (!attachments.length) return [];
@@ -63,10 +66,25 @@ export async function registerElosIaAttachments(input:{
     if (!file.path.startsWith(prefix) || file.path.includes("..")) throw new Error("Caminho de anexo inválido.");
   }
 
-  const rows=attachments.map((file)=>({
-    company_id:companyId,project_id:projectId,turn_id:turnId,uploaded_by:userId,
-    storage_path:file.path,file_name:file.fileName,mime_type:file.mimeType,file_size:file.size,
-  }));
+  const rows=[];
+  if (input.verifyDocuments && new Set(attachments.map((file)=>file.fileName)).size !== attachments.length) {
+    throw new Error("Use nomes diferentes para os arquivos da mesma pergunta.");
+  }
+  for (const file of attachments) {
+    let contentHash:string|undefined;
+    if (input.verifyDocuments) {
+      const downloaded=await supabase.storage.from(ELOS_IA_ATTACHMENT_BUCKET).download(file.path);
+      if(downloaded.error||!downloaded.data)throw new Error(`Não foi possível conferir o arquivo ${file.fileName}.`);
+      if(downloaded.data.size!==file.size||downloaded.data.size>ELOS_IA_MAX_ATTACHMENT_BYTES)throw new Error("O tamanho real do arquivo não corresponde ao envio. Anexe novamente.");
+      const bytes=new Uint8Array(await downloaded.data.arrayBuffer());
+      validateDocumentBytes(bytes,file.mimeType);
+      contentHash=createHash("sha256").update(bytes).digest("hex");
+    }
+    rows.push({company_id:companyId,project_id:projectId,turn_id:turnId,uploaded_by:userId,
+      storage_path:file.path,file_name:file.fileName,mime_type:file.mimeType,file_size:file.size,
+      ...(contentHash?{content_sha256:contentHash}:{}),
+    });
+  }
   const inserted=await supabase.from("ai_action_attachments").insert(rows).select("id,storage_path,file_name,mime_type,file_size");
   if (inserted.error) throw new Error(`Não foi possível registrar os anexos: ${inserted.error.message}`);
 

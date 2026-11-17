@@ -3,6 +3,7 @@ import { getElosIaConfig } from "@/lib/elos-ia/config";
 import { defaultPersonaForRole, ELOS_IA_PERSONAS } from "@/lib/elos-ia/personas";
 import { loadElosIaProjects, resolveElosIaAccess } from "@/lib/elos-ia/server";
 import { loadElosIaUsage, quotaView } from "@/lib/elos-ia/usage";
+import { elosIaDocumentActionsEnabled } from "@/lib/elos-ia/document-action-shared";
 
 function json(body:Record<string,unknown>,status=200){return NextResponse.json(body,{status,headers:{"cache-control":"no-store"}});}
 
@@ -20,6 +21,7 @@ export async function GET(){
   return json({
     ok:true,
     configured:Boolean(config.apiKey),
+    documentActionsEnabled:elosIaDocumentActionsEnabled(),
     personas:ELOS_IA_PERSONAS.map((persona)=>({key:persona.key,label:persona.label,tagline:persona.tagline,pilotNote:persona.pilotNote??null,suggestions:persona.suggestions,sources:[]})),
     defaultPersona:defaultPersonaForRole(workspace.roleKey),
     activeProjectId:activeProject?.id??null,

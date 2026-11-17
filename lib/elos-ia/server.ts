@@ -14,6 +14,9 @@ import {scheduleToolsForPersona,scheduleActionToolSchemas,isScheduleActionTool,s
 import { elosIaWorksiteToolLabel, elosIaWorksiteToolSchemas, elosIaWorksiteToolsForPersona, isElosIaWorksiteTool, runElosIaWorksiteTool } from "./worksite-tools";
 import { elosIaCommercialToolLabel, elosIaCommercialToolSchemas, elosIaCommercialToolsForPersona, isElosIaCommercialTool, runElosIaCommercialTool } from "./commercial-tools";
 import { buildElosIaVisuals, type ElosIaVisual, type ElosIaToolObservation } from "./visuals.mjs";
+import { elosIaDocumentActionsEnabled, isDocumentActionType } from "./document-action-shared";
+import { commercialDocumentToolsForPersona, commercialDocumentToolPermissions, commercialDocumentToolLabel, commercialDocumentToolSchemas, isCommercialDocumentTool, runCommercialDocumentTool } from "./commercial-document-tools";
+import { procurementDocumentToolsForPersona, procurementDocumentToolPermissions, procurementDocumentToolLabel, procurementDocumentToolSchemas, isProcurementDocumentTool, runProcurementDocumentTool } from "./procurement-document-tools";
 
 type Workspace = Awaited<ReturnType<typeof resolveActiveWorkspace>>;
 const ANSWER_DEADLINE_MS = 55_000;
@@ -66,6 +69,8 @@ function finalText(text: string, status: "ok" | "incomplete" | "empty") {
   return text;
 }
 function toolLabel(name:string){
+  if(isCommercialDocumentTool(name))return commercialDocumentToolLabel(name);
+  if(isProcurementDocumentTool(name))return procurementDocumentToolLabel(name);
   if(isElosIaCommercialTool(name))return elosIaCommercialToolLabel(name);
   if(isScheduleActionTool(name))return scheduleActionToolLabel(name);
   if(isElosIaFinanceActionTool(name))return elosIaFinanceActionToolLabel(name);
@@ -83,7 +88,7 @@ async function loadTurnActions(access:ElosIaAccess,turnId:string):Promise<ElosIa
   if(query.error){console.error("[elos-ia] Falha ao ler ações preparadas:",query.error.message);return [];}
   return (query.data??[]).map((row)=>({
     id:row.id,actionType:row.action_type,title:row.title,summary:row.summary,preview:(row.preview??{}) as Record<string,unknown>,status:row.status,
-    requiredPermission:row.required_permission,canExecute:access.can(row.required_permission),createdAt:row.created_at,expiresAt:row.expires_at,
+    requiredPermission:row.required_permission,canExecute:access.can(row.required_permission)&&(!isDocumentActionType(row.action_type)||elosIaDocumentActionsEnabled()),createdAt:row.created_at,expiresAt:row.expires_at,
   }));
 }
 
@@ -114,21 +119,24 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
   const activeProject=projects.find((project)=>project.id===workspace.projectId)??null;
   const today=elosIaToday();
   const turnId=crypto.randomUUID();
+  const documentActionsEnabled=elosIaDocumentActionsEnabled();
   let registeredAttachments=[] as Awaited<ReturnType<typeof registerElosIaAttachments>>;
   try{
-    registeredAttachments=await registerElosIaAttachments({supabase:workspace.supabase,companyId:workspace.companyId,projectId:activeProject?.id??null,userId:workspace.userId,turnId,attachments:attachmentInputs});
+    registeredAttachments=await registerElosIaAttachments({supabase:workspace.supabase,companyId:workspace.companyId,projectId:activeProject?.id??null,userId:workspace.userId,turnId,attachments:attachmentInputs,verifyDocuments:documentActionsEnabled});
   }catch(error){console.error("[elos-ia] Falha nos anexos",error);return {ok:false,status:400,error:error instanceof Error?error.message:"Não foi possível preparar os anexos."};}
 
   const toolContext:ElosIaToolContext={supabase:workspace.supabase,companyId:workspace.companyId,activeProjectId:activeProject?.id??null,projects,today,can:access.can,cache:new Map()};
   const actionContext:ElosIaActionToolContext={...toolContext,userId:workspace.userId,turnId,persona:persona.key,attachmentNames:registeredAttachments.map((file)=>file.fileName)};
-  const instructions=buildElosIaInstructions(persona,{today,companyName:workspace.company.name,activeProjectLabel:activeProject?[activeProject.code,activeProject.name].filter(Boolean).join(" · "):null,projectCount:projects.length,userName:profileResult.data?.full_name?.trim()||workspace.email.split("@")[0]||"Usuário",roleName:workspace.role.name??workspace.roleKey});
+  const instructions=buildElosIaInstructions(persona,{today,companyName:workspace.company.name,activeProjectLabel:activeProject?[activeProject.code,activeProject.name].filter(Boolean).join(" · "):null,projectCount:projects.length,userName:profileResult.data?.full_name?.trim()||workspace.email.split("@")[0]||"Usuário",roleName:workspace.role.name??workspace.roleKey,documentActionsEnabled});
   const actionTools=elosIaActionToolsForPersona(persona.key);
   const scheduleTools=scheduleToolsForPersona(persona.key);
   const financeTools=elosIaFinanceToolsForPersona(persona.key);
   const financeActionTools=elosIaFinanceActionToolsForPersona(persona.key);
   const worksiteTools=elosIaWorksiteToolsForPersona(persona.key);
   const commercialTools=elosIaCommercialToolsForPersona(persona.key);
-  const tools=[...scheduleActionToolSchemas(scheduleTools),...elosIaToolSchemas(persona.tools),...elosIaWorksiteToolSchemas(worksiteTools),...elosIaFinanceToolSchemas(financeTools),...elosIaActionToolSchemas(actionTools),...elosIaFinanceActionToolSchemas(financeActionTools),...elosIaCommercialToolSchemas(commercialTools)];
+  const commercialDocumentTools=documentActionsEnabled?commercialDocumentToolsForPersona(persona.key).filter((name)=>commercialDocumentToolPermissions(name).every(access.can)):[];
+  const procurementDocumentTools=documentActionsEnabled?procurementDocumentToolsForPersona(persona.key).filter((name)=>procurementDocumentToolPermissions(name).every(access.can)):[];
+  const tools=[...scheduleActionToolSchemas(scheduleTools),...elosIaToolSchemas(persona.tools),...elosIaWorksiteToolSchemas(worksiteTools),...elosIaFinanceToolSchemas(financeTools),...elosIaActionToolSchemas(actionTools),...elosIaFinanceActionToolSchemas(financeActionTools),...elosIaCommercialToolSchemas(commercialTools),...commercialDocumentToolSchemas(commercialDocumentTools),...procurementDocumentToolSchemas(procurementDocumentTools)];
   const userContent=elosIaAttachmentContent(question,registeredAttachments);
 
   const observations: ElosIaToolObservation[] = [];
@@ -137,7 +145,9 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
     // Sequence is assigned before await: runAgentTurn executes each round in parallel.
     const sequence = nextSequence++;
     const result = await (
-      isScheduleActionTool(name) ? runScheduleActionTool(actionContext as ScheduleActionContext,scheduleTools,name,args)
+      isCommercialDocumentTool(name) ? runCommercialDocumentTool(actionContext,commercialDocumentTools,name,args)
+      : isProcurementDocumentTool(name) ? runProcurementDocumentTool(actionContext,procurementDocumentTools,name,args)
+      : isScheduleActionTool(name) ? runScheduleActionTool(actionContext as ScheduleActionContext,scheduleTools,name,args)
       : isElosIaFinanceActionTool(name) ? runElosIaFinanceActionTool(actionContext,financeActionTools,name,args)
       : isElosIaActionTool(name) ? runElosIaActionTool(actionContext,actionTools,name,args)
       : isElosIaFinanceTool(name) ? runElosIaFinanceTool(toolContext,financeTools,name,args)
