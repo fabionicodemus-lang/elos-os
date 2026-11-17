@@ -228,6 +228,7 @@ export default async function DelinquencyManagementPage({
               <button type="submit">Filtrar</button>
               <Link prefetch={false} href="/financeiro/gestao-inadimplencias">Limpar</Link>
             </form>
+            <p className="delinquency-filter-note">Os indicadores e as faixas de atraso consideram todo o empreendimento selecionado. A busca por cliente filtra somente a lista abaixo.</p>
           </section>
 
           <section className="registry-table-panel delinquency-debtors-panel">
