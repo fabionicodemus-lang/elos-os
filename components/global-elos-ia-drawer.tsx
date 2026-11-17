@@ -11,6 +11,7 @@ type Quota={tracking:boolean;costTracking:boolean;userTokensToday:number;dailyUs
 type Bootstrap={
   ok:boolean;
   configured:boolean;
+  documentActionsEnabled?:boolean;
   personas:ElosIaChatPersona[];
   defaultPersona:string;
   activeProjectId:string|null;
@@ -111,7 +112,7 @@ export function GlobalElosIaDrawer({activeProjectLabel}:{activeProjectLabel:stri
       <div className="elos-ai-drawer-body">
         {loading&&!bootstrap?<div className="elos-ai-drawer-state"><span className="elos-ai-drawer-spark">✦</span><strong>Preparando o contexto desta tela…</strong></div>:null}
         {error?<div className="elos-ai-drawer-state error"><strong>{error}</strong><button type="button" className="elos-button" onClick={retry}>Tentar novamente</button></div>:null}
-        {bootstrap?<ElosIaChat key={storageKey} personas={bootstrap.personas} defaultPersona={bootstrap.defaultPersona} configured={bootstrap.configured} activeProjectLabel={activeProjectLabel??bootstrap.activeProjectLabel} initialQuota={bootstrap.initialQuota} maxQuestionChars={bootstrap.maxQuestionChars} companyId={bootstrap.companyId} userId={bootstrap.userId} compact pageContext={context} storageKey={storageKey} onBusyChange={setBusy}/>:null}
+        {bootstrap?<ElosIaChat key={storageKey} personas={bootstrap.personas} defaultPersona={bootstrap.defaultPersona} configured={bootstrap.configured} documentActionsEnabled={bootstrap.documentActionsEnabled} activeProjectLabel={activeProjectLabel??bootstrap.activeProjectLabel} initialQuota={bootstrap.initialQuota} maxQuestionChars={bootstrap.maxQuestionChars} companyId={bootstrap.companyId} userId={bootstrap.userId} compact pageContext={context} storageKey={storageKey} onBusyChange={setBusy}/>:null}
       </div>
     </aside>,document.body):null;
 

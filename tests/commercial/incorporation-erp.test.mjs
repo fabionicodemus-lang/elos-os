@@ -56,10 +56,10 @@ async function bootstrap(db){
       ('${sale}','${company}','${project}','${unit}','${client}','V-001','CT-001','2026-01-10',1000000,'active','${uid}',now()),
       ('${sale2}','${company}','${project}','${unit2}','${client}','V-002','CT-002','2026-02-10',1000,'active','${uid}',now());
     insert into receivables(company_id,project_id,sale_id,client_id,unit_id,category,description,due_date,amount,adjusted_amount,paid_amount,status) values
-      ('${company}','${project}','${sale}','${client}','${unit}','entry','Entrada','2026-01-15',100,100,40,'open'),
-      ('${company}','${project}','${sale}','${client}','${unit}','monthly','Mensal','2026-12-15',200,200,0,'open'),
-      ('${company}','${project}','${sale2}','${client}','${unit2}','monthly','M1','2026-11-10',150,150,0,'open'),
-      ('${company}','${project}','${sale2}','${client}','${unit2}','monthly','M2','2026-12-10',150,150,0,'open');
+      ('${company}','${project}','${sale}','${client}','${unit}','entry','Entrada',current_date - 30,100,100,40,'open'),
+      ('${company}','${project}','${sale}','${client}','${unit}','monthly','Mensal',current_date + 90,200,200,0,'open'),
+      ('${company}','${project}','${sale2}','${client}','${unit2}','monthly','M1',current_date + 30,150,150,0,'open'),
+      ('${company}','${project}','${sale2}','${client}','${unit2}','monthly','M2',current_date + 60,150,150,0,'open');
   `);
   await db.exec(migration);
   await db.exec(integrity);

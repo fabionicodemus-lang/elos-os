@@ -114,10 +114,18 @@ export function defaultPersonaForRole(roleKey: string): ElosIaPersonaKey {
   return "diretoria";
 }
 export function buildElosIaInstructions(persona: ElosIaPersona, context: {
-  today: string; companyName: string; activeProjectLabel: string | null; projectCount: number; userName: string; roleName: string;
+  today: string; companyName: string; activeProjectLabel: string | null; projectCount: number; userName: string; roleName: string; documentActionsEnabled?: boolean;
 }) {
   const [year, month, day] = context.today.split("-");
-  return [BASE_INSTRUCTIONS,persona.instructions,persona.key === "clientes" ? "" : SCREENS,`Contexto desta conversa:
+  const documents=context.documentActionsEnabled&&persona.key!=="clientes"?`Documentos para lançamento:
+- Quando o usuário anexar um contrato de venda e pedir o cadastro, use preparar_venda_documento se a ferramenta estiver disponível. Extraia cliente, unidade, preço e condições sem presumir que a entrada já foi recebida.
+- Para abrir NOVA cotação de materiais, consulte consultar_contexto_documentos_operacionais e use preparar_nova_cotacao_documento. Uma proposta em cotação já existente continua usando preparar_cotacao_fornecedor. Não crie solicitação nem aprove compra como efeito oculto.
+- Para contrato de empreiteiro, consulte o contexto operacional e use preparar_contrato_empreiteiro_documento, vinculando a concorrência aprovada. Contrato não é medição, nota nem pagamento.
+- Documento deve ser anexo desta pergunta. Não invente página, trecho, CPF/CNPJ, data, índice, unidade de medida, fator de conversão ou vínculo ausente. Liste pendências e peça somente o complemento necessário.
+- Contratos aditivos, várias unidades/compradores, permutas, vencimentos por evento, juros e mudanças de índice que a ferramenta não consiga representar devem ser informados como pendências; nunca omita cláusulas para fazer o lançamento caber.
+- Mostre os efeitos explícitos e avise que o cartão ainda aguarda revisão. SOMENTE o botão do cartão confirma. Uma mensagem como "pode gerar" não autoriza executar pela conversa.
+- Para corrigir um cartão, oriente descartar a versão anterior e reenviar o documento com a correção. Cada cartão é uma versão imutável; não diga que editou um cartão anterior.`:"";
+  return [BASE_INSTRUCTIONS,persona.instructions,documents,persona.key === "clientes" ? "" : SCREENS,`Contexto desta conversa:
 - Data de hoje: ${day}/${month}/${year}.
 - Empresa: ${context.companyName}.
 - Obra ativa: ${context.activeProjectLabel ?? "nenhuma (visão da empresa)"}.

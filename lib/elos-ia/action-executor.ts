@@ -1,5 +1,6 @@
 import type { resolveActiveWorkspace } from "@/lib/workspace";
 import { ELOS_IA_ATTACHMENT_BUCKET } from "./attachments";
+import { elosIaDocumentActionsEnabled, isDocumentActionType } from "./document-action-shared";
 
 type SupabaseClientLike=Awaited<ReturnType<typeof resolveActiveWorkspace>>["supabase"];
 export type ElosIaActionProposal={
@@ -83,11 +84,14 @@ export async function loadElosIaActionProposal(supabase:SupabaseClientLike,compa
 export async function executeElosIaActionProposal(input:{supabase:SupabaseClientLike;companyId:string;proposalId:string}){
   const proposal=await loadElosIaActionProposal(input.supabase,input.companyId,input.proposalId);
   if(!proposal)throw new Error("A ação preparada não foi encontrada ou você não possui acesso.");
-  const rpc=proposal.action_type==="execution_schedule_update"?"ai_execute_schedule_action_proposal":"ai_execute_action_proposal";
+  const documentAction=isDocumentActionType(proposal.action_type);
+  if(documentAction&&!elosIaDocumentActionsEnabled())throw new Error("Os lançamentos por documentos ainda não estão habilitados neste ambiente.");
+  const rpc=documentAction?"ai_execute_document_action_proposal":proposal.action_type==="execution_schedule_update"?"ai_execute_schedule_action_proposal":"ai_execute_action_proposal";
   const executed=await input.supabase.rpc(rpc,{p_proposal_id:proposal.id});
   if(executed.error)throw new Error(executed.error.message);
   const result=(executed.data??{}) as Record<string,unknown>;
-  const warnings=await copyOfficialDocuments(input.supabase,proposal,result);
+  // Document actions retain the exact original inside their database transaction.
+  const warnings=documentAction?[]:await copyOfficialDocuments(input.supabase,proposal,result);
   return {proposal:{...proposal,status:"executed",result},result,warnings};
 }
 
