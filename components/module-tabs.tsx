@@ -13,7 +13,7 @@ function activeFor(pathname: string, tab: Tab) {
 
 function resolveTabs(pathname: string): TabSet[] {
   if (pathname.startsWith("/financeiro/")) return [{ aria: "Navegação do Financeiro", tabs: [
-    { label: "Contas a Pagar", href: "/financeiro/contas-a-pagar" }, { label: "Contas a Receber", href: "/financeiro/contas-a-receber" }, { label: "Fluxo de Caixa", href: "/financeiro/fluxo-de-caixa" }, { label: "Relatórios", href: "/financeiro/relatorios" }, { label: "Notas Manuais", href: "/financeiro/notas-manuais" }, { label: "Notas Eletrônicas", href: "/financeiro/notas-eletronicas" }, { label: "Impostos", href: "/financeiro/impostos" }, { label: "Contas Bancárias", href: "/financeiro/contas-bancarias" }, { label: "Índices", href: "/financeiro/indices-de-correcao" },
+    { label: "Contas a Pagar", href: "/financeiro/contas-a-pagar" }, { label: "Contas a Receber", href: "/financeiro/contas-a-receber" }, { label: "Inadimplências", href: "/financeiro/gestao-inadimplencias" }, { label: "Fluxo de Caixa", href: "/financeiro/fluxo-de-caixa" }, { label: "Relatórios", href: "/financeiro/relatorios" }, { label: "Notas Manuais", href: "/financeiro/notas-manuais" }, { label: "Notas Eletrônicas", href: "/financeiro/notas-eletronicas" }, { label: "Impostos", href: "/financeiro/impostos" }, { label: "Contas Bancárias", href: "/financeiro/contas-bancarias" }, { label: "Índices", href: "/financeiro/indices-de-correcao" },
   ] }];
 
   if (pathname.startsWith("/suprimentos/")) {

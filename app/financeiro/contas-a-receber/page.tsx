@@ -181,6 +181,7 @@ export default async function AccountsReceivablePage({
         <>
           <Link prefetch={false} className="elos-button" href="/comercial/planos-de-pagamento">Planos de Pagamento</Link>
           <Link prefetch={false} className="elos-button" href="/comercial/vendas">Vendas</Link>
+          <Link prefetch={false} className="elos-button" href="/financeiro/gestao-inadimplencias">Gestão de Inadimplências</Link>
           <Link prefetch={false} className="elos-button" href="/financeiro/indices-de-correcao">Índices de correção</Link>
         </>
       }

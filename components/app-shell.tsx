@@ -53,6 +53,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const projectLocationsHref = can("projects.view") ? "/empreendimentos/locais" : undefined;
   const projectUnitsHref = can("projects.view") ? "/empreendimentos/unidades" : undefined;
   const financeReceivablesHref = can("receivables.view") ? "/financeiro/contas-a-receber" : undefined;
+  const delinquencyHref = can("receivables.view") ? "/financeiro/gestao-inadimplencias" : undefined;
   const commercialReceivablesHref = can("receivables.view") ? "/comercial/planos-de-pagamento" : undefined;
   const indicesHref = can("indices.view") ? "/financeiro/indices-de-correcao" : undefined;
   const cashflowHref = can("cashflow.view") ? "/financeiro/fluxo-de-caixa" : undefined;
@@ -202,6 +203,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
     { key: "finance", label: "Financeiro", icon: "$", active: activeGroup === "finance", items: [
       { label: "Contas a Pagar", href: can("payables.view") ? "/financeiro/contas-a-pagar" : undefined, active: activeItem === "payables", disabled: !can("payables.view") },
       { label: "Contas a Receber", href: financeReceivablesHref, active: activeItem === "receivables", disabled: !financeReceivablesHref },
+      { label: "Gestão de Inadimplências", href: delinquencyHref, active: activeItem === "delinquency", disabled: !delinquencyHref },
       { label: "Índices de Correção", href: indicesHref, active: activeItem === "correction-indices", disabled: !indicesHref },
       { label: "Fluxo de Caixa", href: cashflowHref, active: activeItem === "cashflow", disabled: !cashflowHref },
       { label: "Relatórios Financeiros", href: reportsHref, active: activeItem === "reports", disabled: !reportsHref },
