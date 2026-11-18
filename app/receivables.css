@@ -97,6 +97,228 @@
   background: #fff0f0;
 }
 
+/* Financeiro > Gestão de Inadimplências */
+.delinquency-summary article {
+  min-width: 0;
+}
+
+.delinquency-summary .delinquency-summary-overdue {
+  border-color: #f0cccc;
+  background: linear-gradient(145deg, #fff, #fff6f4);
+}
+
+.delinquency-summary-overdue strong,
+.delinquency-money-alert {
+  color: #a53d39;
+}
+
+.delinquency-aging-panel {
+  margin-top: 16px;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: white;
+}
+
+.delinquency-aging-panel .section-heading {
+  margin-bottom: 14px;
+}
+
+.delinquency-aging-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.delinquency-aging-grid article {
+  min-width: 0;
+  padding: 15px 16px;
+  border: 1px solid #e5ebea;
+  border-radius: 12px;
+  background: #f9fbfa;
+}
+
+.delinquency-aging-grid article > span,
+.delinquency-aging-grid article > strong,
+.delinquency-aging-grid article > small {
+  display: block;
+}
+
+.delinquency-aging-grid article > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.delinquency-aging-grid article > strong {
+  margin-top: 5px;
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: clamp(17px, 1.45vw, 23px);
+}
+
+.delinquency-aging-grid article > small {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.delinquency-aging-track {
+  height: 7px;
+  margin-top: 11px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5ebea;
+}
+
+.delinquency-aging-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #008780;
+}
+
+.delinquency-aging-attention .delinquency-aging-track > span { background: #d3a14b; }
+.delinquency-aging-warning .delinquency-aging-track > span { background: #d97936; }
+.delinquency-aging-critical .delinquency-aging-track > span { background: #af4a44; }
+
+.delinquency-filter {
+  display: grid;
+  grid-template-columns: minmax(230px, 1.25fr) minmax(180px, 1fr) auto auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.delinquency-filter label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.delinquency-filter :is(input, select, button) {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.delinquency-filter :is(input, select):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.delinquency-filter button {
+  padding: 0 19px;
+  border-color: var(--brand);
+  background: var(--brand);
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.delinquency-filter a {
+  align-self: center;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.delinquency-filter-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.delinquency-table {
+  min-width: 1100px;
+}
+
+.delinquency-table td > strong,
+.delinquency-table td > span,
+.delinquency-table td > small {
+  display: block;
+}
+
+.delinquency-table td > span,
+.delinquency-table td > small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.delinquency-table td .status-badge {
+  display: inline-block;
+  margin: 0;
+  color: inherit;
+}
+
+.delinquency-table td .status-badge.overdue { color: #a33c3c; }
+.delinquency-table td .status-badge.open { color: #8a6111; }
+
+.delinquency-table tr.delinquency-selected-row {
+  background: #f0f9f7;
+}
+
+.delinquency-client-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.delinquency-client-summary > div {
+  padding: 15px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f7faf9;
+}
+
+.delinquency-client-summary :is(span, strong, small) {
+  display: block;
+}
+
+.delinquency-client-summary span,
+.delinquency-client-summary small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.delinquency-client-summary strong {
+  margin: 5px 0;
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 21px;
+}
+
+@media (max-width: 1120px) {
+  .delinquency-aging-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .delinquency-filter,
+  .delinquency-aging-grid,
+  .delinquency-client-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .delinquency-aging-panel {
+    padding: 16px;
+  }
+
+  .delinquency-filter a {
+    justify-self: start;
+  }
+}
+
 .sale-detail-hero {
   margin-top: 20px;
   padding: 24px;
