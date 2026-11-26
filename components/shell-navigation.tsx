@@ -135,6 +135,7 @@ function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string)
       compactItem("Contas a Pagar", "/financeiro/contas-a-pagar", findItem(finance, "/financeiro/contas-a-pagar"), pathname),
       compactItem("Contas a Receber", "/financeiro/contas-a-receber", findItem(finance, "/financeiro/contas-a-receber"), pathname),
       compactItem("Gestão de Inadimplências", "/financeiro/gestao-inadimplencias", findItem(finance, "/financeiro/gestao-inadimplencias"), pathname),
+      compactItem("Central de Cobrança", "/financeiro/central-cobranca", findItem(finance, "/financeiro/central-cobranca"), pathname),
       compactItem("Fluxo de Caixa", "/financeiro/fluxo-de-caixa", findItem(finance, "/financeiro/fluxo-de-caixa"), pathname),
       compactItem("Relatórios", "/financeiro/relatorios", findItem(finance, "/financeiro/relatorios"), pathname),
       compactItem("Notas Manuais", "/financeiro/notas-manuais", findItem(finance, "/financeiro/notas-manuais"), pathname),

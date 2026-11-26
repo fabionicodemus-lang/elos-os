@@ -206,6 +206,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Contas a Pagar", href: can("payables.view") ? "/financeiro/contas-a-pagar" : undefined, active: activeItem === "payables", disabled: !can("payables.view") },
       { label: "Contas a Receber", href: financeReceivablesHref, active: activeItem === "receivables", disabled: !financeReceivablesHref },
       { label: "Gestão de Inadimplências", href: delinquencyHref, active: activeItem === "delinquency", disabled: !delinquencyHref },
+      { label: "Central de Cobrança", href: can("receivables.view") ? "/financeiro/central-cobranca" : undefined, active: activeItem === "collections", disabled: !can("receivables.view") },
       { label: "Índices de Correção", href: indicesHref, active: activeItem === "correction-indices", disabled: !indicesHref },
       { label: "Fluxo de Caixa", href: cashflowHref, active: activeItem === "cashflow", disabled: !cashflowHref },
       { label: "Relatórios Financeiros", href: reportsHref, active: activeItem === "reports", disabled: !reportsHref },
