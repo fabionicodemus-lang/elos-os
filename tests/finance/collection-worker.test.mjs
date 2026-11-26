@@ -12,3 +12,7 @@ test("direct document payload has issuer, unit, project, amount and date; no por
 test("worker refuses missing adapter", async () => {
  await assert.rejects(runCollectionCycle({db:null,configId:"test",adapter:null}),/homologado/);
 });
+
+test("sandbox cannot mutate the operational financial portfolio", async () => {
+ await assert.rejects(runCollectionCycle({db:null,configId:"test",adapter:{environment:"sandbox",refreshReconciliation:async()=>true}}),/sandbox/);
+});

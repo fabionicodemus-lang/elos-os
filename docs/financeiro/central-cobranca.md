@@ -14,6 +14,8 @@ Base: `main` 62f8fb5ead29e1da7c13fb7c2e74f0d588504f15. O PR #311 permanece draft
 
 ## Limites e homologação
 
+- Integração bancária: os clientes isolados de sandbox do Sicredi e Santander estão em `lib/collections/bank-sandbox/`; ver [conectores e habilitação](./conectores-bancarios-sicredi-santander.md). Ainda não habilitam o worker operacional nem alteram carteira Elos. A homologação de produção e CNAB continuam pendentes.
+
 - A migration é aditiva, não ativa nenhuma empresa, não reenvia boletos e não modifica os importados. Para títulos da central, o guard impede baixa manual que divirja da conciliação. Os fluxos financeiros legados sem cobrança vinculada continuam existentes nesta etapa; migrá-los exige conferência dos dados históricos.
 - A importação eObra agora aceita identificador bancário/nosso número e convênio. Preserva zeros e snapshots no registro de importação; antigos exports sem campos novos mantêm o hash. `correction_locked` permanece intacto. Títulos eObra abertos exigem conferência documentada; título com identificador conhecido não pode gerar novo boleto. Vincular boleto legado ao registro bancário e continuar atualização CUB a partir da referência contratual importada depende do layout/dados reais; não inventar referência nem descongelar histórico automaticamente.
 - Recebimentos, tarifas separadas e estornos integrais conciliados são suportados. Tarifas retidas sem movimento explícito, estornos parciais/diferenças e reaproveitamento de crédito exigem conferência; não presumir que o bruto coincide com um crédito líquido sem identificação confiável. A alocação registra crédito não aplicado, não transfere automaticamente para outro título. Histórico de evidência deve permanecer intacto.
