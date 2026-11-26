@@ -1,0 +1,12 @@
+export const SNAPSHOT_BUCKET: string;
+export const SNAPSHOT_BUNDLE_BUCKET: string;
+export const MAX_SNAPSHOT_BYTES: number;
+export const MAX_SNAPSHOT_PART_BYTES: number;
+export const MAX_SNAPSHOT_CONTROL_BYTES: number;
+export function readSnapshotControl(request: Request): Promise<Record<string, unknown>>;
+export function assertSnapshotPath(path: unknown, companyId: string, userId: string): string;
+export function assertSnapshotBundlePath(path: unknown, companyId: string, userId?: string): string;
+export function assertSnapshotPartPath(manifestPath: unknown, partName: unknown, companyId: string, userId?: string): string;
+export function snapshotStorageBucket(path: unknown): string;
+export function parseSnapshotProjectMap(input: unknown, sourceProjectIds: readonly string[]): Record<string, string>;
+export function snapshotRequiredPermissions(records: readonly {entity: string; normalized?: Record<string, unknown>}[]): string[];

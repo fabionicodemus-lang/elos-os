@@ -7,7 +7,11 @@ on:
       - "app/api/imports/eobra/**"
       - "app/configuracoes/importacoes/**"
       - "tests/imports/**"
-      - "supabase/migrations/*integration_eobra_import.sql"
+      - "lib/finance/**"
+      - "tests/finance/partial-*.test.mjs"
+      - "supabase/migrations/*eobra*.sql"
+      - "supabase/migrations/*partial_settlements.sql"
+      - "supabase/migrations/*explicit_correction_policies.sql"
       - ".github/workflows/eobra-import-ci.yml"
   push:
     branches: [main]
@@ -16,7 +20,11 @@ on:
       - "app/api/imports/eobra/**"
       - "app/configuracoes/importacoes/**"
       - "tests/imports/**"
-      - "supabase/migrations/*integration_eobra_import.sql"
+      - "lib/finance/**"
+      - "tests/finance/partial-*.test.mjs"
+      - "supabase/migrations/*eobra*.sql"
+      - "supabase/migrations/*partial_settlements.sql"
+      - "supabase/migrations/*explicit_correction_policies.sql"
       - ".github/workflows/eobra-import-ci.yml"
 
 permissions:
@@ -34,5 +42,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:eobra
+      - run: node --test tests/finance/partial-*.test.mjs
       - run: npx eslint lib/eobra-import app/api/imports/eobra app/configuracoes/importacoes tests/imports
       - run: npx tsc --noEmit

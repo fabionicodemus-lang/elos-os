@@ -1,3 +1,5 @@
+import { titleFinancialTimeline } from "@/lib/finance/title-balances.mjs";
+import { loadCompleteFinanceRows, loadTitlePaymentHistory } from "@/lib/finance/payment-history";
 import Link from "next/link";
 import "../../forecast.css";
 import { AppShell } from "@/components/app-shell";
@@ -11,7 +13,7 @@ type Client = { id: string; name: string };
 type Unit = { id: string; code: string };
 type Sale = { id: string; number: string };
 type Payable = {
-  id: string; due_date: string; amount: number; status: "open" | "paid" | "cancelled";
+  id: string; due_date: string; amount: number; adjusted_amount: number; status: "open" | "paid" | "cancelled";
   document: string | null; installment_label: string | null; paid_at: string | null; paid_amount: number | null;
   paid_account_name: string | null; source_system: string | null; notes: string | null;
   suppliers: Supplier | Supplier[] | null;
@@ -73,48 +75,54 @@ export default async function CashFlowPage({
     : Promise.resolve({ data: null, error: null });
   let payablesQuery = supabase
     .from("payables")
-    .select("id, due_date, amount, status, document, installment_label, paid_at, paid_amount, paid_account_name, source_system, notes, suppliers(id, legal_name, trade_name)")
-    .eq("company_id", companyId).neq("status", "cancelled").order("due_date", { ascending: true }).limit(10000);
+    .select("id, due_date, amount, adjusted_amount, status, document, installment_label, paid_at, paid_amount, paid_account_name, source_system, notes, suppliers(id, legal_name, trade_name)")
+    .eq("company_id", companyId).order("due_date", { ascending: true }).order("id").limit(10000);
   let receivablesQuery = supabase
     .from("receivables")
     .select("id, sale_id, due_date, amount, adjusted_amount, status, category, description, sequence_number, sequence_total, paid_at, paid_amount, paid_account_name, source_system, clients(id, name), units(id, code), sales(id, number)")
-    .eq("company_id", companyId).neq("status", "cancelled").order("due_date", { ascending: true }).limit(10000);
+    .eq("company_id", companyId).order("due_date", { ascending: true }).order("id").limit(10000);
   if (projectId) { payablesQuery = payablesQuery.eq("project_id", projectId); receivablesQuery = receivablesQuery.eq("project_id", projectId); }
 
   const [projectResult, payablesResult, receivablesResult, forecastContext] = await Promise.all([
     projectQuery,
-    payablesQuery,
-    receivablesQuery,
+    loadCompleteFinanceRows(payablesQuery),
+    loadCompleteFinanceRows(receivablesQuery),
     projectId
       ? loadProjectForecast({ supabase, companyId, projectId, asOfDate: todayIso() })
       : Promise.resolve(null),
   ]);
   const payables = (payablesResult.data ?? []) as unknown as Payable[];
   const receivables = (receivablesResult.data ?? []) as unknown as Receivable[];
+  const paymentHistory = await loadTitlePaymentHistory({ supabase, companyId, projectId, titleIds: [...payables.map(row => row.id), ...receivables.map(row => row.id)] });
+  let incompleteHistoryCount = 0;
   const project = projectResult.data;
   const forecast = forecastContext?.forecast ?? null;
 
-  const payableEntries: CashEntry[] = payables.map((payable) => {
+  const payableEntries: CashEntry[] = payables.flatMap((payable) => {
     const supplier = relatedOne(payable.suppliers);
-    const paid = payable.status === "paid";
-    return {
-      id: `out-${payable.id}`, direction: "out", situation: paid ? "realized" : "forecast",
-      effectiveDate: cleanDate(paid ? payable.paid_at : payable.due_date), dueDate: cleanDate(payable.due_date), paidAt: cleanDate(payable.paid_at) || null,
-      amount: Number(paid ? payable.paid_amount ?? payable.amount : payable.amount), party: supplier?.trade_name || supplier?.legal_name || "Fornecedor",
-      reference: payable.document || payable.notes || "Conta a pagar", installment: payable.installment_label || "—", account: payable.paid_account_name || "—",
-      origin: originLabel(payable.source_system, "Contas a Pagar"), link: "/financeiro/contas-a-pagar",
-    };
+    const timeline = titleFinancialTimeline(payable, paymentHistory.get(`payable:${payable.id}`) ?? []);
+    if (!timeline.history_complete || !timeline.history_dates_complete) incompleteHistoryCount++;
+    return timeline.entries.map(event => ({
+      id: `out-${event.id}`, direction: "out", situation: event.situation,
+      effectiveDate: event.date, dueDate: cleanDate(payable.due_date), paidAt: event.situation === "realized" ? event.date : null,
+      amount: event.amount, party: supplier?.trade_name || supplier?.legal_name || "Fornecedor",
+      reference: `${event.kind === "reversal" ? "Estorno · " : ""}${payable.document || payable.notes || "Conta a pagar"}`,
+      installment: payable.installment_label || "—", account: event.account_name || "—",
+      origin: originLabel(event.source_system ?? payable.source_system, "Contas a Pagar"), link: "/financeiro/contas-a-pagar",
+    }));
   });
-  const receivableEntries: CashEntry[] = receivables.map((receivable) => {
-    const client = relatedOne(receivable.clients); const unit = relatedOne(receivable.units); const sale = relatedOne(receivable.sales); const paid = receivable.status === "paid";
-    return {
-      id: `in-${receivable.id}`, direction: "in", situation: paid ? "realized" : "forecast",
-      effectiveDate: cleanDate(paid ? receivable.paid_at : receivable.due_date), dueDate: cleanDate(receivable.due_date), paidAt: cleanDate(receivable.paid_at) || null,
-      amount: Number(paid ? receivable.paid_amount ?? receivable.adjusted_amount ?? receivable.amount : receivable.adjusted_amount ?? receivable.amount),
-      party: client?.name || "Cliente", reference: `${unit?.code ? `Unidade ${unit.code}` : "Unidade"}${sale?.number ? ` · Venda ${sale.number}` : ""}`,
+  const receivableEntries: CashEntry[] = receivables.flatMap((receivable) => {
+    const client = relatedOne(receivable.clients); const unit = relatedOne(receivable.units); const sale = relatedOne(receivable.sales);
+    const timeline = titleFinancialTimeline(receivable, paymentHistory.get(`receivable:${receivable.id}`) ?? []);
+    if (!timeline.history_complete || !timeline.history_dates_complete) incompleteHistoryCount++;
+    return timeline.entries.map(event => ({
+      id: `in-${event.id}`, direction: "in", situation: event.situation,
+      effectiveDate: event.date, dueDate: cleanDate(receivable.due_date), paidAt: event.situation === "realized" ? event.date : null,
+      amount: event.amount, party: client?.name || "Cliente",
+      reference: `${event.kind === "reversal" ? "Estorno · " : ""}${unit?.code ? `Unidade ${unit.code}` : "Unidade"}${sale?.number ? ` · Venda ${sale.number}` : ""}`,
       installment: `${categoryLabels[receivable.category] || receivable.description} · ${receivable.sequence_number}/${receivable.sequence_total}`,
-      account: receivable.paid_account_name || "—", origin: originLabel(receivable.source_system, "Contas a Receber"), link: `/comercial/vendas/${receivable.sale_id}`,
-    };
+      account: event.account_name || "—", origin: originLabel(event.source_system ?? receivable.source_system, "Contas a Receber"), link: `/comercial/vendas/${receivable.sale_id}`,
+    }));
   });
 
   const allEntries = [...receivableEntries, ...payableEntries].filter((entry) => Boolean(entry.effectiveDate)).sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate) || a.direction.localeCompare(b.direction));
@@ -191,6 +199,7 @@ export default async function CashFlowPage({
       description={`${company.name} · ${context} · previsto, realizado e projeção completa de ${periodDescription}.`}
       actions={<><Link prefetch={false} className="elos-button" href="/financeiro/contas-a-pagar">Contas a Pagar</Link><Link prefetch={false} className="elos-button" href="/financeiro/contas-a-receber">Contas a Receber</Link><Link prefetch={false} className="elos-button elos-button-primary" href="/engenharia/previsao-financeira">Previsão por serviço</Link></>}
     >
+      {incompleteHistoryCount > 0 ? <div className="auth-message error workspace-message">Histórico por data pendente em {incompleteHistoryCount} título(s). Os totais realizados estão incompletos.</div> : null}
       {payablesResult.error || receivablesResult.error ? <div className="auth-message error workspace-message">Não foi possível consolidar o fluxo de caixa.</div> : null}
       {forecastContext?.errors.length ? <div className="auth-message error workspace-message">A projeção da Engenharia está incompleta: {forecastContext.errors.join(" · ")}</div> : null}
 

@@ -1,6 +1,99 @@
-# Importador eObra por arquivos
+# Importadores eObra
 
-## Estado e escopo
+## Migração conjunta de cadastros, vendas e financeiro
+
+O fluxo em **Sistema → Importações → Migração do eObra**
+(`/configuracoes/importacoes/migracoes`) recebe uma pasta com manifesto e partes
+JSON, ou um arquivo único menor, com os registros originais, relações por
+identificador e evidências de cobertura. Ele permite
+importar pessoas, unidades, vendas com múltiplas unidades/compradores e parcelas,
+mantendo baixas individuais, estornos, índices e dados complementares da origem.
+
+O formato está em [eobra-snapshot-format.md](./eobra-snapshot-format.md), os
+cálculos em [eobra-financial-contract.md](./eobra-financial-contract.md) e a
+continuidade de reajuste em [eobra-correction-continuity.md](./eobra-correction-continuity.md).
+
+### Operação e retomada
+
+1. Capturar a origem por uma sessão autorizada ou exportação verificável. Guardar
+   filtros, contagens, páginas, detalhes e identificadores; ausência de registros
+   não comprova que um módulo está vazio.
+2. Para coletas grandes, selecionar a pasta com `manifest.json` e arquivos
+   `part-000001.json` na mesma pasta. Cada arquivo tem até 2 MiB e cada parte,
+   até 500 registros; o conjunto aceita 200 MiB, 100.000 registros e 1.000 partes.
+   O manifesto é enviado depois das partes. O modo de arquivo único continua
+   disponível até 50 MiB. Ambos usam armazenamento privado e imutável da empresa.
+3. Conferir o inventário e associar cada obra de origem a uma obra real da empresa
+   selecionada. O importador não cria obras ou vínculos por semelhança de nomes.
+4. Preparar a revisão. A carga e a validação avançam em chamadas limitadas e o
+   progresso fica salvo. Pausar encerra após o lote em andamento; reabrir a coleta
+   permite continuar sem reenviar os arquivos. No modo em partes, a primeira
+   prévia confere somente o manifesto e não declara contagens ou totais validados.
+   Cada parte é conferida pelo tamanho e SHA-256 dos bytes antes de entrar no banco.
+5. Comparar cobertura, pendências, vínculos e totais. Os valores conservam original,
+   componentes de atualização, baixas líquidas e saldo. A falta de um componente,
+   detalhe obrigatório ou relação impede promover o pacote.
+6. Confirmar a revisão e iniciar a importação. Os registros são processados em
+   ordem de dependência, até 50 por transação. Uma falha desfaz somente o lote
+   atual: os lotes anteriores continuam identificados e a execução pode ser
+   retomada. Uma coleta com criações já concluídas não é cancelada como se nada
+   tivesse sido importado.
+7. Conferir o resultado e as pendências de reajuste. A coleta completa, a
+   preservação de documentos e a criação de dados nos módulos do Elos são estados
+   distintos, apresentados separadamente.
+
+Não há chamada do Elos para endpoints do eObra nem armazenamento da senha de
+origem. O upload pressupõe uma coleta realizada e verificada; ele não é um
+conector de extração automática nem comprova, sozinho, que todos os módulos da
+origem foram examinados.
+
+### Histórico e operação financeira
+
+O financeiro nativo suporta várias baixas por título e calcula o saldo residual.
+Um identificador de intenção impede duplicar a baixa operacional em uma repetição
+de envio. O histórico importado conserva cada data e valor, sem executar novamente
+os pagamentos nem criar movimentos bancários a partir de um total acumulado.
+
+Contas, índices e eventos da origem conservam identidade própria. Extratos,
+transferências, documentos e outros registros complementares permanecem
+identificados como dados preservados quando não houver promoção canônica
+implementada. Isso não é declarado como conciliação bancária nem como saldo
+inicial de uma conta nativa.
+
+As parcelas entram com o valor histórico protegido. A tela
+`/configuracoes/importacoes/correcao-eobra` confere vínculo de índice, competência
+base, série mensal e paridade antes de habilitar uma política explícita. Não se
+herda a carência usada por outra incorporadora. Parcelas quitadas, canceladas ou
+parcialmente amortizadas não recebem reajuste automático por essa ativação.
+
+### Banco de dados e instalação
+
+Aplicar, na ordem dos arquivos, as migrations do importador por planilha e depois
+`eobra_snapshot_foundation`, `eobra_snapshot_storage`,
+`finance_partial_settlements`, `eobra_snapshot_promotion`,
+`receivable_explicit_correction_policies`, `commercial_sale_units_eobra` e
+`eobra_snapshot_resumable`, `eobra_snapshot_parts` e
+`eobra_snapshot_bundle_storage`. Elas criam a estrutura e as regras; não executam uma
+carga de dados de clientes.
+
+Pacotes em partes usam `begin_eobra_snapshot_parts` e
+`append_eobra_snapshot_part`; arquivos únicos usam `begin_eobra_snapshot` e
+`append_eobra_snapshot`. As etapas seguintes compartilham
+`finish_eobra_snapshot_append`, `validate_eobra_snapshot_chunk`,
+`seal_eobra_snapshot`, `promote_eobra_snapshot_chunk` e `eobra_snapshot_progress`.
+O banco deriva cada lote de sua evidência imutável, sem reconstruir o arquivo
+grande em memória: a aplicação não pode substituir linhas entre chamadas.
+O início da promoção verifica o hash aprovado, e cada
+lote verifica suas dependências e a identidade permanente antes de gravar.
+
+As tabelas `eobra_migration_*` mantêm revisão, cobertura, relações e identidade.
+As tabelas `eobra_source_*` conservam contas, índices e eventos da fonte.
+Permissões nativas de cada módulo, vínculo com a empresa, RLS e validação no banco
+também se aplicam às chamadas diretas; dados brutos não contornam essas permissões.
+
+## Importação por planilha
+
+### Estado e escopo da planilha
 
 O Elos recebe arquivos CSV ou XLSX em **Sistema → Importações** (`/configuracoes/importacoes`). A primeira versão trata fornecedores, clientes, contas a pagar e contas a receber. Ela identifica cada ambiente eObra pelo hostname e cada registro pelo código estável da origem.
 
@@ -66,9 +159,9 @@ As regras do banco revalidam os valores e relacionamentos na promoção. O servi
 
 ## Limites financeiros desta versão
 
-**Pagamentos parciais ficam bloqueados.** O financeiro atual do Elos usa situações aberto, pago e cancelado, e alguns resumos ainda tratam o valor integral de um título aberto. O importador conserva original, atual, pago e saldo na revisão, sem reduzir silenciosamente o principal ao saldo.
+**Pagamentos parciais ficam bloqueados neste fluxo por planilha.** Use o pacote de migração conjunta para conservar os eventos individuais e o saldo residual. A planilha conserva original, atual, pago e saldo na revisão, sem reduzir silenciosamente o principal ao saldo.
 
-Contas a pagar com valor atual diferente do original ficam bloqueadas porque o cadastro canônico não representa separadamente todos os ajustes. Recebíveis podem conservar os componentes de atualização, desde que original mais acréscimos menos desconto corresponda ao atual.
+Contas a pagar com valor atual diferente do original também exigem o pacote de migração conjunta, que conserva seus componentes. Recebíveis por planilha podem conservar os componentes de atualização, desde que original mais acréscimos menos desconto corresponda ao atual.
 
 Recebíveis exigem venda, cliente e unidade reais da mesma empresa e obra. Esta versão não cria automaticamente unidades ou contratos para preencher referências ausentes. O vínculo é revalidado na promoção, inclusive situação da venda e documento do cliente.
 
@@ -111,6 +204,7 @@ Aplicar a migration `supabase/migrations/20261126135809_integration_eobra_import
 ```sh
 npm ci
 npm run test:eobra
+node --test tests/finance/partial-*.test.mjs
 npx eslint lib/eobra-import app/api/imports/eobra app/configuracoes/importacoes tests/imports
 npx tsc --noEmit
 npm run build

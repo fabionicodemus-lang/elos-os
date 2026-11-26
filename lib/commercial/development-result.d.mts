@@ -46,6 +46,7 @@ export type DevelopmentReceivable = {
 export type DevelopmentPayable = {
   status?: string | null;
   amount?: number | string | null;
+  adjusted_amount?: number | string | null;
   paid_amount?: number | string | null;
 };
 

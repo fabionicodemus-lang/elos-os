@@ -203,14 +203,15 @@ export async function markReceivablePaid(formData: FormData) {
   const returnPath = safeReturnPath(formData);
   const paidAt = String(formData.get("paid_at") ?? "").trim();
   const paidAmount = parseMoney(formData.get("paid_amount"));
+  const requestId = String(formData.get("payment_request_id") ?? "").trim();
 
-  if (!receivableId || !bankAccountId || !paidAt || !Number.isFinite(paidAmount) || paidAmount <= 0) {
+  if (!receivableId || !bankAccountId || !paidAt || !Number.isFinite(paidAmount) || paidAmount <= 0 || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId)) {
     redirect(pageUrl("Informe conta bancária, data e valor recebidos.", "error", saleId, returnPath));
   }
 
   const { supabase, companyId, projectId } = await requireCompanyPermission("receivables.manage");
   const receivableResult = await supabase.from("receivables").select("id,project_id,status").eq("id", receivableId).eq("company_id", companyId).maybeSingle();
-  if (!receivableResult.data || receivableResult.data.status !== "open") {
+  if (!receivableResult.data) {
     redirect(pageUrl("A parcela não está disponível para recebimento.", "error", saleId, returnPath));
   }
 
@@ -222,6 +223,7 @@ export async function markReceivablePaid(formData: FormData) {
     p_account_id: bankAccountId,
     p_paid_at: paidAt,
     p_paid_amount: paidAmount,
+    p_request_id: requestId,
   });
   if (result.error) redirect(pageUrl(result.error.message, "error", saleId, returnPath));
 
@@ -229,8 +231,10 @@ export async function markReceivablePaid(formData: FormData) {
   revalidatePath("/financeiro/contas-a-receber");
   revalidatePath("/financeiro/contas-bancarias");
   revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/financeiro/relatorios");
+  revalidatePath("/dashboard");
   revalidatePath(returnPath);
-  redirect(pageUrl("Recebimento registrado, correção travada e extrato atualizado.", "success", saleId, returnPath));
+  redirect(pageUrl("Recebimento registrado. Saldo atualizado e valor histórico preservado.", "success", saleId, returnPath));
 }
 
 export async function cancelReceivable(formData: FormData) {

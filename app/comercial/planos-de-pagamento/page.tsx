@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { titleFinancialValues } from "@/lib/finance/title-balances.mjs";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
@@ -160,7 +162,7 @@ export default async function PaymentPlansPage({
     listQuery = listQuery.or(`description.ilike.%${safe}%,adjustment_index.ilike.%${safe}%`);
   }
 
-  const [projectResult, salesResult, listResult, summaryResult, manageResult, correctionIndicesResult] = await Promise.all([
+  const [projectResult, salesResult, listResult, summaryResult, manageResult, correctionIndicesResult, paymentAccountsResult] = await Promise.all([
     projectQuery,
     salesQuery,
     listQuery,
@@ -179,6 +181,7 @@ export default async function PaymentPlansPage({
       .eq("company_id", companyId)
       .eq("status", "active")
       .order("code"),
+    supabase.from("finance_bank_accounts").select("id,label").eq("company_id",companyId).eq("status","active").order("label").limit(500),
   ]);
 
   const schemaMissing =
@@ -188,6 +191,7 @@ export default async function PaymentPlansPage({
   const sales = (salesResult.data ?? []) as unknown as SaleOption[];
   const receivables = (listResult.data ?? []) as unknown as Receivable[];
   const correctionIndices = (correctionIndicesResult.data ?? []) as CorrectionIndex[];
+  const paymentAccounts = (paymentAccountsResult.data ?? []) as Array<{ id: string; label: string }>;
   const defaultCorrectionIndexId = correctionIndices.find((index) => index.code === "CUB-SC")?.id ?? "";
   const selectedSale = sales.find((sale) => sale.id === saleId) ?? null;
   const summary = (summaryResult.data ?? {
@@ -315,7 +319,8 @@ export default async function PaymentPlansPage({
                     const unit = relatedOne(receivable.units);
                     const sale = relatedOne(receivable.sales);
                     const overdue = receivable.status === "open" && receivable.due_date < today;
-                    const updatedValue = Number(receivable.adjusted_amount ?? receivable.amount);
+                    const values = titleFinancialValues(receivable);
+                const updatedValue = values.updated;
                     const correctionDetails = [
                       receivable.correction_base_month ? `base ${monthBR(receivable.correction_base_month)}` : "",
                       receivable.correction_base_value ? `CUB ${decimal(receivable.correction_base_value, 6)}` : "",
@@ -329,21 +334,22 @@ export default async function PaymentPlansPage({
                         <td><strong>{categoryLabels[receivable.category] || receivable.category}</strong><span>{receivable.description}</span><small>{receivable.sequence_number} / {receivable.sequence_total}</small></td>
                         <td>{dateBR(receivable.due_date)}</td>
                         <td><strong>{money(receivable.amount)}</strong><small>lançamento original</small></td>
-                        <td><strong>{money(updatedValue)}</strong><small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small></td>
+                        <td><strong>{money(updatedValue)}</strong><small>Saldo exigível: {money(values.remaining)}</small>{receivable.status === "cancelled" ? <small>Saldo histórico: {money(values.historical_balance)}</small> : null}<small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small></td>
                         <td><span>{receivable.adjustment_index || "Sem correção"}</span><small>{correctionDetails}</small>{receivable.interest_rate_monthly ? <small>{receivable.interest_rate_monthly}% a.m.</small> : null}</td>
-                        <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{overdue ? "Vencida" : receivable.status === "open" ? "Em aberto" : receivable.status === "paid" ? "Recebida" : "Cancelada"}</span></td>
-                        <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : "—"}</span><small>{receivable.paid_at ? `${money(receivable.paid_amount ?? updatedValue)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
+                        <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{overdue ? "Vencida" : receivable.status === "open" ? values.partial ? "Parcial" : "Em aberto" : receivable.status === "paid" ? "Recebida" : "Cancelada"}</span></td>
+                        <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : "—"}</span><small>{values.paid > 0 ? `${money(values.paid)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
                         <td>
                           {canManage && receivable.status === "open" ? (
                             <div className="payable-actions">
                               <details>
                                 <summary>Baixar</summary>
                                 <form action={markReceivablePaid}>
+                                  <input type="hidden" name="payment_request_id" value={randomUUID()} />
                                   <input type="hidden" name="receivable_id" value={receivable.id} />
                                   <input type="hidden" name="sale_id" value={receivable.sale_id} />
                                   <label>Data<input name="paid_at" type="date" defaultValue={today} required /></label>
-                                  <label>Valor<input name="paid_amount" defaultValue={inputMoney(updatedValue)} required /></label>
-                                  <label>Conta<input name="paid_account_name" /></label>
+                                  <label>Valor<input name="paid_amount" defaultValue={inputMoney(values.remaining)} required /></label>
+                                  <label>Conta bancária<select name="bank_account_id" required defaultValue=""><option value="">Selecione a conta</option>{paymentAccounts.map(account => <option key={account.id} value={account.id}>{account.label}</option>)}</select></label>
                                   <button type="submit">Confirmar</button>
                                 </form>
                               </details>

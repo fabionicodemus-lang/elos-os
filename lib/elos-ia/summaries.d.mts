@@ -1,10 +1,13 @@
+import type { FinancialPaymentEvent } from "../finance/title-balances.mjs";
 export type PayableSummaryRow = {
   id: string;
   status: string;
   dueDate: string | null;
   paidAt: string | null;
   amount: number | string | null;
+  adjustedAmount?: number | string | null;
   paidAmount: number | string | null;
+  paymentEvents?: FinancialPaymentEvent[];
   supplier: string | null;
   document: string | null;
   installment: string | null;
@@ -18,6 +21,7 @@ export type ReceivableSummaryRow = {
   amount: number | string | null;
   adjustedAmount: number | string | null;
   paidAmount: number | string | null;
+  paymentEvents?: FinancialPaymentEvent[];
   category: string;
   client: string | null;
   unit: string | null;

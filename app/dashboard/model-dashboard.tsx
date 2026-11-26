@@ -1,3 +1,5 @@
+import { titleFinancialValues, titleFinancialTimeline, type FinancialPaymentEvent } from "@/lib/finance/title-balances.mjs";
+import { loadCompleteFinanceRows, loadTitlePaymentHistory } from "@/lib/finance/payment-history";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -51,6 +53,7 @@ type PayableRow = {
   project_id: string | null;
   due_date: string;
   amount: number;
+  adjusted_amount: number;
   status: "open" | "paid" | "cancelled";
   paid_at: string | null;
   paid_amount: number | null;
@@ -136,10 +139,6 @@ function monthKey(value: string) {
 
 function monthLabel(value: string) {
   return new Intl.DateTimeFormat("pt-BR", { month: "short", year: "2-digit", timeZone: "UTC" }).format(parseDate(value)).replace(" de ", "/").replace(".", "");
-}
-
-function dateBR(value: string | null | undefined) {
-  return value ? new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(parseDate(value)) : "—";
 }
 
 function money(value: number | null | undefined) {
@@ -269,23 +268,16 @@ function buildPhysicalMonths(
   return rows;
 }
 
-function buildCashFlowMonths(payables: PayableRow[], receivables: ReceivableRow[], today: string): CashFlowMonth[] {
+function buildCashFlowMonths(payables: PayableRow[], receivables: ReceivableRow[], history: Map<string, FinancialPaymentEvent[]>, today: string): CashFlowMonth[] {
   const start = addMonths(`${today.slice(0, 7)}-01`, -3);
+  const events = [...history.values()].flat();
   let cumulative = 0;
   return Array.from({ length: 9 }, (_, index) => {
     const key = monthKey(addMonths(start, index));
-    const received = receivables
-      .filter((item) => item.status === "paid" && item.paid_at && monthKey(item.paid_at) === key)
-      .reduce((sum, item) => sum + Number(item.paid_amount ?? item.adjusted_amount ?? item.amount), 0);
-    const receivable = receivables
-      .filter((item) => item.status === "open" && monthKey(item.due_date) === key)
-      .reduce((sum, item) => sum + Number(item.adjusted_amount ?? item.amount), 0);
-    const paid = payables
-      .filter((item) => item.status === "paid" && item.paid_at && monthKey(item.paid_at) === key)
-      .reduce((sum, item) => sum + Number(item.paid_amount ?? item.amount), 0);
-    const payable = payables
-      .filter((item) => item.status === "open" && monthKey(item.due_date) === key)
-      .reduce((sum, item) => sum + Number(item.amount), 0);
+    const received = events.filter(item => item.title_kind === "receivable" && monthKey(item.occurred_on) === key).reduce((sum, item) => sum + Number(item.amount), 0);
+    const paid = events.filter(item => item.title_kind === "payable" && monthKey(item.occurred_on) === key).reduce((sum, item) => sum + Number(item.amount), 0);
+    const receivable = receivables.filter(item => monthKey(item.due_date) === key).reduce((sum, item) => sum + titleFinancialValues(item).remaining, 0);
+    const payable = payables.filter(item => monthKey(item.due_date) === key).reduce((sum, item) => sum + titleFinancialValues(item).remaining, 0);
     cumulative += received + receivable - paid - payable;
     return { key, label: monthLabel(`${key}-01`), received, receivable, paid, payable, cumulative };
   });
@@ -364,7 +356,6 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
   const can = (permission: string) => privileged || permissions.has(permission);
   const projectId = activeProject?.id ?? null;
   const today = localDateIso();
-  const cashStart = addMonths(`${today.slice(0, 7)}-01`, -4);
   const cashEnd = monthEnd(addMonths(`${today.slice(0, 7)}-01`, 9));
 
   let unitsPromise = can("projects.view") || can("sales.view")
@@ -389,14 +380,14 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
     : Promise.resolve({ data: null, error: null });
 
   let payablesPromise = can("payables.view")
-    ? supabase.from("payables").select("id,project_id,due_date,amount,status,paid_at,paid_amount")
-      .eq("company_id", activeCompany.id).neq("status", "cancelled").gte("due_date", cashStart).lte("due_date", cashEnd).order("due_date").limit(10000)
+    ? supabase.from("payables").select("id,project_id,due_date,amount,adjusted_amount,status,paid_at,paid_amount")
+      .eq("company_id", activeCompany.id).eq("status", "open").lte("due_date", cashEnd).order("due_date").order("id").limit(10000)
     : null;
   if (payablesPromise && projectId) payablesPromise = payablesPromise.eq("project_id", projectId);
 
   let receivablesPromise = can("receivables.view")
     ? supabase.from("receivables").select("id,project_id,due_date,amount,adjusted_amount,status,paid_at,paid_amount")
-      .eq("company_id", activeCompany.id).neq("status", "cancelled").gte("due_date", cashStart).lte("due_date", cashEnd).order("due_date").limit(10000)
+      .eq("company_id", activeCompany.id).eq("status", "open").lte("due_date", cashEnd).order("due_date").order("id").limit(10000)
     : null;
   if (receivablesPromise && projectId) receivablesPromise = receivablesPromise.eq("project_id", projectId);
 
@@ -442,6 +433,7 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
     baselinesResult,
     servicesResult,
     qualityResult,
+    paymentHistory,
   ] = await Promise.all([
     unitsPromise ?? emptyResult<UnitRow>(),
     proposalSummaryPromise,
@@ -449,13 +441,14 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
     payablesSummaryPromise,
     receivablesSummaryPromise,
     assistanceSummaryPromise,
-    payablesPromise ?? emptyResult<PayableRow>(),
-    receivablesPromise ?? emptyResult<ReceivableRow>(),
+    payablesPromise ? loadCompleteFinanceRows(payablesPromise) : emptyResult<PayableRow>(),
+    receivablesPromise ? loadCompleteFinanceRows(receivablesPromise) : emptyResult<ReceivableRow>(),
     ordersPromise,
     budgetsPromise ?? emptyResult<Budget>(),
     baselinesPromise ?? emptyResult<Baseline>(),
     servicesPromise ?? emptyResult<EngineeringService>(),
     qualityPromise,
+    can("payables.view") || can("receivables.view") ? loadTitlePaymentHistory({supabase,companyId:activeCompany.id,projectId}) : Promise.resolve(new Map<string, FinancialPaymentEvent[]>()),
   ]);
 
   const units = (unitsResult.data ?? []) as UnitRow[];
@@ -527,7 +520,7 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
   const physical = calculatePhysicalSnapshot(activities, measurements, activityWeights, today, selectedBaseline);
   const physicalMonths = buildPhysicalMonths(activities, measurements, activityWeights, selectedBaseline, today);
   const stageRows = buildStageRows(activities, measurements, activityWeights, services, today, selectedBaseline);
-  const cashMonths = buildCashFlowMonths(payables, receivables, today);
+  const cashMonths = buildCashFlowMonths(payables, receivables, paymentHistory, today);
   const activeQuality = qualityInspections.filter((item) => item.status !== "cancelled");
   const pendingQuality = activeQuality.filter((item) => ["pending", "in_progress"].includes(item.status));
   const scoredQuality = activeQuality.filter((item) => item.first_inspection_score !== null);
@@ -559,16 +552,22 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
   const nineMonthEnd = monthEnd(addMonths(currentMonthStart, 8));
   const futureReceivables = receivables
     .filter((item) => item.status === "open" && item.due_date >= today && item.due_date <= nineMonthEnd)
-    .reduce((sum, item) => sum + Number(item.adjusted_amount ?? item.amount), 0);
+    .reduce((sum, item) => sum + titleFinancialValues(item).remaining, 0);
   const futurePayables = payables
     .filter((item) => item.status === "open" && item.due_date >= today && item.due_date <= nineMonthEnd)
-    .reduce((sum, item) => sum + Number(item.amount), 0);
+    .reduce((sum, item) => sum + titleFinancialValues(item).remaining, 0);
   const nextNineBalance = futureReceivables - futurePayables;
 
   const overduePayables = payables.filter((item) => item.status === "open" && item.due_date < today);
   const overdueReceivables = receivables.filter((item) => item.status === "open" && item.due_date < today);
   const delayedOrders = orders.filter((item) => !["received", "closed", "cancelled"].includes(item.status) && item.expected_delivery_date && item.expected_delivery_date < today);
   const risks: DashboardRisk[] = [];
+  const pendingHistory = new Set<string>();
+  for (const [key, events] of paymentHistory) if (events.some(event => event.history_dates_complete === false)) pendingHistory.add(key);
+  for (const row of payables) if (!titleFinancialTimeline(row,paymentHistory.get(`payable:${row.id}`) ?? []).history_complete) pendingHistory.add(`payable:${row.id}`);
+  for (const row of receivables) if (!titleFinancialTimeline(row,paymentHistory.get(`receivable:${row.id}`) ?? []).history_complete) pendingHistory.add(`receivable:${row.id}`);
+  const historyIssues = pendingHistory.size;
+  if (historyIssues) risks.push({id:"financial-history",severity:"medium",title:"Histórico financeiro pendente",description:`Conferir as datas das baixas de ${historyIssues} título(s) antes de usar os totais realizados.`,href:"/financeiro/fluxo-de-caixa"});
   if (physicalVariance < -2) risks.push({
     id: "physical-delay",
     severity: physicalVariance < -8 ? "high" : "medium",
@@ -580,14 +579,14 @@ export default async function ModelDashboardPage({ searchParams }: { searchParam
     id: "overdue-payables",
     severity: "high",
     title: `${overduePayables.length} conta(s) a pagar vencida(s)`,
-    description: `Valor em atraso: ${money(overduePayables.reduce((sum, item) => sum + Number(item.amount), 0))}.`,
+    description: `Valor em atraso: ${money(overduePayables.reduce((sum, item) => sum + titleFinancialValues(item).remaining, 0))}.`,
     href: "/financeiro/contas-a-pagar?status=open",
   });
   if (overdueReceivables.length) risks.push({
     id: "overdue-receivables",
     severity: "medium",
     title: `${overdueReceivables.length} recebível(is) vencido(s)`,
-    description: `Inadimplência acumulada: ${money(overdueReceivables.reduce((sum, item) => sum + Number(item.adjusted_amount ?? item.amount), 0))}.`,
+    description: `Inadimplência acumulada: ${money(overdueReceivables.reduce((sum, item) => sum + titleFinancialValues(item).remaining, 0))}.`,
     href: "/financeiro/contas-a-receber?status=open",
   });
   if (Number(assistanceSummary.overdue_count ?? 0) > 0) risks.push({

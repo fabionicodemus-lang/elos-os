@@ -1,3 +1,5 @@
+import { titleFinancialTimeline, type FinancialPaymentEvent } from "@/lib/finance/title-balances.mjs";
+import { loadTitlePaymentHistory } from "@/lib/finance/payment-history";
 import { fetchAllRows } from "@/lib/supabase-pagination";
 import { assignActivityCosts } from "@/app/engenharia/curvas/curve-calculations.mjs";
 import { buildUnifiedForecast, type UnifiedForecastResult } from "./engine.mjs";
@@ -112,6 +114,7 @@ type Payable = {
   status: "open" | "paid" | "cancelled";
   due_date: string;
   amount: number;
+  adjusted_amount: number;
   paid_at: string | null;
   paid_amount: number | null;
   source_system: string | null;
@@ -431,10 +434,10 @@ export async function loadProjectForecast({
     fetchAllRows<Payable>(async (from, to) => {
       const { data, error } = await supabase
         .from("payables")
-        .select("id, status, due_date, amount, paid_at, paid_amount, source_system, source_id")
+        .select("id, status, due_date, amount, adjusted_amount, paid_at, paid_amount, source_system, source_id")
         .eq("company_id", companyId)
         .eq("project_id", projectId)
-        .neq("status", "cancelled")
+        .order("id")
         .range(from, to);
       return { data: (data ?? []) as Payable[], error };
     }),
@@ -550,16 +553,22 @@ export async function loadProjectForecast({
     itemsByMeasurement.set(item.measurement_id, rows);
   }
 
+  let paymentHistory = new Map<string, FinancialPaymentEvent[]>();
+  try {
+    paymentHistory = await loadTitlePaymentHistory({supabase,companyId,projectId,titleKind:"payable",titleIds:payablesResult.data.map(row => row.id)});
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : "Histórico financeiro indisponível.");
+  }
   const actualPayments: AllocatedFinancialSource[] = [];
   const openPayables: AllocatedFinancialSource[] = [];
   for (const payable of payablesResult.data) {
     const measurement = measurementFromPayable(payable, measurementByPayableId, measurementBySourceId);
-    if (payable.status === "paid" && payable.paid_at) {
-      const allocated = allocatePayable(payable, number(payable.paid_amount ?? payable.amount), measurement, itemsByMeasurement, allocationsByPayable, developmentServiceIds);
-      actualPayments.push(...allocated.map((source) => ({ ...source, paidAt: payable.paid_at!.slice(0, 10) })));
-    } else if (payable.status === "open") {
-      const allocated = allocatePayable(payable, number(payable.amount), measurement, itemsByMeasurement, allocationsByPayable, developmentServiceIds);
-      openPayables.push(...allocated.map((source) => ({ ...source, dueDate: payable.due_date })));
+    const timeline = titleFinancialTimeline(payable,paymentHistory.get(`payable:${payable.id}`) ?? []);
+    if (!timeline.history_complete || !timeline.history_dates_complete) errors.push(`Histórico por data pendente no título ${payable.id}.`);
+    for (const event of timeline.entries) {
+      const allocated = allocatePayable(payable,event.amount,measurement,itemsByMeasurement,allocationsByPayable,developmentServiceIds);
+      if (event.situation === "realized") actualPayments.push(...allocated.map(source => ({...source,id:`${source.id}:${event.id}`,paidAt:event.date})));
+      else openPayables.push(...allocated.map(source => ({...source,dueDate:event.date})));
     }
   }
 

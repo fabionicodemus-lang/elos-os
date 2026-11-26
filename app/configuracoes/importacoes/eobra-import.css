@@ -453,6 +453,34 @@
   border-top: 1px solid var(--line);
 }
 
+.eobra-import-page .eobra-snapshot-fieldset {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.eobra-import-page .eobra-snapshot-kpis {
+  margin-top: 24px;
+}
+
+.eobra-import-page .eobra-snapshot-kpis .eobra-snapshot-word {
+  font-size: 21px;
+}
+
+.eobra-import-page .eobra-snapshot-json {
+  max-width: 720px;
+  max-height: 280px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 12px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 10px;
+  border-radius: 8px;
+}
+
 @media (max-width: 1100px) {
   .eobra-import-page .eobra-steps,
   .eobra-import-page .eobra-form-grid,
