@@ -1,0 +1,38 @@
+name: eObra importer
+
+on:
+  pull_request:
+    paths:
+      - "lib/eobra-import/**"
+      - "app/api/imports/eobra/**"
+      - "app/configuracoes/importacoes/**"
+      - "tests/imports/**"
+      - "supabase/migrations/*integration_eobra_import.sql"
+      - ".github/workflows/eobra-import-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "lib/eobra-import/**"
+      - "app/api/imports/eobra/**"
+      - "app/configuracoes/importacoes/**"
+      - "tests/imports/**"
+      - "supabase/migrations/*integration_eobra_import.sql"
+      - ".github/workflows/eobra-import-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:eobra
+      - run: npx eslint lib/eobra-import app/api/imports/eobra app/configuracoes/importacoes tests/imports
+      - run: npx tsc --noEmit
