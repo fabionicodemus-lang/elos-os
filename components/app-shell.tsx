@@ -46,6 +46,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
   const platformAdminHref = platformResult.data === true ? "/plataforma/ambientes" : undefined;
   const permissionsHref = privileged || can("admin.roles.view") || can("admin.roles.manage") ? "/configuracoes/permissoes" : undefined;
   const dataBackupHref = privileged || can("admin.data.view") || can("admin.data.export") || can("admin.data.restore") || can("admin.data.manage") ? "/configuracoes/dados-backup" : undefined;
+  const importsHref = can("admin.company.manage") ? "/configuracoes/importacoes" : undefined;
   const auditTrailHref = can("security.audit.view") ? "/configuracoes/auditoria" : undefined;
   const legalEntitiesHref = can("projects.view") ? "/empreendimentos/empresas" : undefined;
   const projectsHref = can("projects.view") ? "/empreendimentos" : undefined;
@@ -142,6 +143,7 @@ export async function AppShell({ activeGroup, activeItem, eyebrow, title, descri
       { label: "Cadastros gerais", sectionLabel: "Cadastros gerais" },
       { label: "Fornecedores", href: can("suppliers.view") ? "/cadastros/fornecedores" : undefined, active: activeItem === "suppliers", disabled: !can("suppliers.view") },
       { label: "Clientes", href: can("clients.view") ? "/cadastros/clientes" : undefined, active: activeItem === "clients", disabled: !can("clients.view") },
+      { label: "Importações", href: importsHref, active: activeItem === "imports", disabled: !importsHref },
       { label: "Dados & Backup", href: dataBackupHref, active: activeItem === "data-backup", disabled: !dataBackupHref },
       { label: "Trilha de auditoria", href: auditTrailHref, active: activeItem === "audit-trail", disabled: !auditTrailHref },
     ]},

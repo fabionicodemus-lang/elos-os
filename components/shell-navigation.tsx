@@ -202,6 +202,7 @@ function buildNavigationGroups(groups: ShellNavigationGroup[], pathname: string)
     items: [
       compactItem("Usuários", "/configuracoes/acessos", findItem(system, "/configuracoes/acessos"), pathname),
       compactItem("Permissões", "/configuracoes/permissoes", findItem(system, "/configuracoes/permissoes"), pathname),
+      compactItem("Importações", "/configuracoes/importacoes", findItem(system, "/configuracoes/importacoes"), pathname),
       compactItem("Dados & Backup", "/configuracoes/dados-backup", findItem(system, "/configuracoes/dados-backup"), pathname),
     ],
   };

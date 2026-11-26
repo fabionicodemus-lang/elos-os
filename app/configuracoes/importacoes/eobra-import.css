@@ -1,0 +1,502 @@
+.eobra-import-page {
+  min-width: 0;
+}
+
+.eobra-import-page h2 {
+  margin: 5px 0 0;
+  font-size: 18px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.eobra-import-page h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.eobra-import-page p,
+.eobra-import-page .eobra-muted {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.eobra-import-page .eobra-step {
+  color: var(--brand);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.eobra-import-page .eobra-intro > div > p {
+  max-width: 790px;
+  margin-bottom: 0;
+}
+
+.eobra-import-page .eobra-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 22px 0 0;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.eobra-import-page .eobra-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eobra-import-page .eobra-steps b {
+  color: var(--brand);
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.eobra-import-page .eobra-steps small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.eobra-import-form > fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.eobra-import-page .eobra-form-grid,
+.eobra-import-page .eobra-mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.eobra-import-page .eobra-mapping-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.eobra-import-page .eobra-file-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.eobra-import-page .eobra-file-grid > button {
+  margin-top: 21px;
+}
+
+.eobra-import-page .eobra-wide {
+  grid-column: 1 / -1;
+}
+
+.eobra-import-page label {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  color: #526163;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.eobra-import-page label small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.eobra-import-page input:not([type="checkbox"]),
+.eobra-import-page select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #dce3e3;
+  border-radius: 11px;
+  padding: 0 11px;
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.eobra-import-page input[type="file"] {
+  padding: 9px 11px;
+}
+
+.eobra-import-page input:focus-visible,
+.eobra-import-page select:focus-visible {
+  border-color: var(--brand);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 135, 128, .12);
+}
+
+.eobra-import-page .elos-button:disabled,
+.eobra-import-page fieldset:disabled .elos-button {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.eobra-import-page .eobra-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.eobra-import-page .eobra-sample-head {
+  margin: 24px 0 12px;
+}
+
+.eobra-import-page .eobra-sample-head p {
+  margin: 5px 0 0;
+}
+
+.eobra-import-page .eobra-sample-table {
+  min-width: 680px;
+}
+
+.eobra-import-page .registry-table td {
+  overflow-wrap: anywhere;
+}
+
+.eobra-import-page .registry-table td > small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.eobra-import-page .eobra-sample-table td {
+  min-width: 100px;
+  max-width: 280px;
+  vertical-align: top;
+}
+
+.eobra-import-page .eobra-scope-check,
+.eobra-import-page .eobra-note {
+  margin-top: 18px;
+  border-radius: 11px;
+  padding: 14px 16px;
+  background: var(--brand-soft);
+}
+
+.eobra-import-page .eobra-scope-check strong {
+  color: var(--brand-strong);
+  font-size: 13px;
+}
+
+.eobra-import-page .eobra-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.eobra-import-page .eobra-checkbox input {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin: 1px 0 0;
+  accent-color: var(--brand);
+}
+
+.eobra-import-page .eobra-filter {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.eobra-import-page .eobra-filter label {
+  min-width: 190px;
+}
+
+.eobra-import-page .eobra-text-link,
+.eobra-import-page .eobra-metadata a {
+  color: var(--brand-strong);
+  font-size: 12px;
+}
+
+.eobra-import-page .eobra-filter .eobra-text-link {
+  padding-bottom: 11px;
+}
+
+.eobra-import-page .eobra-empty {
+  padding: 22px 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.eobra-import-page .eobra-empty strong {
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.eobra-import-page .eobra-empty p {
+  max-width: 610px;
+  margin: 8px auto 0;
+}
+
+.eobra-import-page .eobra-status {
+  display: inline-block !important;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.eobra-import-page .eobra-status.success {
+  background: #eaf6ef;
+  color: var(--success);
+}
+
+.eobra-import-page .eobra-status.warning {
+  background: #fff4dd;
+  color: var(--warning);
+}
+
+.eobra-import-page .eobra-status.neutral {
+  background: var(--background);
+  color: var(--muted);
+}
+
+.eobra-import-page .eobra-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.eobra-import-page .eobra-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.eobra-import-page .eobra-kpis > article {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.eobra-import-page .eobra-kpis span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.eobra-import-page .eobra-kpis strong {
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 27px;
+}
+
+.eobra-import-page .eobra-kpis small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.eobra-import-page .eobra-metadata,
+.eobra-import-page .eobra-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+}
+
+.eobra-import-page .eobra-metadata dt,
+.eobra-import-page .eobra-totals dt {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.eobra-import-page .eobra-metadata dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.eobra-import-page .eobra-totals {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.eobra-import-page .eobra-totals dd {
+  margin: 0;
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.eobra-import-page .eobra-result {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  color: var(--success);
+  font-size: 13px;
+}
+
+.eobra-import-page .eobra-result p {
+  margin-bottom: 0;
+}
+
+.eobra-import-page .eobra-finance-table {
+  min-width: 1440px;
+}
+
+.eobra-import-page .eobra-finance-table td:nth-child(2) {
+  min-width: 210px;
+  max-width: 300px;
+}
+
+.eobra-import-page .eobra-contact-table {
+  min-width: 1000px;
+}
+
+.eobra-import-page .eobra-money {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.eobra-import-page .eobra-row-notes {
+  min-width: 240px;
+  max-width: 380px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.eobra-import-page .eobra-row-errors,
+.eobra-import-page .eobra-row-warnings {
+  margin: 0 0 8px;
+  padding-left: 16px;
+}
+
+.eobra-import-page .eobra-row-errors,
+.eobra-import-page .eobra-error {
+  color: var(--danger);
+}
+
+.eobra-import-page .eobra-row-warnings {
+  color: var(--warning);
+}
+
+.eobra-import-page .registry-table td > .eobra-unresolved {
+  color: var(--warning);
+}
+
+.eobra-import-page .eobra-raw-details {
+  margin-top: 8px;
+}
+
+.eobra-import-page .eobra-raw-details > summary {
+  color: var(--brand-strong);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.eobra-import-page .eobra-raw-data {
+  max-height: 300px;
+  margin-bottom: 0;
+  padding: 10px;
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--background);
+}
+
+.eobra-import-page .eobra-raw-data > div + div {
+  margin-top: 8px;
+}
+
+.eobra-import-page .eobra-raw-data dt {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.eobra-import-page .eobra-raw-data dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.eobra-import-page .eobra-review-actions {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 1100px) {
+  .eobra-import-page .eobra-steps,
+  .eobra-import-page .eobra-form-grid,
+  .eobra-import-page .eobra-kpis,
+  .eobra-import-page .eobra-metadata,
+  .eobra-import-page .eobra-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .eobra-import-page .eobra-file-grid {
+    grid-template-columns: minmax(0, 1fr) 180px;
+  }
+  .eobra-import-page .eobra-file-grid > button {
+    margin-top: 0;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .eobra-import-page .eobra-form-grid,
+  .eobra-import-page .eobra-file-grid,
+  .eobra-import-page .eobra-mapping-grid,
+  .eobra-import-page .eobra-metadata,
+  .eobra-import-page .eobra-totals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .eobra-import-page .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .eobra-import-page .eobra-steps {
+    gap: 14px 10px;
+  }
+  .eobra-import-page .eobra-steps li {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .eobra-import-page .eobra-filter label,
+  .eobra-import-page .eobra-filter > button,
+  .eobra-import-page .eobra-file-grid > button,
+  .eobra-import-page .eobra-actions > button {
+    width: 100%;
+  }
+  .eobra-import-page .eobra-kpis strong {
+    font-size: 23px;
+  }
+}
