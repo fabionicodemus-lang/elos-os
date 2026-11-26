@@ -144,3 +144,24 @@ export async function applyMigration(db,suffix) {
   await db.exec(readFileSync(new URL(file,migrationDir),'utf8'));
   await db.exec('set role authenticated');
 }
+
+// These synthetic scenarios explicitly intend to create their named fixture
+// units, or reuse the exact identity already imported by an earlier test run.
+// Production must collect these choices from the operator's reviewed catalog.
+export async function confirmSyntheticUnitDecisions(db,runId) {
+  const progress=(await db.query('select public.eobra_snapshot_progress($1) progress',[runId])).rows[0].progress;
+  if(progress.next_step!=='map_units')return;
+  const rows=(await db.query(`select rec.source_id,rec.company_id,rec.project_id,ledger.targets->>'units' target_id
+    from public.eobra_migration_records rec join public.eobra_migration_runs run on run.id=rec.run_id
+    left join public.eobra_migration_ledger ledger on ledger.company_id=rec.company_id and ledger.source_host=run.source_host
+      and ledger.entity='unit' and ledger.source_id=rec.source_id and ledger.archive_type=''
+    where rec.run_id=$1 and rec.entity='unit'`,[runId])).rows;
+  const map={};
+  for(const row of rows){
+    if(row.target_id){
+      const identityHash=(await db.query('select public.eobra_import_hash(public.eobra_snapshot_unit_identity($1,$2,$3)) hash',[row.target_id,row.company_id,row.project_id])).rows[0].hash;
+      map[row.source_id]={action:'reuse',unit_id:row.target_id,expected_identity_hash:identityHash};
+    }else map[row.source_id]={action:'create'};
+  }
+  await db.query('select public.confirm_eobra_snapshot_unit_map($1,$2)',[runId,map]);
+}

@@ -176,16 +176,30 @@ navegador para substituir o snapshot ou um `company_id` sem conferir a sessão.
 | `eobra_receivable_correction_candidates(company, limit, offset)` | Lista paginada dos recebíveis promovidos e suas políticas |
 
 Revisão e ativação exigem vínculo ativo com a empresa e permissões
-`admin.company.manage`, `indices.manage` e `receivables.manage`. Refresh exige
-vínculo com a empresa e `indices.manage` ou `receivables.manage`. As tabelas novas
-têm RLS e só concedem leitura ao papel `authenticated`; não há DML direto para
-alterar hashes, políticas ou eventos. Rotinas internas de cálculo, fila, gatilho e
-agendador não concedem execução a `authenticated` ou `anon`.
+`admin.company.manage`, `indices.manage` e `receivables.manage`. Refresh manual
+exige vínculo com a empresa e `receivables.manage`. A migration posterior
+`receivable_correction_native_permissions` alinha esse acesso às permissões
+nativas dos recebíveis: políticas e eventos que contêm valores financeiros
+exigem `receivables.view` ou `receivables.manage`. Somente acesso a índices não
+permite ler esses valores nem executar a atualização manual. A consulta do
+resumo e da lista também confere acesso de leitura aos recebíveis.
+
+As tabelas novas têm RLS e só concedem leitura ao papel `authenticated`; não há
+DML direto para alterar hashes, políticas ou eventos. Metadados e histórico dos
+índices continuam seguindo as permissões de índices. A escrita autorizada de um
+índice conserva o gatilho que atualiza as políticas previamente aprovadas; ela
+não concede acesso direto aos valores das parcelas. Rotinas internas de cálculo,
+fila, gatilho e agendador não concedem execução a `authenticated` ou `anon`.
+
+O modelo nativo vigente autoriza obras e recebíveis pela empresa. Não há uma
+restrição adicional por `project_memberships` nas políticas desses cadastros;
+esta entrega conserva esse modelo e o isolamento entre empresas.
 
 O painel exige `indices.manage`, permitindo ao Financeiro continuar os lotes sem
-receber administração da empresa. Os formulários de vínculo/ativação aparecem
-somente para quem possui todas as permissões de revisão. A lista de parcelas
-também verifica `receivables.view` ou `receivables.manage`.
+receber administração da empresa. A fila e a lista exigem acesso de leitura aos
+recebíveis; o botão e a ação de continuar o lote exigem `receivables.manage`. Os
+formulários de vínculo/ativação aparecem somente para quem possui todas as
+permissões de revisão.
 
 ## Lotes, concorrência e operação mensal
 
@@ -226,6 +240,10 @@ O teste PGlite executa a migração e o gatilho legado real com dados sintético
 Confere isolamento, permissões, prova desatualizada, máxima do período, ausência de
 índice atual, índice futuro, preservação de componentes, baixa parcial, alteração
 histórica, bloqueio de escrita direta do CUB, replay de ativação, limites de
-paginação, fuso de São Paulo e cálculo exato. Um cenário com 105 políticas verifica
+paginação, fuso de São Paulo e cálculo exato. Perfis sintéticos com somente leitura
+ou gestão de índices são comparados com o RLS nativo dos recebíveis: não enxergam
+valores financeiros nem executam o refresh manual. A leitura financeira e a
+gestão de recebíveis são verificadas separadamente, incluindo a preservação do
+gatilho autorizado pela escrita de índice. Um cenário com 105 políticas verifica
 que o gatilho processa 100, mostra cinco pendentes e permite concluir a fila em
 novos lotes sem reaplicar parcelas já processadas.

@@ -6,6 +6,7 @@ import { calculateIndexNumberAmount } from "../../lib/eobra-import/financial.mjs
 
 const dir = new URL("../../supabase/migrations/", import.meta.url);
 const migration = readFileSync(new URL(readdirSync(dir).find(name => name.endsWith("_receivable_explicit_correction_policies.sql")), dir), "utf8");
+const permissionsMigration = readFileSync(new URL(readdirSync(dir).find(name => name.endsWith("_receivable_correction_native_permissions.sql")), dir), "utf8");
 const legacy = readFileSync(new URL("20260723_0013_open_receivables_use_latest_cub.sql", dir), "utf8").match(/create or replace function public\.set_receivable_automatic_correction\(\)[\s\S]*?\$\$;/)[0];
 const A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const PA = "11111111-1111-4111-8111-111111111111", PB = "22222222-2222-4222-8222-222222222222";
@@ -29,7 +30,7 @@ async function fixture() {
     create table auth.users(id uuid primary key);insert into auth.users values('${UA}'),('${UB}');
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('test.uid',true),'')::uuid$$;
     create function public.is_company_member(p_company uuid) returns boolean language sql stable as $$select auth.uid() is not null and p_company=nullif(current_setting('test.company',true),'')::uuid$$;
-    create function public.has_company_permission(p_company uuid,p_permission text) returns boolean language sql stable as $$select public.is_company_member(p_company) and p_permission<>coalesce(current_setting('test.denied',true),'')$$;
+    create function public.has_company_permission(p_company uuid,p_permission text) returns boolean language sql stable as $$select public.is_company_member(p_company) and p_permission<>coalesce(current_setting('test.denied',true),'') and (coalesce(current_setting('test.allowed',true),'')='' or p_permission=any(string_to_array(current_setting('test.allowed',true),',')))$$;
     create table public.companies(id uuid primary key,name text);
     create table public.projects(id uuid primary key,company_id uuid references public.companies(id),name text);
     create table public.units(id uuid primary key,company_id uuid references public.companies(id),project_id uuid references public.projects(id),code text);
@@ -67,6 +68,9 @@ async function fixture() {
       execute format('alter table public.%I enable row level security',t);
       execute format('create policy tenant on public.%I for all to authenticated using(public.is_company_member(company_id)) with check(public.is_company_member(company_id))',t);
     end loop;end;$$;
+    drop policy tenant on public.receivables;
+    create policy native_receivable_read on public.receivables for select to authenticated using(public.has_company_permission(company_id,'receivables.view') or public.has_company_permission(company_id,'receivables.manage'));
+    create policy native_receivable_update on public.receivables for update to authenticated using(public.has_company_permission(company_id,'receivables.manage')) with check(public.has_company_permission(company_id,'receivables.manage'));
   `);
   await db.query("insert into public.eobra_migration_records values($1,$2,$3,$4,'receivable','receipt-source','hash-receipt',$5)", [SRC, A, PA, RUN, data()]);
   await db.query("insert into public.eobra_migration_ledger(company_id,run_id,record_id,entity,record_hash,targets,disposition) values($1,$2,$3,'receivable','hash-receipt',$4,'canonical')", [A, RUN, SRC, { receivables: REC }]);
@@ -74,6 +78,7 @@ async function fixture() {
   await db.exec(legacy);
   await db.exec("create trigger receivables_automatic_correction before insert or update on public.receivables for each row execute function public.set_receivable_automatic_correction()");
   await db.exec(migration);
+  await db.exec(permissionsMigration);
   await month(db, "2026-03-01");
   await tenant(db, A, UA);
   return db;
@@ -81,7 +86,7 @@ async function fixture() {
 
 async function tenant(db, company = A, user = UA) {
   await db.exec("reset role");
-  await db.query("select set_config('test.company',$1,false),set_config('test.uid',$2,false),set_config('test.denied','',false)", [company, user]);
+  await db.query("select set_config('test.company',$1,false),set_config('test.uid',$2,false),set_config('test.denied','',false),set_config('test.allowed','',false)", [company, user]);
   await db.exec("set role authenticated");
 }
 
@@ -94,6 +99,11 @@ async function month(db, value) {
 
 async function rpc(db, name, args) {
   return (await db.query(`select public.${name}(${args.map((_, i) => `$${i + 1}`).join(",")}) result`, args)).rows[0].result;
+}
+async function permissionDenied(db, run) {
+  await db.exec("savepoint permission_denial");
+  try { await assert.rejects(run, /Sem permissão/); }
+  finally { await db.exec("rollback to savepoint permission_denial; release savepoint permission_denial"); }
 }
 async function bind(db) {
   const preview = await rpc(db, "preview_eobra_correction_index", [A, SOURCE_INDEX, IA]);
@@ -212,6 +222,56 @@ test("explicit native correction engine, real triggers and tenant boundaries", a
     await isolated("revoked role permission cannot activate via private or public endpoint", async () => {
       await db.query("select set_config('test.denied','indices.manage',true)");
       await assert.rejects(rpc(db, "preview_eobra_correction_index", [A, SOURCE_INDEX, IA]), /Sem permissão/);
+    });
+    await isolated("index readers cannot read financial values through correction policies or events", async () => {
+      await activate(db);
+      await db.query("select set_config('test.allowed','indices.view',true)");
+      for (const table of ["receivables", "receivable_correction_policies", "receivable_correction_events"]) {
+        assert.equal((await db.query(`select count(*)::int n from public.${table}`)).rows[0].n, 0);
+      }
+      assert.equal((await db.query("select count(*)::int n from public.correction_index_source_links")).rows[0].n, 1);
+      assert.equal((await db.query("select count(*)::int n from public.correction_index_value_history")).rows[0].n, 4);
+    });
+    await isolated("index managers cannot query financial overview or manually write receivables", async () => {
+      await activate(db); await month(db, "2026-04-01");
+      await db.query("select set_config('test.allowed','indices.manage',true)");
+      assert.equal((await db.query("update public.receivables set description=description returning id")).rows.length, 0);
+      await permissionDenied(db, () => rpc(db, "receivable_correction_overview", [A]));
+      await permissionDenied(db, () => db.query("select finance_correction_private.overview($1)", [A]));
+      await permissionDenied(db, () => rpc(db, "eobra_receivable_correction_candidates", [A, 20, 0]));
+      await permissionDenied(db, () => rpc(db, "refresh_receivable_correction_policies", [A, null, 500]));
+      await permissionDenied(db, () => db.query("select finance_correction_private.refresh_authorized($1,null,500)", [A]));
+      await db.exec("reset role");
+      assert.equal((await title(db)).adjusted_amount, "128.00");
+      assert.equal((await db.query("select count(*)::int n from finance_correction_private.revaluation_intents")).rows[0].n, 0);
+    });
+    await isolated("financial read permission permits audit values but does not grant manual recalculation", async () => {
+      await activate(db); await month(db, "2026-04-01");
+      await db.query("select set_config('test.allowed','indices.manage,receivables.view',true)");
+      assert.equal((await title(db)).adjusted_amount, "128.00");
+      assert.equal((await db.query("select snapshot_current_amount::text amount from public.receivable_correction_policies")).rows[0].amount, "128.00");
+      assert.equal((await rpc(db, "receivable_correction_overview", [A])).total, 1);
+      assert.equal((await rpc(db, "eobra_receivable_correction_candidates", [A, 20, 0])).total, 1);
+      await permissionDenied(db, () => rpc(db, "refresh_receivable_correction_policies", [A, null, 500]));
+      await db.query("select set_config('test.allowed','receivables.manage',true)");
+      assert.equal((await rpc(db, "refresh_receivable_correction_policies", [A, null, 500])).updated, 1);
+      assert.equal((await title(db)).adjusted_amount, "138.00");
+    });
+    await isolated("financial permission in another company cannot read or refresh this company's policies", async () => {
+      await activate(db); await tenant(db, B, UB);
+      await db.query("select set_config('test.allowed','receivables.manage',true)");
+      assert.equal((await db.query("select count(*)::int n from public.receivable_correction_policies")).rows[0].n, 0);
+      assert.equal((await db.query("select count(*)::int n from public.receivable_correction_events")).rows[0].n, 0);
+      await permissionDenied(db, () => rpc(db, "receivable_correction_overview", [A]));
+      await permissionDenied(db, () => rpc(db, "refresh_receivable_correction_policies", [A, null, 500]));
+    });
+    await isolated("authorized index writes retain the approved trigger without granting manual financial access", async () => {
+      await activate(db); await month(db, "2026-04-01");
+      await db.query("select set_config('test.allowed','indices.manage',true)");
+      await db.query("update public.correction_index_values set value=1400 where correction_index_id=$1 and reference_month='2026-04-01'", [IA]);
+      assert.equal((await db.query("select count(*)::int n from public.receivable_correction_policies")).rows[0].n, 0);
+      await db.exec("reset role");
+      assert.equal((await title(db)).adjusted_amount, "148.00");
     });
     await isolated("a bounded trigger leaves a visible queue and the next RPC drains it without replay", async () => {
       await activate(db); await db.exec("reset role");

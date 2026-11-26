@@ -5,6 +5,7 @@ import { requireCompanyPermission } from '@/lib/workspace';
 import { isUuid } from '@/lib/eobra-import/resolution.mjs';
 import { dateBR, pageNumber, statusTone } from '../../import-presentation';
 import { SnapshotControls } from '../snapshot-controls';
+import { SnapshotUnitMap } from '../snapshot-unit-map';
 import { SNAPSHOT_ENTITY_LABELS, SNAPSHOT_STATUS_LABELS, snapshotLabel, type MigrationSummary, type SnapshotProgress } from '../snapshot-presentation';
 import '../../eobra-import.css';
 
@@ -58,7 +59,7 @@ export default async function EobraMigrationReview({ params, searchParams }: {
   const unavailable = Boolean(reviewResult.error || progressResult.error || !progress || recordsResult.error || coverageResult.error || projectsResult.error);
   const count = recordsResult.count ?? 0;
   const pages = Math.max(1, Math.ceil(count / 50));
-  const canPromote = !unavailable && status === 'ready' && Boolean(summary.coverage_complete) && Number(summary.blocked ?? 0) === 0 && Number(summary.conflicts ?? 0) === 0 && /^[a-f0-9]{64}$/.test(hash);
+  const canPromote = !unavailable && status === 'ready' && progress?.next_step === 'promote' && Boolean(summary.coverage_complete) && Number(summary.blocked ?? 0) === 0 && Number(summary.conflicts ?? 0) === 0 && /^[a-f0-9]{64}$/.test(hash);
   const href = (target: number) => {
     const values = new URLSearchParams({ page: String(target) }); if (entity) values.set('entity', entity); if (rowStatus) values.set('status', rowStatus);
     return `/configuracoes/importacoes/migracoes/${runId}?${values}#registros`;
@@ -77,6 +78,7 @@ export default async function EobraMigrationReview({ params, searchParams }: {
         <article className="registry-table-panel"><span>Pendências e conflitos</span><strong>{(Number(summary.blocked ?? 0) + Number(summary.conflicts ?? 0)).toLocaleString('pt-BR')}</strong><small>Os detalhes aparecem em cada registro</small></article>
         <article className="registry-table-panel"><span>Preservados para consulta</span><strong>{Number(summary.archived ?? 0).toLocaleString('pt-BR')}</strong><small>Dados sem promoção nos módulos do Elos</small></article>
       </section>
+      {!unavailable && progress && progress.stage !== 'loading' && Number(progress.unit_records ?? 0) > 0 ? <SnapshotUnitMap key={`${runId}:${Boolean(progress.unit_map_confirmed)}`} companyId={companyId} runId={runId} projects={projectsResult.data ?? []} expectedCount={Number(progress.unit_records)} confirmed={Boolean(progress.unit_map_confirmed)} canEdit={status === 'building' && progress.next_step === 'map_units'} /> : null}
       <section className="registry-table-panel eobra-card"><div className="section-heading"><div><span className="eobra-step">Escopo e cobertura</span><h2>{summary.coverage_complete ? 'Coleta conferida no escopo declarado' : 'Coleta com etapas pendentes'}</h2></div><p>Coletada em {dateBR(run.captured_at, true)}</p></div>
         <p>A cobertura compara as contagens, a paginação e os detalhes declarados na origem. Dados preservados para consulta continuam separados dos registros efetivamente criados nos módulos do Elos.</p>
         {summary.errors?.length ? <ul className="eobra-row-errors">{summary.errors.map((error, index) => <li key={index}>{error}</li>)}</ul> : null}
@@ -89,7 +91,7 @@ export default async function EobraMigrationReview({ params, searchParams }: {
         {summary.history_dates_complete === false ? <p role="status" className="eobra-note">Há eventos com data pendente na origem. O saldo pode estar conciliado, mas a linha do tempo desses eventos ainda exige conferência. Os registros e valores originais foram preservados.</p> : null}
         <p><Link href="/configuracoes/importacoes/correcao-eobra" prefetch={false} className="eobra-text-link">Conferir a base e a continuidade do reajuste das parcelas →</Link></p>
         {run.promotion_result ? <details className="eobra-raw-details"><summary>Resultado do processamento</summary><pre className="eobra-snapshot-json">{JSON.stringify(run.promotion_result, null, 2)}</pre></details> : null}
-        {!unavailable && progress ? <SnapshotControls key={`${runId}:${status}`} companyId={companyId} runId={runId} previewHash={hash} canPromote={canPromote} canCancel={['building', 'ready', 'review'].includes(status)} initialProgress={progress} autoPrepare={query.prepare === '1'} /> : null}
+        {!unavailable && progress ? <SnapshotControls key={`${runId}:${status}:${progress.next_step}`} companyId={companyId} runId={runId} previewHash={hash} canPromote={canPromote} canCancel={['building', 'ready', 'review'].includes(status)} initialProgress={progress} autoPrepare={query.prepare === '1'} /> : null}
       </section>
       <section className="registry-table-panel eobra-card" id="registros"><div className="section-heading"><div><span className="eobra-step">Conferência individual</span><h2>Registros e vínculos</h2></div><p>{count.toLocaleString('pt-BR')} registro(s) nos filtros</p></div>
         <form method="get" className="eobra-filter"><label>Conjunto<select name="entity" defaultValue={entity}><option value="">Todos</option>{Object.entries(SNAPSHOT_ENTITY_LABELS).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label><label>Situação<select name="status" defaultValue={rowStatus}><option value="">Todas</option>{recordStatuses.map((value) => <option key={value} value={value}>{SNAPSHOT_STATUS_LABELS[value] ?? value}</option>)}</select></label><button type="submit" className="elos-button">Filtrar registros</button></form>

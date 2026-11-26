@@ -4,15 +4,21 @@ Esta implementação separa a evidência capturada da criação de dados operaci
 
 ## Ordem das migrations
 
-Aplicar a sequência do repositório, sem saltar arquivos. As migrations do importador completo são:
+Aplicar somente as migrations novas ainda ausentes no ambiente, nesta ordem. A sequência completa do release é:
 
 1. `20261126150339_eobra_snapshot_foundation.sql`: documento original, registros, relações, cobertura, de-para, ledger e histórico de origem.
-2. `20261126152634_eobra_snapshot_promotion.sql`: projeção dos campos canônicos, dependências e promoção inicial para pacotes pequenos.
-3. `20261126153443_commercial_sale_units_eobra.sql`: todas as unidades do contrato, alocações observadas e exclusividade de venda ativa.
-4. `20261126154832_eobra_snapshot_resumable.sql`: processamento por lotes, progresso persistido, validação de dependências nativas e retomada.
-5. `20261126162954_eobra_snapshot_parts.sql`: transporte por manifesto e partes imutáveis, recibos de integridade por registro e resumo calculado uma vez por transição.
+2. `20261126151116_eobra_snapshot_storage.sql`: bucket privado para o transporte JSON legado.
+3. `20261126151453_finance_partial_settlements.sql`: saldos parciais, componentes de contas a pagar, intenções idempotentes de baixa e consulta minimizada de histórico.
+4. `20261126152634_eobra_snapshot_promotion.sql`: projeção dos campos canônicos, dependências e promoção inicial para pacotes pequenos.
+5. `20261126153232_receivable_explicit_correction_policies.sql`: política explícita por parcela, paridade, histórico e atualização por índice; nenhuma política é ativada na instalação.
+6. `20261126153443_commercial_sale_units_eobra.sql`: todas as unidades do contrato, alocações observadas e exclusividade de venda ativa.
+7. `20261126154832_eobra_snapshot_resumable.sql`: processamento por lotes, progresso persistido, validação de dependências nativas e retomada.
+8. `20261126162954_eobra_snapshot_parts.sql`: transporte por manifesto e partes imutáveis, recibos de integridade por registro e resumo calculado uma vez por transição.
+9. `20261126163219_eobra_snapshot_bundle_storage.sql`: bucket multipart privado; retomada por outro operador somente quando ele puder acessar o run vinculado.
+10. `20261126172521_eobra_snapshot_unit_mapping.sql`: decisão explícita por unidade e reutilização de cadastros existentes sem sobrescrever seus metadados.
+11. `20261126172931_receivable_correction_native_permissions.sql`: leitura e atualização de correção respeitam as permissões financeiras nativas, separadas da manutenção dos índices.
 
-As migrations de armazenamento privado, suporte financeiro parcial e políticas explícitas de correção ficam intercaladas pelos próprios timestamps. A foundation utiliza os helpers de tipos, documentos fiscais e hash de `20261126135809_integration_eobra_import.sql`.
+A foundation utiliza os helpers de tipos, documentos fiscais e hash de `20261126135809_integration_eobra_import.sql`. As tabelas e os helpers nativos de empresa, permissões, obras, pessoas, comercial, títulos, bancos e índices precisam existir. A migration financeira trata `finance_private.draft_collection` como componente opcional: só substitui a função se ela, `finance_private.account` e `finance_collection_drafts` já existirem. A ausência de `finance_bank_accounts.closed_through` também é aceita. Não é necessário instalar esse módulo opcional nem `pg_cron` para usar o importador. Não reexecutar migrations históricas apenas porque seus timestamps locais diferem do histórico do ambiente.
 
 ## Preparação retomável
 
@@ -21,6 +27,8 @@ As migrations de armazenamento privado, suporte financeiro parcial e políticas 
 | `begin_eobra_snapshot` | `p_company_id`, pacote JSON original, `p_project_map` | UUID do run; grava documento imutável, sem dados operacionais. |
 | `append_eobra_snapshot` | `p_run_id`, `p_limit` | Extrai o próximo conjunto diretamente do documento no banco; padrão 250, máximo 500. |
 | `finish_eobra_snapshot_append` | `p_run_id` | Confere correspondência do conjunto, relações e manifesto; muda de loading para validating. |
+| `eobra_snapshot_unit_options` | `p_run_id`, `p_project_id`, busca, limite e offset | Lista paginada de unidades nativas da obra, incluindo o hash da identidade exibida; máximo 100. |
+| `confirm_eobra_snapshot_unit_map` | `p_run_id`, `p_unit_map` | Confirma uma decisão explícita para cada unidade antes da validação; máximo 3 MiB. |
 | `validate_eobra_snapshot_chunk` | `p_run_id`, `p_limit` | Confere registros ainda pendentes; padrão e máximo 100. |
 | `seal_eobra_snapshot` | `p_run_id` | Deriva cobertura, totais e hash; termina em ready ou review. |
 | `review_eobra_snapshot` | `p_run_id` | Lê a revisão e o progresso; não repete a validação de todos os registros. |
@@ -28,11 +36,36 @@ As migrations de armazenamento privado, suporte financeiro parcial e políticas 
 
 `p_project_map` tem formato `{ "id_da_obra_na_origem": "uuid_da_obra_no_Elos" }`. O banco confere empresa, visibilidade e consistência do de-para. Centro de custo não substitui a identidade da obra.
 
-O progresso contém `run_id`, `status`, `stage`, `expected_records`, `loaded_records`, `validated_records`, `promoted_records`, `remaining_records`, `next_step`, `preview_hash`, `summary` e `promotion_result`. `next_step` é um de `append`, `finish_append`, `validate`, `seal`, `promote`, `complete` ou `blocked`. A interface pode parar entre chamadas e retomar somente com o UUID do run, sem reenviar o arquivo.
+O progresso contém `run_id`, `status`, `stage`, `expected_records`, `loaded_records`, `validated_records`, `promoted_records`, `remaining_records`, `next_step`, `preview_hash`, `summary` e `promotion_result`. `next_step` é um de `append`, `finish_append`, `map_units`, `validate`, `seal`, `promote`, `complete` ou `blocked`. `unit_records` conta as unidades capturadas; `units_requiring_decision` zera quando o de-para estiver confirmado e `unit_map_confirmed` indica essa confirmação. A interface pode parar entre chamadas e retomar somente com o UUID do run, sem reenviar o arquivo.
 
 `stage` é `loading`, `validating` ou `sealed`. O estado de negócio é `building`, `review`, `ready`, `promoting`, `imported` ou `cancelled`. `promoted_records` mede itens concluídos pelo processador, incluindo evidência arquivada; os resultados canônicos e os arquivos permanecem separados nos estados das linhas e no resultado final.
 
 O wrapper antigo `stage_eobra_snapshot` aceita no máximo 500 registros. Entradas maiores devem usar as chamadas retomáveis. O limite do documento normalizado é 60 MiB e 100 mil registros; o upload público aplica seu limite anterior de 50 MiB. Esses limites de tamanho não equivalem a uma garantia de duração de uma chamada.
+
+## Conciliação explícita das unidades
+
+Depois de carregar o pacote, `map_units` interrompe a preparação até que o operador escolha o destino de todas as unidades. O ID estável da unidade na origem é a chave; rótulos e prefixos não são usados para presumir que dois cadastros representam a mesma unidade, nem para presumir que é necessário criar outro cadastro.
+
+`p_unit_map` tem este formato:
+
+```json
+{
+  "id-origem-existente": {
+    "action": "reuse",
+    "unit_id": "UUID da unidade existente",
+    "expected_identity_hash": "SHA-256 devolvido pela lista de opções"
+  },
+  "id-origem-novo": { "action": "create" }
+}
+```
+
+Nenhuma opção deve vir selecionada por ausência de correspondência de código. O banco rejeita IDs extras, decisões faltantes, dois IDs de origem para a mesma unidade, destinos de outra empresa/obra e um hash diferente da versão exibida. Mesmo o caminho de criação exige uma escolha explícita; códigos nativos exatamente coincidentes continuam impedindo duplicação.
+
+Ao confirmar, o banco deriva `unit_target_evidence` com a identidade física do cadastro nativo e o estado observado. O mapa e essa evidência entram no hash da prévia e ficam imutáveis. O mesmo mapa pode ser reenviado; outra decisão exige novo run. Mudanças em código, obra, área, tipo ou outros atributos do cadastro depois da exibição ou da confirmação exigem nova conferência. O estado e os campos de auditoria não são tratados como identidade física, porque uma venda importada pode legitimamente marcar uma unidade como vendida.
+
+Reutilizar preserva código, áreas, preço, origem anterior e os demais campos existentes. O ledger vincula o ID eObra ao UUID canônico sem alterar a proveniência do cadastro. Vendas e parcelas apontam para esse UUID. Uma venda ativa anterior continua sendo conflito, salvo quando for a mesma identidade de venda já importada. A unicidade do destino por empresa/host impede que execuções concorrentes vinculem IDs distintos da origem à mesma unidade.
+
+O bloqueio também existe nas RPCs antigas e nos guards das tabelas; não depende exclusivamente da interface. Runs antigos já selados com unidades e sem de-para explícito precisam de uma nova revisão antes de promover.
 
 ## Transporte de pacotes grandes
 

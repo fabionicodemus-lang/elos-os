@@ -57,11 +57,11 @@ export function SnapshotControls({ companyId, runId, previewHash, canPromote, ca
   }, [companyId, runId, previewHash, router]);
 
   useEffect(() => {
-    if (autoPrepare && initialProgress.status === 'building' && !autoStarted.current) {
+    if (autoPrepare && initialProgress.status === 'building' && initialProgress.next_step !== 'map_units' && !autoStarted.current) {
       autoStarted.current = true;
       void start('prepare');
     }
-  }, [autoPrepare, initialProgress.status, start]);
+  }, [autoPrepare, initialProgress.status, initialProgress.next_step, start]);
   useEffect(() => () => { stopAfterBatch.current = true; }, []);
 
   const preparing = progress.status === 'building';
@@ -78,11 +78,12 @@ export function SnapshotControls({ companyId, runId, previewHash, canPromote, ca
       <p><strong>{label}: {amount.toLocaleString('pt-BR')} / {total.toLocaleString('pt-BR')}</strong></p>
       {preparing && progress.transport === 'parts' ? <p>Partes preparadas: {Number(progress.uploaded_parts ?? 0).toLocaleString('pt-BR')} / {Number(progress.expected_parts ?? 0).toLocaleString('pt-BR')}</p> : null}
       <progress value={Math.min(amount, total)} max={total || 1} aria-label={label} />
-      <p>{busy ? (pausePending ? 'O lote atual será concluído antes da pausa.' : 'O progresso é salvo a cada lote. Você pode pausar e retomar esta coleta.') : 'Continue a partir da última etapa salva. Os lotes concluídos não serão repetidos.'}</p>
+      <p>{progress.next_step === 'map_units' ? 'Defina os vínculos de unidades para continuar a conferência desta coleta.' : busy ? (pausePending ? 'O lote atual será concluído antes da pausa.' : 'O progresso é salvo a cada lote. Você pode pausar e retomar esta coleta.') : 'Continue a partir da última etapa salva. Os lotes concluídos não serão repetidos.'}</p>
     </div> : null}
     {canPromote && !promoting ? <label className="eobra-checkbox"><input type="checkbox" checked={confirmed} disabled={busy} onChange={(event) => setConfirmed(event.target.checked)} /><span>Conferi os empreendimentos, os vínculos, a cobertura e os totais. Li os dados que serão apenas preservados para consulta.</span></label> : null}
     <div className="eobra-actions">
-      {preparing && !busy ? <button type="button" className="elos-button primary" onClick={() => void start('prepare')}>Continuar preparação</button> : null}
+      {preparing && !busy && progress.next_step !== 'map_units' ? <button type="button" className="elos-button primary" onClick={() => void start('prepare')}>Continuar preparação</button> : null}
+      {preparing && !busy && progress.next_step === 'map_units' ? <a className="elos-button primary" href="#unidades">Conferir vínculos das unidades</a> : null}
       {(canPromote || promoting) && !busy ? <button type="button" className="elos-button primary" disabled={!promoting && !confirmed} onClick={() => void start('promote', confirmed || promoting)}>{promoting ? 'Retomar importação' : 'Importar registros revisados'}</button> : null}
       {busy ? <button type="button" className="elos-button" disabled={pausePending} onClick={() => { stopAfterBatch.current = true; setPausePending(true); }}>Pausar após este lote</button> : null}
       {canCancel && !busy && !promoting ? <form action={cancelEobraSnapshot}><input type="hidden" name="run_id" value={runId} /><CancelButton /></form> : null}

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fixture, applyMigration, setTenant, A, B, PA, PA2, PB, UA, UB } from "./eobra-snapshot-fixture.mjs";
+import { fixture, applyMigration, confirmSyntheticUnitDecisions, setTenant, A, B, PA, PA2, PB, UA, UB } from "./eobra-snapshot-fixture.mjs";
 
 const entities = ["project", "person", "unit", "sale", "receivable", "payable", "settlement", "bank_account", "bank_transaction", "correction_index", "index_value"];
 const projectEntities = ["unit", "sale", "receivable", "payable", "settlement"];
@@ -38,7 +38,12 @@ function snapshot(items, { capturedAt = "2026-11-26T00:00:00Z", scope = { projec
 }
 async function stage(db, items, options = {}) {
   const pack = items.format ? items : snapshot(items, options);
-  return (await db.query("select public.stage_eobra_snapshot($1,$2,$3) id", [options.company ?? A, pack, options.map ?? { p1: PA }])).rows[0].id;
+  const id = (await db.query("select public.stage_eobra_snapshot($1,$2,$3) id", [options.company ?? A, pack, options.map ?? { p1: PA }])).rows[0].id;
+  await confirmSyntheticUnitDecisions(db,id);
+  let progress=(await db.query("select public.eobra_snapshot_progress($1) progress",[id])).rows[0].progress;
+  while(progress.next_step==='validate')progress=(await db.query("select public.validate_eobra_snapshot_chunk($1,100) progress",[id])).rows[0].progress;
+  if(progress.next_step==='seal')await db.query("select public.seal_eobra_snapshot($1)",[id]);
+  return id;
 }
 async function run(db, id) { return (await db.query("select * from public.eobra_migration_runs where id=$1", [id])).rows[0]; }
 async function promote(db, id, hash) { return (await db.query("select public.promote_eobra_snapshot($1,$2) result", [id, hash ?? (await run(db, id)).preview_hash])).rows[0].result; }
@@ -52,6 +57,7 @@ test("complete eObra package: isolated staging, provenance, transactional promot
     await applyMigration(db, "_commercial_sale_units_eobra.sql");
     await applyMigration(db, "_eobra_snapshot_resumable.sql");
     await applyMigration(db, "_eobra_snapshot_parts.sql");
+    await applyMigration(db, "_eobra_snapshot_unit_mapping.sql");
 
     await t.test("order-independent commercial promotion creates every role and relation", async () => {
       const items = records();

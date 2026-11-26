@@ -50,7 +50,7 @@ export async function activateCorrectionPolicy(form: FormData) {
 }
 
 export async function refreshCorrectionBatch(form: FormData) {
-  const { supabase, companyId } = await correctionContext(form, "indices.manage");
+  const { supabase, companyId } = await correctionContext(form, "receivables.manage");
   const result = await supabase.rpc("refresh_receivable_correction_policies", { p_company_id: companyId, p_correction_index_id: null, p_limit: 500 });
   if (result.error) redirect(destination(safeImportDatabaseMessage(result.error)));
   const counts = result.data as { processed?: number; updated?: number; pending?: number; total_blocked?: number } | null;

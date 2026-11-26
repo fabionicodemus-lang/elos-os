@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
-import { fixture, applyMigration, setTenant, A, B, PA, UA, UB } from "./eobra-snapshot-fixture.mjs";
+import { fixture, applyMigration, confirmSyntheticUnitDecisions, setTenant, A, B, PA, UA, UB } from "./eobra-snapshot-fixture.mjs";
 
 const entities = ["project", "person", "unit", "sale", "receivable", "payable", "settlement", "bank_account", "bank_transaction", "correction_index", "index_value"];
 const projectEntities = ["unit", "sale", "receivable", "payable", "settlement"];
@@ -45,6 +45,7 @@ async function append(db, id, ordinal, body) { return (await db.query("select pu
 async function count(db, table, id) { return (await db.query(`select count(*)::int n from public.${table} where run_id=$1`, [id])).rows[0].n; }
 async function prepare(db, id) {
   await db.query("select public.finish_eobra_snapshot_append($1)", [id]);
+  await confirmSyntheticUnitDecisions(db,id);
   let progress;
   do { progress = (await db.query("select public.validate_eobra_snapshot_chunk($1,100) progress", [id])).rows[0].progress; } while (progress.next_step === "validate");
   return (await db.query("select public.seal_eobra_snapshot($1) progress", [id])).rows[0].progress;
@@ -53,7 +54,7 @@ async function prepare(db, id) {
 test("multipart snapshot transport binds every bounded part to one immutable manifest", async t => {
   const db = await fixture();
   try {
-    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql"]) await applyMigration(db, suffix);
+    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql"]) await applyMigration(db, suffix);
 
     await t.test("manifest rejects gaps, weak hashes, excessive size, wrong scope and foreign storage ownership", async () => {
       const initial = bundle([archive("boundary-a"), archive("boundary-b"), archive("boundary-c")]);

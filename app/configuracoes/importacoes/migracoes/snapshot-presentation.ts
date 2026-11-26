@@ -33,7 +33,8 @@ export type MigrationSummary = {
 export type SnapshotProgress = {
   run_id: string; status: string; stage: 'loading' | 'validating' | 'sealed';
   transport?: string; expected_parts?: number; uploaded_parts?: number; next_part_ordinal?: number | null;
-  next_step: 'upload_part' | 'append' | 'finish_append' | 'validate' | 'seal' | 'promote' | 'complete' | 'blocked';
+  next_step: 'upload_part' | 'append' | 'finish_append' | 'map_units' | 'validate' | 'seal' | 'promote' | 'complete' | 'blocked';
   expected_records: number; loaded_records: number; validated_records: number; promoted_records: number;
+  unit_records?: number; units_requiring_decision?: number; unit_map_confirmed?: boolean;
 };
 export const snapshotLabel = (entity: string, archiveType?: string | null) => entity === 'raw_archive' && archiveType ? `Complementar · ${archiveType}` : SNAPSHOT_ENTITY_LABELS[entity] ?? entity;

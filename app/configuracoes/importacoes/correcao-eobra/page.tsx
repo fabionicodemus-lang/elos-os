@@ -22,12 +22,13 @@ export default async function EobraCorrectionPage({ searchParams }: { searchPara
   const { supabase, companyId, company } = await requireCompanyPermission("indices.manage");
   const permissions = await Promise.all(["admin.company.manage", "receivables.manage", "receivables.view"].map(permission => supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: permission })));
   const canReview = permissions[0].data === true && permissions[1].data === true;
+  const canRefresh = permissions[1].data === true;
   const canReadTitles = permissions[1].data === true || permissions[2].data === true;
   const page = Math.min(pageNumber(params.page), 50000);
   const [sourceResult, indexResult, overviewResult, candidatesResult] = await Promise.all([
     canReview ? supabase.from("eobra_source_indices").select("id,source_host,source_id,details").eq("company_id", companyId).eq("entity", "correction_index").order("source_id").limit(100) : Promise.resolve({ data: [], error: null }),
     supabase.from("correction_indices").select("id,name,code").eq("company_id", companyId).eq("value_type", "index_number").eq("status", "active").order("name").limit(100),
-    supabase.rpc("receivable_correction_overview", { p_company_id: companyId }),
+    canReadTitles ? supabase.rpc("receivable_correction_overview", { p_company_id: companyId }) : Promise.resolve({ data: {}, error: null }),
     canReadTitles ? supabase.rpc("eobra_receivable_correction_candidates", { p_company_id: companyId, p_limit: 20, p_offset: (page - 1) * 20 }) : Promise.resolve({ data: { total: 0, rows: [] }, error: null }),
   ]);
   const unavailable = Boolean(sourceResult.error || indexResult.error || overviewResult.error || candidatesResult.error);
@@ -59,7 +60,7 @@ export default async function EobraCorrectionPage({ searchParams }: { searchPara
       {unavailable ? <div role="alert" className="auth-message error workspace-message">A revisão de correção está indisponível. Confirme a atualização do banco e suas permissões antes de continuar.</div> : null}
       {previewUnavailable ? <div role="alert" className="auth-message error workspace-message">Esta prévia não está disponível na empresa selecionada. Abra a parcela ou escolha os índices novamente.</div> : null}
 
-      <section className="registry-table-panel eobra-card">
+      {canReadTitles ? <section className="registry-table-panel eobra-card">
         <div className="section-heading"><div><span className="eobra-step">Atualização mensal</span><h2>Fila de {monthLabel(overview.reference_month)}</h2></div></div>
         <div className="eobra-kpis">
           <article className="eobra-card"><span>Políticas revisadas</span><strong>{overview.total ?? 0}</strong><small>Ativação individual após conferir o corte da origem.</small></article>
@@ -68,8 +69,8 @@ export default async function EobraCorrectionPage({ searchParams }: { searchPara
           <article className="eobra-card"><span>Histórico preservado</span><strong>{overview.history_preserved ?? 0}</strong><small>Parcelas recebidas, canceladas ou com pagamento parcial.</small></article>
         </div>
         <div className="eobra-note"><p>O cadastro de um índice inicia a atualização das políticas já aprovadas. Quando houver parcelas na fila, continue os lotes abaixo. A rotina mensal ainda não está agendada: ao virar o mês, use esta conferência. Se faltar uma competência, o valor anterior permanece e a pendência aparece na lista.</p></div>
-        <form action={refreshCorrectionBatch} className="eobra-actions"><input type="hidden" name="company_id" value={companyId} /><button className="elos-button primary" disabled={unavailable || !overview.total}>{(overview.pending ?? 0) > 0 ? "Continuar atualização · até 500 parcelas" : "Conferir competência atual"}</button></form>
-      </section>
+        {canRefresh ? <form action={refreshCorrectionBatch} className="eobra-actions"><input type="hidden" name="company_id" value={companyId} /><button className="elos-button primary" disabled={unavailable || !overview.total}>{(overview.pending ?? 0) > 0 ? "Continuar atualização · até 500 parcelas" : "Conferir competência atual"}</button></form> : <p>A atualização da fila exige permissão para gerenciar contas a receber.</p>}
+      </section> : <div className="eobra-note"><p>Seu perfil precisa de acesso a contas a receber para consultar a fila e as parcelas.</p></div>}
 
       {canReview ? <section className="registry-table-panel eobra-card">
         <div className="section-heading"><div><span className="eobra-step">1 · Série mensal</span><h2>Conferir os índices</h2></div><p>Escolha a correspondência entre origem e cadastro do Elos.</p></div>
@@ -107,13 +108,13 @@ export default async function EobraCorrectionPage({ searchParams }: { searchPara
         </form> : <p>A parcela permanece com o valor importado enquanto a pendência é conferida.</p>}
       </section> : null}
 
-      <section className="registry-table-panel eobra-card" id="parcelas"><div className="section-heading"><div><span className="eobra-step">Acompanhamento</span><h2>Parcelas e políticas</h2></div><p>{listing.total.toLocaleString("pt-BR")} parcela(s) importada(s)</p></div>
+      {canReadTitles ? <section className="registry-table-panel eobra-card" id="parcelas"><div className="section-heading"><div><span className="eobra-step">Acompanhamento</span><h2>Parcelas e políticas</h2></div><p>{listing.total.toLocaleString("pt-BR")} parcela(s) importada(s)</p></div>
         <div className="registry-table-wrap"><table className="registry-table"><thead><tr><th>Obra e parcela</th><th>Vencimento</th><th>Principal</th><th>Atualizado</th><th>Política</th><th>Referência</th><th>Ação</th></tr></thead><tbody>
           {listing.rows.map(item => <tr key={item.receivable_id}><td>{item.project_name}<small>{item.unit_code ? `${item.unit_code} · ` : ""}{item.description}</small></td><td>{dateBR(item.due_date)}</td><td className="eobra-money">{moneyBR(item.original_amount)}</td><td className="eobra-money">{moneyBR(item.current_amount)}</td><td><span className={`eobra-status ${item.policy_state === "active" ? "success" : item.last_error ? "warning" : "neutral"}`}>{item.policy_state ? stateLabel[item.policy_state] ?? item.policy_state : item.status !== "open" || (item.paid_amount && item.paid_amount !== "0.00") ? "Histórico preservado" : "A revisar"}</span>{item.last_error ? <small>{item.last_error}</small> : null}</td><td>{monthLabel(item.last_reference_month)}</td><td>{item.policy_id ? <span>Regra revisada</span> : canReview ? <Link prefetch={false} className="table-action" href={`${PATH}?${new URLSearchParams({ page: String(page), receivable: item.receivable_id, source_record: item.source_record_id })}#revisao`}>Conferir regra</Link> : <span>Aguardando revisão da implantação</span>}</td></tr>)}
           {!listing.rows.length ? <tr><td colSpan={7}><div className="eobra-empty"><strong>{unavailable ? "Lista indisponível." : "Nenhuma parcela importada nesta página."}</strong><p>A revisão fica disponível após a promoção dos recebíveis com seus vínculos de origem.</p></div></td></tr> : null}
         </tbody></table></div>
         {listing.total > 0 ? <nav className="eobra-pagination" aria-label="Páginas de parcelas">{page > 1 ? <Link prefetch={false} className="elos-button" href={`?page=${page - 1}#parcelas`}>← Anterior</Link> : <span />}<span>Página {page} de {Math.max(1, Math.ceil(listing.total / 20))}</span>{page * 20 < listing.total ? <Link prefetch={false} className="elos-button" href={`?page=${page + 1}#parcelas`}>Próxima →</Link> : <span />}</nav> : null}
-      </section>
+      </section> : null}
     </div>
   </AppShell>;
 }
