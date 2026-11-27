@@ -279,6 +279,7 @@ export default async function BudgetDetailPage({
       description={`${company.name} · ${context} · ${budget.code} · ${budget.version} · ${budget.name}.`}
       actions={
         <>
+          <Link prefetch={false} className="elos-button" href={`/engenharia/orcamentos/${budget.id}/reajuste`}>Reajuste e memória</Link>
           <Link prefetch={false} className="elos-button" href="/engenharia/orcamentos">Voltar</Link>
           {canManage ? <BudgetRevisionDialogs budget={budget} groups={groups} units={units} itemCount={items.length} hasCostCenterTransactions={hasCostCenterTransactions} /> : null}
           {canManage && budget.status !== "archived" && !budget.is_base ? (

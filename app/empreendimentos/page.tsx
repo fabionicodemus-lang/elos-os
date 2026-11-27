@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
 import { selectProjectFromRegistry } from "./actions";
@@ -178,6 +179,7 @@ export default async function ProjectsRegistryPage({
                     <td>
                       <div className="project-table-actions">
                         {canManage ? <ProjectEditDialog project={project} legalEntities={legalEntities} /> : null}
+                        <Link prefetch={false} className="project-table-action" href={`/empreendimentos/${project.id}/reajustes`}>Reajustes</Link>
                         {canManage ? <ProjectDeleteDialog project={project} /> : null}
                         <form action={selectProjectFromRegistry}>
                           <input type="hidden" name="project_id" value={project.id} />
