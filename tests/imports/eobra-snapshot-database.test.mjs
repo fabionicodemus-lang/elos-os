@@ -4,9 +4,55 @@ import { fixture, applyMigration, confirmSyntheticUnitDecisions, setTenant, A, B
 
 const entities = ["project", "person", "unit", "sale", "receivable", "payable", "settlement", "bank_account", "bank_transaction", "correction_index", "index_value"];
 const projectEntities = ["unit", "sale", "receivable", "payable", "settlement"];
+
+test("historical account without exposed status preserves payments without activating a native account", async () => {
+  const db = await fixture();
+  try {
+    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql", "_eobra_unknown_source_account_status.sql", "_eobra_resolve_native_targets_once.sql"]) await applyMigration(db, suffix);
+    const items = records("history");
+    items.push(record("bank_account", "source-account", { name: "Historical account", currency: "BRL", status: "unknown", status_provenance: "not_exposed_by_source" }));
+    items.push(financial("receivable", "historical-title", { status: "paid", paid_amount: "100.00", balance_amount: "0.00" }, [{ entity: "sale", sourceId: "salehistory", role: "sale" }]));
+    items.push(record("settlement", "historical-payment", { kind: "payment", amount: "100.00", occurred_on: "2026-10-10", medium: "bank" }, [{ entity: "receivable", sourceId: "historical-title", role: "installment" }, { entity: "bank_account", sourceId: "source-account", role: "account" }], "p1"));
+    const id = await stage(db, items);
+    assert.equal((await run(db, id)).status, "ready");
+    await promote(db, id);
+    assert.equal(await count(db, "finance_bank_accounts"), 0);
+    assert.equal(await count(db, "finance_bank_transactions"), 0);
+    assert.equal(await count(db, "eobra_source_events"), 1);
+    assert.equal((await db.query("select details->>'status' status from public.eobra_source_accounts")).rows[0].status, "unknown");
+    const invalid = records("invalid");
+    invalid.push(record("bank_account", "unknown-unproven", { name: "Unproven", currency: "BRL", status: "unknown" }));
+    const bad = await stage(db, invalid);
+    assert.equal((await run(db, bad)).status, "review");
+    await assert.rejects(promote(db, bad), /pendências/);
+  } finally { await db.close(); }
+});
 function record(entity, sourceId, normalized, links = [], project = null) {
   return { entity, sourceId, ...(project ? { sourceProjectId: project } : {}), raw: { source: sourceId, observed: normalized }, normalized, links };
 }
+
+test("resolved ledger lookups preserve tenant, project, permission and source identity checks", async () => {
+  const db = await fixture();
+  try {
+    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql", "_eobra_resolve_native_targets_once.sql"]) await applyMigration(db, suffix);
+    const id = await stage(db, records("lookup"));
+    await promote(db, id);
+    const source = (await db.query("select id from public.eobra_migration_records where run_id=$1 and entity='sale'", [id])).rows[0].id;
+    const unit = (await db.query("select id,targets->>'units' unit_id from public.eobra_migration_ledger where run_id=$1 and entity='unit'", [id])).rows[0];
+    const lookup = async () => (await db.query("select public.eobra_snapshot_link_ledger($1,'unit','unit') ledger_id,public.eobra_snapshot_link_target($1,'unit','unit','units') unit_id", [source])).rows[0];
+    assert.deepEqual(await lookup(), { ledger_id: unit.id, unit_id: unit.unit_id });
+    assert.equal((await db.query("select public.eobra_snapshot_link_ledger($1,'unit','person') id", [source])).rows[0].id, null);
+    await setTenant(db, B, UB);
+    assert.deepEqual(await lookup(), { ledger_id: null, unit_id: null });
+    await setTenant(db, A, UA);
+    await db.query("select set_config('test.denied','sales.manage',false)");
+    assert.deepEqual(await lookup(), { ledger_id: null, unit_id: null });
+    await db.query("select set_config('test.denied','',false),set_config('test.hidden_project',$1,false)", [PA]);
+    assert.deepEqual(await lookup(), { ledger_id: null, unit_id: null });
+    await db.query("select set_config('test.hidden_project','',false)");
+    assert.deepEqual(await lookup(), { ledger_id: unit.id, unit_id: unit.unit_id });
+  } finally { await db.close(); }
+});
 function records(suffix = "") {
   return [
     record("project", "p1", { name: "Obra sintética" }),
@@ -49,6 +95,47 @@ async function run(db, id) { return (await db.query("select * from public.eobra_
 async function promote(db, id, hash) { return (await db.query("select public.promote_eobra_snapshot($1,$2) result", [id, hash ?? (await run(db, id)).preview_hash])).rows[0].result; }
 async function count(db, table) { return (await db.query(`select count(*)::int n from public.${table}`)).rows[0].n; }
 
+test("preloaded people without tax IDs reuse exact company/host/person identity and preserve native contacts", async () => {
+  const db = await fixture();
+  try {
+    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql", "_eobra_exact_person_identity_reuse.sql"]) await applyMigration(db, suffix);
+    const key = "fixture.eobra.com.br|person|buyerpreloaded";
+    const client = (await db.query("insert into public.clients(company_id,person_type,name,status,source_system,source_id,email) values($1,'PF','Cadastro preservado','inactive','eobra_snapshot',$2,'preserved@example.org') returning id", [A,key])).rows[0].id;
+    const supplier = (await db.query("insert into public.suppliers(company_id,person_type,legal_name,status,source_system,source_id) values($1,'individual','Cadastro preservado','active','eobra_snapshot',$2) returning id", [A,key])).rows[0].id;
+    await setTenant(db, B, UB);
+    await db.query("insert into public.clients(company_id,person_type,name,status,source_system,source_id) values($1,'PF','Outra empresa','active','eobra_snapshot',$2)", [B,key]);
+    await setTenant(db, A, UA);
+    const before = { clients: await count(db, "clients"), suppliers: await count(db, "suppliers") };
+    const id = await stage(db, records("preloaded"));
+    const source = (await db.query("select id,expected_targets from public.eobra_migration_records where run_id=$1 and entity='person'", [id])).rows[0];
+    assert.deepEqual(source.expected_targets, { clients:client,suppliers:supplier });
+    await promote(db,id);
+    assert.equal(await count(db,"clients"),before.clients);
+    assert.equal(await count(db,"suppliers"),before.suppliers);
+    assert.deepEqual((await db.query("select name,status,email from public.clients where id=$1",[client])).rows[0], { name:"Cadastro preservado",status:"inactive",email:"preserved@example.org" });
+    assert.equal((await db.query("select client_id from public.sales where source_id='fixture.eobra.com.br|sale|salepreloaded'")).rows[0].client_id,client);
+    await promote(db,id);
+    assert.equal(await count(db,"clients"),before.clients);
+    await setTenant(db,B,UB);
+    assert.deepEqual((await db.query("select public.eobra_snapshot_expected_targets($1) targets",[source.id])).rows[0].targets,{});
+  } finally { await db.close(); }
+});
+
+test("missing tax IDs do not match names, another source host, entity or source system", async () => {
+  const db = await fixture();
+  try {
+    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql", "_eobra_exact_person_identity_reuse.sql"]) await applyMigration(db, suffix);
+    for (const [system,key] of [["eobra_snapshot","other.eobra.com.br|person|buyernomatch"],["eobra_snapshot","fixture.eobra.com.br|other|buyernomatch"],["other","fixture.eobra.com.br|person|buyernomatch"]]) {
+      await db.query("insert into public.clients(company_id,person_type,name,status,source_system,source_id) values($1,'PF','Pessoa sintética nomatch','active',$2,$3)",[A,system,key]);
+    }
+    const id=await stage(db,records("nomatch"));
+    assert.deepEqual((await db.query("select expected_targets from public.eobra_migration_records where run_id=$1 and entity='person'",[id])).rows[0].expected_targets,{});
+    const before=await count(db,"clients");
+    await promote(db,id);
+    assert.equal(await count(db,"clients"),before+1);
+  } finally { await db.close(); }
+});
+
 test("complete eObra package: isolated staging, provenance, transactional promotion", async t => {
   const db = await fixture();
   try {
@@ -58,6 +145,7 @@ test("complete eObra package: isolated staging, provenance, transactional promot
     await applyMigration(db, "_eobra_snapshot_resumable.sql");
     await applyMigration(db, "_eobra_snapshot_parts.sql");
     await applyMigration(db, "_eobra_snapshot_unit_mapping.sql");
+    await applyMigration(db, "_eobra_resolve_native_targets_once.sql");
 
     await t.test("order-independent commercial promotion creates every role and relation", async () => {
       const items = records();

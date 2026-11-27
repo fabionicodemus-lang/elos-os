@@ -54,7 +54,7 @@ async function prepare(db, id) {
 test("multipart snapshot transport binds every bounded part to one immutable manifest", async t => {
   const db = await fixture();
   try {
-    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql"]) await applyMigration(db, suffix);
+    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql", "_eobra_resolve_native_targets_once.sql"]) await applyMigration(db, suffix);
 
     await t.test("manifest rejects gaps, weak hashes, excessive size, wrong scope and foreign storage ownership", async () => {
       const initial = bundle([archive("boundary-a"), archive("boundary-b"), archive("boundary-c")]);

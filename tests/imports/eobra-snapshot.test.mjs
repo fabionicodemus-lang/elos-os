@@ -6,6 +6,20 @@ import {
   hashEobraValue, inspectEobraSnapshot,
 } from "../../lib/eobra-import/snapshot.mjs";
 
+test("unknown source-account status is explicit and never weakens other status checks", () => {
+  const pack = fixture();
+  const account = pack.records.find(row => row.entity === "bank_account");
+  account.normalized.status = "unknown";
+  let result = inspectEobraSnapshot(pack);
+  assert.ok(result.records.find(row => row.entity === "bank_account").errors.some(error => error.startsWith("status_provenance:")));
+  account.normalized.status_provenance = "not_exposed_by_source";
+  result = inspectEobraSnapshot(pack);
+  assert.deepEqual(result.records.find(row => row.entity === "bank_account").errors, []);
+  assert.equal(result.records.find(row => row.entity === "bank_account").disposition, "archived");
+  pack.records.find(row => row.entity === "person").normalized.status = "unknown";
+  assert.ok(inspectEobraSnapshot(pack).records.find(row => row.entity === "person").errors.some(error => error.startsWith("status:")));
+});
+
 // Entirely synthetic fixtures. No customer/export payloads or credentials.
 const scoped = new Set(["unit", "sale", "receivable", "payable", "settlement"]);
 const link = (entity, sourceId, role, extra = {}) => ({ entity, sourceId, role, ...extra });
