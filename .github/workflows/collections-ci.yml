@@ -1,0 +1,29 @@
+name: Collection center
+on:
+  pull_request:
+    paths:
+      - 'app/financeiro/**'
+      - 'lib/collections/**'
+      - 'lib/eobra-import/**'
+      - 'supabase/migrations/*finance_collection_center.sql'
+      - 'tests/finance/**'
+      - '.github/workflows/collections-ci.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:collections
+      - run: npm run test:banking
+      - run: npm run test:delinquency
+      - run: npm run test:eobra
+      - run: npx tsc --noEmit
+      - run: npx eslint app/financeiro/central-cobranca lib/collections tests/finance/collection-*.test.mjs lib/eobra-import/parser.mjs

@@ -183,6 +183,7 @@ export default async function AccountsReceivablePage({
           <Link prefetch={false} className="elos-button" href="/comercial/planos-de-pagamento">Planos de Pagamento</Link>
           <Link prefetch={false} className="elos-button" href="/comercial/vendas">Vendas</Link>
           <Link prefetch={false} className="elos-button" href="/financeiro/gestao-inadimplencias">Gestão de Inadimplências</Link>
+          <Link prefetch={false} className="elos-button" href="/financeiro/central-cobranca">Central de Cobrança</Link>
           <Link prefetch={false} className="elos-button" href="/financeiro/indices-de-correcao">Índices de correção</Link>
         </>
       }
@@ -255,7 +256,7 @@ export default async function AccountsReceivablePage({
                     <td><strong>{money(updatedValue)}</strong><small>Saldo exigível: {money(values.remaining)}</small>{receivable.status === "cancelled" ? <small>Saldo histórico: {money(values.historical_balance)}</small> : null}<small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small></td>
                     <td><span>{receivable.adjustment_index || "Sem correção"}</span><small>{correctionDetails}</small></td>
                     <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{overdue ? "Vencida" : receivable.status === "open" ? values.partial ? "Parcial" : "Em aberto" : receivable.status === "paid" ? "Recebida" : "Cancelada"}</span></td>
-                    <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : "—"}</span><small>{values.paid > 0 ? `${money(values.paid)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
+                    <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : values.paid > 0 ? "Parcial" : "—"}</span><small>{values.paid > 0 ? `${money(values.paid)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
                     <td><Link prefetch={false} className="table-action" href={`/comercial/vendas/${receivable.sale_id}`}>Abrir venda</Link></td>
                   </tr>
                 );

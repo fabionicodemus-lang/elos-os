@@ -170,6 +170,23 @@ test("project resolution follows sale/unit IDs, never cost-center names or numbe
   assert.equal(output.snapshot.scope.projectIds.includes("cost-center-B"), false);
 });
 
+test("payables and their settlements inherit only the explicit sale project, preserving scope conflicts", () => {
+  const rows = [bill("q1", { direction: "payable", current: "-100.00", original: "-100.00", paid: "-20.00" }), bill("q-unlinked", { direction: "payable", saleId: null })];
+  const data = source({ projects: [project("p1"), project("p2")], bills: [{ headers: BILL_HEADERS, rows }],
+    saleDetails: [{ sourceId: "s1", sourceProjectId: "p1", normalized: {} }],
+    payments: [{ headers: PAYMENT_HEADERS, rows: [payment("event-1", "q1")] }],
+  });
+  const output = convertEobraCheckpoint(data);
+  assert.equal(candidate(output, "payable", "q1").sourceProjectId, "p1");
+  assert.equal(candidate(output, "settlement", "event-1").sourceProjectId, "p1");
+  assert.equal(candidate(output, "payable", "q-unlinked").sourceProjectId, null);
+  assert.deepEqual(reconstructEobraCheckpoint(output.snapshot), data);
+  data.captures.installmentDetails = [{ entity: "payable", sourceId: "q1", sourceProjectId: "p2", normalized: {} }];
+  const conflicting = convertEobraCheckpoint(data);
+  assert.ok(pending(conflicting, "payable", "q1").reasons.some(reason => reason.includes("obras diferentes")));
+  assert.equal(candidate(conflicting, "payable", "q1").sourceProjectId, "p2");
+});
+
 test("sale detail preserves multiple units and buyers without assuming primary or allocations", () => {
   const detail = { title: "Negócio Nº 0041", status: "Venda - Concluído", fields: [{ name: "construction.sale.date", value: "10/01/2026" }], tables: [
     { headers: ["Compradores"], rows: [{ id: "rel-c1", cells: [{ links: [{ route: "Person/Details/c1" }] }] }, { id: "rel-c2", cells: [{ links: [{ route: "Person/Details/c2" }] }] }] },

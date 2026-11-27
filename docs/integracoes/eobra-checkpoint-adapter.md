@@ -18,6 +18,10 @@ entrada e confere seu hash. A representação preserva inclusive as strings JSON
 originais dentro de resultados de ferramentas. O hash não depende da indentação
 do arquivo externo.
 
+Coleções grandes são fragmentadas também pelo tamanho UTF-8, além da quantidade
+de itens, para caber no transporte multipart sem remover evidências. Um item
+individual que ultrapasse o limite continua sendo rejeitado.
+
 Mensagens repetidas de pendência ficam em um dicionário complementar dentro do
 pacote. Cada candidato arquivado guarda os códigos correspondentes; o relatório
 JSON conserva as mensagens completas por ID. Essa compactação não remove campos,
@@ -33,6 +37,12 @@ Os IDs de rotas, atributos e campos explícitos precisam concordar. O número
 comercial de um título não substitui o ID da parcela. IDs de construção e de
 centro de custo pertencem a relações diferentes. Um rascunho com data inválida
 fica em `sale_draft`; sua data original permanece preservada.
+
+Contas a pagar vinculadas explicitamente a uma venda herdam a obra dessa venda,
+assim como os recebíveis. Obras conflitantes continuam bloqueadas; o rótulo do
+centro de custo não produz um vínculo. E-mails únicos têm apenas espaços externos
+removidos, conservando o contato original em `source_emails`. Endereços inválidos
+ou múltiplos contatos continuam exigindo revisão.
 
 Valores financeiros da listagem usam `data-value`. Casas adicionais só são
 removidas se forem zeros: `"100.2300"` pode virar `"100.23"`, enquanto
