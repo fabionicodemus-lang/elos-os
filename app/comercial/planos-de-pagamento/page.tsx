@@ -21,6 +21,7 @@ type SaleOption = {
   sale_date: string;
   total_amount: number;
   payment_plan_available: boolean;
+  adjustment_policy_id: string | null;
   clients: Client | Client[] | null;
   units: Unit | Unit[] | null;
 };
@@ -133,7 +134,7 @@ export default async function PaymentPlansPage({
 
   let salesQuery = supabase
     .from("sales")
-    .select("id, number, sale_date, total_amount, payment_plan_available, clients(id, name, tax_id), units(id, code)")
+    .select("id, number, sale_date, total_amount, payment_plan_available, adjustment_policy_id, clients(id, name, tax_id), units(id, code)")
     .eq("company_id", companyId)
     .eq("status", "active")
     .order("sale_date", { ascending: false })
@@ -188,7 +189,7 @@ export default async function PaymentPlansPage({
   const sales = (salesResult.data ?? []) as unknown as SaleOption[];
   const receivables = (listResult.data ?? []) as unknown as Receivable[];
   const correctionIndices = (correctionIndicesResult.data ?? []) as CorrectionIndex[];
-  const defaultCorrectionIndexId = correctionIndices.find((index) => index.code === "CUB-SC")?.id ?? "";
+  const defaultCorrectionIndexId = "";
   const selectedSale = sales.find((sale) => sale.id === saleId) ?? null;
   const summary = (summaryResult.data ?? {
     base_amount: 0,
@@ -210,6 +211,7 @@ export default async function PaymentPlansPage({
     id: sale.id,
     number: sale.number,
     total_amount: sale.total_amount,
+    adjustment_policy_id: sale.adjustment_policy_id,
     client_name: relatedOne(sale.clients)?.name ?? "Cliente",
     unit_code: relatedOne(sale.units)?.code ?? "Unidade",
   }));
