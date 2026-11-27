@@ -59,6 +59,61 @@ function completeFixture() {
   return { ...source({ records: rows, coverage: coverageFor(rows) }), scope: { allProjects: true } };
 }
 
+function paymentUpdateFixture() {
+  const base = completeFixture();
+  const prior = candidate(convertEobraCheckpoint(base), "receivable", "r1");
+  const event = record("settlement", "new-payment", { kind: "payment", amount: "40.00", occurred_on: "2026-03-21", medium: "bank" }, [link("receivable", "r1", "installment"), link("bank_account", "a1", "account")], "p1");
+  const update = { entity: "receivable", sourceId: "r1", beforeHash: hashEobraValue(prior.normalized), observedAt: "2026-03-21T12:00:00Z", evidence: { sha256: "a".repeat(64) }, addedSettlementSourceIds: ["new-payment"], normalized: { ...plainMoney("100.00", "40.00", "partial"), balance_amount: "60.00" } };
+  for (const key of ["description", "due_date", "correction", "sequence_number", "sequence_total"]) delete update.normalized[key];
+  return { base, supplement: source({ settlementDetails: [event], financialObservationUpdates: [update] }), update, event };
+}
+
+test("explicit payment observation advances a hashed version and preserves both original captures", () => {
+  const { base, supplement } = paymentUpdateFixture();
+  const input = [base, supplement]; const before = JSON.stringify(input);
+  const result = convertEobraCheckpoint(input);
+  const row = candidate(result, "receivable", "r1");
+  assert.equal(row.normalized.paid_amount, "40.00");
+  assert.equal(row.normalized.balance_amount, "60.00");
+  assert.deepEqual(row.normalized.financial_observation_resolution.added_settlement_source_ids, ["new-payment"]);
+  assert.deepEqual(reconstructEobraCheckpoint(result.snapshot), input);
+  assert.equal(JSON.stringify(input), before);
+  assert.equal(result.report.preserved.lossless, true);
+  assert.ok(!pending(result, "receivable", "r1")?.reasons.some(x => x.startsWith("financial_observation:")));
+});
+
+test("an explicit review hold blocks a valid parent and propagates to financial dependents", () => {
+  const base = completeFixture();
+  const supplement = source({ reviewHolds: [{ entity: "sale", sourceId: "s1", reason: "Aguardando decisão sobre a obra do contrato." }] });
+  const result = convertEobraCheckpoint([base, supplement]);
+  assert.ok(pending(result, "sale", "s1").reasons.some(x => x.startsWith("review_hold:")));
+  assert.ok(pending(result, "receivable", "r1").reasons.some(x => x.startsWith("references:")));
+  assert.deepEqual(reconstructEobraCheckpoint(result.snapshot), [base, supplement]);
+  const invalid = convertEobraCheckpoint([base, source({ reviewHolds: [{ entity: "sale", sourceId: "missing", reason: "Revisar" }] })]);
+  assert.equal(invalid.report.readyForReview, false);
+});
+
+test("payment updates reject stale versions, duplicate selections, wrong links and inconsistent money", () => {
+  const cases = [
+    f => { f.update.beforeHash = "0".repeat(64); },
+    f => { f.supplement.captures.financialObservationUpdates.push(structuredClone(f.update)); },
+    f => { f.event.links[0].sourceId = "other-installment"; },
+    f => { f.update.normalized.paid_amount = "50.00"; f.update.normalized.balance_amount = "50.00"; },
+    f => { f.update.normalized.original_amount = "110.00"; f.update.normalized.current_amount = "110.00"; f.update.normalized.balance_amount = "70.00"; },
+    f => { f.update.normalized.balance_amount = "61.00"; },
+    f => { f.update.normalized.correction = { mode: "index" }; },
+    f => { f.event.normalized.source_reversed = true; },
+    f => { f.update.addedSettlementSourceIds.push("new-payment"); },
+    f => { f.update.observedAt = "2026-03-21"; },
+  ];
+  for (const mutate of cases) {
+    const f = paymentUpdateFixture(); mutate(f);
+    const result = convertEobraCheckpoint([f.base, f.supplement]);
+    assert.equal(candidate(result, "receivable", "r1").normalized.paid_amount, "0.00");
+    assert.ok(pending(result, "receivable", "r1").reasons.some(x => x.startsWith("financial_observation:")));
+  }
+});
+
 test("lossless source capture includes ToolResult text, HTML, unknown modules and duplicate observations", () => {
   const data = source({ projects: wrap([project()]), unknown: { html: "<div>&amp; intacto</div>", values: [null, true, ""] }, bills: [{ page: 1, headers: BILL_HEADERS, rows: [bill("0001")] }, { page: 1, headers: BILL_HEADERS, rows: [bill("0001")] }] });
   const before = JSON.stringify(data);
@@ -69,6 +124,23 @@ test("lossless source capture includes ToolResult text, HTML, unknown modules an
   assert.equal(output.report.preserved.lossless, true);
   assert.equal(output.report.inventory.find(row => row.capture === "bills").uniqueIds, 1);
   assert.equal(output.report.inventory.find(row => row.capture === "bills").observations, 2);
+});
+
+test("dense capture arrays remain reconstructible with evidence pointers into encoded JSON", () => {
+  const rows = Array.from({ length: 200 }, (_, i) => bill('dense-' + i));
+  const data = source({ projects: [project()], bills: [{ page: 1, headers: BILL_HEADERS, rows }] });
+  const result = convertEobraCheckpoint(data);
+  assert.equal(result.inspection.ok, true);
+  assert.deepEqual(reconstructEobraCheckpoint(result.snapshot), data);
+  const row = candidate(result, "receivable", "dense-199");
+  const evidence = row.raw.evidence.find(e => e.jsonPointer === '/0/rows/199');
+  assert.ok(evidence);
+  const fragment = result.snapshot.records.find(r => r.sourceId === evidence.sourceId);
+  assert.equal(fragment.raw.encoding, 'json-value-v1');
+  assert.equal(evidence.pointer, '/encodedValue');
+  assert.deepEqual(JSON.parse(fragment.raw.encodedValue)[0].rows[199], rows[199]);
+  fragment.raw.encodedValue = fragment.raw.encodedValue.replace('dense-199', 'changed-199');
+  assert.throws(() => reconstructEobraCheckpoint(result.snapshot), /Fragmento/);
 });
 
 test("a missing capture timestamp remains a real package blocker", () => {

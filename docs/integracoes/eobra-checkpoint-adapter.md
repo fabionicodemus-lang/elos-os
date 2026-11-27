@@ -22,6 +22,11 @@ Coleções grandes são fragmentadas também pelo tamanho UTF-8, além da quanti
 de itens, para caber no transporte multipart sem remover evidências. Um item
 individual que ultrapasse o limite continua sendo rejeitado.
 
+Listas densas usam fragmentos `encoding="json-value-v1"`, com seu JSON integral
+em `encodedValue`. As referências de evidência apontam para esse texto e para
+seu `jsonPointer` interno. A reconstrução decodifica e confere o hash original;
+os limites de nós e de bytes do snapshot permanecem inalterados.
+
 Mensagens repetidas de pendência ficam em um dicionário complementar dentro do
 pacote. Cada candidato arquivado guarda os códigos correspondentes; o relatório
 JSON conserva as mensagens completas por ID. Essa compactação não remove campos,
@@ -86,6 +91,23 @@ ou acrescentar uma observação estruturada do coletor:
 normalização explícita e verificável desse dado. Ausência de `primary` permanece
 ausência. Valores diferentes para o mesmo campo/ID em duas observações geram
 conflito; o adaptador não escolhe silenciosamente a versão mais recente.
+
+Uma baixa capturada depois do checkpoint pode ser reconciliada explicitamente
+em `captures.financialObservationUpdates`. Cada entrada informa entidade/ID da
+parcela, `beforeHash` do normalizado anterior, `observedAt`, `evidence.sha256`,
+`addedSettlementSourceIds` e `normalized` com os nove valores financeiros e status.
+O adaptador exige versão anterior exata, IDs únicos de pagamentos vinculados à
+mesma parcela/obra, principal inalterado, variação do pago igual às novas baixas
+e composição/saldo exatos. Não aceita parcela cancelada, atualização duplicada,
+estorno tratado como pagamento ou alteração de outros campos. As duas observações
+permanecem reconstituíveis; a resolução registra a versão anterior e a evidência.
+Isso não declara cobertura completa nem libera correção, boletos ou movimentos
+bancários. Conflitos comuns fora dessa reconciliação continuam bloqueados.
+
+`captures.reviewHolds` preserva decisões ainda pendentes, por entidade, ID e
+motivo explícito. Uma retenção arquiva o candidato e bloqueia seus dependentes,
+mesmo quando todos os valores estão preenchidos. IDs desconhecidos são erro;
+uma nova captura de valores não remove uma retenção existente.
 
 `installmentDetails` exige `entity="receivable"` ou `entity="payable"` para uma
 parcela ainda não identificada na listagem. As relações seguem o contrato do
