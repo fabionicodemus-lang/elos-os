@@ -132,6 +132,10 @@ Os resumos de migração mantêm `balance_amount` como soma histórica e publica
 
 Nenhuma dessas funções cria movimentação bancária. Eventos históricos importados e movimentos operacionais do banco devem permanecer separados até que o vínculo bancário tenha sido validado.
 
+### Conta histórica sem situação cadastral exposta
+
+Uma conta usada por pagamentos históricos pode declarar `status: "unknown"` somente com `status_provenance: "not_exposed_by_source"`. Isso registra a ausência observada de informação, sem escolher `active` ou `inactive`. Nome, moeda, identidade técnica e relações continuam obrigatórios. A conta é conservada em `eobra_source_accounts`; essa declaração não cria nem habilita uma conta em `finance_bank_accounts` e não altera os saldos bancários. A mesma situação não é aceita para pessoas ou outros cadastros operacionais.
+
 ## Suporte nativo a parciais e histórico
 
 A migration local `20261126151453_finance_partial_settlements.sql` prepara o modelo e suas leituras. Ela não representa aplicação em produção.

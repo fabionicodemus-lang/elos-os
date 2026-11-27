@@ -4,6 +4,29 @@ import { fixture, applyMigration, confirmSyntheticUnitDecisions, setTenant, A, B
 
 const entities = ["project", "person", "unit", "sale", "receivable", "payable", "settlement", "bank_account", "bank_transaction", "correction_index", "index_value"];
 const projectEntities = ["unit", "sale", "receivable", "payable", "settlement"];
+
+test("historical account without exposed status preserves payments without activating a native account", async () => {
+  const db = await fixture();
+  try {
+    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql", "_eobra_unknown_source_account_status.sql"]) await applyMigration(db, suffix);
+    const items = records("history");
+    items.push(record("bank_account", "source-account", { name: "Historical account", currency: "BRL", status: "unknown", status_provenance: "not_exposed_by_source" }));
+    items.push(financial("receivable", "historical-title", { status: "paid", paid_amount: "100.00", balance_amount: "0.00" }, [{ entity: "sale", sourceId: "salehistory", role: "sale" }]));
+    items.push(record("settlement", "historical-payment", { kind: "payment", amount: "100.00", occurred_on: "2026-10-10", medium: "bank" }, [{ entity: "receivable", sourceId: "historical-title", role: "installment" }, { entity: "bank_account", sourceId: "source-account", role: "account" }], "p1"));
+    const id = await stage(db, items);
+    assert.equal((await run(db, id)).status, "ready");
+    await promote(db, id);
+    assert.equal(await count(db, "finance_bank_accounts"), 0);
+    assert.equal(await count(db, "finance_bank_transactions"), 0);
+    assert.equal(await count(db, "eobra_source_events"), 1);
+    assert.equal((await db.query("select details->>'status' status from public.eobra_source_accounts")).rows[0].status, "unknown");
+    const invalid = records("invalid");
+    invalid.push(record("bank_account", "unknown-unproven", { name: "Unproven", currency: "BRL", status: "unknown" }));
+    const bad = await stage(db, invalid);
+    assert.equal((await run(db, bad)).status, "review");
+    await assert.rejects(promote(db, bad), /pendências/);
+  } finally { await db.close(); }
+});
 function record(entity, sourceId, normalized, links = [], project = null) {
   return { entity, sourceId, ...(project ? { sourceProjectId: project } : {}), raw: { source: sourceId, observed: normalized }, normalized, links };
 }
