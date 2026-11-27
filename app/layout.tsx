@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { IdleSessionBoundary } from "@/components/idle-session-boundary";
+import "./idle-session.css";
 import { APP_VERSION } from "@/lib/version";
 import { IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import { BudgetAnalyticalDetails } from "@/components/budget-analytical-details";
@@ -84,12 +86,14 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${ibmPlexSans.variable} ${spaceGrotesk.variable}`}>
       <body>
+        <IdleSessionBoundary>
         {children}
         <BudgetAnalyticalDetails />
         <ServiceInlineComposition />
         <CurvesBarValues />
         <GlobalSearchableSelect />
         <SefazNfeLauncher />
+        </IdleSessionBoundary>
       </body>
     </html>
   );

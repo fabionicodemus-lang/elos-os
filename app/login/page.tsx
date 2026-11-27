@@ -8,6 +8,7 @@ export default async function LoginPage({
     success?: string;
     recovery?: string;
     from?: string;
+    expired?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -42,6 +43,7 @@ export default async function LoginPage({
 
         {params.error ? <div className="auth-message error">{params.error}</div> : null}
         {params.success ? <div className="auth-message success">{params.success}</div> : null}
+        {params.expired === "1" ? <div className="auth-message">Sua sessão foi encerrada após 30 minutos sem uso. Entre novamente para continuar.</div> : null}
 
         {recovery ? (
           <form className="auth-form" action={updatePassword}>

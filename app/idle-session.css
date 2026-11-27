@@ -1,0 +1,4 @@
+.idle-session-warning { position: fixed; right: 1rem; bottom: 1rem; z-index: 10000; max-width: 26rem; padding: 1.25rem; background: #fff; color: #0f1c1b; border: 2px solid #008780; border-radius: .75rem; box-shadow: 0 8px 30px #0003; }
+.idle-session-warning p { margin: .6rem 0; }
+.idle-session-overlay { position: fixed; inset: 0; z-index: 10001; display: grid; place-items: center; padding: 1.5rem; background: #eef1f0; color: #0f1c1b; }
+.idle-session-card { max-width: 30rem; padding: 2rem; border-radius: .75rem; background: #fff; }

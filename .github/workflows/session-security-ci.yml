@@ -1,0 +1,30 @@
+name: Session security
+on:
+  pull_request:
+    paths:
+      - 'lib/auth/**'
+      - 'components/idle-session-boundary.tsx'
+      - 'app/login/**'
+      - 'app/layout.tsx'
+      - 'app/idle-session.css'
+      - 'tests/security/**'
+      - 'supabase/migrations/*restrict_inventory_internal_rpc.sql'
+      - '.github/workflows/session-security-ci.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/security/idle-session.test.mjs tests/security/idle-logout-action.test.mjs tests/security/inventory-rpc-privileges.test.mjs
+      - run: npm run test:collections
+      - run: npm run test:banking
+      - run: npx tsc --noEmit
+      - run: npx eslint components/idle-session-boundary.tsx app/login/idle-actions.ts lib/auth/idle-session.mjs tests/security/idle-session.test.mjs tests/security/idle-logout-action.test.mjs tests/security/inventory-rpc-privileges.test.mjs
