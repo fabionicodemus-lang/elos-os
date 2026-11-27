@@ -117,6 +117,36 @@ test("cancelled titles preserve paid and residual history instead of forcing zer
   assert.equal(Object.hasOwn(data, "discount_amount"), false);
 });
 
+test("explicit partial marker treats Valor as the residual without subtracting payment twice", () => {
+  for (const direction of ["receivable", "payable"]) {
+    const sign = direction === "payable" ? "-" : "";
+    const raw = bill("partial-residual", { direction, original: sign + "100.00", current: sign + "30.00", paid: sign + "80.00" });
+    raw.cells[6].tips = ["Pago parcialmente"];
+    const input = source({ bills: [{ headers: BILL_HEADERS, rows: [raw] }] });
+    const output = convertEobraCheckpoint(input);
+    const n = candidate(output, direction, "partial-residual").normalized;
+    assert.equal(n.original_amount, "100.00");
+    assert.equal(n.current_amount, "110.00");
+    assert.equal(n.paid_amount, "80.00");
+    assert.equal(n.balance_amount, "30.00");
+    assert.equal(n.status, "partial");
+    assert.equal(n.balance_provenance, "source_partial_residual");
+    assert.equal(n.current_amount_provenance, "source_partial_residual_plus_paid_amount");
+    assert.deepEqual(reconstructEobraCheckpoint(output.snapshot), input);
+    assert.equal(Object.hasOwn(n, "correction_amount"), false);
+  }
+});
+
+test("contradictory partial markers stay blocked and do not reinterpret paid or cancelled history", () => {
+  for (const state of ["Pago", "Estornado"]) {
+    const raw = bill("partial-conflict", { current: "100.00", paid: "80.00", state });
+    raw.cells[6].tips = ["Pago parcialmente"];
+    const output = convertEobraCheckpoint(source({ bills: [{ headers: BILL_HEADERS, rows: [raw] }] }));
+    assert.equal(candidate(output, "receivable", "partial-conflict").normalized.current_amount, "100.00");
+    assert.ok(pending(output, "receivable", "partial-conflict").reasons.some(reason => reason.includes("indicador de saldo parcial")));
+  }
+});
+
 test("money precision, scientific notation and contradictory signs cannot become canonical values", () => {
   for (const invalid of ["100.0001", "1e3", "9007199254740990999999.00", "-100.00"]) {
     const output = convertEobraCheckpoint(source({ bills: [{ headers: BILL_HEADERS, rows: [bill("precision", { current: invalid })] }] }));

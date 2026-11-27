@@ -140,6 +140,13 @@ original e os IDs adicionais comprovados pelos suplementos.
 
 ## Uso local
 
+Na listagem de parcelas, o indicador explícito `Pago parcialmente` da célula
+`Valor` identifica saldo residual. Nesses casos o atualizado é esse saldo mais
+`Valor pago`; o saldo não sofre uma segunda dedução. A origem dos dois campos
+calculados fica registrada. Marcadores que contradizem status ou valores mantêm
+o registro pendente. Essa regra não atribui ajustes ao CUB e não altera os bytes
+do checkpoint.
+
 ```sh
 node scripts/import-eobra-checkpoint.mjs \
   --input /caminho/privado/checkpoint.json \
