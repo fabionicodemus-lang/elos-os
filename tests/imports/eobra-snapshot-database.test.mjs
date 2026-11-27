@@ -8,7 +8,7 @@ const projectEntities = ["unit", "sale", "receivable", "payable", "settlement"];
 test("historical account without exposed status preserves payments without activating a native account", async () => {
   const db = await fixture();
   try {
-    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql", "_eobra_unknown_source_account_status.sql"]) await applyMigration(db, suffix);
+    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql", "_eobra_unknown_source_account_status.sql", "_eobra_resolve_native_targets_once.sql"]) await applyMigration(db, suffix);
     const items = records("history");
     items.push(record("bank_account", "source-account", { name: "Historical account", currency: "BRL", status: "unknown", status_provenance: "not_exposed_by_source" }));
     items.push(financial("receivable", "historical-title", { status: "paid", paid_amount: "100.00", balance_amount: "0.00" }, [{ entity: "sale", sourceId: "salehistory", role: "sale" }]));
@@ -30,6 +30,29 @@ test("historical account without exposed status preserves payments without activ
 function record(entity, sourceId, normalized, links = [], project = null) {
   return { entity, sourceId, ...(project ? { sourceProjectId: project } : {}), raw: { source: sourceId, observed: normalized }, normalized, links };
 }
+
+test("resolved ledger lookups preserve tenant, project, permission and source identity checks", async () => {
+  const db = await fixture();
+  try {
+    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql", "_eobra_resolve_native_targets_once.sql"]) await applyMigration(db, suffix);
+    const id = await stage(db, records("lookup"));
+    await promote(db, id);
+    const source = (await db.query("select id from public.eobra_migration_records where run_id=$1 and entity='sale'", [id])).rows[0].id;
+    const unit = (await db.query("select id,targets->>'units' unit_id from public.eobra_migration_ledger where run_id=$1 and entity='unit'", [id])).rows[0];
+    const lookup = async () => (await db.query("select public.eobra_snapshot_link_ledger($1,'unit','unit') ledger_id,public.eobra_snapshot_link_target($1,'unit','unit','units') unit_id", [source])).rows[0];
+    assert.deepEqual(await lookup(), { ledger_id: unit.id, unit_id: unit.unit_id });
+    assert.equal((await db.query("select public.eobra_snapshot_link_ledger($1,'unit','person') id", [source])).rows[0].id, null);
+    await setTenant(db, B, UB);
+    assert.deepEqual(await lookup(), { ledger_id: null, unit_id: null });
+    await setTenant(db, A, UA);
+    await db.query("select set_config('test.denied','sales.manage',false)");
+    assert.deepEqual(await lookup(), { ledger_id: null, unit_id: null });
+    await db.query("select set_config('test.denied','',false),set_config('test.hidden_project',$1,false)", [PA]);
+    assert.deepEqual(await lookup(), { ledger_id: null, unit_id: null });
+    await db.query("select set_config('test.hidden_project','',false)");
+    assert.deepEqual(await lookup(), { ledger_id: unit.id, unit_id: unit.unit_id });
+  } finally { await db.close(); }
+});
 function records(suffix = "") {
   return [
     record("project", "p1", { name: "Obra sintética" }),
@@ -81,6 +104,7 @@ test("complete eObra package: isolated staging, provenance, transactional promot
     await applyMigration(db, "_eobra_snapshot_resumable.sql");
     await applyMigration(db, "_eobra_snapshot_parts.sql");
     await applyMigration(db, "_eobra_snapshot_unit_mapping.sql");
+    await applyMigration(db, "_eobra_resolve_native_targets_once.sql");
 
     await t.test("order-independent commercial promotion creates every role and relation", async () => {
       const items = records();

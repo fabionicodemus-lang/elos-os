@@ -74,7 +74,7 @@ const identity = native => Object.fromEntries(Object.entries(native).filter(([ke
 test("explicit unit reconciliation binds physical identity without overwriting an existing catalog", async t => {
   const db = await fixture();
   try {
-    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql"]) await applyMigration(db, suffix);
+    for (const suffix of ["_finance_partial_settlements.sql", "_eobra_snapshot_promotion.sql", "_commercial_sale_units_eobra.sql", "_eobra_snapshot_resumable.sql", "_eobra_snapshot_parts.sql", "_eobra_snapshot_unit_mapping.sql", "_eobra_resolve_native_targets_once.sql"]) await applyMigration(db, suffix);
 
     await t.test("a label mismatch never implies CREATE and direct state writes cannot bypass the decision", async () => {
       await seedUnit(db, "701");
