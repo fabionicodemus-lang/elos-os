@@ -182,7 +182,9 @@ using(public.eobra_snapshot_authorized(company_id,array['projects.manage']) and 
 with check(public.eobra_snapshot_authorized(company_id,array['projects.manage']) and exists(select 1 from public.projects p where p.id=eobra_migration_project_links.project_id and p.company_id=eobra_migration_project_links.company_id));
 do $$ declare t text;begin
   foreach t in array array['eobra_migration_snapshots','eobra_migration_records','eobra_migration_relations','eobra_migration_coverage','eobra_source_accounts','eobra_source_indices','eobra_source_events'] loop
-    execute format('create policy %I on public.%I for all to authenticated using(exists(select 1 from public.eobra_migration_runs r where r.id=%I.run_id and r.company_id=%I.company_id and (%I.project_id is null or exists(select 1 from public.projects p where p.id=%I.project_id and p.company_id=r.company_id)))) with check(exists(select 1 from public.eobra_migration_runs r where r.id=%I.run_id and r.company_id=%I.company_id and (%I.project_id is null or exists(select 1 from public.projects p where p.id=%I.project_id and p.company_id=r.company_id))))',t||'_access',t,t,t,t,t,t,t,t,t);
+    -- Uncorrelated visible sets let PostgreSQL check native RLS once per statement,
+    -- instead of repeating authorization for every staged row. Both IDs remain paired.
+    execute format('create policy %I on public.%I for all to authenticated using((run_id,company_id) in (select r.id,r.company_id from public.eobra_migration_runs r) and (project_id is null or (project_id,company_id) in (select p.id,p.company_id from public.projects p))) with check((run_id,company_id) in (select r.id,r.company_id from public.eobra_migration_runs r) and (project_id is null or (project_id,company_id) in (select p.id,p.company_id from public.projects p)))',t||'_access',t);
   end loop;
 end; $$;
 grant select,insert,update on public.eobra_migration_runs,public.eobra_migration_records,public.eobra_migration_coverage to authenticated;

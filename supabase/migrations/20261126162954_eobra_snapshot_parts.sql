@@ -30,8 +30,8 @@ alter table public.eobra_migration_snapshot_parts enable row level security;
 revoke all on public.eobra_migration_snapshot_parts from public,anon,authenticated;
 grant select,insert on public.eobra_migration_snapshot_parts to authenticated;
 create policy eobra_migration_snapshot_parts_access on public.eobra_migration_snapshot_parts for all to authenticated
-using(exists(select 1 from public.eobra_migration_runs r where r.id=eobra_migration_snapshot_parts.run_id and r.company_id=eobra_migration_snapshot_parts.company_id))
-with check(exists(select 1 from public.eobra_migration_runs r where r.id=eobra_migration_snapshot_parts.run_id and r.company_id=eobra_migration_snapshot_parts.company_id));
+using((run_id,company_id) in (select r.id,r.company_id from public.eobra_migration_runs r))
+with check((run_id,company_id) in (select r.id,r.company_id from public.eobra_migration_runs r));
 
 create or replace function public.eobra_snapshot_assert_storage_path(p_company_id uuid,p_user_id uuid,p_path text)
 returns void language plpgsql immutable security invoker set search_path=pg_catalog,public

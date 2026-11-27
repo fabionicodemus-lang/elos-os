@@ -116,7 +116,9 @@ test("complete eObra package: isolated staging, provenance, transactional promot
       await setTenant(db, A, UA);
       await db.query("select set_config('test.hidden_project',$1,false)", [PA]);
       assert.equal((await db.query("select * from public.eobra_migration_runs where id=$1", [id])).rows.length, 0);
+      assert.equal((await db.query("select * from public.eobra_migration_records where run_id=$1", [id])).rows.length, 0);
       await db.query("select set_config('test.hidden_project','',false)");
+      assert.equal((await db.query("select * from public.eobra_migration_records where run_id=$1", [id])).rows.length, pack.records.length);
       await assert.rejects(stage(db, [records()[0]], { map: { p1: PB } }), /De-para/);
       const { rows } = await db.query("select prosecdef from pg_proc where proname in('stage_eobra_snapshot','promote_eobra_snapshot','cancel_eobra_snapshot')");
       assert.ok(rows.every(row => row.prosecdef === false));
