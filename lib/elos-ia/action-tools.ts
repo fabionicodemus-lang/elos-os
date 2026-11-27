@@ -1,8 +1,9 @@
+import { feasibilityActionProperties, prepareFeasibility } from "./feasibility-action-tool";
 import type { ElosIaPersonaKey } from "./personas";
 import type { ElosIaToolContext } from "./tools";
 import { allocateSharedAmount, buildMeasurementPreview, matchUniqueCandidate } from "./action-utils.mjs";
 
-export type ElosIaActionToolName = "preparar_cotacao_fornecedor" | "preparar_medicao_contrato";
+export type ElosIaActionToolName = "preparar_cotacao_fornecedor" | "preparar_medicao_contrato" | "preparar_estudo_viabilidade";
 export type ElosIaActionToolContext = ElosIaToolContext & {
   userId:string;
   turnId:string;
@@ -236,6 +237,7 @@ async function prepareContractMeasurement(context:ElosIaActionToolContext,args:T
 }
 
 const ACTIONS:ActionDefinition[]=[
+  {name:"preparar_estudo_viabilidade",label:"Preparar estudo de viabilidade",permissions:["commercial.incorporation.manage"],description:"Lê estudo de viabilidade anexado ou descrito e prepara uma página editável para confirmação humana. Use sempre que pedirem importar/lançar viabilidade. Não exige baseline aprovado, orçamento, preços ou unidades cadastradas. Extraia fatos do documento; campos ausentes ficam null, divergências viram avisos. Não aprova o estudo, não cria empreendimento nem substitui baseline.",properties:feasibilityActionProperties,run:prepareFeasibility},
   {
     name:"preparar_cotacao_fornecedor",label:"Preparar proposta de fornecedor",permissions:["procurement.quotations.manage"],
     description:"Prepara, mas NÃO lança ainda, uma proposta de fornecedor dentro de uma cotação de materiais em coleta. Use quando o usuário enviar orçamento em PDF, foto, planilha ou texto. Faça um chamado por fornecedor. Nunca invente item, preço, quantidade, condição ou fornecedor; use null quando um campo opcional não estiver no documento.",
@@ -256,8 +258,8 @@ const BY_NAME=new Map(ACTIONS.map((tool)=>[tool.name,tool]));
 
 export function elosIaActionToolsForPersona(persona:ElosIaPersonaKey):ElosIaActionToolName[]{
   if(persona==="clientes")return [];
-  if(persona==="financeiro")return ["preparar_cotacao_fornecedor"];
-  return ["preparar_cotacao_fornecedor","preparar_medicao_contrato"];
+  if(persona==="financeiro")return ["preparar_cotacao_fornecedor","preparar_estudo_viabilidade"];
+  return ["preparar_cotacao_fornecedor","preparar_medicao_contrato","preparar_estudo_viabilidade"];
 }
 export function elosIaActionToolLabel(name:string){return BY_NAME.get(name as ElosIaActionToolName)?.label??name;}
 export function elosIaActionToolPermissions(name:ElosIaActionToolName){return BY_NAME.get(name)?.permissions??[];}

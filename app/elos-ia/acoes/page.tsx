@@ -25,6 +25,6 @@ export default async function ElosIaActionsPage(){
       const action:ElosIaClientAction={id:row.id,actionType:row.action_type,title:row.title,summary:row.summary,preview:row.preview??{},status:row.status,requiredPermission:row.required_permission,canExecute:access.can(row.required_permission),createdAt:row.created_at,expiresAt:row.expires_at};
       return <ElosIaActionCard key={row.id} action={action}/>;
     })}</div>
-    {!query.error&&!rows.length?<section className="result-empty"><strong>Nenhuma ação pendente.</strong><p>Quando a Elos IA preparar uma cotação ou medição, ela aparecerá aqui até ser lançada ou descartada.</p></section>:null}
+    {!query.error&&!rows.length?<section className="result-empty"><strong>Nenhuma ação pendente.</strong><p>Quando a Elos IA preparar uma cotação, medição ou estudo de viabilidade, ela aparecerá aqui até ser lançada ou descartada.</p></section>:null}
   </AppShell>;
 }

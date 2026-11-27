@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { normalizeFeasibilityImport, reportedFields, studyFields } from "@/lib/elos-ia/feasibility-import.mjs";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { calculateFeasibility } from "@/lib/commercial/feasibility.mjs";
@@ -58,7 +59,7 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
   const { studyId } = await params;
   const messages = await searchParams;
   const { supabase, company, companyId, roleKey } = await requireCompanyPermission("commercial.incorporation.view");
-  const [studyResult, unitsResult, constructionAreasResult, salesVelocitiesResult, entitiesResult, manageResult, approveResult] = await Promise.all([
+  const [studyResult, unitsResult, constructionAreasResult, salesVelocitiesResult, entitiesResult, manageResult, approveResult, importResult] = await Promise.all([
     supabase.from("commercial_feasibility_studies").select("*").eq("id", studyId).eq("company_id", companyId).maybeSingle(),
     supabase.from("commercial_feasibility_unit_types").select("*").eq("study_id", studyId).eq("company_id", companyId).order("sort_order").order("name"),
     supabase.from("commercial_feasibility_construction_areas").select("*").eq("study_id", studyId).eq("company_id", companyId).order("sort_order").order("name"),
@@ -66,9 +67,12 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
     supabase.from("legal_entities").select("id,legal_name,trade_name,entity_type").eq("company_id", companyId).eq("status", "active").order("legal_name"),
     supabase.rpc("has_company_permission", { target_company_id:companyId, target_permission:"commercial.incorporation.manage" }),
     supabase.rpc("has_company_permission", { target_company_id:companyId, target_permission:"commercial.incorporation.approve" }),
+    supabase.from("commercial_feasibility_imports").select("proposal_id,project_id,source_file,reviewed_payload,applied_fields").eq("company_id", companyId).eq("study_id", studyId).maybeSingle(),
   ]);
   if (!studyResult.data) notFound();
   const study = studyResult.data as Study;
+  const imported = importResult.data;
+  const importedData = imported ? normalizeFeasibilityImport(imported.reviewed_payload) : null;
   const unitTypes = (unitsResult.data ?? []) as FeasibilityUnitType[];
   const constructionAreas = (constructionAreasResult.data ?? []) as FeasibilityConstructionArea[];
   const salesVelocities = (salesVelocitiesResult.data ?? []) as FeasibilitySalesVelocity[];
@@ -116,6 +120,7 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
         <a href="#fluxo">Fluxo</a>
       </nav>
 
+      {imported && importedData ? <section className="registry-table-panel"><h2>Estudo importado · dados declarados no documento</h2><p>Origem: {imported.source_file}. Cadastrado em rascunho, associado ao empreendimento existente. O baseline aprovado permanece preservado.</p><div className="registry-form-grid">{reportedFields.map(([key,label,type])=><div key={key}><span>{label}</span><strong style={{display:"block"}}>{importedData.reported[key] == null ? "Não informado" : type === "date" ? String(importedData.reported[key]) : ["vgv","total_cost","profit"].includes(key) ? money(importedData.reported[key]) : number(importedData.reported[key])}</strong></div>)}</div><Link className="elos-button" href={`/elos-ia/acoes/${imported.proposal_id}/viabilidade`}>Documento, revisão e memória de importação</Link><details><summary>Premissas não preenchidas pela importação</summary><p>{studyFields.filter(([key])=>!imported.applied_fields?.includes(key)).map(([,label])=>label).join(" · ")}</p><p>Estas premissas usam o comportamento padrão do simulador quando exigidas pelo cadastro. Não foram extraídas do documento. Linhas incompletas e outros dados estão preservados na memória de importação.</p></details><div className="auth-message warning"><strong>Indicadores abaixo são uma simulação com as premissas atuais.</strong> Revise as premissas faltantes antes de utilizar os resultados para decisões. Eles podem divergir dos totais declarados acima.</div></section> : null}
       <section className="feasibility-kpis" id="resumo" aria-label="Resumo executivo da viabilidade">
         <article className="feasibility-kpi-primary"><span>VGV disponível</span><strong>{money(calculated.available_vgv)}</strong><small>{calculated.available_units} unidade(s) comercializável(is)</small></article>
         <article className={`feasibility-kpi-primary ${Number(calculated.profit) >= 0 ? "positive" : "danger"}`}><span>Lucro projetado</span><strong>{money(calculated.profit)}</strong><small>após todos os custos estimados</small></article>
@@ -240,7 +245,7 @@ export default async function FeasibilityStudyPage({ params, searchParams }: { p
       <div className="registry-table-wrap feasibility-flow"><table className="registry-table"><thead><tr><th>Mês</th><th>Vendas</th><th>Recebimentos</th><th>Terreno</th><th>Projetos</th><th>Obra</th><th>Comissão</th><th>Impostos</th><th>Marketing</th><th>Central</th><th>Financeiro</th><th>Contingência</th><th>Caixa mês</th><th>Acumulado</th></tr></thead><tbody>{cashflow.map(row => <tr key={row.month}><td><strong>{monthLabel(study,row.month)}</strong></td><td>{money(row.sales)}</td><td>{money(row.receipts)}</td><td>{money(row.land)}</td><td>{money(row.projects)}</td><td>{money(row.construction)}</td><td>{money(row.commission)}</td><td>{money(row.taxes)}</td><td>{money(row.marketing)}</td><td>{money(row.centralOffice)}</td><td>{money(row.financial)}</td><td>{money(row.contingency)}</td><td><strong>{money(row.net)}</strong></td><td><strong>{money(row.cumulative)}</strong></td></tr>)}</tbody></table></div>
     </section>
 
-    {study.status === "draft" && canApprove ? <section className="feasibility-card feasibility-section" id="decisao">
+    {study.status === "draft" && canApprove && !imported ? <section className="feasibility-card feasibility-section" id="decisao">
       <div className="feasibility-section-title"><div><span>Decisão de investimento</span><h2>Aprovar permuta e criar empreendimento</h2></div><p>Esta ação congela o estudo e cria a obra em Planejamento.</p></div>
       <div className="feasibility-note feasibility-warning">Depois da aprovação, as premissas deste estudo não poderão ser alteradas. O snapshot passa a ser o baseline econômico original do empreendimento.</div>
       <form action={approveAndConvertFeasibilityStudy} className="feasibility-actions"><input type="hidden" name="study_id" value={study.id}/><button className="feasibility-primary" type="submit">Aprovar permuta e criar empreendimento</button></form>

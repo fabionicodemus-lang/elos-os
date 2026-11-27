@@ -83,6 +83,7 @@ export async function loadElosIaActionProposal(supabase:SupabaseClientLike,compa
 export async function executeElosIaActionProposal(input:{supabase:SupabaseClientLike;companyId:string;proposalId:string}){
   const proposal=await loadElosIaActionProposal(input.supabase,input.companyId,input.proposalId);
   if(!proposal)throw new Error("A ação preparada não foi encontrada ou você não possui acesso.");
+  if(proposal.action_type==="commercial_feasibility_import")throw new Error("Abra a página de revisão do estudo para conferir os dados e confirmar o lançamento.");
   const rpc=proposal.action_type==="execution_schedule_update"?"ai_execute_schedule_action_proposal":"ai_execute_action_proposal";
   const executed=await input.supabase.rpc(rpc,{p_proposal_id:proposal.id});
   if(executed.error)throw new Error(executed.error.message);
