@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+import { titleFinancialValues } from "@/lib/finance/title-balances.mjs";
+import { loadCompleteFinanceRows } from "@/lib/finance/payment-history";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
@@ -26,6 +29,15 @@ type Unit = {
   status: string;
 };
 
+type SaleUnit = {
+  id: string;
+  unit_id: string;
+  is_primary: boolean;
+  allocated_amount: number | null;
+  status: "active" | "inactive";
+  units: Unit | Unit[] | null;
+};
+
 type CorrectionIndex = {
   id: string;
   code: string;
@@ -41,6 +53,7 @@ type Sale = {
   unit_id: string;
   number: string;
   source_code: string | null;
+  source_system: string | null;
   contract_number: string | null;
   sale_date: string;
   total_amount: number;
@@ -92,6 +105,7 @@ type Summary = {
   total_count: number;
   open_count: number;
   paid_count: number;
+  partial_count?: number;
   overdue_count: number;
   open_amount: number;
   paid_amount: number;
@@ -153,7 +167,7 @@ export default async function SaleDetailPage({
   const saleResult = await supabase
     .from("sales")
     .select(
-      "id, project_id, client_id, unit_id, number, source_code, contract_number, sale_date, total_amount, commission_pct, commission_amount, broker_name, status, payment_plan_available, correction_start_month, adjustment_policy_id, notes, clients(id, name, tax_id), units(id, code, floor, type, status), projects(id, name, code)",
+      "id, project_id, client_id, unit_id, number, source_code, source_system, contract_number, sale_date, total_amount, commission_pct, commission_amount, broker_name, status, payment_plan_available, correction_start_month, adjustment_policy_id, notes, clients(id, name, tax_id), units(id, code, floor, type, status), projects(id, name, code)",
     )
     .eq("id", saleId)
     .eq("company_id", companyId)
@@ -170,6 +184,8 @@ export default async function SaleDetailPage({
     salesManageResult,
     receivablesManageResult,
     correctionIndicesResult,
+    paymentAccountsResult,
+    saleUnitsResult,
   ] = await Promise.all([
     supabase
       .from("clients")
@@ -184,7 +200,7 @@ export default async function SaleDetailPage({
       .eq("project_id", sale.project_id)
       .neq("status", "inactive")
       .order("code"),
-    supabase
+    loadCompleteFinanceRows(supabase
       .from("receivables")
       .select(
         "id, category, description, sequence_number, sequence_total, due_date, amount, adjusted_amount, correction_amount, adjustment_index, correction_base_month, correction_base_value, correction_reference_month, correction_reference_value, correction_locked, adjustment_policy_id, adjustment_calculation, interest_rate_monthly, status, paid_at, paid_amount, paid_account_name",
@@ -192,7 +208,7 @@ export default async function SaleDetailPage({
       .eq("company_id", companyId)
       .eq("sale_id", saleId)
       .order("due_date", { ascending: true })
-      .limit(500),
+      .order("id")),
     supabase.rpc("receivables_summary", {
       p_company_id: companyId,
       p_project_id: sale.project_id,
@@ -212,6 +228,11 @@ export default async function SaleDetailPage({
       .eq("company_id", companyId)
       .eq("status", "active")
       .order("code"),
+    supabase.from("finance_bank_accounts").select("id,label").eq("company_id",companyId).eq("status","active").order("label").limit(500),
+    supabase.from("commercial_sale_units")
+      .select("id,unit_id,is_primary,allocated_amount,status,units(id,code,floor,type,status)")
+      .eq("company_id", companyId).eq("project_id", sale.project_id).eq("sale_id", saleId)
+      .order("is_primary", { ascending: false }).order("id"),
   ]);
 
   const [policyResult, policyHistoryResult] = await Promise.all([
@@ -226,6 +247,9 @@ export default async function SaleDetailPage({
   const units = (unitsResult.data ?? []) as Unit[];
   const receivables = (receivablesResult.data ?? []) as Receivable[];
   const correctionIndices = (correctionIndicesResult.data ?? []) as CorrectionIndex[];
+  const paymentAccounts = (paymentAccountsResult.data ?? []) as Array<{ id: string; label: string }>;
+  const saleUnits = (saleUnitsResult.data ?? []) as unknown as SaleUnit[];
+  const importedPolicy = sale.source_system === "eobra_snapshot";
   const defaultCorrectionIndexId = "";
   const summary = (summaryResult.data ?? {
     base_amount: 0,
@@ -260,6 +284,7 @@ export default async function SaleDetailPage({
     >
       {messages.error ? <div className="auth-message error workspace-message">{messages.error}</div> : null}
       {messages.success ? <div className="auth-message success workspace-message">{messages.success}</div> : null}
+      {saleUnitsResult.error ? <div className="auth-message error workspace-message">Não foi possível carregar as unidades vinculadas ao contrato.</div> : null}
       {correctionIndicesResult.error ? (
         <div className="auth-message error workspace-message">
           Instale o cadastro de índices para usar CUB-SC, IPCA e INCC no plano de pagamento.
@@ -268,29 +293,53 @@ export default async function SaleDetailPage({
 
       <section className="sale-detail-hero">
         <div>
-          <span>Unidade e cliente</span>
+          <span>Unidade principal e cliente</span>
           <h2>{unit?.code || "Unidade"} · {client?.name || "Cliente"}</h2>
           <p>
-            Contrato {sale.contract_number || "sem numeração"} · venda em {dateBR(sale.sale_date)} · mês 0 da correção {monthBR(`${sale.sale_date.slice(0, 7)}-01`)}
+            Contrato {sale.contract_number || "sem numeração"} · venda em {dateBR(sale.sale_date)} · {importedPolicy ? "correção e data-base por parcela" : `mês 0 da correção ${monthBR(`${sale.sale_date.slice(0, 7)}-01`)}`}
           </p>
         </div>
         <div className="sale-detail-values">
-          <div><span>Valor contrato</span><strong>{money(summary.base_amount)}</strong></div>
+          <div><span>Valor contrato</span><strong>{money(sale.total_amount)}</strong></div>
           <div><span>Valor atualizado</span><strong>{money(summary.updated_amount)}</strong></div>
           <div><span>Correção acumulada</span><strong>{money(summary.correction_amount)}</strong></div>
         </div>
       </section>
 
+      {saleUnits.length > 0 ? (
+        <section className="registry-table-panel">
+          <div className="section-heading">
+            <div><span>Imóveis do contrato</span><h2>Unidades da venda</h2></div>
+            <p>{saleUnits.length} unidade(s) · valor único do contrato: {money(sale.total_amount)}</p>
+          </div>
+          <div className="registry-table-wrap">
+            <table className="registry-table">
+              <thead><tr><th>Unidade</th><th>Vínculo</th><th>Valor atribuído</th><th>Situação do vínculo</th></tr></thead>
+              <tbody>{saleUnits.map(item => {
+                const linkedUnit = relatedOne(item.units);
+                return <tr key={item.id}>
+                  <td><strong>{linkedUnit?.code || "Unidade"}</strong><small>{[linkedUnit?.type, linkedUnit?.floor != null ? `${linkedUnit.floor}º andar` : null].filter(Boolean).join(" · ")}</small></td>
+                  <td>{item.is_primary ? "Principal" : "Adicional"}</td>
+                  <td>{item.allocated_amount == null ? "Não informado na origem" : money(item.allocated_amount)}</td>
+                  <td>{item.status === "active" ? "Ativo" : "Inativo"}</td>
+                </tr>;
+              })}</tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
       <section className="finance-summary-grid sale-finance-summary">
         <article><span>Parcelas</span><strong>{summary.total_count}</strong><small>{summary.open_count} em aberto</small></article>
-        <article><span>Em aberto</span><strong>{money(summary.open_amount)}</strong><small>valores conforme a regra de cada parcela · {summary.overdue_count} vencida(s)</small></article>
-        <article><span>Recebido</span><strong>{money(summary.paid_amount)}</strong><small>{summary.paid_count} parcela(s)</small></article>
+        <article><span>Em aberto</span><strong>{money(summary.open_amount)}</strong><small>saldo atualizado após recebimentos · {summary.overdue_count} vencida(s)</small></article>
+        <article><span>Recebido</span><strong>{money(summary.paid_amount)}</strong><small>{summary.paid_count} quitada(s){summary.partial_count ? ` · ${summary.partial_count} parcial(is)` : ""}</small></article>
         <article><span>Regra para novas parcelas</span><strong>{contractPolicy?.mode === "none" ? "Sem reajuste" : contractPolicy?.mode === "phased" ? "Até / após as chaves" : contractPolicy?.mode === "pending" ? "Definição pendente" : "Regra anterior"}</strong><small>Condições individuais do contrato</small></article>
       </section>
 
       <section className="registry-table-panel">
         <div className="section-heading"><div><span>Negociação individual</span><h2>Reajustes até e após as chaves</h2></div></div>
         <p>Alterações no padrão do empreendimento não modificam este contrato. Cada parcela mantém a regra com que foi criada, salvo revisão explícita das parcelas elegíveis.</p>
+        {importedPolicy ? <p>Parcelas importadas do eObra mantêm política e referência próprias, com valores históricos preservados.</p> : null}
         {policyResult.error ? <p className="auth-message error">Não foi possível carregar a regra do contrato.</p> : null}
         {!contractPolicy ? <p>Contrato anterior a esta configuração: as condições e parcelas atuais estão preservadas.</p> : <p>{contractPolicy.mode === "pending" ? "Defina as condições negociadas antes de preparar cobranças." : contractPolicy.mode === "none" ? "Novas parcelas sem reajuste monetário." : `Mês-base ${monthBR(contractPolicy.base_month)} · chaves ${monthBR(contractPolicy.keys_month)}.`}</p>}
         {canEditSale && sale.status === "active" && !policyResult.error ? <details className="registry-create" open={contractPolicy?.mode === "pending"}><summary>Definir / revisar condições do contrato</summary>
@@ -311,8 +360,9 @@ export default async function SaleDetailPage({
                     {clients.map((item) => <option key={item.id} value={item.id}>{item.name}{item.status === "inactive" ? " · inativo" : ""}</option>)}
                   </select>
                 </label>
-                <label>Unidade
-                  <select name="unit_id" defaultValue={sale.unit_id} required>
+                <label>Unidade principal
+                  {saleUnits.length > 0 ? <input type="hidden" name="unit_id" value={sale.unit_id} /> : null}
+                  <select name={saleUnits.length > 0 ? undefined : "unit_id"} defaultValue={sale.unit_id} required disabled={saleUnits.length > 0}>
                     {units.map((item) => (
                       <option key={item.id} value={item.id} disabled={item.status === "sold" && item.id !== sale.unit_id}>
                         {item.code}{item.type ? ` · ${item.type}` : ""}{item.status === "sold" && item.id !== sale.unit_id ? " · vendida" : ""}
@@ -385,7 +435,7 @@ export default async function SaleDetailPage({
       <section className="registry-table-panel sale-plan-table-panel">
         <div className="section-heading">
           <div><span>Plano do contrato</span><h2>Parcelas da venda</h2></div>
-          <p>{receivables.length} parcela(s) cadastrada(s) · Valor contrato = soma dos valores base.</p>
+          <p>{receivables.length} parcela(s) cadastrada(s) · Base das parcelas: {money(summary.base_amount)}.</p>
         </div>
 
         <div className="registry-table-wrap">
@@ -398,7 +448,8 @@ export default async function SaleDetailPage({
             <tbody>
               {receivables.map((receivable) => {
                 const overdue = receivable.status === "open" && receivable.due_date < today;
-                const updatedValue = Number(receivable.adjusted_amount ?? receivable.amount);
+                const values = titleFinancialValues(receivable);
+                const updatedValue = values.updated;
                 const correctionDetails = [
                   receivable.correction_base_month ? `base ${monthBR(receivable.correction_base_month)}` : "",
                   receivable.correction_base_value ? `CUB ${decimal(receivable.correction_base_value, 6)}` : "",
@@ -415,9 +466,9 @@ export default async function SaleDetailPage({
                     <td>{dateBR(receivable.due_date)}</td>
                     <td><strong>{money(receivable.amount)}</strong><small>lançamento original</small></td>
                     <td>
-                      <strong>{money(updatedValue)}</strong>
+                      <strong>{money(updatedValue)}</strong><small>Saldo exigível: {money(values.remaining)}</small>{receivable.status === "cancelled" ? <small>Saldo histórico: {money(values.historical_balance)}</small> : null}
                       <small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small>
-                      {receivable.status === "paid" ? <small>Recebido: {money(receivable.paid_amount)}</small> : null}
+                      {values.paid > 0 ? <small>Recebido: {money(values.paid)}</small> : null}
                     </td>
                     <td>
                       <span>{receivable.adjustment_index || "Sem correção"}</span>
@@ -430,19 +481,20 @@ export default async function SaleDetailPage({
                       })}</details> : null}
                       {receivable.interest_rate_monthly ? <small>{receivable.interest_rate_monthly}% a.m.</small> : null}
                     </td>
-                    <td><span className={`status-badge ${receivable.status}`}>{receivable.status === "paid" ? "Recebida" : receivable.status === "cancelled" ? "Cancelada" : overdue ? "Vencida" : "Em aberto"}</span></td>
+                    <td><span className={`status-badge ${receivable.status}`}>{receivable.status === "paid" ? "Recebida" : receivable.status === "cancelled" ? "Cancelada" : values.partial ? overdue ? "Parcial · vencida" : "Parcial" : overdue ? "Vencida" : "Em aberto"}</span></td>
                     <td>
                       {canManagePlan && receivable.status === "open" ? (
                         <div className="payable-actions">
                           <details>
                             <summary>Baixar</summary>
                             <form action={markReceivablePaid}>
+                                  <input type="hidden" name="payment_request_id" value={randomUUID()} />
                               <input type="hidden" name="receivable_id" value={receivable.id} />
                               <input type="hidden" name="sale_id" value={sale.id} />
                               <input type="hidden" name="return_path" value={returnPath} />
                               <label>Data recebida<input name="paid_at" type="date" defaultValue={today} required /></label>
-                              <label>Valor recebido<input name="paid_amount" inputMode="decimal" defaultValue={inputMoney(updatedValue)} required /></label>
-                              <label>Conta / banco<input name="paid_account_name" /></label>
+                              <label>Valor recebido<input name="paid_amount" inputMode="decimal" defaultValue={inputMoney(values.remaining)} required /></label>
+                              <label>Conta bancária<select name="bank_account_id" required defaultValue=""><option value="">Selecione a conta</option>{paymentAccounts.map(account => <option key={account.id} value={account.id}>{account.label}</option>)}</select></label>
                               <button type="submit">Registrar recebimento</button>
                             </form>
                           </details>

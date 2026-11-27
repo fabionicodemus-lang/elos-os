@@ -106,8 +106,9 @@ export async function markPayablePaid(formData: FormData) {
   const bankAccountId = String(formData.get("bank_account_id") ?? "").trim();
   const paidAt = String(formData.get("paid_at") ?? "").trim();
   const paidAmount = parseMoney(formData.get("paid_amount"));
+  const requestId = String(formData.get("payment_request_id") ?? "").trim();
 
-  if (!payableId || !bankAccountId || !paidAt || !Number.isFinite(paidAmount) || paidAmount <= 0) {
+  if (!payableId || !bankAccountId || !paidAt || !Number.isFinite(paidAmount) || paidAmount <= 0 || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId)) {
     redirect(pageUrl("Informe conta bancária, data e valor pagos."));
   }
 
@@ -119,7 +120,7 @@ export async function markPayablePaid(formData: FormData) {
     .eq("company_id", companyId)
     .maybeSingle();
 
-  if (!payableResult.data || payableResult.data.status !== "open") {
+  if (!payableResult.data) {
     redirect(pageUrl("A conta não está disponível para pagamento."));
   }
   if (projectId && payableResult.data.project_id !== projectId) {
@@ -133,12 +134,15 @@ export async function markPayablePaid(formData: FormData) {
     p_account_id: bankAccountId,
     p_paid_at: paidAt,
     p_paid_amount: paidAmount,
+    p_request_id: requestId,
   });
 
   if (result.error) redirect(pageUrl(result.error.message));
   revalidatePath(PATH);
   revalidatePath("/financeiro/contas-bancarias");
   revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/financeiro/relatorios");
+  revalidatePath("/dashboard");
   revalidatePath("/execucao/medicoes-contratos");
   redirect(pageUrl("Pagamento registrado e lançado no extrato bancário.", "success"));
 }

@@ -1,3 +1,4 @@
+import { loadTitlePaymentHistory } from "@/lib/finance/payment-history";
 // Elos IA — ferramentas de consulta ao Elos OS.
 //
 // Segurança:
@@ -179,7 +180,7 @@ const FORECAST_PERMISSIONS = ["schedule.view", "budgets.view", "payables.view", 
 // ---------------------------------------------------------------------------
 
 type PayableRecord = {
-  id: string; due_date: string; amount: number; status: string; document: string | null; installment_label: string | null;
+  id: string; due_date: string; amount: number; adjusted_amount: number; status: string; document: string | null; installment_label: string | null;
   paid_at: string | null; paid_amount: number | null;
   suppliers: { legal_name: string; trade_name: string | null } | { legal_name: string; trade_name: string | null }[] | null;
 };
@@ -189,14 +190,15 @@ function loadPayables(context: ElosIaToolContext, projectId: string | null) {
     const result = await fetchAllRows<PayableRecord>(async (from, to) => {
       let query = context.supabase
         .from("payables")
-        .select("id, due_date, amount, status, document, installment_label, paid_at, paid_amount, suppliers(legal_name, trade_name)")
+        .select("id, due_date, amount, adjusted_amount, status, document, installment_label, paid_at, paid_amount, suppliers(legal_name, trade_name)")
         .eq("company_id", context.companyId)
-        .neq("status", "cancelled");
+        ;
       if (projectId) query = query.eq("project_id", projectId);
       const { data, error } = await query.order("due_date", { ascending: true }).order("id", { ascending: true }).range(from, to);
       return { data: (data ?? []) as unknown as PayableRecord[], error };
     });
     failIfErrors([result.error?.message]);
+    const history = await loadTitlePaymentHistory({supabase:context.supabase,companyId:context.companyId,projectId,titleKind:"payable",titleIds:result.data.map(row => row.id)});
     return result.data.map((row) => {
       const supplier = relatedOne(row.suppliers);
       return {
@@ -205,6 +207,8 @@ function loadPayables(context: ElosIaToolContext, projectId: string | null) {
         dueDate: row.due_date,
         paidAt: row.paid_at,
         amount: row.amount,
+        adjustedAmount: row.adjusted_amount,
+        paymentEvents: history.get(`payable:${row.id}`) ?? [],
         paidAmount: row.paid_amount,
         supplier: supplier?.trade_name || supplier?.legal_name || null,
         document: row.document,
@@ -228,12 +232,13 @@ function loadReceivables(context: ElosIaToolContext, projectId: string | null) {
         .from("receivables")
         .select("id, due_date, amount, adjusted_amount, status, category, sequence_number, sequence_total, paid_at, paid_amount, clients(name), units(code)")
         .eq("company_id", context.companyId)
-        .neq("status", "cancelled");
+        ;
       if (projectId) query = query.eq("project_id", projectId);
       const { data, error } = await query.order("due_date", { ascending: true }).order("id", { ascending: true }).range(from, to);
       return { data: (data ?? []) as unknown as ReceivableRecord[], error };
     });
     failIfErrors([result.error?.message]);
+    const history = await loadTitlePaymentHistory({supabase:context.supabase,companyId:context.companyId,projectId,titleKind:"receivable",titleIds:result.data.map(row => row.id)});
     return result.data.map((row) => ({
       id: row.id,
       status: row.status,
@@ -241,6 +246,7 @@ function loadReceivables(context: ElosIaToolContext, projectId: string | null) {
       paidAt: row.paid_at,
       amount: row.amount,
       adjustedAmount: row.adjusted_amount,
+      paymentEvents: history.get(`receivable:${row.id}`) ?? [],
       paidAmount: row.paid_amount,
       category: row.category,
       client: relatedOne(row.clients)?.name ?? null,

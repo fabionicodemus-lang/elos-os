@@ -1,3 +1,4 @@
+import { titleFinancialValues } from "@/lib/finance/title-balances.mjs";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
@@ -236,7 +237,8 @@ export default async function AccountsReceivablePage({
                 const client = relatedOne(receivable.clients);
                 const unit = relatedOne(receivable.units);
                 const sale = relatedOne(receivable.sales);
-                const updatedValue = Number(receivable.adjusted_amount ?? receivable.amount);
+                const values = titleFinancialValues(receivable);
+                const updatedValue = values.updated;
                 const overdue = receivable.status === "open" && receivable.due_date < today;
                 const correctionDetails = [
                   receivable.correction_base_month ? `base ${monthBR(receivable.correction_base_month)}` : "",
@@ -251,10 +253,10 @@ export default async function AccountsReceivablePage({
                     <td><strong>{categoryLabels[receivable.category] || receivable.category}</strong><span>{receivable.description}</span><small>{receivable.sequence_number} / {receivable.sequence_total}</small></td>
                     <td>{dateBR(receivable.due_date)}</td>
                     <td><strong>{money(receivable.amount)}</strong><small>lançamento original</small></td>
-                    <td><strong>{money(updatedValue)}</strong><small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small></td>
+                    <td><strong>{money(updatedValue)}</strong><small>Saldo exigível: {money(values.remaining)}</small>{receivable.status === "cancelled" ? <small>Saldo histórico: {money(values.historical_balance)}</small> : null}<small>{receivable.correction_amount ? `Correção: ${money(receivable.correction_amount)}` : "Sem correção no período"}</small></td>
                     <td><span>{receivable.adjustment_index || "Sem correção"}</span><small>{correctionDetails}</small></td>
-                    <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{overdue ? "Vencida" : receivable.status === "open" ? "Em aberto" : receivable.status === "paid" ? "Recebida" : "Cancelada"}</span></td>
-                    <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : Number(receivable.paid_amount) > 0 ? "Parcial" : "—"}</span><small>{receivable.paid_at || Number(receivable.paid_amount) > 0 ? `${money(receivable.paid_amount ?? updatedValue)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
+                    <td><span className={`status-badge ${overdue ? "overdue" : receivable.status}`}>{overdue ? "Vencida" : receivable.status === "open" ? values.partial ? "Parcial" : "Em aberto" : receivable.status === "paid" ? "Recebida" : "Cancelada"}</span></td>
+                    <td><span>{receivable.paid_at ? dateBR(receivable.paid_at) : values.paid > 0 ? "Parcial" : "—"}</span><small>{values.paid > 0 ? `${money(values.paid)}${receivable.paid_account_name ? ` · ${receivable.paid_account_name}` : ""}` : ""}</small></td>
                     <td><Link prefetch={false} className="table-action" href={`/comercial/vendas/${receivable.sale_id}`}>Abrir venda</Link></td>
                   </tr>
                 );

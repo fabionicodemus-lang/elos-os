@@ -79,7 +79,7 @@ async function developmentResult(context: ElosIaToolContext, args: Args): Promis
     projectRows<DevelopmentSale>(context, projectId, "sales", "id,unit_id,total_amount,commission_pct,commission_amount,status,sale_date"),
     projectRows<DevelopmentUnit>(context, projectId, "units", "id,code,status,list_price"),
     projectRows<DevelopmentReceivable>(context, projectId, "receivables", "id,status,amount,adjusted_amount,paid_amount,due_date,paid_at"),
-    projectRows<DevelopmentPayable>(context, projectId, "payables", "id,status,amount,paid_amount,due_date,paid_at"),
+    projectRows<DevelopmentPayable>(context, projectId, "payables", "id,status,amount,adjusted_amount,paid_amount,due_date,paid_at"),
     forecastFor(context, projectId),
     loadDevelopmentCosts({ supabase: context.supabase, companyId: context.companyId, projectId }),
   ]);

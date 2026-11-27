@@ -1,3 +1,5 @@
+import { titleFinancialTimeline, titleFinancialValues } from "@/lib/finance/title-balances.mjs";
+import { loadCompleteFinanceRows, loadTitlePaymentHistory } from "@/lib/finance/payment-history";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
@@ -24,6 +26,7 @@ type Payable = {
   id: string;
   due_date: string;
   amount: number;
+  adjusted_amount: number;
   status: "open" | "paid" | "cancelled";
   paid_at: string | null;
   paid_amount: number | null;
@@ -163,18 +166,16 @@ export default async function FinancialReportsPage({
 
   let payablesQuery = supabase
     .from("payables")
-    .select("id, due_date, amount, status, paid_at, paid_amount, suppliers(id, legal_name, trade_name)")
+    .select("id, due_date, amount, adjusted_amount, status, paid_at, paid_amount, suppliers(id, legal_name, trade_name)")
     .eq("company_id", companyId)
-    .neq("status", "cancelled")
-    .order("due_date", { ascending: true })
+    .order("due_date", { ascending: true }).order("id")
     .limit(10000);
 
   let receivablesQuery = supabase
     .from("receivables")
     .select("id, due_date, amount, adjusted_amount, status, category, paid_at, paid_amount, clients(id, name), units(id, code)")
     .eq("company_id", companyId)
-    .neq("status", "cancelled")
-    .order("due_date", { ascending: true })
+    .order("due_date", { ascending: true }).order("id")
     .limit(10000);
 
   if (projectId) {
@@ -184,47 +185,36 @@ export default async function FinancialReportsPage({
 
   const [projectResult, payablesResult, receivablesResult] = await Promise.all([
     projectQuery,
-    payablesQuery,
-    receivablesQuery,
+    loadCompleteFinanceRows(payablesQuery),
+    loadCompleteFinanceRows(receivablesQuery),
   ]);
 
   const project = projectResult.data;
   const payables = (payablesResult.data ?? []) as unknown as Payable[];
   const receivables = (receivablesResult.data ?? []) as unknown as Receivable[];
+  const paymentHistory = await loadTitlePaymentHistory({ supabase, companyId, projectId, titleIds: [...payables.map(row => row.id), ...receivables.map(row => row.id)] });
+  let incompleteHistoryCount = 0;
 
-  const payableEntries: ReportEntry[] = payables.map((payable) => {
+  const payableEntries: ReportEntry[] = payables.flatMap((payable) => {
     const supplier = relatedOne(payable.suppliers);
-    const paid = payable.status === "paid";
-    return {
-      id: `out-${payable.id}`,
-      direction: "out",
-      situation: paid ? "realized" : "forecast",
-      effectiveDate: cleanDate(paid ? payable.paid_at : payable.due_date),
-      dueDate: cleanDate(payable.due_date),
-      amount: Number(paid ? payable.paid_amount ?? payable.amount : payable.amount),
-      partyId: supplier?.id ?? "supplier-unknown",
-      partyName: supplier?.trade_name || supplier?.legal_name || "Fornecedor não identificado",
-      category: "payable",
-      unitCode: "",
-    };
+    const timeline = titleFinancialTimeline(payable, paymentHistory.get(`payable:${payable.id}`) ?? []);
+    if (!timeline.history_complete || !timeline.history_dates_complete) incompleteHistoryCount++;
+    return timeline.entries.map(event => ({
+      id: `out-${event.id}`, direction: "out", situation: event.situation, effectiveDate: event.date,
+      dueDate: cleanDate(payable.due_date), amount: event.amount,
+      partyId: supplier?.id ?? "supplier-unknown", partyName: supplier?.trade_name || supplier?.legal_name || "Fornecedor não identificado",
+      category: "payable", unitCode: "",
+    }));
   });
-
-  const receivableEntries: ReportEntry[] = receivables.map((receivable) => {
-    const client = relatedOne(receivable.clients);
-    const unit = relatedOne(receivable.units);
-    const paid = receivable.status === "paid";
-    return {
-      id: `in-${receivable.id}`,
-      direction: "in",
-      situation: paid ? "realized" : "forecast",
-      effectiveDate: cleanDate(paid ? receivable.paid_at : receivable.due_date),
-      dueDate: cleanDate(receivable.due_date),
-      amount: Number(paid ? receivable.paid_amount ?? receivable.adjusted_amount ?? receivable.amount : receivable.adjusted_amount ?? receivable.amount),
-      partyId: client?.id ?? "client-unknown",
-      partyName: client?.name || "Cliente não identificado",
-      category: receivable.category,
-      unitCode: unit?.code ?? "",
-    };
+  const receivableEntries: ReportEntry[] = receivables.flatMap((receivable) => {
+    const client = relatedOne(receivable.clients); const unit = relatedOne(receivable.units);
+    const timeline = titleFinancialTimeline(receivable, paymentHistory.get(`receivable:${receivable.id}`) ?? []);
+    if (!timeline.history_complete || !timeline.history_dates_complete) incompleteHistoryCount++;
+    return timeline.entries.map(event => ({
+      id: `in-${event.id}`, direction: "in", situation: event.situation, effectiveDate: event.date,
+      dueDate: cleanDate(receivable.due_date), amount: event.amount, partyId: client?.id ?? "client-unknown", partyName: client?.name || "Cliente não identificado",
+      category: receivable.category, unitCode: unit?.code ?? "",
+    }));
   });
 
   const allEntries = [...receivableEntries, ...payableEntries].filter((entry) => Boolean(entry.effectiveDate));
@@ -311,13 +301,17 @@ export default async function FinancialReportsPage({
 
   const categoryMap = new Map<string, { base: number; adjusted: number; paid: number; open: number; count: number }>();
   receivables.forEach((receivable) => {
+    const values = titleFinancialValues(receivable);
+    if (receivable.status === "cancelled" && values.paid === 0) return;
     const current = categoryMap.get(receivable.category) ?? { base: 0, adjusted: 0, paid: 0, open: 0, count: 0 };
     const adjusted = Number(receivable.adjusted_amount ?? receivable.amount);
-    current.base += Number(receivable.amount);
-    current.adjusted += adjusted;
-    current.count += 1;
-    if (receivable.status === "paid") current.paid += Number(receivable.paid_amount ?? adjusted);
-    if (receivable.status === "open") current.open += adjusted;
+    if (receivable.status !== "cancelled") {
+      current.base += Number(receivable.amount);
+      current.adjusted += adjusted;
+      current.count += 1;
+    }
+    current.paid += values.paid;
+    current.open += values.remaining;
     categoryMap.set(receivable.category, current);
   });
 
@@ -357,6 +351,7 @@ export default async function FinancialReportsPage({
         </>
       }
     >
+      {incompleteHistoryCount > 0 ? <div className="auth-message error workspace-message">Histórico por data pendente em {incompleteHistoryCount} título(s). Os totais realizados estão incompletos.</div> : null}
       {payablesResult.error || receivablesResult.error ? (
         <div className="auth-message error workspace-message">Não foi possível consolidar todos os dados financeiros do relatório.</div>
       ) : null}

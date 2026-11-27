@@ -58,6 +58,11 @@ export default async function ImportsPage({ searchParams }: {
         {params.error ? <div role="alert" className="auth-message error workspace-message">{params.error}</div> : null}
         {unavailable ? <div role="alert" className="auth-message error workspace-message">Não foi possível carregar o importador agora. Atualize a página antes de enviar um arquivo.</div> : null}
 
+        <section className="registry-table-panel eobra-card">
+          <div className="section-heading"><div><span className="eobra-step">Migração vinculada</span><h2>Vendas, parcelas e histórico financeiro</h2></div><Link prefetch={false} className="elos-button primary" href="/configuracoes/importacoes/migracoes">Abrir migração do eObra</Link></div>
+          <p>Revise um pacote com empreendimentos, unidades, pessoas, vendas, parcelas, baixas e índices. A cobertura identifica o que foi coletado e o que ainda precisa de tratamento antes de entrar nos módulos do Elos.</p>
+        </section>
+
         <section className="registry-table-panel eobra-intro">
           <div><span className="eobra-step">Importação por arquivos</span><h2>Do relatório à conferência no Elos</h2>
             <p>Exporte os dados no ambiente eObra da empresa e envie os arquivos aqui. O endereço de origem identifica os registros; esta tela não faz uma conexão automática com o eObra.</p></div>

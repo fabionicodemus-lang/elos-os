@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { titleFinancialValues } from "@/lib/finance/title-balances.mjs";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DateRangeFilter } from "@/components/date-range-filter";
@@ -18,6 +20,7 @@ type Payable = {
   document: string | null;
   due_date: string;
   amount: number;
+  adjusted_amount: number;
   status: "open" | "paid" | "cancelled";
   installment_label: string | null;
   notes: string | null;
@@ -109,7 +112,7 @@ export default async function PayablesPage({
 
   let listQuery = supabase
     .from("payables")
-    .select("id, document, due_date, amount, status, installment_label, notes, paid_at, paid_amount, paid_account_name, source_system, source_category, beneficiary_name, beneficiary_tax_id, suppliers(id, legal_name, trade_name, tax_id)", { count: "exact" })
+    .select("id, document, due_date, amount, adjusted_amount, status, installment_label, notes, paid_at, paid_amount, paid_account_name, source_system, source_category, beneficiary_name, beneficiary_tax_id, suppliers(id, legal_name, trade_name, tax_id)", { count: "exact" })
     .eq("company_id", companyId)
     .order("due_date", { ascending: false })
     .range(fromRow, toRow);
@@ -128,17 +131,19 @@ export default async function PayablesPage({
     listQuery = listQuery.or(`document.ilike.%${safe}%,notes.ilike.%${safe}%,installment_label.ilike.%${safe}%,beneficiary_name.ilike.%${safe}%,beneficiary_tax_id.ilike.%${safe}%`);
   }
 
-  const [projectResult, suppliersResult, listResult, summaryResult, manageResult] = await Promise.all([
+  const [projectResult, suppliersResult, listResult, summaryResult, manageResult, paymentAccountsResult] = await Promise.all([
     projectQuery,
     suppliersQuery,
     listQuery,
     supabase.rpc("payables_summary", { p_company_id: companyId, p_project_id: projectId }),
     supabase.rpc("has_company_permission", { target_company_id: companyId, target_permission: "payables.manage" }),
+    supabase.from("finance_bank_accounts").select("id,label").eq("company_id",companyId).eq("status","active").order("label").limit(500),
   ]);
 
   const schemaMissing = listResult.error?.code === "42P01" || listResult.error?.message.includes("payables");
   const payables = (listResult.data ?? []) as unknown as Payable[];
   const suppliers = (suppliersResult.data ?? []) as Supplier[];
+  const paymentAccounts = (paymentAccountsResult.data ?? []) as Array<{ id: string; label: string }>;
   const summary = (summaryResult.data ?? {
     total_count: 0,
     open_count: 0,
@@ -225,24 +230,26 @@ export default async function PayablesPage({
                     const beneficiaryName = payable.beneficiary_name || supplier?.trade_name || supplier?.legal_name || "Favorecido";
                     const beneficiaryTaxId = payable.beneficiary_tax_id || supplier?.tax_id;
                     const origin = sourceLabel(payable);
+                    const values = titleFinancialValues(payable);
                     return (
                       <tr key={payable.id}>
                         <td><strong>{beneficiaryName}</strong><small>{beneficiaryTaxId}</small></td>
                         <td><span>{payable.document || "—"}</span><small>{[payable.installment_label, origin].filter(Boolean).join(" · ")}</small></td>
                         <td>{dateBR(payable.due_date)}</td>
-                        <td><strong>{money(payable.amount)}</strong></td>
-                        <td><span className={`status-badge ${payable.status}`}>{payable.status === "open" ? "Em aberto" : payable.status === "paid" ? "Pago" : "Cancelado"}</span></td>
-                        <td><span>{payable.paid_at ? dateBR(payable.paid_at) : "—"}</span><small>{payable.paid_at ? `${money(payable.paid_amount ?? payable.amount)}${payable.paid_account_name ? ` · ${payable.paid_account_name}` : ""}` : ""}</small></td>
+                        <td><strong>{money(values.updated)}</strong><small>Original: {money(values.original)}</small><small>Saldo exigível: {money(values.remaining)}</small>{payable.status === "cancelled" ? <small>Saldo histórico: {money(values.historical_balance)}</small> : null}</td>
+                        <td><span className={`status-badge ${payable.status}`}>{payable.status === "open" ? values.partial ? "Parcial" : "Em aberto" : payable.status === "paid" ? "Pago" : "Cancelado"}</span></td>
+                        <td><span>{payable.paid_at ? dateBR(payable.paid_at) : "—"}</span><small>{values.paid > 0 ? `${money(values.paid)}${payable.paid_account_name ? ` · ${payable.paid_account_name}` : ""}` : ""}</small></td>
                         <td>
                           {canManage && payable.status === "open" ? (
                             <div className="payable-actions">
                               <details>
                                 <summary>Baixar</summary>
                                 <form action={markPayablePaid}>
+                                  <input type="hidden" name="payment_request_id" value={randomUUID()} />
                                   <input type="hidden" name="payable_id" value={payable.id} />
                                   <label>Data<input name="paid_at" type="date" defaultValue={today} required /></label>
-                                  <label>Valor<input name="paid_amount" defaultValue={payable.amount.toFixed(2)} required /></label>
-                                  <label>Conta<input name="paid_account_name" /></label>
+                                  <label>Valor<input name="paid_amount" defaultValue={values.remaining.toFixed(2)} required /></label>
+                                  <label>Conta bancária<select name="bank_account_id" required defaultValue=""><option value="">Selecione a conta</option>{paymentAccounts.map(account => <option key={account.id} value={account.id}>{account.label}</option>)}</select></label>
                                   <button className="auth-primary" type="submit">Confirmar</button>
                                 </form>
                               </details>
