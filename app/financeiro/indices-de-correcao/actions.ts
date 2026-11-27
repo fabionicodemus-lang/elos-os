@@ -65,3 +65,16 @@ export async function saveCorrectionIndexValue(formData: FormData) {
   revalidatePath("/comercial/vendas");
   redirect(pageUrl(`${correctionIndex.code} de ${referenceMonthInput} salvo com sucesso.`, "success"));
 }
+
+export async function configureCubAutomation(formData: FormData) {
+  const { supabase, companyId } = await requireCompanyPermission("indices.manage");
+  const { error } = await supabase.rpc("cub_sc_configure", {
+    p_company: companyId,
+    p_index: String(formData.get("correction_index_id") ?? ""),
+    p_series: String(formData.get("series") ?? ""),
+    p_enabled: formData.get("enabled") === "true",
+  });
+  if (error) redirect(pageUrl(error.message));
+  revalidatePath(PATH);
+  redirect(pageUrl("Configuração do CUB salva. A busca ocorre nos dias 1 a 3, até localizar a publicação do mês.", "success"));
+}

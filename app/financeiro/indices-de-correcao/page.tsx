@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { requireCompanyPermission } from "@/lib/workspace";
-import { saveCorrectionIndexValue } from "./actions";
+import { configureCubAutomation, saveCorrectionIndexValue } from "./actions";
+import { cubWindow } from "@/lib/cub-sc/source.mjs";
 
 type CorrectionIndex = {
   id: string;
@@ -106,6 +107,14 @@ export default async function CorrectionIndicesPage({
   }
 
   const canManage = manageResult.data === true || roleKey === "owner" || roleKey === "admin";
+  const [automationResult, historyResult] = await Promise.all([
+    supabase.from("cub_sc_automation").select("correction_index_id,series,enabled,last_application_month,last_checked_at,last_error").eq("company_id", companyId).maybeSingle(),
+    supabase.from("cub_sc_automation_history").select("id,application_month,event,created_at").eq("company_id", companyId).order("created_at", { ascending: false }).limit(12),
+  ]);
+  const automation = automationResult.data;
+  const window = cubWindow();
+  const errors: Record<string, string> = { not_published: "Publicação do mês ainda não localizada", invalid_source: "Formato da fonte mudou; conferir", source_unavailable: "Fonte indisponível na última consulta", variation_review: "Variação elevada; conferir antes de aplicar", value_conflict: "O valor cadastrado diverge da publicação; conferir", application_failed: "A aplicação do índice exige conferência" };
+  const autoStatus = !automation?.enabled ? "Desativada" : automation.last_application_month === window.month ? "Atualizado · busca encerrada neste mês" : automation.last_error && automation.last_error !== "not_published" ? errors[automation.last_error] ?? "Conferência necessária" : window.open ? "Aguardando publicação · busca de hora em hora" : "Janela encerrada · mês atual sem atualização automática";
   const defaultMonth = new Date().toISOString().slice(0, 7);
   const years = Array.from({ length: 12 }, (_, index) => currentYear + 1 - index);
 
@@ -134,6 +143,35 @@ export default async function CorrectionIndicesPage({
         </section>
       ) : (
         <>
+          {!automationResult.error ? <section className="registry-table-panel">
+            <div className="section-heading"><div><span>CUB-SC automático</span><h2>{autoStatus}</h2></div></div>
+            <p>Consulta oficial de hora em hora, somente nos dias 1 a 3, no horário de Brasília. Ao validar a publicação do mês, a busca para até o próximo mês.</p>
+            <p>Índices são cadastrados no mês de uso informado pelo Sinduscon. Parcelas quitadas, parciais, travadas, importadas do eObra ou com cobrança preparada/registrada são preservadas e podem exigir conferência.</p>
+            {automation?.last_checked_at ? <p>Última consulta: {new Date(automation.last_checked_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} · Último mês aplicado: {monthBR(automation.last_application_month)}</p> : null}
+            {canManage ? <details className="registry-create"><summary>Configurar atualização automática</summary>
+              <form action={configureCubAutomation}>
+                <div className="registry-form-grid">
+                  <label>Índice da construtora<select name="correction_index_id" required defaultValue={automation?.correction_index_id ?? ""}>
+                    <option value="" disabled>Selecione</option>
+                    {activeIndices.filter(i => i.code.startsWith("CUB") && i.value_type === "index_number").map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                  </select></label>
+                  <label>Modalidade prevista nos contratos<select name="series" required defaultValue={automation?.series ?? ""}>
+                    <option value="" disabled>Selecione sem inferir pelo empreendimento</option>
+                    <option value="residential">CUB-SC Residencial Médio · Norma 2006</option>
+                    <option value="commercial">CUB-SC Comercial Médio · Norma 2006</option>
+                  </select></label>
+                  <label>Atualização nesta construtora<select name="enabled" defaultValue={automation?.enabled ? "true" : "false"}>
+                    <option value="true">Ativa</option><option value="false">Desativada</option>
+                  </select></label>
+                </div>
+                <p>Confirme a modalidade usada pelo índice e pelos contratos vinculados. CUB desonerado e padrões específicos como R8-N não são atendidos por esta fonte automática. Ativação após a coleta mensal aguarda o próximo ciclo.</p>
+                <button className="auth-primary" type="submit">Salvar configuração</button>
+              </form>
+            </details> : null}
+            {historyResult.data?.length ? <details><summary>Últimos eventos da atualização</summary><ul>
+              {historyResult.data.map(event => <li key={event.id}>{new Date(event.created_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} · {event.event === "configured" ? "Configuração salva" : event.event === "updated" ? `Índice de ${monthBR(event.application_month)} conferido/aplicado` : errors[event.event] ?? "Conferência necessária"}</li>)}
+            </ul></details> : null}
+          </section> : null}
           <section className="index-summary-grid">
             {activeIndices.map((index) => {
               const latest = latestByIndex.get(index.id) ?? null;
