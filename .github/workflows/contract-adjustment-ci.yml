@@ -1,0 +1,31 @@
+name: Project and contract adjustments
+on:
+  pull_request:
+    paths:
+      - 'app/empreendimentos/**'
+      - 'app/comercial/vendas/**'
+      - 'app/comercial/planos-de-pagamento/**'
+      - 'app/engenharia/orcamentos/**'
+      - 'components/contract-adjustment-form.tsx'
+      - 'lib/contract-adjustments/**'
+      - 'supabase/migrations/*project_contract_adjustment_policies.sql'
+      - 'supabase/migrations/*preconstruction_budget_indexation.sql'
+      - 'tests/finance/contract-adjustment*.test.mjs'
+      - '.github/workflows/contract-adjustment-ci.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/finance/contract-adjustment*.test.mjs tests/finance/cub-sc-*.test.mjs
+      - run: npm run test:collections
+      - run: npx tsc --noEmit
+      - run: npx eslint components/contract-adjustment-form.tsx lib/contract-adjustments app/empreendimentos app/comercial/vendas app/comercial/planos-de-pagamento app/engenharia/orcamentos tests/finance/contract-adjustment*.test.mjs

@@ -78,7 +78,7 @@ export async function createReceivableSeries(formData: FormData) {
   const saleId = String(formData.get("sale_id") ?? "");
   const returnPath = safeReturnPath(formData);
   const category = String(formData.get("category") ?? "");
-  const correctionIndexId = String(formData.get("correction_index_id") ?? "").trim() || null;
+  let correctionIndexId = String(formData.get("correction_index_id") ?? "").trim() || null;
   const customInstallments = parseInstallments(formData);
   const customTotal = parseMoney(formData.get("total_amount"));
 
@@ -117,7 +117,7 @@ export async function createReceivableSeries(formData: FormData) {
 
   const { data: sale } = await supabase
     .from("sales")
-    .select("id, client_id, unit_id, status, sale_date")
+    .select("id, client_id, unit_id, status, sale_date, adjustment_policy_id")
     .eq("id", saleId)
     .eq("company_id", companyId)
     .eq("project_id", projectId)
@@ -125,6 +125,12 @@ export async function createReceivableSeries(formData: FormData) {
 
   if (!sale || sale.status !== "active") {
     redirect(pageUrl("A venda selecionada não pertence ao ambiente ativo ou está cancelada.", "error", saleId, returnPath));
+  }
+
+  if (sale.adjustment_policy_id) {
+    const policy = await supabase.from("contract_adjustment_versions").select("mode").eq("id", sale.adjustment_policy_id).eq("company_id", companyId).eq("sale_id", sale.id).maybeSingle();
+    if (!policy.data || policy.data.mode === "pending") redirect(pageUrl("Defina os reajustes negociados na tela do contrato antes de adicionar parcelas.", "error", saleId, returnPath));
+    correctionIndexId = null; // The database applies the immutable contract version.
   }
 
   let correctionIndex: { id: string; code: string } | null = null;

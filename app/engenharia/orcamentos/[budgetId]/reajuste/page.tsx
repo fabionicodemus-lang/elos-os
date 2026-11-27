@@ -20,7 +20,7 @@ type BudgetItem = { id: string; service_id: string | null; code: string | null; 
 type Amendment = {
   id: string; code: string; description: string; approval_date: string | null; status: string; adjustment_enabled: boolean;
   correction_index_id: string | null; correction_index_code: string | null; correction_base_month: string | null;
-  correction_base_value: number | null; correction_factor: number; nominal_amount: number; current_amount: number;
+  correction_base_value: number | null; correction_factor: number | null; nominal_amount: number; current_amount: number | null;
 };
 type AmendmentItem = { amendment_id: string; service_code_snapshot: string | null; service_name_snapshot: string; amount: number };
 
@@ -55,17 +55,20 @@ export default async function BudgetAdjustmentPage({ params, searchParams }: {
   const nominalBudget = items.reduce((sum, item) => sum + Number(item.total_direct_cost || 0), 0);
   const currentIndex = indices.find((item) => item.id === budget.correction_index_id) ?? null;
   let factor = 1;
+  let adjustmentPending = Boolean(budget.adjustment_enabled && (!budget.correction_index_id || !budget.correction_base_month));
   if (budget.adjustment_enabled && budget.correction_index_id && budget.correction_base_month) {
     const result = await supabase.rpc("engineering_correction_factor", {
       p_company_id: companyId,
       p_index_id: budget.correction_index_id,
       p_base_month: budget.correction_base_month,
-      p_target_month: new Date().toISOString().slice(0,10),
+      p_target_month: new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()),
       p_base_value: budget.correction_base_value,
     });
+    adjustmentPending = Boolean(result.error || result.data == null);
     factor = Number(result.data ?? 1);
   }
   const approvedAmendments = amendments.filter((item) => item.status === "approved");
+  adjustmentPending ||= Boolean(amendmentsResult.error || approvedAmendments.some(item => item.current_amount == null));
   const nominalAmendments = approvedAmendments.reduce((sum, item) => sum + Number(item.nominal_amount || 0), 0);
   const currentAmendments = approvedAmendments.reduce((sum, item) => sum + Number(item.current_amount || 0), 0);
   const nominalReference = nominalBudget + nominalAmendments;
@@ -87,13 +90,14 @@ export default async function BudgetAdjustmentPage({ params, searchParams }: {
       {query.error ? <div className="auth-message error workspace-message">{query.error}</div> : null}
       {(budgetResult.error || amendmentsResult.error) ? <div className="auth-message error workspace-message">A tela exige as migrations do pacote Pré-Obra 9.5.</div> : null}
 
+      {adjustmentPending ? <div className="auth-message warning workspace-message">Reajuste pendente: faltam valores do índice nas competências necessárias ou a consulta não foi concluída. Os valores nominais continuam disponíveis.</div> : null}
       <section className="pre95-summary">
         <article><span>Orçamento nominal + aditivos</span><strong>{money(nominalReference)}</strong><small>{money(nominalBudget)} base · {money(nominalAmendments)} aditivos</small></article>
         <article><span>Custo previsto / comprometido</span><strong>{money(forecastCost)}</strong><small>controle atual da obra</small></article>
         <article><span>Saldo nominal</span><strong>{money(nominalBalance)}</strong><small>sem correção monetária</small></article>
-        <article className={adjustedBalance >= 0 ? "positive" : "negative"}><span>Saldo reajustado</span><strong>{money(adjustedBalance)}</strong><small>{balanceAdjustmentGain >= 0 ? "+" : ""}{money(balanceAdjustmentGain)} pelo índice</small></article>
-        <article><span>Referência atualizada</span><strong>{money(currentBudgetReference)}</strong><small>base + aditivos no índice atual</small></article>
-        <article className={adjustmentGain > 0 ? "positive" : ""}><span>Efeito bruto dos índices</span><strong>{adjustmentGain >= 0 ? "+" : ""}{money(adjustmentGain)}</strong><small>memória de referência</small></article>
+        <article className={adjustedBalance >= 0 ? "positive" : "negative"}><span>Saldo reajustado</span><strong>{adjustmentPending ? "Pendente" : money(adjustedBalance)}</strong><small>{adjustmentPending ? "Aguardando publicação ou conferência do índice" : `${balanceAdjustmentGain >= 0 ? "+" : ""}${money(balanceAdjustmentGain)} pelo índice`}</small></article>
+        <article><span>Referência atualizada</span><strong>{adjustmentPending ? "Pendente" : money(currentBudgetReference)}</strong><small>base + aditivos no índice atual</small></article>
+        <article className={adjustmentGain > 0 ? "positive" : ""}><span>Efeito bruto dos índices</span><strong>{adjustmentPending ? "Pendente" : `${adjustmentGain >= 0 ? "+" : ""}${money(adjustmentGain)}`}</strong><small>memória de referência</small></article>
       </section>
 
       <div className="auth-message warning workspace-message">
@@ -113,7 +117,7 @@ export default async function BudgetAdjustmentPage({ params, searchParams }: {
           <div><span>Situação</span><strong>{budget.adjustment_enabled ? "Reajuste ativo" : "Sem reajuste"}</strong></div>
           <div><span>Índice</span><strong>{currentIndex?.code ?? "—"}</strong><small>{currentIndex?.source_name ?? ""}</small></div>
           <div><span>Base</span><strong>{monthBR(budget.correction_base_month)}</strong><small>{budget.correction_base_value ? decimal(budget.correction_base_value, 4) : "valor-base ainda não informado"}</small></div>
-          <div><span>Fator ponderado atual</span><strong>{decimal(weightedFactor, 6)}×</strong><small>{decimal((weightedFactor - 1) * 100, 3)}%</small></div>
+          <div><span>Fator ponderado atual</span><strong>{adjustmentPending ? "Pendente" : `${decimal(weightedFactor, 6)}×`}</strong><small>{adjustmentPending ? "Confira as competências necessárias" : `${decimal((weightedFactor - 1) * 100, 3)}%`}</small></div>
         </div>
       </section>
 
@@ -137,7 +141,7 @@ export default async function BudgetAdjustmentPage({ params, searchParams }: {
           {amendments.map((amendment) => {
             const rows = amendmentItems.filter((item) => item.amendment_id === amendment.id);
             return <article key={amendment.id} className={`pre95-amendment status-${amendment.status}`}>
-              <header><div><span>{amendment.status === "approved" ? "Aprovado" : amendment.status === "cancelled" ? "Cancelado" : "Rascunho"}</span><h3>{amendment.code} · {amendment.description}</h3><small>{dateBR(amendment.approval_date)} · {amendment.adjustment_enabled ? `${amendment.correction_index_code ?? "índice"} desde ${monthBR(amendment.correction_base_month)}` : "sem reajuste"}</small></div><div><strong>{money(amendment.nominal_amount)}</strong><small>atual: {money(amendment.current_amount)} · fator {decimal(amendment.correction_factor, 5)}×</small></div></header>
+              <header><div><span>{amendment.status === "approved" ? "Aprovado" : amendment.status === "cancelled" ? "Cancelado" : "Rascunho"}</span><h3>{amendment.code} · {amendment.description}</h3><small>{dateBR(amendment.approval_date)} · {amendment.adjustment_enabled ? `${amendment.correction_index_code ?? "índice"} desde ${monthBR(amendment.correction_base_month)}` : "sem reajuste"}</small></div><div><strong>{money(amendment.nominal_amount)}</strong><small>atual: {amendment.current_amount == null ? "Pendente" : money(amendment.current_amount)} · fator {amendment.correction_factor == null ? "Pendente" : `${decimal(amendment.correction_factor, 5)}×`}</small></div></header>
               {rows.length ? <div className="pre95-amendment-items">{rows.map((row, index) => <div key={`${amendment.id}-${index}`}><span>{row.service_code_snapshot || "—"} · {row.service_name_snapshot}</span><strong>{money(row.amount)}</strong></div>)}</div> : null}
               {canManage && amendment.status === "draft" ? <div className="pre95-amendment-actions">
                 <form action={addBudgetAmendmentItem}><input type="hidden" name="budget_id" value={budget.id} /><input type="hidden" name="amendment_id" value={amendment.id} /><select name="budget_item_id"><option value="">Ajuste geral</option>{items.map((item) => <option key={item.id} value={item.id}>{item.code ?? "—"} · {item.description}</option>)}</select><input name="amount" inputMode="decimal" placeholder="Valor (+ ou -)" required /><input name="notes" placeholder="Observação" /><button type="submit">Adicionar item</button></form>

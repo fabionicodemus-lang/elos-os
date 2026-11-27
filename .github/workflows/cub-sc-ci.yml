@@ -1,0 +1,27 @@
+name: CUB-SC monthly automation
+on:
+  pull_request:
+    paths:
+      - 'lib/cub-sc/**'
+      - 'app/api/cron/cub-sc/**'
+      - 'app/financeiro/indices-de-correcao/**'
+      - 'supabase/migrations/*cub_sc_monthly_automation.sql'
+      - 'tests/finance/cub-sc-*.test.mjs'
+      - 'vercel.json'
+      - '.github/workflows/cub-sc-ci.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/finance/cub-sc-*.test.mjs
+      - run: npx tsc --noEmit
+      - run: npx eslint lib/cub-sc app/api/cron/cub-sc app/financeiro/indices-de-correcao tests/finance/cub-sc-*.test.mjs
