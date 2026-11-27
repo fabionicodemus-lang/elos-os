@@ -1,0 +1,26 @@
+name: AI feasibility document review
+on:
+  pull_request:
+    paths:
+      - 'lib/elos-ia/**'
+      - 'app/elos-ia/**'
+      - 'app/comercial/incorporacao/viabilidade/**'
+      - 'supabase/migrations/*ai_feasibility_review.sql'
+      - 'tests/commercial/**'
+      - '.github/workflows/ai-feasibility-ci.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test lib/elos-ia/*.test.mjs tests/commercial/*.test.mjs
+      - run: npx tsc --noEmit
+      - run: npx eslint lib/elos-ia/feasibility* app/elos-ia/acoes tests/commercial/feasibility-import-db.test.mjs

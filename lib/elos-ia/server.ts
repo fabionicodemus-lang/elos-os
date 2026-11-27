@@ -1,4 +1,5 @@
 // Elos IA — orquestração de uma pergunta (somente servidor).
+import { isFeasibilityImportRequest } from "./feasibility-import.mjs";
 import { resolveActiveWorkspace } from "@/lib/workspace";
 import { runAgentTurn, trimHistory, emptyUsage, type AgentUsage, type AgentToolTrace } from "./agent-loop.mjs";
 import { getElosIaConfig, type ElosIaConfig } from "./config";
@@ -128,7 +129,10 @@ export async function answerElosIaQuestion(input: { persona: unknown; question: 
   const financeActionTools=elosIaFinanceActionToolsForPersona(persona.key);
   const worksiteTools=elosIaWorksiteToolsForPersona(persona.key);
   const commercialTools=elosIaCommercialToolsForPersona(persona.key);
-  const tools=[...scheduleActionToolSchemas(scheduleTools),...elosIaToolSchemas(persona.tools),...elosIaWorksiteToolSchemas(worksiteTools),...elosIaFinanceToolSchemas(financeTools),...elosIaActionToolSchemas(actionTools),...elosIaFinanceActionToolSchemas(financeActionTools),...elosIaCommercialToolSchemas(commercialTools)];
+  let tools=[...scheduleActionToolSchemas(scheduleTools),...elosIaToolSchemas(persona.tools),...elosIaWorksiteToolSchemas(worksiteTools),...elosIaFinanceToolSchemas(financeTools),...elosIaActionToolSchemas(actionTools),...elosIaFinanceActionToolSchemas(financeActionTools),...elosIaCommercialToolSchemas(commercialTools)];
+  if(actionTools.includes("preparar_estudo_viabilidade") && isFeasibilityImportRequest(question,actionContext.attachmentNames)) {
+    tools=tools.filter(tool=>tool.name==="preparar_estudo_viabilidade");
+  }
   const userContent=elosIaAttachmentContent(question,registeredAttachments);
 
   const observations: ElosIaToolObservation[] = [];
